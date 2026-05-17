@@ -71,8 +71,19 @@ class SmokeReport:
         return data
 
 
-def _is_ignored(rel: Path) -> bool:
-    return any(part in GENERATED_PARTS or part.endswith(".egg-info") for part in rel.parts)
+def _is_ignored(rel_path: Path) -> bool:
+    """Return True for generated/runtime/cache paths that should not affect smoke hygiene."""
+    parts = set(rel_path.parts)
+    rel = rel_path.as_posix()
+
+    if parts & GENERATED_PARTS:
+        return True
+    if rel.startswith(".sentinel_tmp/"):
+        return True
+    if rel == "tests/PASS_CHANGES.txt":
+        return True
+
+    return False
 
 
 def _run(cmd: list[str], *, cwd: Path, timeout: int = 90) -> tuple[str, str, int]:

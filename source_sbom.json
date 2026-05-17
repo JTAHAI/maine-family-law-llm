@@ -600,7 +600,7 @@
       "type": "enterprise-resource-catalog"
     }
   ],
-  "generated_at": "2026-05-17T13:33:34.816625+00:00",
+  "generated_at": "2026-05-17T15:58:22.988370+00:00",
   "interpretation": "Source SBOM/provenance only; not proof that legal data, attorney-reviewed evals, or production signoffs exist.",
   "production_legal_ready": false,
   "project_name": "maine-family-law-llm",
