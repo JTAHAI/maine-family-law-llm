@@ -17,6 +17,9 @@ from .ollama_adapter import GenerationClient
 from .retrieval import InMemoryCorpusRetriever
 
 
+GENERATION_FAILED_WARNING = "generation_failed_retrieval_fallback"
+
+
 class CitationFirstAnswerPipeline:
     """Answer questions only from retrieved source snippets."""
 
@@ -45,14 +48,17 @@ class CitationFirstAnswerPipeline:
         prompt = self._build_prompt(request, snippets)
 
         if self._generator is None:
-            generated = (
-                "I found source material that may be relevant. Review the cited "
-                "snippets before relying on the answer."
-            )
+            generated = self._retrieval_only_answer()
             used_model = None
+            warning = None
         else:
-            generated = self._generator.generate(prompt)
             used_model = self._generator.model_name
+            try:
+                generated = self._generator.generate(prompt)
+                warning = None
+            except Exception:
+                generated = self._retrieval_only_answer()
+                warning = GENERATION_FAILED_WARNING
 
         answer = self._append_disclaimer(generated)
         return AnswerResult(
@@ -60,7 +66,14 @@ class CitationFirstAnswerPipeline:
             citations=snippets,
             grounded=True,
             used_model=used_model,
-            warning=None,
+            warning=warning,
+        )
+
+    @staticmethod
+    def _retrieval_only_answer() -> str:
+        return (
+            "I found source material that may be relevant. Review the cited "
+            "snippets before relying on the answer."
         )
 
     def _build_prompt(
