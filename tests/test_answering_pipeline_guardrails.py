@@ -223,3 +223,67 @@ def test_ask_local_cli_json_success_respects_max_sources(tmp_path: Path) -> None
     assert payload["grounded"] is True
     assert len(payload["citations"]) == 1
     assert payload["citations"][0]["source_id"] == "a-parental-rights-sample.txt"
+
+class FailingGenerator:
+    model_name = "broken-local-model"
+
+    def generate(self, prompt: str) -> str:
+        raise TimeoutError("simulated local model timeout")
+
+
+def test_pipeline_falls_back_to_retrieval_answer_when_generator_fails() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text about parental rights modification.",
+        locator="sample locator",
+    )
+    pipeline = CitationFirstAnswerPipeline(
+        InMemoryCorpusRetriever([snippet]),
+        generator=FailingGenerator(),
+    )
+
+    result = pipeline.answer(AnswerRequest(question="parental rights modification"))
+
+    assert result.grounded is True
+    assert result.used_model == "broken-local-model"
+    assert result.warning == "generation_failed_retrieval_fallback"
+    assert result.citations == (snippet,)
+    assert "review the cited snippets" in result.answer.lower()
+    assert "not legal advice" in result.answer.lower()
+
+
+def test_ask_local_json_shape_includes_warning_field_for_success(
+    tmp_path: Path,
+) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    sample = corpus / "parental-rights-sample.txt"
+    sample.write_text(
+        "Sample source one mentions parental rights and modification.",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(_REPO_ROOT / "scripts" / "ask-local.py"),
+            "parental rights modification",
+            "--corpus",
+            str(corpus),
+            "--no-ollama",
+            "--json",
+        ],
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert payload["grounded"] is True
+    assert payload["warning"] is None
+    assert payload["used_model"] is None
+    assert len(payload["citations"]) == 1
