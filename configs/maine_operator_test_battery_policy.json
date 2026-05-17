@@ -1,0 +1,63 @@
+{
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "external_data_dirs": [
+    "research_resources",
+    "official_authority_store",
+    "parsed_authority_store",
+    "embedding_store",
+    "eval_store",
+    "release_evidence",
+    "runtime"
+  ],
+  "local_operator_commands": [
+    "cd C:\\dev\\ME_FM_LLM",
+    "python scripts\\run-reboot-safe-healthcheck.py",
+    "python scripts\\run-test-readiness.py --skip-pytest",
+    "python scripts\\run-final-local-acceptance.py",
+    "python -m pytest -q",
+    "python scripts\\run-quality-checks.py",
+    "python scripts\\run-networked-source-gate.py --data-root C:\\dev\\ME_FM_LLM_data --allow-fail-report",
+    "python scripts\\build-operator-handoff-bundle.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\run-production-promotion-gate.py --data-root C:\\dev\\ME_FM_LLM_data --allow-fail-report"
+  ],
+  "networked_authority_commands": [
+    "python scripts\\collect-enterprise-resources.py --project-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-authority-layer.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+  ],
+  "production_legal_readiness_blockers": [
+    "live_official_authority_manifest_required",
+    "parsed_authority_manifest_required",
+    "retrieval_index_manifest_required",
+    "attorney_reviewed_gold_eval_manifest_required",
+    "measured_release_metrics_required",
+    "pilot_security_evidence_required",
+    "owner_signoffs_required",
+    "production_promotion_gate_required",
+    "pilot_security_signoff_evidence_required",
+    "rollback_package_manifest_required"
+  ],
+  "purpose": "One-command operator acceptance battery for local source testing after reboot or before a public GitHub push.",
+  "required_repo_files": [
+    ".gitignore",
+    ".github/workflows/ci.yml",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "PASS_CHANGES.txt",
+    "pyproject.toml",
+    "scripts/run-reboot-safe-healthcheck.py",
+    "scripts/run-test-readiness.py",
+    "scripts/run-final-local-acceptance.py",
+    "scripts/run-quality-checks.py",
+    "scripts/run-networked-source-gate.py",
+    "scripts/build-operator-handoff-bundle.py",
+    "scripts/run-production-promotion-gate.py",
+    "scripts/run-production-promotion-gate.ps1"
+  ],
+  "version": "post-ga-operator-test-battery-2"
+}

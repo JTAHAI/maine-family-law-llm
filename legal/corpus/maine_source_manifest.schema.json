@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MaineSourceManifestRecord",
+  "type": "object",
+  "required": [
+    "source_id",
+    "source_class",
+    "jurisdiction",
+    "retrieved_at",
+    "hash",
+    "parser_status",
+    "freshness_status",
+    "data_class",
+    "use_restrictions"
+  ],
+  "properties": {
+    "source_id": {"type": "string", "minLength": 1},
+    "source_class": {"type": "string", "minLength": 1},
+    "jurisdiction": {"type": "string", "minLength": 1},
+    "retrieved_at": {"type": "string", "format": "date-time"},
+    "hash": {"type": "string", "minLength": 1},
+    "parser_status": {"type": "string", "minLength": 1},
+    "freshness_status": {"type": "string", "minLength": 1},
+    "data_class": {
+      "type": "string",
+      "enum": [
+        "official_public_authority",
+        "public_non_official_source",
+        "licensed_secondary_source",
+        "user_provided_confidential_matter_data",
+        "synthetic_eval_data",
+        "attorney_reviewed_eval_data",
+        "model_artifact",
+        "audit_record"
+      ]
+    },
+    "source_url_or_path": {"type": ["string", "null"]},
+    "parser_version": {"type": ["string", "null"]},
+    "use_restrictions": {
+      "type": "object",
+      "required": [
+        "training_allowed_by_default",
+        "release_packaging_allowed",
+        "requires_human_review"
+      ],
+      "properties": {
+        "training_allowed_by_default": {"type": "boolean"},
+        "release_packaging_allowed": {"type": "boolean"},
+        "requires_human_review": {"type": "boolean"},
+        "notes": {"type": "string"}
+      }
+    },
+    "metadata": {"type": "object"}
+  }
+}

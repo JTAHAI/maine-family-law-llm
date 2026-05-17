@@ -1,0 +1,67 @@
+{
+  "version": "post-ga-production-promotion-gate-1",
+  "purpose": "Final hard gate before anyone may describe a build as production-legal-ready. This gate requires the networked official-source gate plus pilot/security/signoff evidence in the external data root.",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "required_external_files": [
+    "official_authority_store/source_manifest.json",
+    "parsed_authority_store/parsed_authority_manifest.json",
+    "embedding_store/retrieval_index_manifest.json",
+    "eval_store/gold_eval_pack_manifest.json",
+    "eval_store/release_metrics_evidence.json",
+    "release_evidence/security_governance_packet.json",
+    "release_evidence/pilot_evidence_packet.json",
+    "release_evidence/owner_signoffs.json",
+    "release_evidence/rollback_package_manifest.json"
+  ],
+  "required_signoff_roles": [
+    "security_owner",
+    "legal_owner",
+    "product_owner",
+    "ops_owner"
+  ],
+  "minimum_attorney_reviewed_rows_total": 2750,
+  "metric_thresholds": {
+    "retrieval_recall_at_20": {"direction": ">=", "value": 0.95},
+    "citation_existence": {"direction": ">=", "value": 0.99},
+    "citation_support": {"direction": ">=", "value": 0.95},
+    "quote_span_verification": {"direction": ">=", "value": 0.97},
+    "hallucination_rate": {"direction": "<=", "value": 0.03},
+    "filing_ready_false_pass_rate": {"direction": "<=", "value": 0.0},
+    "form_freshness_detection": {"direction": ">=", "value": 0.99}
+  },
+  "fixture_markers": [
+    "fixture",
+    "offline-smoke",
+    "sample-only",
+    "synthetic-only",
+    "not_production",
+    "placeholder"
+  ],
+  "required_pilot_fields": [
+    "pilot_status",
+    "no_data_leakage",
+    "no_unsupported_filing_ready_exports",
+    "attorney_signoff_present"
+  ],
+  "required_security_fields": [
+    "security_signoff_complete",
+    "threat_model_complete",
+    "privacy_impact_assessment_complete",
+    "incident_response_plan_complete",
+    "rollback_drill_complete"
+  ],
+  "promotion_blockers": [
+    "networked_source_gate_not_passed",
+    "missing_required_external_file",
+    "required_external_file_not_json",
+    "data_root_inside_source_repo",
+    "fixture_marker_detected",
+    "metric_threshold_not_met",
+    "attorney_reviewed_rows_minimum_not_met",
+    "pilot_evidence_incomplete",
+    "security_governance_evidence_incomplete",
+    "owner_signoff_missing_or_unapproved",
+    "rollback_package_missing_or_incomplete"
+  ]
+}

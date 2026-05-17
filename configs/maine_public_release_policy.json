@@ -1,0 +1,63 @@
+{
+  "blocked_paths": [
+    ".git",
+    ".env",
+    "runtime",
+    "uploads",
+    "corpora",
+    "vectorstores",
+    "official_authority_store",
+    "parsed_authority_store",
+    "embedding_store",
+    "eval_store",
+    "matter_store",
+    "model_store",
+    "model_registry",
+    "audit_store",
+    "ME_FM_LLM_data",
+    "maine-family-law-llm-data"
+  ],
+  "blocked_suffixes": [
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+    ".faiss",
+    ".pt",
+    ".pth",
+    ".safetensors",
+    ".onnx",
+    ".pdf",
+    ".doc",
+    ".docx"
+  ],
+  "public_release_status": "not_yet_published",
+  "public_repo_name": "ME_FM_LLM",
+  "release_rule": "Public GitHub release can be source-code-ready while production legal-data readiness remains blocked until real external data, attorney-reviewed evals, live metrics, security/pilot evidence, and signoffs are attached.",
+  "required_docs": [
+    "docs/public-github-release-checklist.md",
+    "docs/attribution-license-options.md",
+    "docs/local-test-runbook.md",
+    "docs/public-release-hardening.md",
+    "docs/supply-chain-security.md",
+    "docs/enterprise-acceptance-and-github-publish.md"
+  ],
+  "required_github_workflows": [
+    ".github/workflows/ci.yml"
+  ],
+  "required_root_files": [
+    "README.md",
+    "PASS_CHANGES.txt",
+    "pyproject.toml",
+    ".gitignore",
+    "LICENSE.md",
+    "NOTICE.md",
+    "ATTRIBUTION.md",
+    "CITATION.cff",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md"
+  ],
+  "single_text_file_allowed": "PASS_CHANGES.txt",
+  "version": "post-ga-public-release-3"
+}

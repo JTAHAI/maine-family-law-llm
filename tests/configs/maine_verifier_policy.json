@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0-pass29-pass31",
+  "citation_quote_verifier": {
+    "citation_existence_target": 0.99,
+    "quote_span_verification_target": 0.97,
+    "resolved_citation_required_for_filing_ready": true,
+    "quote_exact_or_fuzzy_span_required": true,
+    "source_card_trace_required": true,
+    "offset_recording_required": true
+  },
+  "claim_support_verifier": {
+    "citation_support_target": 0.95,
+    "automatic_claim_extraction_enabled": true,
+    "supported_statuses": ["supported"],
+    "blocking_statuses": [
+      "unsupported",
+      "contradicted",
+      "stale",
+      "jurisdiction_mismatch",
+      "not_verifiable"
+    ],
+    "drill_path_required": "claim_to_citation_to_source_text_to_verifier_result"
+  },
+  "source_scope_verifier": {
+    "current_law_requires_known_freshness": true,
+    "maine_scope_default": true,
+    "federal_allowed_when_family_law_adjacent": true,
+    "negative_treatment_unknown_blocks_case_reliance": true,
+    "form_version_current_required": true
+  },
+  "claim_support_statuses": [
+    "supported",
+    "partially_supported",
+    "unsupported",
+    "contradicted",
+    "stale",
+    "jurisdiction_mismatch",
+    "not_verifiable"
+  ],
+  "blocking_statuses": {
+    "citations": ["not_found"],
+    "quotes": ["quote_span_not_found", "semantic_match"],
+    "claims": ["unsupported", "contradicted", "stale", "jurisdiction_mismatch", "not_verifiable"],
+    "authority": ["stale_unknown", "not_found", "contradicted", "overruled_or_negative_treatment_unknown", "jurisdiction_mismatch"],
+    "source_scope": ["stale_or_unknown_freshness", "jurisdiction_mismatch", "negative_treatment_unknown", "form_freshness_not_verified"]
+  },
+  "filing_ready_policy": {
+    "unsupported_legal_claim_blocks_export": true,
+    "unresolved_citation_blocks_export": true,
+    "quote_span_not_found_blocks_export": true,
+    "current_law_claim_from_unknown_freshness_blocks_export": true,
+    "wrong_jurisdiction_blocks_export": true,
+    "stale_form_blocks_export": true,
+    "human_review_required_by_default": true
+  }
+}

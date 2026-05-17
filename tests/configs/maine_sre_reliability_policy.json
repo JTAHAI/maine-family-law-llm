@@ -1,0 +1,29 @@
+{
+  "version": "1.0-pass45-reliability-sre",
+  "readiness": "source_implemented_sre_controls_pending_real_load_and_restore_drills",
+  "slos": {
+    "uptime_monthly": {"target": 0.995, "measurement": "availability"},
+    "api_p95_latency_ms": {"target": 1500, "measurement": "protected_api_routes"},
+    "retrieval_p95_latency_ms": {"target": 2500, "measurement": "hybrid_retrieval"},
+    "draft_p95_latency_ms": {"target": 10000, "measurement": "review_required_draft_workspace"},
+    "eval_runtime_minutes": {"target": 60, "measurement": "release_eval_suite"},
+    "ingestion_runtime_minutes": {"target": 120, "measurement": "official_authority_ingestion"}
+  },
+  "required_operational_controls": [
+    "load_test_plan",
+    "chaos_restore_test_plan",
+    "backup_restore_drill",
+    "observability_dashboards",
+    "error_budget_policy",
+    "queue_monitoring",
+    "cost_controls",
+    "degraded_mode_vector_index_down",
+    "degraded_mode_model_provider_down",
+    "degraded_mode_source_store_down"
+  ],
+  "degraded_modes": {
+    "vector_index_down": "fall_back_to_bm25_and_exact_citation_lookup_review_required",
+    "model_provider_down": "research_only_mode_no_generation_exports",
+    "source_store_down": "block_current_law_claims_and_exports"
+  }
+}

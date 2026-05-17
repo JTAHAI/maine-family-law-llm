@@ -1,0 +1,21 @@
+﻿{
+    "changed_files":  [
+                          "README.md"
+                      ],
+    "failing_checks":  [
+                           {
+                               "exit_code":  124,
+                               "name":  "python_pytest",
+                               "output_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-02-python_pytest.txt",
+                               "command":  "python -m pytest -q",
+                               "failure_class":  "timeout",
+                               "status":  "failed",
+                               "timeout":  true
+                           }
+                       ],
+    "feature_id":  "feat-001",
+    "repair_attempt":  1,
+    "cycle":  2,
+    "failure_class":  "timeout",
+    "stderr_excerpt":  "command_timeout\r\n"
+}

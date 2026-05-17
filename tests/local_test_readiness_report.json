@@ -1,0 +1,185 @@
+{
+  "blockers": [],
+  "data_root": "/tmp/ME_FM_LLM_data_reboot_test",
+  "enterprise_acceptance": {
+    "evidence_file_count": 45,
+    "expected_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+    "expected_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+    "findings": [],
+    "generated_at": "2026-05-17T00:00:49.045965+00:00",
+    "interpretation": "Source acceptance is separate from production legal readiness. A public/source-ready tree still cannot be used as a production legal product until every external evidence marker is satisfied.",
+    "only_one_txt_file": true,
+    "production_blockers": [
+      "external_data_manifest_attached",
+      "parsed_authority_manifest_attached",
+      "retrieval_index_manifest_attached",
+      "attorney_reviewed_gold_manifest_attached",
+      "measured_release_metrics_attached",
+      "pilot_evidence_attached",
+      "owner_signoffs_attached"
+    ],
+    "production_legal_ready": false,
+    "project_root": "/mnt/data/work_reboot_harden",
+    "public_source_ready": true,
+    "release_lock_present": true,
+    "required_file_count": 31,
+    "source_hashes": {
+      "PASS_CHANGES.txt": "560115ee89f1fad50fb4f1196fd3f1f24486734c306ea03aca96ac2229ec136b",
+      "README.md": "adf5513d5e2f34c913432ea08a1470b1cbffd19b530d3514775d2c9b03353573",
+      "configs/maine_enterprise_acceptance_policy.json": "e94816f9db2267eba830a7f710d6ae928bffb97c940306b121454f8c8ccf7137",
+      "configs/maine_public_release_policy.json": "4968529b6c5019f9363fc75458200c3f8f5039cf714cef2c6726fc813b5e7f6e",
+      "docs/enterprise-acceptance-and-github-publish.md": "47e58fb8e99d71673bc492badda8b5dfe5f323e54b68f3e5a94950b81394059a",
+      "pyproject.toml": "af7a817c98050c8b4e6b6adc6ce4dd612ea8401d6aab1799381a0d9c893a691d",
+      "scripts/collect-enterprise-resources.py": "b13c855130f6eb1c4eb42aa1f6c8e390a04def130c02f6b6221637e3663b193b",
+      "scripts/run-enterprise-preflight.py": "ca4d8bfa1b48fdd8b07b72949d0f746f6ddb3c53b223d0e76454f20ba2bc3d21",
+      "scripts/run-quality-checks.py": "5e7557ec50fac6646e9dd1903e6834616ce3e2fbb2dadb909abc38b93bdf7c1d"
+    },
+    "status": "pass"
+  },
+  "enterprise_preflight": {
+    "blockers": [],
+    "data_root": "/tmp/ME_FM_LLM_data_reboot_test",
+    "external_dirs_planned": [
+      "/tmp/ME_FM_LLM_data_reboot_test/research_resources",
+      "/tmp/ME_FM_LLM_data_reboot_test/official_authority_store",
+      "/tmp/ME_FM_LLM_data_reboot_test/parsed_authority_store",
+      "/tmp/ME_FM_LLM_data_reboot_test/embedding_store",
+      "/tmp/ME_FM_LLM_data_reboot_test/eval_store",
+      "/tmp/ME_FM_LLM_data_reboot_test/release_evidence"
+    ],
+    "generated_at": "2026-05-17T00:00:48.952148+00:00",
+    "missing_configs": [],
+    "missing_scripts": [],
+    "networked_data_ready": false,
+    "next_commands": [
+      "python scripts/collect-enterprise-resources.py --project-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-authority-layer.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/run-release-metrics-evidence.py",
+      "python scripts/audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+    ],
+    "platform": "Linux-4.4.0-x86_64-with-glibc2.41",
+    "public_release_readiness": {
+      "checked_files": 447,
+      "findings": [],
+      "generated_at": "2026-05-17T00:00:48.951612+00:00",
+      "github_ci_present": true,
+      "interpretation": "Public source readiness only. Production legal readiness still requires external official authority, attorney-reviewed evals, measured metrics, security/pilot evidence, and owner signoffs.",
+      "only_one_txt_file": true,
+      "pass_log_present": true,
+      "production_legal_ready": false,
+      "project_root": "/mnt/data/work_reboot_harden",
+      "public_source_ready": true,
+      "release_manifest_clean": true,
+      "required_docs_present": true,
+      "status": "pass"
+    },
+    "python_version": "3.13.5",
+    "repo_data_violations": [],
+    "repo_root": "/mnt/data/work_reboot_harden",
+    "source_preflight_ready": true,
+    "status": "pass",
+    "warnings": []
+  },
+  "generated_at": "2026-05-17T00:00:49.301291+00:00",
+  "interpretation": "Ready to test locally means the source tree, scripts, audits, lockfile, offline fixture pack, public-source hygiene, and external-data-root preflight are runnable. It does not mean the product is ready for legal production use; production legal readiness remains blocked until real external authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and signoffs are attached.",
+  "offline_validation_pack": {
+    "created_files": [
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/offline_validation_pack/fixture_official_source.html",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/official_authority_store/source_manifest.json",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/parsed_authority_store/statutes/offline_fixture_statutes.jsonl",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/parsed_authority_store/rules/offline_fixture_rules.jsonl",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/parsed_authority_store/forms/offline_fixture_forms.jsonl",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/parsed_authority_store/opinions/offline_fixture_opinions.jsonl",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/eval_store/offline_fixture_retrieval_gold.jsonl",
+      "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/release_evidence/offline_validation_pack_evidence.json"
+    ],
+    "data_root": "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture",
+    "eval_store_root": "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/eval_store",
+    "fixture_only": true,
+    "generated_at": "2026-05-17T00:00:48.963260+00:00",
+    "manifest_path": "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/official_authority_store/source_manifest.json",
+    "pack_root": "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/offline_validation_pack",
+    "parsed_store_root": "/tmp/ME_FM_LLM_data_reboot_test/_local_test_readiness_offline_fixture/parsed_authority_store",
+    "status": "pass",
+    "warnings": [
+      "offline validation pack is synthetic and not legal authority"
+    ]
+  },
+  "production_legal_readiness_required_external_evidence": [
+    "official_authority_store/source_manifest.json from a networked live-source run",
+    "parsed_authority_store JSONL outputs linked to snapshot hashes and source spans",
+    "embedding_store retrieval indexes built outside the source repo",
+    "attorney-reviewed gold eval minimums with reviewer metadata",
+    "release_metrics_evidence.json from real gold data meeting GA thresholds",
+    "security/compliance/SRE evidence from the target deployment environment",
+    "pilot evidence from attorney-only and controlled real-matter pilots",
+    "security/legal/product/ops owner signoffs"
+  ],
+  "production_legal_ready": false,
+  "public_github_source_ready": true,
+  "public_source_readiness": {
+    "checked_files": 447,
+    "findings": [],
+    "generated_at": "2026-05-17T00:00:48.553010+00:00",
+    "github_ci_present": true,
+    "interpretation": "Public source readiness only. Production legal readiness still requires external official authority, attorney-reviewed evals, measured metrics, security/pilot evidence, and owner signoffs.",
+    "only_one_txt_file": true,
+    "pass_log_present": true,
+    "production_legal_ready": false,
+    "project_root": "/mnt/data/work_reboot_harden",
+    "public_source_ready": true,
+    "release_manifest_clean": true,
+    "required_docs_present": true,
+    "status": "pass"
+  },
+  "pytest": {
+    "returncode": 0,
+    "status": "skipped",
+    "timed_out": false
+  },
+  "ready_to_test_locally": true,
+  "recommended_windows_test_commands": [
+    "cd C:\\dev\\ME_FM_LLM",
+    "py -3.11 -m pytest -q",
+    "py -3.11 scripts\\run-test-readiness.py --repo-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\run-enterprise-preflight.ps1 -RepoRoot C:\\dev\\ME_FM_LLM -DataRoot C:\\dev\\ME_FM_LLM_data",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\collect-enterprise-resources.ps1 -RepoRoot C:\\dev\\ME_FM_LLM -DataRoot C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\audit-enterprise-resource-collection.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+  ],
+  "release_lock_audit": {
+    "actual_file_count": 445,
+    "actual_source_tree_hash": "391820eaf3765ceddaa90a6e1f1fcd99c5321b61a3f7cffa77ae3cf7e6320df8",
+    "added": [],
+    "changed": [],
+    "expected_file_count": 445,
+    "expected_source_tree_hash": "391820eaf3765ceddaa90a6e1f1fcd99c5321b61a3f7cffa77ae3cf7e6320df8",
+    "generated_at": "2026-05-17T00:00:49.301162+00:00",
+    "project_root": "/mnt/data/work_reboot_harden",
+    "removed": [],
+    "status": "pass"
+  },
+  "repo_root": "/mnt/data/work_reboot_harden",
+  "status": "pass",
+  "supply_chain_summary": {
+    "dependency_count": 0,
+    "findings": [],
+    "generated_at": "2026-05-17T00:00:49.059563+00:00",
+    "optional_dependency_count": 4,
+    "production_legal_ready": false,
+    "project_root": "/mnt/data/work_reboot_harden",
+    "python_requires": ">=3.11",
+    "sbom_path": "/mnt/data/work_reboot_harden/source_sbom.json",
+    "script_count": 64,
+    "status": "pass",
+    "workflow_count": 1
+  },
+  "warnings": [
+    "networked_resource_collection_still_required_for_real_authority",
+    "ready_for_local_testing_not_production_legal_use"
+  ]
+}

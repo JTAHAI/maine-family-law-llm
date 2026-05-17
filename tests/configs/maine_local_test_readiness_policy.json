@@ -1,0 +1,52 @@
+{
+  "policy_version": "post-ga-hardening-test-readiness-v1",
+  "windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "source_test_readiness_checks": [
+    "pytest",
+    "public_source_readiness",
+    "enterprise_preflight",
+    "offline_validation_pack",
+    "release_lockfile_audit",
+    "enterprise_acceptance_evidence",
+    "supply_chain_summary"
+  ],
+  "local_test_modes": [
+    {
+      "mode": "source_only",
+      "purpose": "Prove the checked-out repository builds, imports, tests, packages, and remains free of private/runtime data."
+    },
+    {
+      "mode": "offline_fixture_wiring",
+      "purpose": "Use synthetic external fixtures to prove parser/retrieval/verifier/drafting wiring without treating fixtures as legal authority."
+    },
+    {
+      "mode": "networked_authority_collection",
+      "purpose": "Run the resource collector and authority ingestor against official sources from a networked workstation."
+    },
+    {
+      "mode": "public_github_staging",
+      "purpose": "Stage only source code, docs, configs, tests, scripts, attribution files, CI, and safety policies for a public repository."
+    }
+  ],
+  "production_legal_readiness_required_external_evidence": [
+    "official_authority_store/source_manifest.json from a networked live-source run",
+    "parsed_authority_store JSONL outputs linked to snapshot hashes and source spans",
+    "embedding_store retrieval indexes built outside the source repo",
+    "attorney-reviewed gold eval minimums with reviewer metadata",
+    "release_metrics_evidence.json from real gold data meeting GA thresholds",
+    "security/compliance/SRE evidence from the target deployment environment",
+    "pilot evidence from attorney-only and controlled real-matter pilots",
+    "security/legal/product/ops owner signoffs"
+  ],
+  "recommended_windows_test_commands": [
+    "cd C:\\dev\\ME_FM_LLM",
+    "py -3.11 -m pytest -q",
+    "py -3.11 scripts\\run-test-readiness.py --repo-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\run-enterprise-preflight.ps1 -RepoRoot C:\\dev\\ME_FM_LLM -DataRoot C:\\dev\\ME_FM_LLM_data",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\collect-enterprise-resources.ps1 -RepoRoot C:\\dev\\ME_FM_LLM -DataRoot C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\audit-enterprise-resource-collection.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "interpretation": "Post-GA hardening passes are source/local-readiness controls. Production legal readiness still requires live external data and signoffs.",
+  "offline_validation_pack": {
+    "created_files": [
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/offline_validation_pack/fixture_official_source.html",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/official_authority_store/source_manifest.json",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store/statutes/offline_fixture_statutes.jsonl",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store/rules/offline_fixture_rules.jsonl",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store/forms/offline_fixture_forms.jsonl",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store/opinions/offline_fixture_opinions.jsonl",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/eval_store/offline_fixture_retrieval_gold.jsonl",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/release_evidence/offline_validation_pack_evidence.json"
+    ],
+    "data_root": "/tmp/maine-family-law-llm-post-ga-hardening-data",
+    "eval_store_root": "/tmp/maine-family-law-llm-post-ga-hardening-data/eval_store",
+    "fixture_only": true,
+    "generated_at": "2026-05-16T23:11:11.586083+00:00",
+    "manifest_path": "/tmp/maine-family-law-llm-post-ga-hardening-data/official_authority_store/source_manifest.json",
+    "pack_root": "/tmp/maine-family-law-llm-post-ga-hardening-data/offline_validation_pack",
+    "parsed_store_root": "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store",
+    "status": "pass",
+    "warnings": [
+      "offline validation pack is synthetic and not legal authority"
+    ]
+  },
+  "preflight": {
+    "blockers": [],
+    "data_root": "/tmp/maine-family-law-llm-post-ga-hardening-data",
+    "external_dirs_planned": [
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/research_resources",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/official_authority_store",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/parsed_authority_store",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/embedding_store",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/eval_store",
+      "/tmp/maine-family-law-llm-post-ga-hardening-data/release_evidence"
+    ],
+    "generated_at": "2026-05-16T23:11:11.574930+00:00",
+    "missing_configs": [],
+    "missing_scripts": [],
+    "networked_data_ready": false,
+    "next_commands": [
+      "python scripts/collect-enterprise-resources.py --project-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-authority-layer.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+      "python scripts/run-release-metrics-evidence.py",
+      "python scripts/audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+    ],
+    "platform": "Linux-4.4.0-x86_64-with-glibc2.41",
+    "public_release_readiness": {
+      "checked_files": 400,
+      "findings": [],
+      "generated_at": "2026-05-16T23:11:11.574494+00:00",
+      "github_ci_present": true,
+      "interpretation": "Public source readiness only. Production legal readiness still requires external official authority, attorney-reviewed evals, measured metrics, security/pilot evidence, and owner signoffs.",
+      "only_one_txt_file": true,
+      "pass_log_present": true,
+      "production_legal_ready": false,
+      "project_root": "/mnt/data/work_next",
+      "public_source_ready": true,
+      "release_manifest_clean": true,
+      "required_docs_present": true,
+      "status": "pass"
+    },
+    "python_version": "3.13.5",
+    "repo_data_violations": [],
+    "repo_root": "/mnt/data/work_next",
+    "source_preflight_ready": true,
+    "status": "pass",
+    "warnings": []
+  },
+  "public_release_readiness": {
+    "checked_files": 400,
+    "findings": [],
+    "generated_at": "2026-05-16T23:11:11.968206+00:00",
+    "github_ci_present": true,
+    "interpretation": "Public source readiness only. Production legal readiness still requires external official authority, attorney-reviewed evals, measured metrics, security/pilot evidence, and owner signoffs.",
+    "only_one_txt_file": true,
+    "pass_log_present": true,
+    "production_legal_ready": false,
+    "project_root": "/mnt/data/work_next",
+    "public_source_ready": true,
+    "release_manifest_clean": true,
+    "required_docs_present": true,
+    "status": "pass"
+  },
+  "release_provenance": {
+    "excluded_runtime_dirs": [
+      "runtime",
+      "uploads",
+      "corpora",
+      "vectorstores",
+      "official_authority_store",
+      "parsed_authority_store",
+      "embedding_store",
+      "eval_store",
+      "matter_store",
+      "model_store",
+      "model_registry",
+      "audit_store"
+    ],
+    "file_count": 400,
+    "generated_at": "2026-05-16T23:11:12.100390+00:00",
+    "project_root": "/mnt/data/work_next",
+    "source_tree_hash": "f7da8fa723ba8f485ee4e3655f9f5ba41bf53859598d5b8c2426221754d1e218",
+    "status": "pass",
+    "total_bytes": 3970755
+  },
+  "status": "pass"
+}

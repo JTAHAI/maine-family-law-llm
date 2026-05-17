@@ -1,0 +1,33 @@
+{
+  "policy_name": "maine_matter_ingestion_policy",
+  "version": "pass9-foundation",
+  "default_data_class": "user_provided_confidential_matter_data",
+  "default_training_allowed": false,
+  "store_location": "external_matter_store_only",
+  "required_document_metadata": [
+    "document_id",
+    "matter_id",
+    "filename",
+    "sha256",
+    "source_class",
+    "jurisdiction",
+    "parser_status",
+    "freshness_status",
+    "use_restrictions",
+    "private_data_allowed_for_training"
+  ],
+  "required_outputs": [
+    "issue_tree",
+    "procedural_posture_summary",
+    "timeline",
+    "evidence_map",
+    "missing_record_checklist",
+    "red_flags"
+  ],
+  "blocked_release_locations": [
+    "matter_store",
+    "uploads",
+    "runtime",
+    ".local_data"
+  ]
+}

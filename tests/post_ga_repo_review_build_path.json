@@ -1,0 +1,162 @@
+{
+  "audit_summary": {
+    "authority_build": {
+      "blocker_count": 3,
+      "production_ready": false,
+      "readiness": "authority_build_blocked_until_external_official_snapshots_are_ingested",
+      "total_records": 0
+    },
+    "gold_eval_pack": {
+      "blocker_count": 12,
+      "dataset_count": 12,
+      "production_ready": false,
+      "readiness": "gold_eval_pack_blocked_until_attorney_reviewed_jsonl_meets_minimums"
+    },
+    "release_gates": {
+      "blocker_count": 10,
+      "readiness": "production_release_blocked",
+      "release_allowed": false,
+      "required_metric_count": 10
+    }
+  },
+  "blockers": [
+    "authority:manifest_missing",
+    "authority:minimum_ingested_targets_not_met",
+    "authority:source_class_minimum_not_met",
+    "fixture_evidence_must_be_replaced_before_real_ga",
+    "gold_eval:gold_rows_minimum_not_met:maine_authority_ranking_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_citation_validity_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_drafting_review_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_fact_to_evidence_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_forms_freshness_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_hallucination_negative_cases.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_issue_classification_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_law_court_holding_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_posture_classification_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_quote_span_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_rag_retrieval_gold.jsonl",
+    "gold_eval:gold_rows_minimum_not_met:maine_rule_52_gap_gold.jsonl",
+    "release_metric:missing_metric:attorney_review_sample_present",
+    "release_metric:missing_metric:citation_existence",
+    "release_metric:missing_metric:citation_support",
+    "release_metric:missing_metric:filing_gate_false_pass_rate",
+    "release_metric:missing_metric:form_freshness_detection",
+    "release_metric:missing_metric:hallucination_rate",
+    "release_metric:missing_metric:private_data_packaging",
+    "release_metric:missing_metric:quote_span_verification",
+    "release_metric:missing_metric:retrieval_recall_at_20",
+    "release_metric:missing_metric:source_freshness_report_present"
+  ],
+  "build_path": [
+    {
+      "commands": [
+        "python scripts/ingest-maine-authority.py --data-root <external-data-root>",
+        "python scripts/audit-authority-build.py --data-root <external-data-root>"
+      ],
+      "exit_criteria": [
+        "source_manifest.json exists outside repo",
+        "minimum official source-class counts pass",
+        "every source has hash, snapshot path, parser status, and freshness status"
+      ],
+      "owner_lane": "legal-data-engineering",
+      "priority": "P0",
+      "stage_id": "B1",
+      "status": "pending_external_execution",
+      "title": "Execute live official Maine authority ingestion"
+    },
+    {
+      "commands": [
+        "python scripts/build-parsed-authority-store.py --data-root <external-data-root>",
+        "python scripts/audit-parsed-authority-store.py --data-root <external-data-root>",
+        "python scripts/build-source-update-report.py --data-root <external-data-root>"
+      ],
+      "exit_criteria": [
+        "statutes/rules/forms/opinions JSONL records exist",
+        "records link to snapshot hashes and source spans",
+        "fresh/stale/unknown/superseded status is explicit"
+      ],
+      "owner_lane": "legal-data-engineering",
+      "priority": "P0",
+      "stage_id": "B2",
+      "status": "pending_external_execution",
+      "title": "Build parsed authority store and freshness/update reports"
+    },
+    {
+      "commands": [
+        "python scripts/build-retrieval-indexes.py --data-root <external-data-root>",
+        "python scripts/run-retrieval-smoke-eval.py --data-root <external-data-root>"
+      ],
+      "exit_criteria": [
+        "BM25/vector/hybrid index artifacts exist outside repo",
+        "exact citation/form/case/statute lookup works",
+        "Recall@20 reaches release threshold on attorney-reviewed gold"
+      ],
+      "owner_lane": "retrieval-engineering",
+      "priority": "P0",
+      "stage_id": "B3",
+      "status": "pending_external_execution",
+      "title": "Build retrieval indexes and tune measured retrieval"
+    },
+    {
+      "commands": [
+        "python scripts/build-gold-annotation-queue.py --manifest <external-data-root>/official_authority_store/source_manifest.json --output <external-eval-root>/gold_annotation_queue.jsonl",
+        "python scripts/audit-gold-eval-pack.py --eval-root <external-eval-root>"
+      ],
+      "exit_criteria": [
+        "minimum row counts are met for every gold dataset",
+        "seed/synthetic rows do not count as gold",
+        "private-data training flags are false by default",
+        "attorney reviewer metadata is present"
+      ],
+      "owner_lane": "attorney-review-operations",
+      "priority": "P0",
+      "stage_id": "B4",
+      "status": "pending_external_execution",
+      "title": "Produce attorney-reviewed gold eval pack"
+    },
+    {
+      "commands": [
+        "python scripts/audit-enterprise-readiness.py --data-root <external-data-root> --eval-root <external-eval-root>"
+      ],
+      "exit_criteria": [
+        "retrieval, citation, quote, hallucination, form-freshness, filing-gate, and privacy metrics pass",
+        "metrics include sample size, basis, reviewer status, and pass/fail",
+        "missing/synthetic/undersized metrics block release"
+      ],
+      "owner_lane": "evaluation-engineering",
+      "priority": "P0",
+      "stage_id": "B5",
+      "status": "pending_external_execution",
+      "title": "Run full release metrics on real gold data"
+    },
+    {
+      "commands": [
+        "python scripts/run-security-compliance-sre-evidence.py",
+        "python scripts/run-pilot-evidence.py",
+        "python scripts/run-ga-release-evidence.py"
+      ],
+      "exit_criteria": [
+        "evidence uses real deployment and pilot artifacts rather than fixtures",
+        "security/legal/product/ops owners approve with accountable signoffs",
+        "no open P0/P1 blockers remain"
+      ],
+      "owner_lane": "security-ops-product-legal",
+      "priority": "P1",
+      "stage_id": "B6",
+      "status": "pending_external_execution",
+      "title": "Attach real security, compliance, SRE, pilot, and owner-signoff evidence"
+    }
+  ],
+  "data_root": "/mnt/data/maine-family-law-llm-data",
+  "eval_root": "/mnt/data/work_next6/eval_data",
+  "fixture_evidence_detected": true,
+  "interpretation": "All numbered pass source-control foundations are present, but this repo is not a real production GA legal product until the external build path is executed and fixture evidence is replaced with live official Maine authority, attorney-reviewed gold data, measured release metrics, pilot/security evidence, and accountable signoffs.",
+  "numbered_pass_foundations_complete": true,
+  "only_one_pass_txt_file": true,
+  "production_ready": false,
+  "production_status": "blocked_real_build_path_required",
+  "project_root": "/mnt/data/work_next6",
+  "single_pass_log_present": true,
+  "source_repo_clean": true,
+  "status": "pass"
+}

@@ -1,0 +1,345 @@
+{
+  "document_audit_event_counts": [
+    6
+  ],
+  "document_training_allowed": [
+    false
+  ],
+  "encrypted_paths": [
+    "/tmp/maine-family-law-llm-pass35-pass36-evidence-script/matter_store/tenant-pass35-36/matter-pass35-36/doc_2a184eb06f2b.json.enc"
+  ],
+  "generated_at": "2026-05-16T20:55:04.503437+00:00",
+  "intake_report": {
+    "documents": [
+      {
+        "audit_history": [
+          {
+            "event_type": "document_received",
+            "metadata": {
+              "filename": "motion_to_modify.txt",
+              "matter_id": "matter-pass35-36",
+              "tenant_id": "tenant-pass35-36"
+            },
+            "timestamp": "2026-05-16T20:55:04.220376+00:00"
+          },
+          {
+            "event_type": "text_extracted",
+            "metadata": {
+              "status": "provided_text"
+            },
+            "timestamp": "2026-05-16T20:55:04.220386+00:00"
+          },
+          {
+            "event_type": "private_data_scanned",
+            "metadata": {
+              "finding_kinds": []
+            },
+            "timestamp": "2026-05-16T20:55:04.220391+00:00"
+          },
+          {
+            "event_type": "document_classified",
+            "metadata": {
+              "document_type": "motion"
+            },
+            "timestamp": "2026-05-16T20:55:04.220394+00:00"
+          },
+          {
+            "event_type": "redaction_applied",
+            "metadata": {
+              "redaction_count": 0
+            },
+            "timestamp": "2026-05-16T20:55:04.220397+00:00"
+          },
+          {
+            "event_type": "training_policy_applied",
+            "metadata": {
+              "private_data_allowed_for_training": false
+            },
+            "timestamp": "2026-05-16T20:55:04.220400+00:00"
+          }
+        ],
+        "classification": {
+          "confidence": 0.85,
+          "confidentiality_flags": [],
+          "document_type": "motion",
+          "privilege_flags": [],
+          "sealed_record_warnings": []
+        },
+        "created_at": "2026-05-16T20:55:04.220422+00:00",
+        "data_class": "user_provided_confidential_matter_data",
+        "document_id": "doc_2a184eb06f2b",
+        "extracted_text_status": "provided_text",
+        "filename": "motion_to_modify.txt",
+        "freshness_status": "user_provided_not_authority",
+        "jurisdiction": "maine",
+        "matter_id": "matter-pass35-36",
+        "parser_status": "parsed_text",
+        "pii_findings": [],
+        "private_data_allowed_for_training": false,
+        "redacted_text": "Motion to modify parental rights and responsibilities. On 01/03/2026 the child moved to a new school. Child support should be reviewed.",
+        "redaction_count": 0,
+        "retention_action": "delete_source_file_derived_text_embeddings_and_private_work_product",
+        "retention_policy_id": "matter_policy_defined",
+        "sha256": "2a184eb06f2beb60653bc048797f3692ad8ce5a5ac688db91d45a87b6ce00edb",
+        "source_class": "user_provided_confidential_matter_data",
+        "storage_encryption_status": "not_persisted",
+        "tenant_id": "tenant-pass35-36",
+        "text": "Motion to modify parental rights and responsibilities. On 01/03/2026 the child moved to a new school. Child support should be reviewed.",
+        "use_restrictions": [
+          "matter_only",
+          "not_for_shared_training",
+          "not_official_authority"
+        ]
+      }
+    ],
+    "evidence_map": [
+      {
+        "fact": "Motion to modify parental rights and responsibilities.",
+        "fact_id": "fact_0",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.7,
+            "date": null,
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_0",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 54,
+            "span_start": 0,
+            "support_score": 1.0,
+            "text": "Motion to modify parental rights and responsibilities."
+          }
+        ]
+      },
+      {
+        "fact": "On 01/03/2026 the child moved to a new school.",
+        "fact_id": "fact_1",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.45,
+            "date": "01/03/2026",
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_1",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 101,
+            "span_start": 55,
+            "support_score": 1.0,
+            "text": "On 01/03/2026 the child moved to a new school."
+          }
+        ]
+      },
+      {
+        "fact": "Child support should be reviewed.",
+        "fact_id": "fact_2",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.7,
+            "date": null,
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_2",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 135,
+            "span_start": 102,
+            "support_score": 1.0,
+            "text": "Child support should be reviewed."
+          }
+        ]
+      }
+    ],
+    "issue_labels": [
+      "child_support",
+      "parental_rights_responsibilities"
+    ],
+    "legal_readiness": "matter_ingestion_foundation_only_not_enterprise_ready",
+    "matter": {
+      "audit_history": [],
+      "created_at": "2026-05-16T20:55:04.220123+00:00",
+      "data_class": "user_provided_confidential_matter_data",
+      "jurisdiction": "maine",
+      "matter_id": "matter-pass35-36",
+      "owner_user_id": null,
+      "private_data_allowed_for_training": false,
+      "retention_policy_id": "matter_policy_defined",
+      "review_required": true,
+      "tenant_id": "tenant-pass35-36",
+      "title": "Matter evidence packet",
+      "training_allowed": false
+    },
+    "missing_record_checklist": [
+      "financial_disclosure_or_child_support_worksheet_missing",
+      "underlying_order_missing"
+    ],
+    "procedural_posture": "motion_to_modify",
+    "red_flags": [],
+    "review_required": true,
+    "timeline": [
+      {
+        "confidence": 0.45,
+        "date": "01/03/2026",
+        "description": "On 01/03/2026 the child moved to a new school.",
+        "event_id": "doc_2a184eb06f2b_fact_1",
+        "matter_id": "matter-pass35-36",
+        "review_required": true,
+        "source_document_id": "doc_2a184eb06f2b",
+        "span_end": 101,
+        "span_start": 55
+      }
+    ],
+    "warnings": []
+  },
+  "matter_training_allowed": false,
+  "stage": "pass35_pass36_secure_matter_evidence",
+  "status": "pass",
+  "work_product": {
+    "authority_matrix": [
+      {
+        "authority_status": "verified_official_maine",
+        "citation": "19-A M.R.S. \u00a7 1653",
+        "freshness_status": "fresh",
+        "issue_labels": [
+          "parental_rights_responsibilities",
+          "child_support"
+        ],
+        "jurisdiction": "maine",
+        "review_required": false,
+        "source_class": "statute_section_reference",
+        "source_id": "statute-19a-1653",
+        "title": "Parental rights and responsibilities"
+      }
+    ],
+    "evidence_map": [
+      {
+        "fact": "Motion to modify parental rights and responsibilities.",
+        "fact_id": "fact_0",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.7,
+            "date": null,
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_0",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 54,
+            "span_start": 0,
+            "support_score": 1.0,
+            "text": "Motion to modify parental rights and responsibilities."
+          }
+        ]
+      },
+      {
+        "fact": "On 01/03/2026 the child moved to a new school.",
+        "fact_id": "fact_1",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.45,
+            "date": "01/03/2026",
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_1",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 101,
+            "span_start": 55,
+            "support_score": 1.0,
+            "text": "On 01/03/2026 the child moved to a new school."
+          }
+        ]
+      },
+      {
+        "fact": "Child support should be reviewed.",
+        "fact_id": "fact_2",
+        "review_required": true,
+        "support_status": "supported",
+        "supporting_evidence": [
+          {
+            "confidence": 0.7,
+            "date": null,
+            "document_id": "doc_2a184eb06f2b",
+            "evidence_id": "doc_2a184eb06f2b_fact_2",
+            "source_class": "user_provided_confidential_matter_data",
+            "source_document_id": "doc_2a184eb06f2b",
+            "span_end": 135,
+            "span_start": 102,
+            "support_score": 1.0,
+            "text": "Child support should be reviewed."
+          }
+        ]
+      }
+    ],
+    "exhibit_index": [
+      {
+        "data_class": "user_provided_confidential_matter_data",
+        "document_id": "doc_2a184eb06f2b",
+        "document_type": "motion",
+        "exhibit_id": "exhibit_001",
+        "filename": "motion_to_modify.txt",
+        "retention_policy_id": "matter_policy_defined",
+        "review_required": true,
+        "sha256": "2a184eb06f2beb60653bc048797f3692ad8ce5a5ac688db91d45a87b6ce00edb"
+      }
+    ],
+    "export_status": "review_required",
+    "issue_tree": {
+      "by_issue": {
+        "child_support": {
+          "authority_count": 1,
+          "facts": [
+            "Child support should be reviewed."
+          ]
+        },
+        "parental_rights_responsibilities": {
+          "authority_count": 1,
+          "facts": [
+            "Motion to modify parental rights and responsibilities."
+          ]
+        }
+      },
+      "jurisdiction": "maine",
+      "labels": [
+        "child_support",
+        "parental_rights_responsibilities"
+      ]
+    },
+    "matter_id": "matter-pass35-36",
+    "missing_facts": [],
+    "missing_record_checklist": [
+      "financial_disclosure_or_child_support_worksheet_missing",
+      "underlying_order_missing"
+    ],
+    "procedural_posture_summary": {
+      "known_limitations": [
+        "procedural posture is deterministic/rule-based until attorney review",
+        "matter documents are user-provided and not legal authority"
+      ],
+      "procedural_posture": "motion_to_modify",
+      "review_required": true
+    },
+    "red_flags": [],
+    "review_required": true,
+    "timeline": [
+      {
+        "confidence": 0.45,
+        "date": "01/03/2026",
+        "description": "On 01/03/2026 the child moved to a new school.",
+        "event_id": "doc_2a184eb06f2b_fact_1",
+        "matter_id": "matter-pass35-36",
+        "review_required": true,
+        "source_document_id": "doc_2a184eb06f2b",
+        "span_end": 101,
+        "span_start": 55
+      }
+    ],
+    "warnings": []
+  }
+}

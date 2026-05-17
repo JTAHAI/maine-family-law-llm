@@ -1,0 +1,179 @@
+{
+  "artifacts": [
+    {
+      "artifact_type": "admin_guide",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Admin guide",
+      "path_or_uri": "docs/admin-guide.md",
+      "present": true,
+      "sha256": "sha256:5ee95c424daf452672265a3d990f38cebfa3537efd213d5f4b45102cc2f216bc",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "attorney_reviewer_guide",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Attorney reviewer guide",
+      "path_or_uri": "docs/attorney-reviewer-guide.md",
+      "present": true,
+      "sha256": "sha256:9c7145a4b020fe2eb66e8d3fac5861368c071abfc4dcbe2e148dfadec9957abe",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "clean_source_zip",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Clean source ZIP",
+      "path_or_uri": "dist/maine-family-law-llm-1.18.0-pass50-pass51-ga-release-controls.zip",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "external_legal_data_product_manifest",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "External legal data product manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/external-legal-data-product-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "gold_eval_pack_manifest",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Gold eval pack manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/gold-eval-pack-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "incident_rollback_runbook",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Incident/rollback runbook",
+      "path_or_uri": "docs/incident-rollback-runbook.md",
+      "present": true,
+      "sha256": "sha256:6283b6092100755bfc7c424250a8bab11dc5474e6d0441f4c71ab855c7ebe563",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "model_update_runbook",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Model update runbook",
+      "path_or_uri": "docs/model-update-runbook.md",
+      "present": true,
+      "sha256": "sha256:9caa5c4820e2fe6365bf6fff3bc1785b6607be7f5bab7b9c3207cbb569c652a6",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "parsed_authority_build_manifest",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Parsed authority build manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/parsed-authority-build-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "release_metrics_json",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Release metrics JSON",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/release-metrics.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "retrieval_indexes_manifest",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Retrieval indexes manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/retrieval-indexes-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "security_governance_packet",
+      "external": true,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Security/governance packet",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/security-governance-packet.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "smoke_evidence_json",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Smoke/evidence JSON",
+      "path_or_uri": "smoke_evidence_pass50_pass51_ga_release.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "source_update_runbook",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "Source update runbook",
+      "path_or_uri": "docs/source-update-runbook.md",
+      "present": true,
+      "sha256": "sha256:438ef6029e9a636fd4479958ee54ec08002cfb22f0b09744869fc9ffe6b9de73",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "user_guide",
+      "external": false,
+      "generated_at": "2026-05-17T00:29:48.863412+00:00",
+      "immutable": true,
+      "name": "User guide",
+      "path_or_uri": "docs/user-guide.md",
+      "present": true,
+      "sha256": "sha256:00e850169e578b5cf16440d8d0b5db8b11f971ed00fe2c0efb5bb2f1d34c485e",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    }
+  ],
+  "blockers": [],
+  "controls": {
+    "attorney_reviewed_evals_present": true,
+    "audit_trails_present": true,
+    "pilot_evidence_present": true,
+    "private_matter_data_protected": true,
+    "release_metrics_pass": true,
+    "rollback_and_maintenance_operations_present": true,
+    "runs_from_clean_deployment": true,
+    "security_controls_present": true,
+    "unsupported_filing_ready_output_blocked": true,
+    "uses_real_official_maine_authority": true
+  },
+  "ga_shipped": true,
+  "generated_at": "2026-05-17T00:29:48.918952+00:00",
+  "maintenance_operations_ready": true,
+  "release_candidate_status": "pass",
+  "release_name": "maine-family-law-llm",
+  "shipment_manifest_hash": "d105dd52cdfced88ee21553ee29c9b04d53f9f37991e285c0d1650e071533125",
+  "status": "pass",
+  "version": "1.18.0-pass50-pass51-ga-release-controls"
+}

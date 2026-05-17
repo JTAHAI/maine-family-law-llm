@@ -1,0 +1,63 @@
+{
+  "version": "1.0-pass1",
+  "default_classification": "user_provided_confidential_matter_data",
+  "classes": {
+    "official_public_authority": {
+      "description": "Official Maine or federal legal authority acquired from authoritative public sources.",
+      "allowed_stores": ["official_authority_store", "parsed_authority_store"],
+      "training_allowed_by_default": true,
+      "release_packaging_allowed": false,
+      "requires_use_restrictions": true
+    },
+    "public_non_official_source": {
+      "description": "Public legal information that is not official authority, such as public mirrors or explainers.",
+      "allowed_stores": ["parsed_authority_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false,
+      "requires_use_restrictions": true
+    },
+    "licensed_secondary_source": {
+      "description": "Treatises, CLE materials, practice guides, or secondary sources subject to license terms.",
+      "allowed_stores": ["parsed_authority_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false,
+      "requires_use_restrictions": true
+    },
+    "user_provided_confidential_matter_data": {
+      "description": "User-uploaded pleadings, exhibits, correspondence, transcripts, or work product.",
+      "allowed_stores": ["matter_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false,
+      "requires_encryption": true,
+      "requires_redaction_before_eval": true
+    },
+    "synthetic_eval_data": {
+      "description": "Synthetic benchmark and smoke-test records with no private client facts.",
+      "allowed_stores": ["eval_store"],
+      "training_allowed_by_default": true,
+      "release_packaging_allowed": true,
+      "requires_private_data_scan": true
+    },
+    "attorney_reviewed_eval_data": {
+      "description": "Attorney-reviewed examples approved for eval use after privacy and licensing review.",
+      "allowed_stores": ["eval_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false,
+      "requires_review_status": true,
+      "requires_private_data_scan": true
+    },
+    "model_artifact": {
+      "description": "Model weights, adapter files, tokenizers, embeddings, and derived model artifacts.",
+      "allowed_stores": ["model_registry", "embedding_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false
+    },
+    "audit_record": {
+      "description": "Immutable operational records showing user, matter, source, model, prompt, output, verifier, and export status.",
+      "allowed_stores": ["audit_store"],
+      "training_allowed_by_default": false,
+      "release_packaging_allowed": false,
+      "requires_retention_policy": true
+    }
+  }
+}

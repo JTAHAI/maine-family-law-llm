@@ -1,0 +1,101 @@
+{
+  "stage": "enterprise_pass_2_3_ingestion_and_canonical_documents",
+  "generated_at": "2026-05-16T18:45:56.660216+00:00",
+  "checks": {
+    "pytest": {
+      "command": "/opt/pyvenv/bin/python -m pytest -q",
+      "returncode": 0,
+      "stdout": "....................................                                     [100%]\n",
+      "stderr": ""
+    },
+    "orchestrator": {
+      "status": "pass",
+      "stage": "enterprise_pass_2_3_ingestion_and_canonical_documents",
+      "checks": {
+        "eval_data_parse": {
+          "status": "pass",
+          "datasets": [
+            {
+              "path": "eval_data/maine_drafting_review_gold.jsonl",
+              "rows": 1,
+              "parse_errors": 0
+            },
+            {
+              "path": "eval_data/maine_hallucination_negative_cases.jsonl",
+              "rows": 2,
+              "parse_errors": 0
+            }
+          ],
+          "dataset_count": 2,
+          "total_rows": 3,
+          "parse_errors": 0,
+          "retrieval_accuracy": null,
+          "citation_validity": null,
+          "quote_span_accuracy": null,
+          "hallucination_rate": null,
+          "metric_basis": "dataset_parse_smoke_only"
+        },
+        "release_tree_scan": {
+          "release_name": "maine-family-law-llm",
+          "version": "0.9.0-pass2-pass3",
+          "generated_at": "2026-05-16T18:45:56.656913+00:00",
+          "contains_private_data": false,
+          "runtime_state_packaged": false,
+          "private_or_runtime_artifacts": [],
+          "review_required_by_default": true,
+          "filing_ready_export_default": "blocked",
+          "canonical_stores_packaged": false,
+          "data_boundary_status": "pass",
+          "legal_readiness": "official_ingestion_and_canonical_model_foundation_only_not_enterprise_ready"
+        },
+        "data_boundary_policy": {
+          "status": "pass",
+          "checks": {
+            "all_data_classes_configured": true,
+            "all_canonical_stores_configured": true,
+            "retention_covers_all_classes": true,
+            "matter_data_allowed_only_in_matter_store": true,
+            "matter_data_training_blocked_by_default": true,
+            "matter_data_packaging_blocked_by_default": true,
+            "synthetic_eval_private_scan_passed": true
+          },
+          "private_scan_findings": [],
+          "policy_version": "1.0-pass1"
+        },
+        "official_authority_ingestion": {
+          "status": "pass",
+          "checks": {
+            "catalog_loaded": true,
+            "catalog_matches_config": true,
+            "catalog_targets_are_official_domains": true,
+            "revisor_parser_extracts_sections": true,
+            "forms_parser_extracts_form_ids": true,
+            "lawcourt_parser_extracts_pdf_opinions": true
+          },
+          "official_target_count": 6,
+          "parser_smoke": {
+            "statute_sections": 1,
+            "forms": 1,
+            "lawcourt_opinions": 1
+          }
+        },
+        "canonical_document_model": {
+          "status": "pass",
+          "checks": {
+            "required_objects_configured": true,
+            "statute_section_validates": true,
+            "source_card_has_citation": true,
+            "chunks_have_parent_and_offsets": true,
+            "arbitrary_token_blobs_disallowed": true
+          },
+          "chunk_count": 4,
+          "model_version": "0.9.0-pass2-pass3"
+        }
+      },
+      "review_required_by_default": true,
+      "legal_readiness": "official_ingestion_and_canonical_model_foundation_only_not_enterprise_ready"
+    }
+  },
+  "status": "pass",
+  "legal_readiness": "official_ingestion_and_canonical_model_foundation_only_not_enterprise_ready"
+}

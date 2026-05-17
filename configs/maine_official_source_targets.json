@@ -1,0 +1,360 @@
+{
+  "version": "1.1-post-ga-pass52-court-rules-pdf-source-repair",
+  "policy": "Official Maine authority targets are ingested into external canonical stores, never packaged in the source repository. This catalog is broad enough to drive a production data-product ingest job; the source ZIP still must not include the resulting corpus, vector stores, OCR caches, or runtime databases.",
+  "targets": [
+    {
+      "target_id": "me-revisor-title-4-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/4/title4ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 2,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Courts and court officers; family division/statutory court structure"
+    },
+    {
+      "target_id": "me-revisor-title-4-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/4/title4.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Courts and court officers; family division/statutory court structure full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-5-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/5/title5ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 2,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Protection from harassment and administrative records overlaps"
+    },
+    {
+      "target_id": "me-revisor-title-5-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/5/title5.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Protection from harassment and administrative records overlaps full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-14-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/14/title14ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 2,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Court procedure and civil remedies overlaps"
+    },
+    {
+      "target_id": "me-revisor-title-14-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/14/title14.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Court procedure and civil remedies overlaps full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-15-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/15/title15ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 2,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Criminal procedure and protection-order overlaps"
+    },
+    {
+      "target_id": "me-revisor-title-15-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/15/title15.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Criminal procedure and protection-order overlaps full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-17a-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/17-a/title17-Ach0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 2,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Maine Criminal Code overlaps with domestic violence and family safety"
+    },
+    {
+      "target_id": "me-revisor-title-17a-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/17-a/title17-A.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Maine Criminal Code overlaps with domestic violence and family safety full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-18c-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/18-c/title18-Cch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 1,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Probate Code overlaps with guardianship and adoption-adjacent issues"
+    },
+    {
+      "target_id": "me-revisor-title-18c-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/18-c/title18-C.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Probate Code overlaps with guardianship and adoption-adjacent issues full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-19-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/19/title19ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 1,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Domestic relations legacy provisions"
+    },
+    {
+      "target_id": "me-revisor-title-19-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/19/title19.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Domestic relations legacy provisions full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-19a-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/19-a/title19-Ach0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 1,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Domestic Relations core family-law title"
+    },
+    {
+      "target_id": "me-revisor-title-19a-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/19-a/title19-A.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Domestic Relations core family-law title full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-revisor-title-22-index",
+      "source_class": "statute_title_index",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/22/title22ch0sec0.html",
+      "parser_name": "maine_revisor_title_index",
+      "priority": 1,
+      "freshness_strategy": "revisor_data_extracted_timestamp",
+      "notes": "Health and welfare / child protective services overlaps"
+    },
+    {
+      "target_id": "me-revisor-title-22-pdf",
+      "source_class": "statute_title_pdf",
+      "jurisdiction": "maine",
+      "url": "https://legislature.maine.gov/statutes/22/title22.pdf",
+      "parser_name": "pdf_snapshot",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Health and welfare / child protective services overlaps full PDF snapshot for hash/diff comparison."
+    },
+    {
+      "target_id": "me-courts-rules-index",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/index.html",
+      "parser_name": "maine_rules_index",
+      "priority": 1,
+      "freshness_strategy": "page_updated_or_retrieved_timestamp",
+      "notes": "Maine Judicial Branch court rules index; authoritative discovery page for current procedural rules and rule orders."
+    },
+    {
+      "target_id": "me-courts-civil-rules",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/rules-civil.html",
+      "parser_name": "maine_rules_index",
+      "priority": 1,
+      "freshness_strategy": "page_updated_or_retrieved_timestamp",
+      "notes": "Maine Rules of Civil Procedure including family division rules."
+    },
+    {
+      "target_id": "me-courts-appellate-rules",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/text/mr_app_p_plus_2024-11-01.pdf",
+      "parser_name": "maine_rules_pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Maine Rules of Appellate Procedure complete with advisory notes PDF for appeal preservation and record issues.",
+      "expected_content_type": "application/pdf"
+    },
+    {
+      "target_id": "me-courts-evidence-rules",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/text/mr_evid_plus_2018-06-29.pdf",
+      "parser_name": "maine_rules_pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Maine Rules of Evidence complete with advisory notes PDF for proof, privilege, and admissibility issues.",
+      "expected_content_type": "application/pdf"
+    },
+    {
+      "target_id": "me-courts-probate-rules",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/text/mr_prob_p_only_2019-04-11.pdf",
+      "parser_name": "maine_rules_pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Maine Rules of Probate Procedure PDF for guardianship and probate/family overlap issues.",
+      "expected_content_type": "application/pdf"
+    },
+    {
+      "target_id": "me-courts-electronic-court-systems-rules",
+      "source_class": "court_rules_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/text/mrecs.pdf",
+      "parser_name": "maine_rules_pdf",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Maine Rules of Electronic Court Systems PDF for eCourts access, electronic filing/service, and record-access workflow issues."
+    },
+    {
+      "target_id": "me-courts-rule-120-standing-order",
+      "source_class": "court_policy_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/rules/text/mr_civ_p_120_standing_order_2023-03-09.pdf",
+      "parser_name": "maine_rules_pdf",
+      "expected_content_type": "application/pdf",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_pdf_metadata",
+      "notes": "Standing order regarding M.R. Civ. P. 120 findings in family matters; policy authority for Rule 52/family-findings workflows."
+    },
+    {
+      "target_id": "me-courts-forms-index",
+      "source_class": "court_forms_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/forms/index.html",
+      "parser_name": "maine_forms_index",
+      "priority": 1,
+      "freshness_strategy": "page_updated_or_retrieved_timestamp",
+      "notes": "Maine Judicial Branch official forms landing page."
+    },
+    {
+      "target_id": "me-courts-records-access-policy",
+      "source_class": "court_policy_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/maine-courts/records.html",
+      "parser_name": "maine_rules_index",
+      "priority": 2,
+      "freshness_strategy": "page_updated_or_retrieved_timestamp",
+      "notes": "Maine Judicial Branch public record access policy source for privacy/sealed-record checks."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2026",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2026/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2026."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2025",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2025/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2025."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2024",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2024/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 1,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2024."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2023",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2023/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2023."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2022",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2022/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2022."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2021",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2021/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2021."
+    },
+    {
+      "target_id": "me-lawcourt-opinions-2020",
+      "source_class": "law_court_opinion_index",
+      "jurisdiction": "maine",
+      "url": "https://www.courts.maine.gov/courts/sjc/lawcourt/2020/index.html",
+      "parser_name": "maine_law_court_opinion_index",
+      "priority": 2,
+      "freshness_strategy": "retrieved_timestamp_and_opinion_links",
+      "notes": "Maine Supreme Judicial Court / Law Court published opinions index for 2020."
+    }
+  ]
+}

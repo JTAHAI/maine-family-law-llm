@@ -1,0 +1,51 @@
+{
+  "version": "post-ga-full-ga-workbench-1",
+  "purpose": "Single operator workbench for driving the repo from local/source readiness through networked authority validation and final production promotion without allowing fixture evidence to pass as GA.",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "evidence_inventory_files": [
+    "official_authority_store/source_manifest.json",
+    "parsed_authority_store/parsed_authority_manifest.json",
+    "embedding_store/retrieval_index_manifest.json",
+    "eval_store/gold_eval_pack_manifest.json",
+    "eval_store/release_metrics_evidence.json",
+    "release_evidence/security_governance_packet.json",
+    "release_evidence/pilot_evidence_packet.json",
+    "release_evidence/owner_signoffs.json",
+    "release_evidence/rollback_package_manifest.json"
+  ],
+  "fixture_markers": [
+    "fixture",
+    "offline-smoke",
+    "sample-only",
+    "synthetic-only",
+    "not_production",
+    "placeholder"
+  ],
+  "phase_order": [
+    "source_local_test",
+    "networked_official_authority",
+    "parsed_authority_and_indexes",
+    "attorney_reviewed_gold",
+    "release_metrics",
+    "pilot_security_and_signoffs",
+    "production_promotion"
+  ],
+  "windows_full_ga_commands": [
+    "cd C:\\dev\\ME_FM_LLM",
+    "python scripts\\run-operator-test-battery.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\collect-enterprise-resources.py --project-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\audit-authority-build.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\audit-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-authority-layer.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-gold-annotation-queue.py --manifest C:\\dev\\ME_FM_LLM_data\\official_authority_store\\source_manifest.json --output C:\\dev\\ME_FM_LLM_data\\eval_store\\gold_annotation_queue.jsonl",
+    "python scripts\\audit-gold-eval-pack.py --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store",
+    "python scripts\\run-networked-source-gate.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\build-full-ga-workbench.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts\\run-production-promotion-gate.py --data-root C:\\dev\\ME_FM_LLM_data"
+  ],
+  "production_readiness_rule": "Only production_promotion pass may mark production_legal_ready true. All earlier phases can pass while the build remains non-production."
+}

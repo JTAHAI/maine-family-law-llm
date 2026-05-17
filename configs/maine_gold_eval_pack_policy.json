@@ -1,0 +1,62 @@
+{
+  "annotation_queue_policy": {
+    "confidence_required_for_promotion": true,
+    "conflict_resolution_required_for_disagreement": true,
+    "default_double_review_required": true,
+    "queue_rows_are_not_gold": true,
+    "reviewer_identity_required_for_promotion": true,
+    "spreadsheet_export_allowed": true
+  },
+  "annotation_queue_task_types": [
+    "rag_retrieval",
+    "citation_validity",
+    "quote_span",
+    "hallucination_negative",
+    "forms_freshness",
+    "drafting_review",
+    "issue_classification",
+    "posture_classification",
+    "authority_ranking",
+    "fact_to_evidence",
+    "law_court_holding",
+    "rule_52_gap"
+  ],
+  "attorney_review_required": true,
+  "private_data_training_allowed": false,
+  "purpose": "Gold evaluation pack policy for attorney-reviewed Maine legal data-product release gates.",
+  "release_metrics_policy": {
+    "attorney_review_required_for_legal_quality_metrics": true,
+    "missing_metric_blocks_ga": true,
+    "private_data_training_flag_must_be_false": true,
+    "synthetic_seed_metrics_block_ga": true,
+    "undersized_metric_blocks_ga": true
+  },
+  "required_fields": [
+    "source_id",
+    "source_class",
+    "jurisdiction",
+    "text_span",
+    "label",
+    "annotator_or_generation_method",
+    "confidence",
+    "hash",
+    "created_at",
+    "review_status",
+    "private_data_allowed_for_training"
+  ],
+  "required_gold_dataset_minimums": {
+    "maine_authority_ranking_gold.jsonl": 250,
+    "maine_citation_validity_gold.jsonl": 500,
+    "maine_drafting_review_gold.jsonl": 100,
+    "maine_fact_to_evidence_gold.jsonl": 250,
+    "maine_forms_freshness_gold.jsonl": 100,
+    "maine_hallucination_negative_cases.jsonl": 250,
+    "maine_issue_classification_gold.jsonl": 250,
+    "maine_law_court_holding_gold.jsonl": 150,
+    "maine_posture_classification_gold.jsonl": 150,
+    "maine_quote_span_gold.jsonl": 500,
+    "maine_rag_retrieval_gold.jsonl": 500,
+    "maine_rule_52_gap_gold.jsonl": 100
+  },
+  "version": "2.0-pass26-pass28-attorney-queue-gold-release-metrics"
+}

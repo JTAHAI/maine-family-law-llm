@@ -1,0 +1,11 @@
+﻿{
+    "requirements_file":  "C:\\Users\\justi\\Downloads\\Maine Family Law LLM.txt",
+    "target_repo":  "C:\\dev\\ME_FM_LLM",
+    "generated_at":  "2026-05-17T14:57:21.9582664Z",
+    "failure_class":  "no_requirements_found",
+    "features":  [
+
+                 ],
+    "model":  "qwen2.5-coder:14b",
+    "mode":  "FullSend"
+}

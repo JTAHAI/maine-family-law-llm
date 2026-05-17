@@ -1,0 +1,56 @@
+{
+  "stage": "enterprise_pass_0_repo_hardening",
+  "generated_at": "2026-05-16T17:29:46.753661+00:00",
+  "checks": {
+    "pytest": {
+      "command": "/opt/pyvenv/bin/python -m pytest -q",
+      "returncode": 0,
+      "stdout": ".............                                                            [100%]\n",
+      "stderr": ""
+    },
+    "orchestrator": {
+      "status": "pass",
+      "stage": "enterprise_pass_0_repo_hardening",
+      "checks": {
+        "eval_data_parse": {
+          "status": "pass",
+          "datasets": [
+            {
+              "path": "eval_data/maine_drafting_review_gold.jsonl",
+              "rows": 1,
+              "parse_errors": 0
+            },
+            {
+              "path": "eval_data/maine_hallucination_negative_cases.jsonl",
+              "rows": 2,
+              "parse_errors": 0
+            }
+          ],
+          "dataset_count": 2,
+          "total_rows": 3,
+          "parse_errors": 0,
+          "retrieval_accuracy": null,
+          "citation_validity": null,
+          "quote_span_accuracy": null,
+          "hallucination_rate": null,
+          "metric_basis": "dataset_parse_smoke_only"
+        },
+        "release_tree_scan": {
+          "release_name": "maine-family-law-llm",
+          "version": "0.7.0-pass0",
+          "generated_at": "2026-05-16T17:29:46.753576+00:00",
+          "contains_private_data": false,
+          "runtime_state_packaged": false,
+          "private_or_runtime_artifacts": [],
+          "review_required_by_default": true,
+          "filing_ready_export_default": "blocked",
+          "legal_readiness": "scaffold_only_not_enterprise_ready"
+        }
+      },
+      "review_required_by_default": true,
+      "legal_readiness": "scaffold_only_not_enterprise_ready"
+    }
+  },
+  "status": "pass",
+  "legal_readiness": "scaffold_only_not_enterprise_ready"
+}

@@ -1,0 +1,27 @@
+{
+  "version": "0.9.0-pass2-pass3",
+  "required_objects": [
+    "statute_title",
+    "statute_chapter",
+    "statute_section",
+    "statute_subsection",
+    "court_rule",
+    "standing_order",
+    "court_form",
+    "law_court_opinion",
+    "opinion_reference",
+    "source_card",
+    "legal_chunk"
+  ],
+  "chunking_policy": {
+    "arbitrary_token_blobs_allowed": false,
+    "chunks_must_have_parent_document_id": true,
+    "chunks_must_have_source_id": true,
+    "chunks_must_have_offsets_when_text_available": true
+  },
+  "citation_policy": {
+    "statute_sections_store_official_citation": true,
+    "opinions_store_pdf_href_before_full_pdf_parse": true,
+    "forms_store_form_id_and_version_date_when_available": true
+  }
+}

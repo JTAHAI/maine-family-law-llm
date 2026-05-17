@@ -1,0 +1,31 @@
+﻿[
+    {
+        "reason":  "target_repo_is_not_git",
+        "name":  "git_diff_check",
+        "skipped":  true,
+        "kind":  "git"
+    },
+    {
+        "timeout_seconds":  240,
+        "command":  [
+                        "python",
+                        "-m",
+                        "pytest",
+                        "-q"
+                    ],
+        "name":  "python_pytest",
+        "kind":  "python"
+    },
+    {
+        "reason":  "package_json_missing",
+        "name":  "node_test",
+        "skipped":  true,
+        "kind":  "node"
+    },
+    {
+        "reason":  "dotnet_solution_not_discovered",
+        "name":  "dotnet_build",
+        "skipped":  true,
+        "kind":  "dotnet"
+    }
+]

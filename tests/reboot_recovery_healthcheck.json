@@ -1,0 +1,55 @@
+{
+  "after_reboot_windows_commands": [
+    "cd C:\\dev\\ME_FM_LLM",
+    "py -3.11 scripts\\run-reboot-safe-healthcheck.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\run-test-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --skip-pytest",
+    "py -3.11 scripts\\run-enterprise-preflight.py --data-root C:\\dev\\ME_FM_LLM_data"
+  ],
+  "blockers": [],
+  "data_root": "/tmp/maine-family-law-llm-post-ga-quality-hardening",
+  "external_dirs_checked": [
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/official_authority_store",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/parsed_authority_store",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/embedding_store",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/eval_store",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/matter_store",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/runtime",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/logs",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/reports",
+    "/tmp/maine-family-law-llm-post-ga-quality-hardening/release_evidence"
+  ],
+  "forbidden_source_paths_present": [],
+  "generated_at": "2026-05-17T00:29:46.318096+00:00",
+  "interpretation": "Reboot-safe means the source tree, required scripts/configs, external data-root layout, write permissions, and PASS_CHANGES-only TXT discipline are valid for local testing. It does not mean legal production readiness; live official authority, attorney-reviewed evals, real metrics, pilot/security evidence, and signoffs are still required.",
+  "networked_collection_commands": [
+    "py -3.11 scripts\\collect-enterprise-resources.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "py -3.11 scripts\\audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+  ],
+  "one_pass_log_only": true,
+  "platform": "Linux-4.4.0-x86_64-with-glibc2.41",
+  "production_legal_readiness_remains_blocked_until": [
+    "live official Maine authority snapshots are collected into the external data root",
+    "parsed authority stores and retrieval indexes are generated from those snapshots",
+    "attorney-reviewed gold eval packs replace seed/fixture rows",
+    "real release metrics meet GA thresholds",
+    "pilot/security evidence and owner signoffs are attached"
+  ],
+  "production_legal_ready": false,
+  "python_version": "3.13.5",
+  "reboot_safe_for_local_testing": true,
+  "repo_root": "/mnt/data/work_next6",
+  "required_files_missing": [],
+  "status": "pass",
+  "txt_files": [
+    "PASS_CHANGES.txt"
+  ],
+  "warnings": [
+    "production_legal_use_still_requires_networked_authority_and_real_signoffs",
+    "ready_to_resume_after_reboot_for_local_source_fixture_testing"
+  ],
+  "write_probe_ok": true,
+  "write_probe_path": "/tmp/maine-family-law-llm-post-ga-quality-hardening/runtime/.reboot_safe_write_probe.json"
+}

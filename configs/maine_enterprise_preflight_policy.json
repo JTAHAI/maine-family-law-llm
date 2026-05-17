@@ -1,0 +1,53 @@
+{
+  "version": "post-ga-enterprise-preflight-1",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "required_scripts": [
+    "scripts/collect-enterprise-resources.py",
+    "scripts/collect-enterprise-resources.ps1",
+    "scripts/ingest-maine-authority.py",
+    "scripts/build-parsed-authority-store.py",
+    "scripts/build-authority-layer.py",
+    "scripts/build-retrieval-indexes.py",
+    "scripts/run-enterprise-preflight.py",
+    "scripts/build-offline-validation-pack.py",
+    "scripts/prepare-public-github-release.py",
+    "scripts/build-release-provenance.py"
+  ],
+  "required_configs": [
+    "configs/maine_enterprise_resource_catalog.json",
+    "configs/maine_official_source_targets.json",
+    "configs/maine_authority_build_policy.json",
+    "configs/maine_gold_eval_pack_policy.json",
+    "configs/maine_release_gates_policy.json",
+    "configs/maine_public_release_policy.json"
+  ],
+  "required_external_data_dirs": [
+    "research_resources",
+    "official_authority_store",
+    "parsed_authority_store",
+    "embedding_store",
+    "eval_store",
+    "release_evidence"
+  ],
+  "source_repo_must_not_contain": [
+    "research_resources",
+    "official_authority_store",
+    "parsed_authority_store",
+    "embedding_store",
+    "eval_store",
+    "matter_store",
+    "model_store",
+    "uploads",
+    "runtime"
+  ],
+  "networked_execution_commands": [
+    "python scripts/collect-enterprise-resources.py --project-root C:\\dev\\ME_FM_LLM --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts/ingest-maine-authority.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts/build-parsed-authority-store.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts/build-authority-layer.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts/build-retrieval-indexes.py --data-root C:\\dev\\ME_FM_LLM_data",
+    "python scripts/run-release-metrics-evidence.py",
+    "python scripts/audit-enterprise-readiness.py --data-root C:\\dev\\ME_FM_LLM_data --eval-root C:\\dev\\ME_FM_LLM_data\\eval_store"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "version": "1.0-pass1",
+  "root_env_var": "MAINE_FAMILY_LAW_DATA_ROOT",
+  "default_root": ".local_data",
+  "repo_policy": "No canonical data store is created or committed inside the source repository by default.",
+  "stores": {
+    "official_authority_store": {
+      "purpose": "Immutable raw official authority snapshots.",
+      "allowed_data_classes": ["official_public_authority"],
+      "encrypted_required": false,
+      "may_train_shared_models_by_default": true,
+      "may_package_in_release": false
+    },
+    "parsed_authority_store": {
+      "purpose": "Parsed normalized authority, chunks, citations, and source cards.",
+      "allowed_data_classes": ["official_public_authority", "public_non_official_source", "licensed_secondary_source"],
+      "encrypted_required": false,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": false
+    },
+    "matter_store": {
+      "purpose": "User-provided confidential matter files and derived private work product.",
+      "allowed_data_classes": ["user_provided_confidential_matter_data"],
+      "encrypted_required": true,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": false
+    },
+    "eval_store": {
+      "purpose": "Synthetic and approved evaluation datasets.",
+      "allowed_data_classes": ["synthetic_eval_data", "attorney_reviewed_eval_data"],
+      "encrypted_required": false,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": "synthetic_only"
+    },
+    "embedding_store": {
+      "purpose": "Vector indexes and embeddings derived from authority or approved eval data.",
+      "allowed_data_classes": ["model_artifact", "official_public_authority", "licensed_secondary_source"],
+      "encrypted_required": false,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": false
+    },
+    "audit_store": {
+      "purpose": "Audit events, export records, verifier results, and retention/deletion logs.",
+      "allowed_data_classes": ["audit_record"],
+      "encrypted_required": true,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": false
+    },
+    "model_registry": {
+      "purpose": "Model cards, admission records, local model pointers, and non-packaged model artifacts.",
+      "allowed_data_classes": ["model_artifact"],
+      "encrypted_required": false,
+      "may_train_shared_models_by_default": false,
+      "may_package_in_release": false
+    }
+  }
+}

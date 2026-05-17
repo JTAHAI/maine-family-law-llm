@@ -1,0 +1,37 @@
+{
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "handoff_sections": [
+    "environment",
+    "source_tree",
+    "operator_commands",
+    "networked_source_gate",
+    "public_github_staging",
+    "known_non_production_blockers"
+  ],
+  "known_non_production_blockers": [
+    "live official Maine authority evidence not bundled in source repo",
+    "attorney-reviewed gold evals must be created outside repo",
+    "release metrics must be regenerated from real external eval packs",
+    "pilot/security signoffs are external governance evidence",
+    "production_promotion_gate_locked_until_external_evidence_complete"
+  ],
+  "purpose": "Generate a deterministic handoff bundle for local operator testing, reboot recovery, networked source-gate preparation, and public GitHub staging.",
+  "recommended_operator_commands": [
+    "python scripts\\run-production-promotion-gate.py --data-root C:\\dev\\ME_FM_LLM_data --allow-fail-report"
+  ],
+  "required_operator_scripts": [
+    "scripts/run-reboot-safe-healthcheck.py",
+    "scripts/run-operator-test-battery.py",
+    "scripts/run-test-readiness.py",
+    "scripts/run-final-local-acceptance.py",
+    "scripts/run-networked-source-gate.py",
+    "scripts/collect-enterprise-resources.py",
+    "scripts/package-release.sh",
+    "scripts/run-networked-source-gate.ps1",
+    "scripts/build-operator-handoff-bundle.ps1",
+    "scripts/run-production-promotion-gate.py",
+    "scripts/run-production-promotion-gate.ps1"
+  ],
+  "version": "post-ga-operator-handoff-2"
+}

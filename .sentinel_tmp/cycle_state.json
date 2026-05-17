@@ -1,0 +1,13 @@
+﻿{
+    "candidate_packet":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-05-candidate_packet.json",
+    "feature_id":  "feat-001",
+    "backups":  {
+                    "absolute_path":  "C:\\dev\\ME_FM_LLM\\README.md",
+                    "relative_path":  "README.md",
+                    "backup_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-05-backup\\README.md.bak"
+                },
+    "proof_dir":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452",
+    "cycle":  5,
+    "status":  "in_progress",
+    "started_at":  "2026-05-17T15:46:17.2940538Z"
+}

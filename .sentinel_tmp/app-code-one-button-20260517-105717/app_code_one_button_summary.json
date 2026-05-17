@@ -1,0 +1,7 @@
+﻿{
+    "failure_class":  "no_requirements_found",
+    "status":  "complete",
+    "message":  "Requirements file parsed but no feature items were found.",
+    "proof_dir":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717",
+    "requirements_parse_summary":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717\\requirements_parse_summary.json"
+}

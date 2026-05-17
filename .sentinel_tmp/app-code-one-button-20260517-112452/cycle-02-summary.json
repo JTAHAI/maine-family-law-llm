@@ -1,0 +1,17 @@
+﻿{
+    "feature_status":  "blocked",
+    "self_correction":  "bounded_repair_failed",
+    "repair_attempts_used":  1,
+    "failure_class":  "timeout",
+    "verification_status":  "failed",
+    "proof_artifacts":  [
+                            "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-02-candidate_packet.json",
+                            "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-02-acceptance_plan.json",
+                            "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-02-acceptance_results.json",
+                            "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-02-verification_result.json"
+                        ],
+    "cycle":  2,
+    "fallback_used":  false,
+    "feature_id":  "feat-001",
+    "selected_model":  "qwen2.5-coder:14b"
+}

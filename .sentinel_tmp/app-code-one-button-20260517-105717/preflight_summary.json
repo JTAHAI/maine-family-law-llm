@@ -1,0 +1,53 @@
+﻿{
+    "blocked":  [
+
+                ],
+    "resource_health":  {
+                            "memory_available_mb":  21440.38,
+                            "disk_free_gb":  320.4,
+                            "proof_dir_write_ok":  true
+                        },
+    "status":  "ok",
+    "target":  {
+                   "git_repo":  false,
+                   "is_directory":  true,
+                   "git_status_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717\\preflight_target_git_status.txt",
+                   "dirty_worktree":  null,
+                   "exists":  true,
+                   "branch":  "",
+                   "requirements_exists":  true,
+                   "sentinel_tmp_created":  true,
+                   "git_branch_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717\\preflight_target_git_branch.txt",
+                   "writable":  true
+               },
+    "sentinel":  {
+                     "git_diff_check":  {
+                                            "ok":  true,
+                                            "output_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717\\preflight_sentinel_git_diff_check.txt",
+                                            "exit_code":  0
+                                        },
+                     "py_compile":  {
+                                        "ok":  true,
+                                        "output_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105717\\preflight_sentinel_py_compile.txt",
+                                        "exit_code":  0
+                                    }
+                 },
+    "tool_health":  {
+                        "dotnet_available":  true,
+                        "ollama_available":  true,
+                        "model_readiness":  {
+                                                "detail":  "model_listed",
+                                                "provider":  "ollama",
+                                                "model":  "qwen2.5-coder:14b",
+                                                "inventory":  "NAME                          ID              SIZE      MODIFIED     \r\nsentinel-legal-saul:latest    4538fe037047    4.4 GB    15 hours ago    \r\ndeepseek-r1:14b               c333b7232bdb    9.0 GB    30 hours ago    \r\nqwen3:14b                     bdbd181c33f2    9.3 GB    30 hours ago    \r\nqwen3:8b                      500a1f067a9f    5.2 GB    30 hours ago    \r\nqwen2.5-coder:7b              dae161e27b0e    4.7 GB    34 hours ago    \r\nqwen3-embedding:0.6b          ac6da0dfba84    639 MB    2 days ago      \r\nqwen2.5-coder:32b             b92d6a0bd47e    19 GB     2 days ago      \r\nqwen2.5-coder:14b             9ec8897f747e    9.0 GB    2 days ago      \r\nnomic-embed-text:latest       0a109f422b47    274 MB    9 days ago      \r\nqwen2.5-coder:3b              f72c60cabf62    1.9 GB    5 weeks ago     \r\n",
+                                                "failure_class":  "none",
+                                                "status":  "healthy"
+                                            },
+                        "npm_available":  true,
+                        "git_available":  true,
+                        "node_available":  true,
+                        "python_available":  true,
+                        "model_timeout_seconds":  45
+                    },
+    "failure_class":  "none"
+}

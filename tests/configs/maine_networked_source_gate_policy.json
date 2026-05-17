@@ -1,0 +1,100 @@
+{
+  "version": "post-ga-networked-source-gate-1",
+  "purpose": "Hard blocker gate for deciding whether a local external data root contains real networked official Maine authority evidence instead of fixture-only source readiness.",
+  "default_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "default_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "required_external_files": [
+    "official_authority_store/source_manifest.json",
+    "parsed_authority_store/parsed_authority_manifest.json",
+    "embedding_store/retrieval_index_manifest.json",
+    "eval_store/gold_eval_pack_manifest.json",
+    "eval_store/release_metrics_evidence.json"
+  ],
+  "required_source_classes": {
+    "statute_title_index": 1,
+    "statute_pdf": 1,
+    "judicial_branch_rules": 1,
+    "family_division_rules": 1,
+    "court_forms_index": 1,
+    "law_court_opinions_index": 1,
+    "federal_family_law": 1
+  },
+  "minimum_total_sources": 7,
+  "minimum_parsed_record_counts": {
+    "statutes": 1,
+    "rules": 1,
+    "forms": 1,
+    "opinions": 1
+  },
+  "minimum_retrieval_indexes": [
+    "bm25",
+    "vector",
+    "hybrid"
+  ],
+  "minimum_gold_eval_rows_total": 1,
+  "required_release_metric_names": [
+    "retrieval_recall_at_20",
+    "citation_existence",
+    "citation_support",
+    "quote_span_verification",
+    "hallucination_rate",
+    "filing_ready_false_pass_rate",
+    "form_freshness_detection"
+  ],
+  "fixture_markers": [
+    "fixture",
+    "offline-smoke",
+    "sample-only",
+    "synthetic-only",
+    "not_production",
+    "placeholder"
+  ],
+  "production_readiness_blockers": [
+    "missing_required_external_file",
+    "data_root_inside_source_repo",
+    "source_class_minimum_not_met",
+    "parsed_authority_minimum_not_met",
+    "retrieval_index_manifest_missing_required_index",
+    "gold_eval_pack_missing_attorney_reviewed_rows",
+    "release_metrics_missing_required_metric",
+    "fixture_marker_detected"
+  ],
+  "required_external_file_alternates": {
+    "parsed_authority_store/parsed_authority_manifest.json": [
+      "parsed_authority_store/parsed_manifest.json"
+    ],
+    "embedding_store/retrieval_index_manifest.json": [
+      "embedding_store/index_manifest.json"
+    ]
+  },
+  "source_class_aliases": {
+    "statute_pdf": [
+      "statute_title_pdf"
+    ],
+    "statute_title_pdf": [
+      "statute_pdf"
+    ],
+    "judicial_branch_rules": [
+      "court_rules_index"
+    ],
+    "family_division_rules": [
+      "court_policy_index",
+      "court_rules_index"
+    ],
+    "court_rules_index": [
+      "judicial_branch_rules",
+      "family_division_rules"
+    ],
+    "court_policy_index": [
+      "family_division_rules",
+      "judicial_branch_rules"
+    ],
+    "law_court_opinions_index": [
+      "law_court_opinion_index"
+    ],
+    "law_court_opinion_index": [
+      "law_court_opinions_index"
+    ]
+  },
+  "source_class_mapping_note": "The live manifest uses canonical source_class names such as statute_title_pdf, court_rules_index, court_policy_index, court_forms_index, and law_court_opinion_index. The gate counts configured aliases for older policy names without changing the underlying manifest data."
+}

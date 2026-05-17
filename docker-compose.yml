@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: maine-family-law-llm:local
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      MAINE_FAMILY_LAW_DATA_ROOT: /data
+      PYTHONPATH: /app
+      PYTHONDONTWRITEBYTECODE: "1"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - type: bind
+        source: ${MAINE_FAMILY_LAW_DATA_ROOT:-../ME_FM_LLM_data}
+        target: /data
+      - type: bind
+        source: .
+        target: /app
+        read_only: true
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "/app/scripts/container-healthcheck.py", "--url", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,166 @@
+{
+  "checks": {
+    "pass48_attorney_only_sandbox_pilot": {
+      "dashboard": {
+        "active_attorneys": 2,
+        "attorney_can_use_for_research_review": true,
+        "critical_safety_issues": [],
+        "eval_candidates_created": [
+          "PILOT-FB-001"
+        ],
+        "feedback_count": 2,
+        "high_safety_issues": [],
+        "release_blockers": [],
+        "review_queue_count": 2,
+        "sections": [
+          "active_attorneys",
+          "training_completion",
+          "feedback_triage",
+          "review_queue",
+          "critical_safety_issues",
+          "eval_candidates_created",
+          "release_blockers"
+        ],
+        "stage": "attorney_only_sandbox",
+        "status": "pass",
+        "training_completion": true
+      },
+      "onboarding": {
+        "allowed_data": "synthetic_or_public_authority_only",
+        "blocked_participant_ids": [],
+        "participants": [
+          {
+            "allowed_scope": [
+              "research",
+              "review",
+              "draft_review_required"
+            ],
+            "bar_status_verified": true,
+            "nda_or_terms_accepted": true,
+            "participant_id": "attorney-reviewer-001",
+            "role": "maine_family_law_attorney",
+            "training_completed": true
+          },
+          {
+            "allowed_scope": [
+              "research",
+              "review",
+              "draft_review_required"
+            ],
+            "bar_status_verified": true,
+            "nda_or_terms_accepted": true,
+            "participant_id": "attorney-reviewer-002",
+            "role": "supervised_attorney_reviewer",
+            "training_completed": true
+          }
+        ],
+        "real_matter_allowed": false,
+        "stage": "attorney_only_sandbox",
+        "status": "pass",
+        "training_modules": [
+          "data_boundaries",
+          "source_grounding",
+          "citation_quote_verification",
+          "review_required_exports",
+          "feedback_and_error_reporting"
+        ]
+      },
+      "readiness": "Attorney-only sandbox operations are runnable with public/synthetic data only; all outputs remain review_required.",
+      "review_queue": {
+        "queue_count": 2,
+        "rows": [
+          {
+            "category": "retrieval_miss",
+            "creates_eval_candidate": true,
+            "description": "Add eval candidate for contested primary residence query expansion.",
+            "feedback_id": "PILOT-FB-001",
+            "may_be_counted_as_gold": false,
+            "participant_id": "attorney-reviewer-001",
+            "private_data_allowed_for_training": false,
+            "requires_attorney_review": true,
+            "review_type": "eval_candidate_review",
+            "severity": "medium",
+            "status": "open"
+          },
+          {
+            "category": "citation_ui_clarity",
+            "creates_eval_candidate": false,
+            "description": "Expose source-card freshness badge earlier in answer drilldown.",
+            "feedback_id": "PILOT-FB-002",
+            "may_be_counted_as_gold": false,
+            "participant_id": "attorney-reviewer-002",
+            "private_data_allowed_for_training": false,
+            "requires_attorney_review": true,
+            "review_type": "product_triage",
+            "severity": "low",
+            "status": "open"
+          }
+        ],
+        "status": "pass"
+      },
+      "stage": "pass48_attorney_only_sandbox_pilot",
+      "status": "pass"
+    },
+    "pass49_limited_real_matter_pilot": {
+      "audit": {
+        "allowed_tenant_ids": [
+          "tenant-maine-pilot-a"
+        ],
+        "blockers": [],
+        "daily_pilot_review_required": true,
+        "export_restrictions_enforced": true,
+        "human_review_required": true,
+        "incident_process_required": true,
+        "matter_count": 1,
+        "matters": [
+          {
+            "artifacts_generated": [
+              "issue_tree",
+              "posture_summary",
+              "timeline",
+              "evidence_map",
+              "authority_matrix",
+              "red_flag_report"
+            ],
+            "attorney_signed_off": true,
+            "blockers": [],
+            "consent": {
+              "consent_version": "2026-05-pass49",
+              "explicit_real_matter_consent": true,
+              "export_restriction_acknowledged": true,
+              "human_review_required": true,
+              "matter_id": "pilot-matter-001",
+              "participant_id": "attorney-reviewer-001",
+              "tenant_id": "tenant-maine-pilot-a",
+              "training_use_allowed": false
+            },
+            "daily_review_completed": true,
+            "data_leakage_detected": false,
+            "encrypted_storage_verified": true,
+            "incident_open": false,
+            "matter_id": "pilot-matter-001",
+            "missing_artifacts": [],
+            "participant_id": "attorney-reviewer-001",
+            "status": "pass",
+            "tenant_id": "tenant-maine-pilot-a",
+            "tenant_isolation_verified": true,
+            "unsupported_filing_ready_export_attempts": 0
+          }
+        ],
+        "stage": "limited_real_matter_pilot",
+        "status": "pass"
+      },
+      "readiness": "Limited real-matter pilot controls are implemented and auditable; this fixture proves the control path, not real pilot completion.",
+      "stage": "pass49_limited_real_matter_pilot",
+      "status": "pass"
+    }
+  },
+  "completed_passes": [
+    48,
+    49
+  ],
+  "generated_at": "2026-05-17T00:29:45.565299+00:00",
+  "legal_readiness": "Pass 48 and Pass 49 pilot-operation controls are implemented. Real-world GA still requires actual attorney-only sandbox evidence, limited real-matter pilot evidence, and signoffs captured outside the source repo.",
+  "stage": "enterprise_pass_48_49_pilot_operations",
+  "status": "pass"
+}

@@ -1,0 +1,48 @@
+{
+  "policy_name": "maine_ga_release_policy",
+  "version": "2026-05-pass50-pass51",
+  "pass_50_required_artifacts": [
+    "source_repo_zip",
+    "external_data_build_manifest",
+    "parsed_authority_manifest",
+    "retrieval_index_manifest",
+    "gold_eval_pack_manifest",
+    "release_metrics_json",
+    "security_evidence_packet",
+    "pilot_evidence_packet",
+    "rollback_package",
+    "release_notes"
+  ],
+  "pass_50_required_signoffs": ["security", "legal", "product", "ops"],
+  "pass_50_blockers": ["open_P0", "open_P1", "failed_enterprise_readiness_audit", "private_or_runtime_artifacts_in_source_zip"],
+  "pass_51_required_artifacts": [
+    "clean_source_zip",
+    "external_legal_data_product_manifest",
+    "parsed_authority_build_manifest",
+    "retrieval_indexes_manifest",
+    "gold_eval_pack_manifest",
+    "smoke_evidence_json",
+    "release_metrics_json",
+    "security_governance_packet",
+    "admin_guide",
+    "user_guide",
+    "attorney_reviewer_guide",
+    "incident_rollback_runbook",
+    "source_update_runbook",
+    "model_update_runbook"
+  ],
+  "pass_51_required_controls": [
+    "runs_from_clean_deployment",
+    "uses_real_official_maine_authority",
+    "attorney_reviewed_evals_present",
+    "release_metrics_pass",
+    "unsupported_filing_ready_output_blocked",
+    "private_matter_data_protected",
+    "audit_trails_present",
+    "security_controls_present",
+    "pilot_evidence_present",
+    "rollback_and_maintenance_operations_present"
+  ],
+  "source_repo_zip_rule": "The source ZIP may contain code, docs, schemas, scripts, tests, and smoke evidence only. External data stores, parsed authority builds, retrieval indexes, eval stores, matter stores, model weights, and runtime databases stay outside the repo.",
+  "honesty_rule": "A GA shipped report is only true when explicit external artifact references and signoffs are supplied; fixture evidence is for pipeline tests only."
+}

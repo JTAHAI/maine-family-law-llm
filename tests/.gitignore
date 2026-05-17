@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime and private/legal data stores: keep outside the source repo.
+runtime/
+uploads/
+corpora/
+vectorstores/
+official_authority_store/
+parsed_authority_store/
+embedding_store/
+eval_store/
+matter_store/
+model_store/
+model_registry/
+audit_store/
+ME_FM_LLM_data/
+maine-family-law-llm-data/
+
+# Binary/legal-resource downloads are external only.
+*.db
+*.sqlite
+*.sqlite3
+*.faiss
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.pdf
+*.doc
+*.docx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

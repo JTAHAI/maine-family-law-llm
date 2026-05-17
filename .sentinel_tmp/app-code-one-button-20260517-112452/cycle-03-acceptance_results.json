@@ -1,0 +1,29 @@
+﻿[
+    {
+        "failure_class":  "none",
+        "status":  "skipped",
+        "name":  "git_diff_check",
+        "reason":  "target_repo_is_not_git"
+    },
+    {
+        "exit_code":  124,
+        "name":  "python_pytest",
+        "output_path":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-112452\\cycle-03-python_pytest.txt",
+        "command":  "python -m pytest -q",
+        "failure_class":  "timeout",
+        "status":  "failed",
+        "timeout":  true
+    },
+    {
+        "failure_class":  "none",
+        "status":  "skipped",
+        "name":  "node_test",
+        "reason":  "package_json_missing"
+    },
+    {
+        "failure_class":  "none",
+        "status":  "skipped",
+        "name":  "dotnet_build",
+        "reason":  "dotnet_solution_not_discovered"
+    }
+]
