@@ -73,3 +73,32 @@ tests/Dockerfile
 tests/pyproject.toml
 tests/PASS_CHANGES.txt
 *.pfx
+
+# SENTINEL/runtime scratch
+.sentinel_tmp/
+runtime/
+data/
+corpora/
+vector_stores/
+
+# Python/cache
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Build/release artifacts
+dist/
+build/
+release/
+
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+id_rsa
+secrets.*
+credentials.*

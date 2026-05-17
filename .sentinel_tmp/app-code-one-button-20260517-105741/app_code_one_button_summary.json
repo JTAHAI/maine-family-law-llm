@@ -1,8 +1,0 @@
-﻿{
-    "requirements_file":  "C:\\dev\\ME_FM_LLM\\SENTINEL_REQUIREMENTS.md",
-    "recovery_hint":  "Provide -RequirementsFile or rerun with -CreateRequirementsTemplate.",
-    "next_command":  "powershell -ExecutionPolicy Bypass -File .\\scripts\\sentinel_code_app_one_button.ps1 -SentinelRepo \"C:\\dev\\sentinel_proof_green_git_baseline\" -TargetRepo \"C:\\dev\\ME_FM_LLM\" -RequirementsFile \"\u003cpath\u003e\" -Mode FullSend -Model \"qwen2.5-coder:14b\" -MaxCycles 5 -AllowAutonomousMutation",
-    "proof_dir":  "C:\\dev\\ME_FM_LLM\\.sentinel_tmp\\app-code-one-button-20260517-105741",
-    "failure_class":  "requirements_file_missing",
-    "status":  "blocked"
-}
