@@ -31,6 +31,15 @@ class SourceSnippet:
             parts.append(self.locator)
         return " - ".join(parts)
 
+    def to_dict(self) -> dict[str, str | None]:
+        return {
+            "source_id": self.source_id,
+            "title": self.title,
+            "path": self.path,
+            "locator": self.locator,
+            "citation_label": self.citation_label(),
+        }
+
 
 @dataclass(frozen=True)
 class RetrievedContext:
@@ -63,3 +72,12 @@ class AnswerResult:
     grounded: bool
     used_model: str | None = None
     warning: str | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "answer": self.answer,
+            "grounded": self.grounded,
+            "used_model": self.used_model,
+            "warning": self.warning,
+            "citations": [citation.to_dict() for citation in self.citations],
+        }

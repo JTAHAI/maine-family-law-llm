@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -39,6 +40,17 @@ def main() -> int:
         help="Ollama model name",
     )
     parser.add_argument(
+        "--max-sources",
+        type=int,
+        default=5,
+        help="Maximum number of source snippets to retrieve",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON instead of human-readable text",
+    )
+    parser.add_argument(
         "--no-ollama",
         action="store_true",
         help="Use retrieval-only response without calling Ollama",
@@ -50,16 +62,21 @@ def main() -> int:
     generator = None if args.no_ollama else OllamaGenerationClient(model_name=args.model)
 
     pipeline = CitationFirstAnswerPipeline(retriever=retriever, generator=generator)
-    result = pipeline.answer(AnswerRequest(question=args.question))
+    result = pipeline.answer(
+        AnswerRequest(question=args.question, max_sources=max(1, args.max_sources))
+    )
 
-    print(result.answer)
-    if result.citations:
-        print("\nCitations:")
-        for index, citation in enumerate(result.citations, start=1):
-            print(f"[{index}] {citation.citation_label()}")
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+    else:
+        print(result.answer)
+        if result.citations:
+            print("\nCitations:")
+            for index, citation in enumerate(result.citations, start=1):
+                print(f"[{index}] {citation.citation_label()}")
 
-    if result.warning:
-        print(f"\nWarning: {result.warning}", file=sys.stderr)
+        if result.warning:
+            print(f"\nWarning: {result.warning}", file=sys.stderr)
 
     return 0 if result.grounded else 2
 
