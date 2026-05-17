@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -126,3 +127,99 @@ def test_ask_local_cli_returns_grounded_citations_with_local_corpus(
     assert "Citations:" in completed.stdout
     assert "[1] parental rights sample - local plaintext corpus" in completed.stdout
     assert completed.stderr == ""
+
+
+def test_answer_result_serializes_citations_for_cli_json() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text",
+        locator="sample locator",
+    )
+    pipeline = CitationFirstAnswerPipeline(InMemoryCorpusRetriever([snippet]))
+
+    result = pipeline.answer(AnswerRequest(question="sample source"))
+
+    payload = result.to_dict()
+    assert payload["grounded"] is True
+    assert payload["warning"] is None
+    assert payload["citations"] == [
+        {
+            "source_id": "sample-source",
+            "title": "Sample source",
+            "path": None,
+            "locator": "sample locator",
+            "citation_label": "Sample source - sample locator",
+        }
+    ]
+
+
+def test_ask_local_cli_json_refusal_is_machine_readable(tmp_path: Path) -> None:
+    corpus = tmp_path / "empty-corpus"
+    corpus.mkdir()
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(_REPO_ROOT / "scripts" / "ask-local.py"),
+            "parental rights modification",
+            "--corpus",
+            str(corpus),
+            "--no-ollama",
+            "--json",
+        ],
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+
+    assert completed.returncode == 2
+    assert completed.stderr == ""
+    assert payload["grounded"] is False
+    assert payload["warning"] == "insufficient_source_material"
+    assert payload["citations"] == []
+    assert "not have enough cited Maine family-law source material" in payload["answer"]
+
+
+def test_ask_local_cli_json_success_respects_max_sources(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    first = corpus / "a-parental-rights-sample.txt"
+    second = corpus / "b-parental-rights-sample.txt"
+    first.write_text(
+        "Sample source one mentions parental rights and modification.",
+        encoding="utf-8",
+    )
+    second.write_text(
+        "Sample source two mentions parental rights and modification.",
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(_REPO_ROOT / "scripts" / "ask-local.py"),
+            "parental rights modification",
+            "--corpus",
+            str(corpus),
+            "--no-ollama",
+            "--max-sources",
+            "1",
+            "--json",
+        ],
+        cwd=str(_REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert payload["grounded"] is True
+    assert len(payload["citations"]) == 1
+    assert payload["citations"][0]["source_id"] == "a-parental-rights-sample.txt"
