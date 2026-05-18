@@ -317,3 +317,16 @@ def test_source_snippet_to_dict_includes_preview_and_citation_label() -> None:
 
     assert payload["text_preview"] == "Sample text for preview"
     assert payload["citation_label"] == "Sample source - sample locator"
+
+def test_source_snippet_text_preview_limit_argument_is_honored() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="alpha beta gamma delta epsilon zeta eta theta",
+        locator="sample locator",
+    )
+
+    preview = snippet.text_preview(limit=20)
+
+    assert len(preview) <= 20
+    assert preview.endswith("...")
