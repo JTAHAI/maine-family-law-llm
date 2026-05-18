@@ -149,6 +149,7 @@ def test_answer_result_serializes_citations_for_cli_json() -> None:
             "title": "Sample source",
             "path": None,
             "locator": "sample locator",
+            "text_preview": "Sample text",
             "citation_label": "Sample source - sample locator",
         }
     ]
@@ -287,3 +288,19 @@ def test_ask_local_json_shape_includes_warning_field_for_success(
     assert payload["warning"] is None
     assert payload["used_model"] is None
     assert len(payload["citations"]) == 1
+
+def test_source_snippet_text_preview_is_bounded_for_long_text() -> None:
+    long_text = "A" * 400
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text=long_text,
+        locator="sample locator",
+    )
+
+    payload = snippet.to_dict()
+
+    assert "text_preview" in payload
+    assert len(payload["text_preview"]) <= 160
+    assert payload["text_preview"].endswith("...")
+    assert payload["text_preview"] != long_text

@@ -30,6 +30,16 @@ class SourceSnippet:
         if self.locator:
             parts.append(self.locator)
         return " - ".join(parts)
+    def text_preview(self, limit: int = 160) -> str:
+        raw = (self.text or "").strip()
+        if not raw:
+            return ""
+        normalized = " ".join(raw.split())
+        if len(normalized) <= limit:
+            return normalized
+        if limit <= 3:
+            return normalized[:limit]
+        return normalized[: max(0, limit - 3)].rstrip() + "..."
 
     def to_dict(self) -> dict[str, str | None]:
         return {
@@ -37,6 +47,7 @@ class SourceSnippet:
             "title": self.title,
             "path": self.path,
             "locator": self.locator,
+            "text_preview": self.text_preview(),
             "citation_label": self.citation_label(),
         }
 
