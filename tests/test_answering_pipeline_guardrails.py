@@ -304,3 +304,16 @@ def test_source_snippet_text_preview_is_bounded_for_long_text() -> None:
     assert len(payload["text_preview"]) <= 160
     assert payload["text_preview"].endswith("...")
     assert payload["text_preview"] != long_text
+
+def test_source_snippet_to_dict_includes_preview_and_citation_label() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text for preview",
+        locator="sample locator",
+    )
+
+    payload = snippet.to_dict()
+
+    assert payload["text_preview"] == "Sample text for preview"
+    assert payload["citation_label"] == "Sample source - sample locator"
