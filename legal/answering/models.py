@@ -63,7 +63,12 @@ class RetrievedContext:
     def has_sources(self) -> bool:
         return bool(self.snippets)
 
-
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "question": self.question,
+            "snippets": [snippet.to_dict() for snippet in self.snippets],
+            "has_sources": self.has_sources,
+        }
 @dataclass(frozen=True)
 class AnswerRequest:
     """Input to the answer pipeline."""

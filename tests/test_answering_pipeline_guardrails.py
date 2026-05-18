@@ -29,6 +29,7 @@ from legal.answering import (
     InMemoryCorpusRetriever,
     SourceSnippet,
     load_plaintext_corpus,
+    RetrievedContext,
 )
 
 
@@ -330,3 +331,18 @@ def test_source_snippet_text_preview_limit_argument_is_honored() -> None:
 
     assert len(preview) <= 20
     assert preview.endswith("...")
+
+def test_retrieved_context_to_dict_serializes_source_snippet_preview() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text for preview",
+        locator="sample locator",
+    )
+    context = RetrievedContext(question="sample question", snippets=(snippet,))
+
+    payload = context.to_dict()
+
+    assert payload["question"] == "sample question"
+    assert payload["snippets"]
+    assert payload["snippets"][0]["text_preview"] == "Sample text for preview"
