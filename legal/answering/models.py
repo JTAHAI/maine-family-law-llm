@@ -63,6 +63,11 @@ class RetrievedContext:
     def has_sources(self) -> bool:
         return bool(self.snippets)
 
+    @property
+    def has_snippets(self) -> bool:
+        return bool(self.snippets)
+
+
     def to_dict(self) -> dict[str, object]:
         return {
             "question": self.question,
