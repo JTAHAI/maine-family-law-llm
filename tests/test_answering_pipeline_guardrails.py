@@ -362,3 +362,48 @@ def test_answer_result_to_dict_includes_source_transparency_metadata() -> None:
     assert payload["source_count"] == 1
     assert payload["has_source_citations"] is True
     assert payload["citations"][0]["source_id"] == "sample-source"
+
+def test_pipeline_refusal_reason_and_remediation_hint_are_machine_readable() -> None:
+    pipeline = CitationFirstAnswerPipeline(InMemoryCorpusRetriever([]))
+
+    result = pipeline.answer(AnswerRequest(question="Can I modify parental rights?"))
+    payload = result.to_dict()
+
+    assert result.grounded is False
+    assert result.warning == "insufficient_source_material"
+    assert result.refusal_reason == "insufficient_source_material"
+    assert result.remediation_hint
+    assert payload["refusal_reason"] == "insufficient_source_material"
+    assert payload["remediation_hint"]
+def test_pipeline_no_relevant_sources_uses_distinct_reason_code() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text about a different topic.",
+        locator="sample locator",
+    )
+    pipeline = CitationFirstAnswerPipeline(InMemoryCorpusRetriever([snippet]))
+
+    result = pipeline.answer(AnswerRequest(question="unmatched probate phrase"))
+
+    assert result.grounded is False
+    assert result.warning == "no_relevant_sources"
+    assert result.refusal_reason == "no_relevant_sources"
+    assert result.remediation_hint
+def test_generator_failure_records_refusal_reason_without_losing_warning() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text about parental rights modification.",
+        locator="sample locator",
+    )
+    pipeline = CitationFirstAnswerPipeline(
+        InMemoryCorpusRetriever([snippet]),
+        generator=FailingGenerator(),
+    )
+
+    result = pipeline.answer(AnswerRequest(question="parental rights modification"))
+
+    assert result.warning == "generation_failed_retrieval_fallback"
+    assert result.refusal_reason == "generator_failed_with_retrieval_fallback"
+    assert result.remediation_hint

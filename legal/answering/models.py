@@ -11,6 +11,11 @@ INSUFFICIENT_SOURCE_RESPONSE = (
 )
 
 
+
+REFUSAL_REASON_INSUFFICIENT_SOURCE_MATERIAL = "insufficient_source_material"
+REFUSAL_REASON_NO_RELEVANT_SOURCES = "no_relevant_sources"
+REFUSAL_REASON_GENERATOR_FAILED_WITH_RETRIEVAL_FALLBACK = "generator_failed_with_retrieval_fallback"
+REFUSAL_REASON_UNSAFE_OR_UNSUPPORTED_QUESTION = "unsafe_or_unsupported_question"
 @dataclass(frozen=True)
 class SourceSnippet:
     """A retrieved source passage that can support an answer.
@@ -94,6 +99,8 @@ class AnswerResult:
     used_model: str | None = None
     warning: str | None = None
 
+    refusal_reason: str | None = None
+    remediation_hint: str | None = None
     def to_dict(self) -> dict[str, object]:
         return {
             "answer": self.answer,
@@ -102,5 +109,7 @@ class AnswerResult:
             "has_source_citations": bool(self.citations),
             "used_model": self.used_model,
             "warning": self.warning,
+            "refusal_reason": self.refusal_reason,
+            "remediation_hint": self.remediation_hint,
             "citations": [citation.to_dict() for citation in self.citations],
         }
