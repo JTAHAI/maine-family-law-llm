@@ -98,6 +98,8 @@ class AnswerResult:
         return {
             "answer": self.answer,
             "grounded": self.grounded,
+            "source_count": len(self.citations),
+            "has_source_citations": bool(self.citations),
             "used_model": self.used_model,
             "warning": self.warning,
             "citations": [citation.to_dict() for citation in self.citations],

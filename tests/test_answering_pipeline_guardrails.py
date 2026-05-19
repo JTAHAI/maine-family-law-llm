@@ -346,3 +346,19 @@ def test_retrieved_context_to_dict_serializes_source_snippet_preview() -> None:
     assert payload["question"] == "sample question"
     assert payload["snippets"]
     assert payload["snippets"][0]["text_preview"] == "Sample text for preview"
+
+def test_answer_result_to_dict_includes_source_transparency_metadata() -> None:
+    snippet = SourceSnippet(
+        source_id="sample-source",
+        title="Sample source",
+        text="Sample text",
+        locator="sample locator",
+    )
+    pipeline = CitationFirstAnswerPipeline(InMemoryCorpusRetriever([snippet]))
+
+    result = pipeline.answer(AnswerRequest(question="sample source"))
+    payload = result.to_dict()
+
+    assert payload["source_count"] == 1
+    assert payload["has_source_citations"] is True
+    assert payload["citations"][0]["source_id"] == "sample-source"
