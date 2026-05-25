@@ -11,6 +11,9 @@ from .models import (
     AnswerRequest,
     AnswerResult,
     INSUFFICIENT_SOURCE_RESPONSE,
+    REFUSAL_REASON_GENERATOR_FAILED_WITH_RETRIEVAL_FALLBACK,
+    REFUSAL_REASON_INSUFFICIENT_SOURCE_MATERIAL,
+    REFUSAL_REASON_NO_RELEVANT_SOURCES,
     SourceSnippet,
 )
 from .ollama_adapter import GenerationClient
@@ -37,12 +40,26 @@ class CitationFirstAnswerPipeline:
         )
 
         if not snippets:
+            has_corpus = getattr(self._retriever, "source_count", 0) > 0
+            warning = (
+                REFUSAL_REASON_NO_RELEVANT_SOURCES
+                if has_corpus
+                else REFUSAL_REASON_INSUFFICIENT_SOURCE_MATERIAL
+            )
+            hint = (
+                "No indexed source snippet matched the question. Add or fetch official Maine "
+                "family-law sources for this topic, then retry."
+                if has_corpus
+                else "Add official Maine family-law source material to the local corpus, then retry."
+            )
             return AnswerResult(
                 answer=INSUFFICIENT_SOURCE_RESPONSE,
                 citations=(),
                 grounded=False,
                 used_model=None,
-                warning="insufficient_source_material",
+                warning=warning,
+                refusal_reason=warning,
+                remediation_hint=hint,
             )
 
         prompt = self._build_prompt(request, snippets)
@@ -59,6 +76,17 @@ class CitationFirstAnswerPipeline:
             except Exception:
                 generated = self._retrieval_only_answer()
                 warning = GENERATION_FAILED_WARNING
+                refusal_reason = REFUSAL_REASON_GENERATOR_FAILED_WITH_RETRIEVAL_FALLBACK
+                remediation_hint = (
+                    "The generator failed, so the response fell back to retrieved snippets only. "
+                    "Inspect the local model/runtime before relying on generated prose."
+                )
+            else:
+                refusal_reason = None
+                remediation_hint = None
+        if self._generator is None:
+            refusal_reason = None
+            remediation_hint = None
 
         answer = self._append_disclaimer(generated)
         return AnswerResult(
@@ -67,6 +95,8 @@ class CitationFirstAnswerPipeline:
             grounded=True,
             used_model=used_model,
             warning=warning,
+            refusal_reason=refusal_reason,
+            remediation_hint=remediation_hint,
         )
 
     @staticmethod

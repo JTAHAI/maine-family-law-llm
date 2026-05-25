@@ -2,6 +2,36 @@
 
 Standalone Maine family-law legal AI system scaffold for source-grounded research, matter intake, evidence mapping, timeline building, draft review, citation verification, quote verification, filing-readiness review, and authority-grounded retrieval.
 
+## V1 local legal-source workbench
+
+This project is an open-source, local-first Maine family law LLM / RAG workbench. It is not legal advice, does not create an attorney-client relationship, and does not produce filing-ready documents.
+
+The product claim is narrow: Maine family law help with receipts. Answers must come from retrieved sources, prefer official Maine sources, include citations, preserve effective-date/version metadata, and refuse unsupported legal/procedure/form claims.
+
+Quick local path:
+
+```powershell
+cd D:\dev\ME_FM_LLM
+powershell -ExecutionPolicy Bypass -File .\START_LOCAL_TEST.ps1 -SkipTests
+```
+
+CLI examples:
+
+```powershell
+python -m maine_family_law_llm.cli sources validate
+python -m maine_family_law_llm.cli sources fetch --fixtures
+python -m maine_family_law_llm.cli sources normalize --fixtures
+python -m maine_family_law_llm.cli index build --fixtures
+python -m maine_family_law_llm.cli ask "How do I start a family matter?"
+python -m maine_family_law_llm.cli draft "checklist for a child support form"
+python -m maine_family_law_llm.cli inspect-source mrs-title-19a-domestic-relations
+python -m maine_family_law_llm.cli doctor
+```
+
+The local API exposes `/healthz`, `/sources`, `/retrieve`, `/ask`, `/draft`, `/inspect-source/{source_id}`, and interactive docs at `http://127.0.0.1:8000/docs`.
+
+Source metadata lives in `data/sources/manifest.seed.json`. The seed manifest is representative, not a complete corpus. Small offline fixtures live in `data/fixtures` so tests work without internet. Do not add private client facts, raw corpora, databases, vector stores, model weights, caches, venvs, or generated junk to release ZIPs.
+
 ## Current status
 
 **Post-GA reality review foundation added:** all numbered pass source controls through Pass 51 are present, and the repo now includes a post-GA review/build-path audit that explicitly separates source-code foundation completion from real production GA readiness.
@@ -261,4 +291,30 @@ python scripts\run-operator-test-battery.py --data-root C:\dev\ME_FM_LLM_data
 
 A passing operator battery means the package is ready for local fixture/source testing. It does not make the system legal-production-ready; live official Maine authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and owner signoffs are still required.
 
-# sentinel feature feat-001 cycle 5 2026-05-17T15:46:17.2960521Z
+## Full corpus and GA legal-data readiness
+
+The v1 source tree now includes a full-corpus registry for the maintained legal
+data product this project needs. It covers Maine statutes, non-legislature court
+authority, forms, Law Court opinions, professional-conduct materials, judicial
+conduct, eCourts, and a federal District of Maine lane for intake, service,
+CM/ECF, Local Rules, pro se forms, emergency relief, and jurisdiction blockers.
+
+The live corpus belongs outside this repository:
+
+```powershell
+cd D:\dev\ME_FM_LLM
+powershell -ExecutionPolicy Bypass -File .\START_LOCAL_TEST.ps1 -SkipTests
+mfl corpus requirements
+mfl corpus build-manifest --data-root D:\dev\ME_FM_LLM_data
+mfl corpus fetch-live --allow-live --data-root D:\dev\ME_FM_LLM_data
+mfl corpus normalize --data-root D:\dev\ME_FM_LLM_data
+mfl corpus parse --data-root D:\dev\ME_FM_LLM_data
+mfl corpus build-indexes --data-root D:\dev\ME_FM_LLM_data
+mfl corpus audit --data-root D:\dev\ME_FM_LLM_data
+```
+
+See `docs/full_corpus_requirements.md` and
+`docs/enterprise_ga_release_plan.md`. The code can build the external corpus
+scaffold and fetch official raw sources, but enterprise GA legal-data readiness
+remains blocked until the full parse/index pipeline and attorney-reviewed eval
+pack pass.

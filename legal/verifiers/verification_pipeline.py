@@ -169,7 +169,7 @@ class LegalOutputVerifier:
 
 
 def _extract_inline_quotes(text: str) -> list[QuoteRequest]:
-    # Inline quotes without a source_id cannot be verified. Assign a sentinel to
+    # Inline quotes without a source_id cannot be verified. Assign a marker to
     # force the missing-source blocker rather than treating them as verified.
     return [
         QuoteRequest(quoted_text=match.group(1), source_id="__missing_source__")

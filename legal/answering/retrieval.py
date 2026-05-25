@@ -25,6 +25,10 @@ class InMemoryCorpusRetriever:
     def __init__(self, snippets: list[SourceSnippet] | tuple[SourceSnippet, ...]):
         self._snippets = tuple(snippets)
 
+    @property
+    def source_count(self) -> int:
+        return len(self._snippets)
+
     def search(self, query: str, *, limit: int = 5) -> list[SourceSnippet]:
         query_tokens = _tokens(query)
         if not query_tokens:

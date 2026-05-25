@@ -105,6 +105,7 @@ def test_pass_changes_is_the_only_running_txt_pass_log():
         "dist",
         "build",
         ".eggs",
+        ".proofs",
     }
     txt_files = sorted(
         path.relative_to(ROOT).as_posix()

@@ -43,6 +43,8 @@ def clean(repo_root: Path, *, include_venv: bool = False) -> list[str]:
             continue
         rel = path.relative_to(repo_root)
         parts = set(rel.parts)
+        if not include_venv and any(part in VENV_DIR_NAMES for part in parts):
+            continue
         should_remove = False
         if path.is_dir() and path.name in DEFAULT_DIR_NAMES:
             should_remove = True

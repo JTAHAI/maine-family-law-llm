@@ -15,6 +15,7 @@ PACKAGING_EXCLUDE_DIRS = {
     "node_modules",
     "build",
     ".eggs",
+    ".proofs",
 }
 
 PRIVATE_OR_RUNTIME_DIRS = {

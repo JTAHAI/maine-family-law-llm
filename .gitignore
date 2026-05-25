@@ -1,4 +1,4 @@
-﻿# Python
+﻿# Python/local
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -10,9 +10,11 @@ env/
 build/
 dist/
 
-# Local/runtime
-local_test_readiness_report.json
-networked_source_gate_report.json
+# Local runtime/proofs
+.local_server.pid
+.mfl_work/
+.sentinel_tmp/
+.proofs/
 *.log
 *.tmp
 
@@ -24,9 +26,10 @@ networked_source_gate_report.json
 secrets/
 credentials/
 
-# External legal data / corpora / runtime stores
+# External data/corpora/runtime stores
 ME_FM_LLM_data/
-data/
+*_data/
+data_root/
 official_authority_store/
 parsed_authority_store/
 authority_store/
@@ -41,7 +44,7 @@ qdrant/
 models/
 weights/
 
-# Large/legal artifacts not allowed in source repo
+# Legal/runtime artifacts not allowed in source repo
 *.pdf
 *.docx
 *.doc
@@ -55,50 +58,3 @@ weights/
 *.safetensors
 *.onnx
 *.pkl
-.sentinel_tmp/
-.mypy_cache/
-corpora/
-vector_stores/
-tests/app/
-tests/configs/
-tests/docs/
-tests/eval_data/
-tests/legal/
-tests/scripts/
-tests/tests/
-tests/.github/
-tests/*.json
-tests/*.md
-tests/Dockerfile
-tests/pyproject.toml
-tests/PASS_CHANGES.txt
-*.pfx
-
-# SENTINEL/runtime scratch
-.sentinel_tmp/
-runtime/
-data/
-corpora/
-vector_stores/
-
-# Python/cache
-__pycache__/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-
-# Build/release artifacts
-dist/
-build/
-release/
-
-# Secrets / credentials
-.env
-.env.*
-*.pem
-*.key
-*.pfx
-id_rsa
-secrets.*
-credentials.*

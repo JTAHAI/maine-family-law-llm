@@ -3,7 +3,7 @@
   "expected_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
   "expected_windows_repo_root": "C:\\dev\\ME_FM_LLM",
   "findings": [],
-  "generated_at": "2026-05-17T13:33:34.799946+00:00",
+  "generated_at": "2026-05-24T02:23:15.199753+00:00",
   "interpretation": "Source acceptance is separate from production legal readiness. A public/source-ready tree still cannot be used as a production legal product until every external evidence marker is satisfied.",
   "only_one_txt_file": true,
   "production_blockers": [
@@ -16,17 +16,17 @@
     "owner_signoffs_attached"
   ],
   "production_legal_ready": false,
-  "project_root": "/mnt/data/work_next",
+  "project_root": "D:\\dev\\ME_FM_LLM",
   "public_source_ready": true,
   "release_lock_present": true,
   "required_file_count": 31,
   "source_hashes": {
-    "PASS_CHANGES.txt": "33f98fbf1b3bce768ef19661081a2e3ba473487ca970ceb4d1ed6cba6c16a7e9",
-    "README.md": "9e661e1b2ab056b13630c63a4150b2cb801d3b4daaded41c5830e5b9d82bf707",
+    "PASS_CHANGES.txt": "56bf86aa6b3d0725d55ee99dad10ec76cdc303e4576d8116d206f4a76c29ea8c",
+    "README.md": "0b99d6408d2543ec20a5251708cdbe286aec75b5cd271e01999404f928393a99",
     "configs/maine_enterprise_acceptance_policy.json": "e94816f9db2267eba830a7f710d6ae928bffb97c940306b121454f8c8ccf7137",
     "configs/maine_public_release_policy.json": "4968529b6c5019f9363fc75458200c3f8f5039cf714cef2c6726fc813b5e7f6e",
     "docs/enterprise-acceptance-and-github-publish.md": "47e58fb8e99d71673bc492badda8b5dfe5f323e54b68f3e5a94950b81394059a",
-    "pyproject.toml": "84dc9aac49e72a5ab46fdb98e5743209a51f0585ddfc14782a2169cd0bbff57e",
+    "pyproject.toml": "33773ef821adf742c3ceeb60d6b55c330703a841f9e398ca82d43e211c1614f6",
     "scripts/collect-enterprise-resources.py": "b13c855130f6eb1c4eb42aa1f6c8e390a04def130c02f6b6221637e3663b193b",
     "scripts/run-enterprise-preflight.py": "ca4d8bfa1b48fdd8b07b72949d0f746f6ddb3c53b223d0e76454f20ba2bc3d21",
     "scripts/run-quality-checks.py": "5e7557ec50fac6646e9dd1903e6834616ce3e2fbb2dadb909abc38b93bdf7c1d"

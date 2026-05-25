@@ -317,3 +317,21 @@ Pass 28.1 - Local operator script hardening and release source package repair
 - Hardened release package scripts to clean generated local artifacts before packaging and to fail fast if required `legal/corpus` source files are missing.
 - Added regression tests covering corpus source package presence, local smoke JSON output, Windows operator scripts, and package-script corpus guards.
 - Bumped package version to 1.28.0.
+2026-05-23 v1 local workbench hardening
+- Added standalone maine_family_law_llm package for official-source manifest validation, fixture fetch/cache, normalization, citation-aware chunking, keyword retrieval, safety classification, source-grounded answer composition, draft outlines, CLI, and local FastAPI backend.
+- Added representative official-source seed manifest and small offline fixtures for tests. The seed corpus is not complete and must be verified against official pages before use.
+- Added local doctor/repair/start scripts and docs for source policy, safety policy, architecture, local development, and contribution guidance.
+- Repaired citation-first answer pipeline refusal metadata for insufficient source material, no relevant sources, and generator-fallback cases.
+
+2026-05-24 full corpus registry and federal Maine lane
+- Added source-controlled full-corpus requirements for Maine statutes, court
+  rules, family rules, standing orders, professional conduct, bar rules,
+  judicial conduct, evidence, appellate procedure, eCourts, court forms, public
+  guidance, Law Court opinions, U.S. District of Maine intake/relief materials,
+  federal rules, federal statutes, First Circuit opinions, and U.S. Supreme
+  Court opinions.
+- Added external-data-root commands for corpus requirements, manifest build,
+  official live fetch, normalization, parsed-record generation, required index
+  build, and corpus audit.
+- Legal-data GA remains blocked until raw fetch, normalization, structured
+  parsing, indexes, freshness checks, and attorney-reviewed eval minimums pass.

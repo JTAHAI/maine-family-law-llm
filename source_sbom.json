@@ -35,6 +35,12 @@
       "type": "optional-dependency"
     },
     {
+      "bytes": 2659,
+      "path": "scripts/ask-local.py",
+      "sha256": "ee4b07523f936852e4842e22cbde8d6dce8d9c9bec04b69feee61a1df0ee6585",
+      "type": "script"
+    },
+    {
       "bytes": 788,
       "path": "scripts/audit-authority-build.py",
       "sha256": "41ed8cd68b260665b020f6a065566fb7f3b0b1b048ec24534d0c3b05da919d34",
@@ -191,9 +197,9 @@
       "type": "script"
     },
     {
-      "bytes": 2352,
+      "bytes": 2452,
       "path": "scripts/clean-local-artifacts.py",
-      "sha256": "0aa90dca7f4c16d2248fa216d92a32afc48d601dfe54191551d4734ca2e3da62",
+      "sha256": "dd1e4f86730e138a137ec5a40a8bea72406c3c4d2f4ec7753b58501c03b34bf8",
       "type": "script"
     },
     {
@@ -263,6 +269,12 @@
       "type": "script"
     },
     {
+      "bytes": 2782,
+      "path": "scripts/doctor-local-repo.py",
+      "sha256": "1a38db3879894a10cc099fce8997cf2b3a9d2bbe657626b48dc12401d8968a39",
+      "type": "script"
+    },
+    {
       "bytes": 1869,
       "path": "scripts/harden-enterprise-local.ps1",
       "sha256": "83e77623cd7355e43fa33e9dc71c9b28c820cd4b3f3a2d0d92994081d19c4dc3",
@@ -305,6 +317,12 @@
       "type": "script"
     },
     {
+      "bytes": 1630,
+      "path": "scripts/local-test-spin-up.ps1",
+      "sha256": "a006a1054ff308b10cbd52606181efdc37c8b05ab569a996e8aec80de138527e",
+      "type": "script"
+    },
+    {
       "bytes": 1797,
       "path": "scripts/package-release.ps1",
       "sha256": "8ebdf59ca72425ec4cbb656d8742a99ea3a377615da101573e26defac68617c3",
@@ -326,6 +344,12 @@
       "bytes": 788,
       "path": "scripts/prepare-public-github-release.py",
       "sha256": "e8e6708bd784a5452bbcf05c74c3fee64ff4face8896243b293156a61fc7a410",
+      "type": "script"
+    },
+    {
+      "bytes": 3018,
+      "path": "scripts/run-answering-smoke.py",
+      "sha256": "1ef2b64cf1fe3854f70887e89864448d33236fbbaf13ed86927a7d2d53229cc2",
       "type": "script"
     },
     {
@@ -419,9 +443,9 @@
       "type": "script"
     },
     {
-      "bytes": 6874,
+      "bytes": 7360,
       "path": "scripts/run-local-smoke.py",
-      "sha256": "b789db8dd45c1bd7287e56b556c655309ac221f5c528a7815d45a4c5924ee46d",
+      "sha256": "04066b299ad0bdc3a9802d1a4fd55f50ef2260cdb7a97818a1faa73146d91a46",
       "type": "script"
     },
     {
@@ -563,9 +587,9 @@
       "type": "script"
     },
     {
-      "bytes": 553,
+      "bytes": 649,
       "path": "scripts/run-tests.ps1",
-      "sha256": "bb4604a2fb6fa3efe14b0b0afaee51ae2d959a81fec11315419550c8b28eb314",
+      "sha256": "16ee76bb5b6ad84fc46ae3c6f5f9d5c4841ba585649e9c6b056db5f013cedf50",
       "type": "script"
     },
     {
@@ -600,7 +624,7 @@
       "type": "enterprise-resource-catalog"
     }
   ],
-  "generated_at": "2026-05-17T13:33:34.816625+00:00",
+  "generated_at": "2026-05-24T02:23:15.241338+00:00",
   "interpretation": "Source SBOM/provenance only; not proof that legal data, attorney-reviewed evals, or production signoffs exist.",
   "production_legal_ready": false,
   "project_name": "maine-family-law-llm",

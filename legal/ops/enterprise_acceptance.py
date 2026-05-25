@@ -107,6 +107,7 @@ class EnterpriseAcceptanceAuditor:
             "dist",
             "build",
             ".eggs",
+            ".proofs",
         }
         files: list[Path] = []
         for path in sorted(self.project_root.rglob("*")):
@@ -282,6 +283,7 @@ class ReleaseLockfileBuilder:
         "__pycache__",
         "node_modules",
         "dist",
+        ".proofs",
         "runtime",
         "uploads",
         "corpora",

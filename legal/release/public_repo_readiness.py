@@ -90,6 +90,7 @@ class PublicRepoReadinessAuditor:
             "dist",
             "build",
             ".eggs",
+            ".proofs",
         }
         files: list[Path] = []
         for path in self.project_root.rglob("*"):

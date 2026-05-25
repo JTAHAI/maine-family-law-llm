@@ -29,6 +29,7 @@ GENERATED_PARTS = {
     "dist",
     "build",
     ".eggs",
+    ".proofs",
 }
 REQUIRED_SOURCE_FILES = [
     "Dockerfile",
@@ -78,7 +79,7 @@ def _is_ignored(rel_path: Path) -> bool:
 
     if parts & GENERATED_PARTS:
         return True
-    if rel.startswith(".sentinel_tmp/"):
+    if rel.startswith(".local_tmp/"):
         return True
     if rel == "tests/PASS_CHANGES.txt":
         return True

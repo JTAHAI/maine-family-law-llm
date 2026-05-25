@@ -47,7 +47,16 @@ class ReleaseProvenanceReport:
 class ReleaseProvenanceBuilder:
     """Build a deterministic source-file provenance inventory for release evidence."""
 
-    excluded_parts = {".git", ".pytest_cache", ".ruff_cache", ".venv", "__pycache__", "node_modules", "dist"}
+    excluded_parts = {
+        ".git",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "dist",
+        ".proofs",
+    }
     runtime_dirs = [
         "runtime",
         "uploads",

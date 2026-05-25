@@ -1,6 +1,6 @@
 param(
-  [string]$RepoRoot = "C:\dev\ME_FM_LLM",
-  [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
+  [string]$RepoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path,
+  [string]$DataRoot = "D:\dev\ME_FM_LLM_data",
   [switch]$Install,
   [switch]$NoClean,
   [string]$PytestArgs = "-q"
@@ -11,7 +11,8 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $RepoRoot
 $env:MAINE_FAMILY_LAW_DATA_ROOT = $DataRoot
-$env:PYTHONPATH = $RepoRoot
+$env:PYTHONPATH = "$RepoRoot\src;$RepoRoot"
+$env:PYTHONDONTWRITEBYTECODE = "1"
 
 if ($Install) {
   python -m pip install --upgrade pip

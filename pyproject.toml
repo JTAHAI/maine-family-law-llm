@@ -10,17 +10,20 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pypdf>=4.3"]
 
+[project.scripts]
+mfl = "maine_family_law_llm.cli:main"
+
 [project.optional-dependencies]
 api = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.28"]
 dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.28"]
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["app*", "legal*"]
+where = [".", "src"]
+include = ["app*", "legal*", "maine_family_law_llm*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "src"]
 addopts = "-q"
 filterwarnings = [
   "ignore::DeprecationWarning"

@@ -114,6 +114,7 @@ class RebootRecoveryAuditor:
             "dist",
             "build",
             ".eggs",
+            ".proofs",
         }
         txt_files = sorted(
             path.relative_to(self.repo_root).as_posix()

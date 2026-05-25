@@ -29,6 +29,7 @@ GENERATED_PARTS = {
     "dist",
     "build",
     ".eggs",
+    ".proofs",
 }
 REQUIRED_SOURCE_FILES = [
     "Dockerfile",
