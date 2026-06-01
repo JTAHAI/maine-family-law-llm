@@ -1,0 +1,70 @@
+{
+  "artifacts": [
+    {
+      "name": "attorney_sandbox_pilot_report",
+      "pass": 48,
+      "path": "/tmp/nonexistent_pilot/attorney_sandbox_pilot_report.json",
+      "payload_keys": [],
+      "present": false,
+      "required_statuses": [
+        "pass"
+      ],
+      "sha256": "",
+      "status_value": ""
+    },
+    {
+      "name": "limited_real_matter_pilot_report",
+      "pass": 49,
+      "path": "/tmp/nonexistent_pilot/limited_real_matter_pilot_report.json",
+      "payload_keys": [],
+      "present": false,
+      "required_statuses": [
+        "pass"
+      ],
+      "sha256": "",
+      "status_value": ""
+    },
+    {
+      "name": "ga_release_candidate_signoff",
+      "pass": 50,
+      "path": "/tmp/nonexistent_release/ga_release_candidate_signoff.json",
+      "payload_keys": [],
+      "present": false,
+      "required_statuses": [
+        "pass",
+        "signed"
+      ],
+      "sha256": "",
+      "status_value": ""
+    },
+    {
+      "name": "ga_shipment_signoff",
+      "pass": 51,
+      "path": "/tmp/nonexistent_release/ga_shipment_signoff.json",
+      "payload_keys": [],
+      "present": false,
+      "required_statuses": [
+        "pass",
+        "signed"
+      ],
+      "sha256": "",
+      "status_value": ""
+    }
+  ],
+  "blockers": [
+    "pass48_missing_artifact:attorney_sandbox_pilot_report.json",
+    "pass49_missing_artifact:limited_real_matter_pilot_report.json",
+    "pass50_missing_artifact:ga_release_candidate_signoff.json",
+    "pass51_missing_artifact:ga_shipment_signoff.json"
+  ],
+  "closed_passes": [],
+  "generated_at": "2026-06-01T19:54:54.779861+00:00",
+  "open_passes": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "readiness": "pass48_51_launch_evidence_blocked",
+  "status": "blocked"
+}

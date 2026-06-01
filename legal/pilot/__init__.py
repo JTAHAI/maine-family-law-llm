@@ -22,4 +22,9 @@ __all__ = [
     "PilotStage",
     "PrivacyConsentRecord",
     "RealMatterPilotMatter",
+    "LaunchEvidenceArtifact",
+    "LaunchEvidenceGate",
+    "LaunchEvidenceReport",
 ]
+
+from legal.pilot.launch_evidence import LaunchEvidenceArtifact, LaunchEvidenceGate, LaunchEvidenceReport

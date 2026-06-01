@@ -727,3 +727,12 @@ Pass 30 metric gate prep (v1.67.0)
 - Marked Pass 47 complete in the true GA tracker based on repo red-team evidence: false-premise legal queries, fake citations, stale-law/current-law misuse, jurisdiction mismatch, prompt/document/tool injection, confidentiality leakage, malicious upload, and filing-ready bypass attempts all fail safely.
 - Updated GA count to 23 completed / 10 remaining.
 - Did not close Pass 46, Passes 27-31, or Passes 48-51; those still require external release metrics, source-backed/gold evidence, pilots, release-candidate evidence, deployment/signoff, or shipped artifacts.
+
+
+## v1.73.0 - Passes 48-51 launch evidence gate preparation
+
+- Added fail-closed external evidence gate for Passes 48-51.
+- Added launch evidence auditor module and CLI.
+- Added tests proving missing pilot/signoff evidence blocks readiness.
+- Updated true-GA tracker repo-prep status for Passes 48-51 without marking them complete.
+- No pilot, attorney, legal, product, ops, or GA-shipped evidence is fabricated.

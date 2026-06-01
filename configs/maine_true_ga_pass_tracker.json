@@ -517,13 +517,14 @@
         "attorney onboarding",
         "feedback workflow",
         "pilot dashboard",
-        "no critical issues"
+        "no critical issues",
+        "scripts/run-pass48-51-launch-evidence-gates.py verifies attorney_sandbox_pilot_report.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 48,
       "phase": "Phase 12",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "external_evidence_gate_prepared",
       "status": "open",
       "title": "Attorney-only sandbox pilot"
     },
@@ -532,13 +533,14 @@
         "privacy consent",
         "tenant isolation",
         "human review",
-        "daily pilot review"
+        "daily pilot review",
+        "scripts/run-pass48-51-launch-evidence-gates.py verifies limited_real_matter_pilot_report.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 49,
       "phase": "Phase 12",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "external_evidence_gate_prepared",
       "status": "open",
       "title": "Limited real-matter pilot"
     },
@@ -548,13 +550,14 @@
         "metrics",
         "security/pilot evidence",
         "rollback package",
-        "signoffs"
+        "signoffs",
+        "scripts/run-pass48-51-launch-evidence-gates.py verifies ga_release_candidate_signoff.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 50,
       "phase": "Phase 12",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "external_evidence_gate_prepared",
       "status": "open",
       "title": "GA release candidate"
     },
@@ -564,13 +567,14 @@
         "data/index/eval manifests",
         "release/security/pilot evidence",
         "guides/runbooks",
-        "production deployment"
+        "production deployment",
+        "scripts/run-pass48-51-launch-evidence-gates.py verifies ga_shipment_signoff.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 51,
       "phase": "Phase 12",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "external_evidence_gate_prepared",
       "status": "open",
       "title": "GA shipped"
     }

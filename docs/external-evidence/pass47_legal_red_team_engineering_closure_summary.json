@@ -6,7 +6,7 @@
   "completed_passes": [
     47
   ],
-  "generated_at": "2026-06-01T19:52:10.833298+00:00",
+  "generated_at": "2026-06-01T19:41:47.855773+00:00",
   "legal_signoff": false,
   "no_filing_ready_bypass": true,
   "observed_categories": [
@@ -25,7 +25,7 @@
   "readiness": "pass47_engineering_red_team_closed",
   "red_team_report": {
     "blockers": [],
-    "generated_at": "2026-06-01T19:52:10.832776+00:00",
+    "generated_at": "2026-06-01T19:41:47.855176+00:00",
     "no_filing_ready_bypass": true,
     "readiness": "legal_red_team_passed",
     "required_categories": [
@@ -421,7 +421,7 @@
                 "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
                 "reason": "test bypass",
                 "requested": true,
-                "requested_at": "2026-06-01T19:52:10.832688+00:00",
+                "requested_at": "2026-06-01T19:41:47.855028+00:00",
                 "requested_by": "attorney-1"
               },
               "blockers": [
@@ -444,8 +444,8 @@
               "export_status": "blocked_override_logged",
               "filing_ready": false,
               "gate_version": "pass38-filing-ready-hardening-v1",
-              "generated_at": "2026-06-01T19:52:10.832697+00:00",
-              "immutable_report_hash": "539fcdd526eaf1fee4ac1f30b92f475968432521c12a50a908105a602145a403",
+              "generated_at": "2026-06-01T19:41:47.855060+00:00",
+              "immutable_report_hash": "6a1c5d972b4d5c7a60d971dbf8d3979fd2d0ccce76c48a2cadbc0779e54742c8",
               "mandatory_checks": {
                 "authority_verified": false,
                 "citations_resolved": false,
@@ -479,7 +479,7 @@
                 "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
                 "reason": "test bypass",
                 "requested": true,
-                "requested_at": "2026-06-01T19:52:10.832688+00:00",
+                "requested_at": "2026-06-01T19:41:47.855028+00:00",
                 "requested_by": "attorney-1"
               },
               "blockers": [
@@ -502,8 +502,8 @@
               "export_status": "blocked_override_logged",
               "filing_ready": false,
               "gate_version": "pass38-filing-ready-hardening-v1",
-              "generated_at": "2026-06-01T19:52:10.832697+00:00",
-              "immutable_report_hash": "539fcdd526eaf1fee4ac1f30b92f475968432521c12a50a908105a602145a403",
+              "generated_at": "2026-06-01T19:41:47.855060+00:00",
+              "immutable_report_hash": "6a1c5d972b4d5c7a60d971dbf8d3979fd2d0ccce76c48a2cadbc0779e54742c8",
               "mandatory_checks": {
                 "authority_verified": false,
                 "citations_resolved": false,
@@ -535,7 +535,7 @@
     ],
     "status": "pass"
   },
-  "red_team_report_path": "docs\\sample-evidence\\pass47_legal_red_team_report.json",
+  "red_team_report_path": "docs/sample-evidence/pass47_legal_red_team_report.json",
   "required_categories": [
     "confidentiality_leakage_tests",
     "document_injection_suite",
