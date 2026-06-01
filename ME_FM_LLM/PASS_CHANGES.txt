@@ -1,0 +1,770 @@
+## v1.66.0 - Pass 29 verifier production metric gate
+
+- Added a Pass 29 citation/quote verifier metric runner over external attorney-reviewed gold rows.
+- Added a fail-closed Pass 29 production audit script requiring citation existence >= 99% and quote-span verification >= 97%.
+- Added partial release-metric measurement output for citation_existence and quote_span_verification.
+- Added tests proving attorney-reviewed rows can pass while seed/synthetic or missing-source-text rows block.
+- Pass 29 is not decremented by this source ZIP alone; it still requires the external metric run against attorney-reviewed gold and source text/authority index evidence.
+- Remaining true-GA passes stay at 18.
+
+## v1.61.0 - Retrieval smoke performance and progress hardening
+
+- Fixed the live v1.60 pipeline blocker where `run_retrieval_smoke_eval` could consume the full 7200-second step timeout while brute-forcing thousands of source-derived retrieval smoke cases.
+- Bounded retrieval smoke to `max(25, --min-case-count)` cases by default, with `--max-case-count` / `--retrieval-max-case-count` overrides for broader local diagnostics.
+- Prioritized exact citation/form/statute smoke cases before noisier issue-label cases so the required Pass 24 smoke gate measures deterministic official-source retrieval evidence instead of running a full corpus eval.
+- Added `retrieval_smoke_progress.json` and a root-level `retrieval_smoke_report.json` compatibility copy so local operators can monitor progress and final results outside the eval subdirectory.
+- Added regression coverage for bounded smoke case selection, progress reporting, and root-level retrieval smoke report output.
+- True GA count remains 7 complete / 26 remaining until the repaired live pipeline completes and its external evidence is accepted.
+
+## v1.60.0 - Court form freshness normalization hardening
+
+- Fixed the remaining `build_source_update_report` blocker where official Maine court form PDFs with no machine-readable revision date were classified as `freshness_unknown_blocks_current_law_claims` despite having a valid official retrieval timestamp.
+- Updated Maine court form text/PDF parsing to emit `form_pdf_retrieved_timestamp_known` when version text is absent, preserving `known_version_date` when a revision date is extracted.
+- Hardened `SourceUpdateEngine` with a narrow fail-closed exception: only official `court_form_pdf` / `court_form_text` records using `form_version_or_retrieved_timestamp` may fall back from legacy `unknown` freshness to `retrieved_at`; statutes, rules, opinions, and unrelated unknown sources still block.
+- Added regression coverage for both new form parser freshness output and legacy manifest fallback in the source update gate.
+- True GA count remains 7 complete / 26 remaining until the full live authority pipeline passes and its external evidence is audited.
+
+## v1.57.0 - Derived authority quarantine continuation hardening
+
+- Hardened second-wave derived authority ingestion so isolated failed follow-up targets are persisted to `derived_authority_quarantine.json` and the resumable ingest continues instead of stopping the whole Pass 19+ pipeline.
+- Added bounded quarantine gates (`--max-quarantined-targets`, `--max-quarantine-rate`, `--retry-quarantined`) so transient or stale official links are auditable without silently swallowing broad source failure.
+- Added `derived_authority_ingest_report.json` output for machine-readable continuation/quarantine evidence.
+- Percent-encodes spaces/control-character artifacts in derived official URLs before fetch, preventing malformed official link hrefs from failing as `InvalidURL`.
+- Added regression coverage for URL normalization and partial-batch quarantine continuation.
+- True GA count remains 7 complete / 26 remaining until the full live authority pipeline passes and its external evidence is audited.
+
+## v1.56.0 - Resumable derived authority ingest hardening
+
+- Added scripts/ingest-derived-authority-targets.py for resumable chunked second-wave official authority ingestion.
+- Switched run-authority-data-product.py to use the chunked runner for --ingest-followup-targets.
+- Added --derived-batch-size and --derived-batch-timeout controls.
+- Added one curated direct official Title 19-A statute-section target to satisfy the direct statute authority handoff when title indexes expose only chapter/index rows.
+- Remaining true-GA count unchanged until external direct-authority ingestion and retrieval smoke evidence pass.
+
+## v1.55.0 - Follow-up direct authority gate ordering repair
+
+- Fixed `run-authority-data-product.py` so `--require-direct-authority` is enforced after follow-up target derivation/ingest/rebuild, not before direct authority can exist.
+- Added regression coverage proving first-wave parsed authority audit remains reference-safe while `reaudit_parsed_authority_store` remains fail-closed for direct sections/forms/opinions.
+- Remaining true-GA count is unchanged until the repaired local pipeline completes against external evidence.
+
+## v1.54.0 - Official source target 404 repair
+
+- Repaired first-wave official-source target catalog after live local ingestion showed two hard 404s.
+- Updated court records access target from `/maine-courts/records.html` to `/help/records.html`.
+- Replaced unavailable `/lawcourt/2026/index.html` with stable `/lawcourt/2019/index.html`, keeping the seven Law Court index minimum meaningful without requiring an unpublished current-year index.
+- Added catalog regression tests for the known 404 targets.
+- Bumped package version to 1.54.0.
+
+## v1.53.0 - Conflicting status fail-closed hardening
+
+- Hardened `legal.production.ga_pass_evidence.GAPassEvidenceAuditor` so terminal negative status/readiness/result fields block true-GA evidence even when a separate boolean field is positive.
+- Added regression coverage for a Pass 50 release-candidate signoff report with `status: blocked` and `signed: true`.
+- Bumped package version to 1.53.0.
+- True GA completed remains 7; true GA remaining remains 26 because live official-source ingestion evidence is still external and incomplete.
+
+## v1.47.0 - Source manifest evidence hardening
+
+- Hardened `legal.production.ga_pass_evidence.GAPassEvidenceAuditor` so Pass 19 evidence requires non-empty, production-shaped source manifest records rather than any JSON array.
+- Added manifest checks for required official authority metadata, parser audit consistency, known freshness status, snapshot containment, snapshot existence, and SHA-256 hash match.
+- Added regression tests for placeholder manifest records and missing external snapshots.
+- Bumped package version to 1.47.0.
+- True GA completed remains 7; true GA remaining remains 26 because live official-source ingestion evidence is still external and incomplete.
+
+
+## Pass 46 prep / Pass 19 pipeline hardening - 2026-05-31
+
+- Bumped package version to 1.43.0.
+- Added `--append-existing-manifest` to `scripts/ingest-maine-authority.py` so second-wave direct authority ingests preserve first-wave official index snapshots instead of replacing `official_authority_store/source_manifest.json`.
+- Updated `scripts/run-authority-data-product.py` to use append mode for `ingest_derived_authority_targets`, which keeps statute/rule/form/opinion indexes and direct section/form/opinion snapshots in one downstream manifest.
+- Added regression coverage for manifest merge ordering/replacement and for the follow-up ingest command plan.
+- Added `docs/sample-evidence/smoke_evidence_pass19_manifest_merge_hardening.json`.
+- True GA count intentionally unchanged: Pass 19 remains open until live official-source ingestion runs against an external data root and the authority build audit passes from real snapshots.
+
+
+## 2026-05-30 - Pass 1.37.0 - Batched generated-evidence output hygiene
+
+- Redirected local/generated evidence script defaults into docs/sample-evidence instead of repo root.
+- Hardened run-quality-checks.py so nested evidence helpers write/read sample-evidence paths.
+- Added tests that block future scripts from defaulting generated smoke/report JSON to the repo root.
+- Added subprocess timeout to scripts/run-answering-smoke.py.
+- Kept root generated JSON blocked by doctor/release-artifact audit.
+
+Maine Family Law LLM — Running Pass Changes
+
+This is the single running pass-change log for repo releases. External data stores, live authority snapshots, parsed authority stores, indexes, eval stores, model weights, matter files, and runtime databases remain outside the source ZIP unless explicitly documented otherwise.
+
+Passes 0-18 — Foundation through authority/gold-data product baseline
+- Built standalone repo skeleton, data-boundary policy, source registry, rule-based classifiers, citation/quote verifier stubs, filing-ready gate, API/UI shells, no-private-data packaging checks, authority/gold-data policies, and enterprise gate scaffolding.
+
+Passes 19-21 — Authority execution, parsed store, freshness/diff engine
+- Added hardened official-source ingestion path with retry/backoff, rate limiting, robots handling, failed-source reports, and ingest run reports.
+- Added parsed authority store builders/auditors for statute, rule, form, and Law Court opinion JSONL outputs.
+- Added source freshness classification, manifest diffing, and source update report generation.
+- Note: live Maine source fetch must be run in a networked environment; sandbox DNS/network fetch is not proof of a live authority corpus.
+
+Passes 22-25 — Authority graph, retrieval indexes, smoke eval, failure triage
+- Added citation index, authority graph, source-card layer, and negative-treatment placeholder framework.
+- Added external retrieval index builders under embedding_store/bm25, embedding_store/vector, and embedding_store/hybrid.
+- Added measured retrieval smoke eval with Recall@5/10/20, MRR, and nDCG.
+- Added retrieval failure triage with classified failure reasons, fix-ticket output, and query-expansion map.
+
+Passes 26-28 — Attorney annotation operations, gold-pack manifest, release metrics evidence
+- Expanded attorney annotation queue generation with reviewer assignment, double-review metadata, conflict-resolution fields, promoted dataset targets, and CSV spreadsheet export.
+- Added annotation queue auditor to prove queue rows remain needs_attorney_review and are not counted as gold.
+- Added gold eval pack manifest builder that reports required datasets, minimum rows, attorney-reviewed rows, seed/synthetic rows, private-training flags, and blockers.
+- Added release metrics evidence builder and script that emits GA metric evidence with value, sample size, basis, reviewer status, pass/block status, and release-gate blockers.
+- Added tests for Pass 26-28 gold queue, gold manifest, and release metrics evidence behavior.
+- Updated quality checks and smoke evidence for Pass 26-28.
+
+Passes 29-31 — Verifier intelligence, claim support, stale-law/jurisdiction controls
+- Upgraded the verifier pipeline to return citation resolution, pinpoint citation-support status, source-card trace, quote exact/fuzzy verification, offsets, and filing-ready blockers.
+- Added source-card store utilities for verifier reports and API responses.
+- Added deterministic legal-claim extraction and claim-support drill traces from claim to candidate source/evidence terms.
+- Added stale/current-law, jurisdiction mismatch, negative-treatment unknown, and form-version freshness checks.
+- Updated citation, quote, review, and filing-ready API routes to expose verifier reports and consume source metadata/cards.
+- Added verifier evidence script and quality-check integration for Pass 29-31.
+- Added tests proving source-card/offset reporting, unsupported claim blocking, current-law freshness blocking, jurisdiction blocking, stale-form blocking, and filing-gate consumption of scope blockers.
+
+
+Passes 32-34 — Maine-specific Law Court, forms, and findings intelligence
+- Expanded Law Court opinion intelligence into structured case briefs with caption, docket/date, disposition, standard of review, holding, remand reason, preservation status, issue labels, and appellate red flags.
+- Wired appellate red flags into draft review so Maine Law Court defects such as missing Rule 52 findings or incomplete records become review blockers.
+- Added Maine forms intelligence: form catalog entries, version/freshness tracking, required-field extraction, filing-context classification, stale-form warnings, and form-to-rule/statute dependency graph.
+- Added Rule 52 / best-interest / findings engine with proposed findings checklist, best-interest factor coverage, missing-findings detection, contact-restriction support checks, and PFA-to-family-case independent-analysis warning.
+- Added smoke evidence and tests for Pass 32-34 deterministic Maine appellate/forms/findings intelligence.
+
+Passes 35-36 — Secure matter ingestion and evidence work product
+- Added secure matter/document ingestion metadata for tenant ID, data class, retention policy, PII findings, redaction count, extraction status, training exclusion, and per-document audit history.
+- Added external encrypted matter-store persistence for document payloads plus plaintext-free document manifests; repo-local matter stores remain blocked.
+- Added upload text-extraction status handling for provided text, text uploads, PDF/OCR-required uploads, and unsupported binary files.
+- Added fact-to-evidence mapping with source document IDs, span offsets, confidence, and review-required status.
+- Added timeline events with source document IDs and span offsets.
+- Added matter work-product builder producing issue tree, procedural posture summary, timeline, evidence map, exhibit index, authority matrix, missing facts, missing-record checklist, red flags, warnings, and review-required export status.
+- Added intake/report and evidence API paths that expose the secure matter/evidence work-product layer without loading private matter data from the source repo.
+- Added smoke evidence and tests for Pass 35-36 secure matter ingestion, tenant isolation, encrypted persistence, evidence mapping, timeline spans, exhibit index, and authority matrix.
+
+Passes 37-38 — Review-required drafting workspace and filing-ready gate hardening
+- Added DraftWorkspaceBuilder to produce review-required drafting workspaces with source-card sidebar, authority matrix sidebar, claim-support sidebar, missing-fact sidebar, citation report, quote report, fact-to-evidence map, human-review checklist, and filing-readiness blocker report.
+- Updated the draft API route to return the full review-required workspace instead of a bare draft/review pair.
+- Hardened FilingReadyGate around mandatory checks for verified authority, resolved citations, found quote spans, supported legal claims, facts mapped to evidence, procedure/posture check, current forms, and completed human review.
+- Added immutable gate report hashing and attorney override logging that never converts a failed gate into filing-ready pass.
+- Added smoke evidence and tests for Pass 37-38 drafting workspace and filing-ready gate behavior.
+
+Current completed implementation pass number: 38
+Remaining roadmap passes to GA shipped: 13 (Pass 39 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, production verifier/retrieval threshold evidence, production security controls, real matter pilot evidence, and final legal/product/ops signoffs.
+
+Passes 39-40 — Production API and web UI completion
+- Completed the required standalone API surface with OpenAPI coverage for intake, query, research, draft, review, citation/quote verification, evidence map, timeline, filing-ready gate, source lookup, matter evidence packet, health, and version endpoints.
+- Added protected-route RBAC/tenant header enforcement for non-public API routes plus audit headers for every API response.
+- Added API completion policy/evidence objects and OpenAPI completion auditor to prove endpoint inventory, documented operations, public/protected route split, audit-event requirements, and review-required contracts.
+- Upgraded API route responses to include review-required envelopes, RBAC metadata, audit events, source-card/drilldown structures for answers, draft review status, and blocked export explanations.
+- Completed production UI view markers across matter dashboard, Ask Maine Family Law, upload, source library, authority matrix, timeline, evidence map, draft workspace, citation report, quote report, filing-readiness gate, human review queue, settings/data policy, and admin eval dashboard.
+- Added UI completion auditor proving source cards, review status, blocked export explanations, and answer → claim → citation → source text → verifier result drilldowns are present in required views.
+- Added Pass 39-40 smoke evidence, tests, and quality-check integration.
+
+Current completed implementation pass number: 40
+Remaining roadmap passes to GA shipped: 11 (Pass 41 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, production verifier/retrieval threshold evidence, production security controls, governance/compliance signoff, SRE/load/restore evidence, legal red-team results, real matter pilot evidence, and final legal/product/ops signoffs.
+
+
+Passes 41-42 — Model governance and prompt/document/tool-injection defense
+- Added governed model-admission evidence with required model roles, admission records, production-readiness checks, privacy/cost/latency/fallback/regression evidence, and certification tasks reserved to deterministic system gates.
+- Added model replacement ledger with hash-linked audit events so model replacement preserves a verifiable audit trail.
+- Added LLM injection-defense policy, red-team cases, prompt/document injection gateway, retrieval-context isolation, tool sandbox allowlist/denylist, output filtering, and cost-control blockers.
+- Added smoke evidence and tests proving clean prompts pass, malicious prompts/documents/tools are blocked, retrieved text is always untrusted data, and generators cannot self-certify legal correctness.
+
+Current completed implementation pass number: 42
+Remaining roadmap passes to GA shipped: 9 (Pass 43 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, production verifier/retrieval threshold evidence, production security implementation/signoff, governance/compliance evidence packet, SRE/load/restore evidence, legal red-team signoff, real matter pilot evidence, and final legal/product/ops signoffs.
+
+Passes 43-45 — Enterprise security, governance/compliance packet, and SRE operations
+- Added enterprise security controls for authentication, RBAC, tenant isolation, matter-level permissions, encryption-at-rest policy, encryption-in-transit policy, key rotation, secrets handling, immutable export logs, audit logs, backup/disaster recovery, and retention/deletion controls.
+- Added hash-chained key-rotation and immutable export ledgers, plus answer-provenance audit records covering user, matter, source, model, prompt hash, retrieved-context hash, output hash, verifier status, and export status so admins can explain why an answer was generated.
+- Added governance/compliance evidence packet builder with NIST AI RMF, NIST AI 600-1, and OWASP LLM mappings plus data-flow, threat-model, vendor-risk, incident-response, privacy-impact, model/data-card, human-review, attorney-review, source-update, and rollback packet inventory.
+- Added reliability/SRE policy and auditor for SLOs, backup-restore drill evidence, observability/queue/cost controls, error budgets, load/chaos/restore plans, and degraded modes for vector-index, model-provider, and source-store outages.
+- Added smoke evidence, tests, and quality-check integration for Pass 43-45.
+
+Current completed implementation pass number: 45
+Remaining roadmap passes to GA shipped: 6 (Pass 46 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, full production release eval thresholds, legal red-team signoff, attorney-only sandbox pilot evidence, limited real-matter pilot evidence, release-candidate signoffs, and production deployment/operations artifacts.
+
+Passes 46-47 — Full release eval run and legal red-team/adversarial testing
+- Added Pass 46 full release eval runner that produces an explicit ship/no-ship report from GA thresholds, sample-size requirements, attorney-review requirements, source freshness evidence, and private-data packaging evidence.
+- Enforced that seed/synthetic metrics, missing metrics, undersized samples, and missing attorney review block release instead of being counted as GA evidence.
+- Added Pass 47 legal red-team harness covering false-premise legal queries, fake citations, stale-law use, jurisdiction mismatch, prompt injection, document injection, confidentiality leakage, malicious uploaded documents, and filing-ready bypass attempts.
+- Added deterministic filing-ready bypass tests proving attorney override is logged only and cannot silently convert a failed gate into a filing-ready pass.
+- Added red-team policy config, evidence scripts, quality-check integration, and tests for Pass 46-47.
+
+Current completed implementation pass number: 47
+Remaining roadmap passes to GA shipped: 4 (Pass 48 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, production verifier/retrieval threshold evidence, attorney-only sandbox pilot evidence, limited real-matter pilot evidence, release-candidate signoffs, rollback package, final legal/product/ops signoffs, and shipped operations artifacts.
+
+Passes 48-49 — Attorney-only sandbox pilot and limited real-matter pilot operations
+- Added Pass 48 attorney-only sandbox pilot operations: participant onboarding, required training modules, public/synthetic-data-only scope, feedback workflow, attorney review queue, eval-candidate creation, error triage, and pilot dashboard.
+- Added safeguards proving attorney sandbox use remains research/review-only with review_required outputs and no real private matter ingestion.
+- Added Pass 49 limited real-matter pilot controls: explicit privacy consent, limited tenant allowlist, matter-level isolation, encrypted-storage verification, human-review requirement, export restriction acknowledgement, incident process, daily pilot review, and attorney signoff.
+- Added real-matter pilot work-product artifact checks for issue tree, posture summary, timeline, evidence map, authority matrix, and red-flag report.
+- Added pilot policy configs, pilot evidence script, tests, and quality-check integration for Pass 48-49.
+
+Current completed implementation pass number: 49
+Remaining roadmap passes to GA shipped: 2 (Pass 50 through Pass 51)
+Known release blockers outside source code: live official-source corpus execution in a networked environment, attorney-reviewed gold minimums, production verifier/retrieval threshold evidence, actual attorney-only sandbox pilot evidence, actual limited real-matter pilot evidence, GA release-candidate signoffs, rollback package, final legal/product/ops signoffs, and shipped operations artifacts.
+
+Passes 50-51 — GA release candidate and GA shipment controls
+- Added release-candidate artifact inventory gates for versioned source ZIP, external data build manifest, parsed authority manifest, retrieval index manifest, gold eval pack manifest, release metrics JSON, security evidence packet, pilot evidence packet, rollback package, and release notes.
+- Added security, legal, product, and operations signoff enforcement plus open P0/P1 blocker checks before a release candidate can be frozen.
+- Added final GA shipment auditor requiring clean source ZIP, external legal data product manifest, parsed authority build, retrieval indexes, gold eval pack, smoke/evidence JSON, release metrics, security/governance packet, admin/user/attorney-reviewer guides, incident/rollback runbook, source update runbook, and model update runbook.
+- Added GA definition controls for clean deployment, real official Maine authority, attorney-reviewed evals, passing metrics, unsupported filing-ready blocking, private matter-data protection, audit trails, security controls, pilot evidence, rollback, and maintenance operations.
+- Added admin guide, user guide, attorney reviewer guide, incident/rollback runbook, source update runbook, model update runbook, release notes, GA release policy, Pass 50-51 evidence script, and tests.
+- The source ZIP remains clean and excludes external legal data, parsed authority stores, retrieval indexes, eval stores, matter files, model weights, and runtime databases.
+
+Current completed implementation pass number: 51
+Remaining roadmap passes to GA shipped: 0
+Known production-use prerequisites outside this source ZIP: execute live official Maine corpus ingestion in a networked environment, attach real external authority/data/index manifests, meet attorney-reviewed gold minimums, pass measured release metrics, complete actual pilot evidence, and obtain owner signoffs.
+
+Post-GA Review 1 — Reality audit and build-path determination
+- Added a post-GA repo review/build-path audit that separates completed source-code foundations from real production GA readiness.
+- Added configs/maine_post_ga_build_path.json with the concrete remaining build path: live official-source ingestion, parsed authority/freshness, retrieval indexes, attorney-reviewed gold pack, real release metrics, and real security/pilot/signoff evidence.
+- Added legal.release.post_ga_review and scripts/run-post-ga-repo-review.py to generate post_ga_repo_review_build_path.json.
+- Added tests proving the source repo has all numbered pass foundations while production GA remains blocked until fixture evidence is replaced by real external evidence.
+- Integrated the post-GA review into quality checks so source-only releases cannot quietly imply production readiness.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA build-path status: blocked until real external authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and owner signoffs are attached.
+
+Post-GA Hardening 2 — Enterprise local resource collection and hardened build path
+- Added configs/maine_enterprise_resource_catalog.json with a Windows-first enterprise resource catalog for official Maine statutes, Maine Judicial Branch rules/standing orders/forms/family guidance, Law Court opinion indexes, eCourts/public-records controls, Maine child-support resources, and federal family-law-adjacent authority.
+- Added legal.resources enterprise collection/audit/plan builders that download resources into an external local data root, hash every snapshot, emit resource manifests/failure reports/collection reports, and refuse source-repo data roots by default.
+- Added scripts/collect-enterprise-resources.py, scripts/audit-enterprise-resource-collection.py, scripts/build-enterprise-local-plan.py, scripts/run-enterprise-local-hardening.py, plus Windows PowerShell wrappers for C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data.
+- Added docs/enterprise-local-hardening.md and README instructions for the exact local hardening and collection path.
+- Hardened .gitignore for external enterprise stores and generated local evidence.
+- Added tests for catalog coverage, external data-root refusal, dry-run manifests, snapshot hash auditing, and Windows build-plan generation.
+- Integrated the enterprise local collection plan into quality evidence.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA build-path status: enterprise-hardening scripts are present; production remains blocked until a networked local run populates external resource/authority manifests and real attorney-reviewed/signoff evidence replaces fixtures.
+
+
+Post-GA Hardening Passes 2-6 — Test-ready enterprise and public-release hardening
+- Added public GitHub source-readiness policy, CI workflow, public-release checklist, attribution-license options guide, and local test runbook while keeping production legal readiness explicitly separate from public source readiness.
+- Added PublicRepoReadinessAuditor and scripts/prepare-public-github-release.py to enforce source hygiene, one-pass-log-only TXT discipline, no bundled runtime/private/legal corpus artifacts, required docs, and CI presence.
+- Added EnterprisePreflightRunner plus Windows-first run-enterprise-preflight wrappers for C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data, creating/checking the external data-root layout and printing the next networked collection/build commands.
+- Added OfflineValidationPackBuilder and build-offline-validation-pack scripts to create a tiny synthetic external data root for local parser/retrieval/verifier wiring tests without pretending fixtures are legal authority.
+- Added ReleaseProvenanceBuilder and build-release-provenance.py to hash and inventory the source tree for release evidence/SBOM-style provenance.
+- Integrated the new hardening checks into quality evidence and added tests for public repo readiness, enterprise preflight, offline validation pack generation, and release provenance.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: source tree is test-ready for local enterprise validation and public GitHub staging, but production legal use remains blocked until live official authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and owner signoffs replace fixtures.
+
+Post-GA Hardening Passes 7-10 — Public attribution, supply-chain, and GitHub staging hardening
+- Added a public attribution/license kit generator that creates LICENSE.md, NOTICE.md, ATTRIBUTION.md, and CITATION.cff while preserving the rule that legal corpora, private matter data, model weights, embeddings, and attorney-reviewed gold data remain outside the source tree.
+- Added source SBOM/supply-chain evidence generation with dependency bounds checks, CI workflow checks, required enterprise script checks, script/workflow checksums, and resource-catalog inventory.
+- Added Windows-first build-local-github-stage.ps1 for C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data staging before public GitHub publication.
+- Added public release hardening and supply-chain security docs, expanded public-release policy, and integrated attribution/supply-chain evidence into quality checks.
+- Added tests proving attribution files are generated, source SBOM evidence is source-only, public GitHub readiness remains separated from production legal readiness, and one-pass-log discipline remains intact.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: public-source staging is stronger, but production legal use remains blocked until live official authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and owner signoffs replace fixtures.
+
+Post-GA Hardening Passes 11-14 — Enterprise acceptance lock, GitHub hygiene, and final local test gate
+- Added enterprise acceptance policy and auditor for the Windows-first target C:\dev\ME_FM_LLM with external data at C:\dev\ME_FM_LLM_data.
+- Added release lockfile builder/auditor so a staged source tree can be hashed, locked, and rechecked before public GitHub publication or enterprise handoff.
+- Added final local acceptance scripts that run pytest, quality checks, source lock generation/audit, and enterprise acceptance evidence while keeping production legal readiness blocked until real external evidence/signoffs are supplied.
+- Added public GitHub hygiene files: SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SUPPORT.md, issue template, and pull request template with explicit no-private-data/no-corpus rules.
+- Added docs/enterprise-acceptance-and-github-publish.md documenting the exact final local acceptance and public publish path.
+- Integrated release lockfile and enterprise acceptance evidence into the quality-check evidence bundle.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: source release is now lockable and ready for final local acceptance testing; production legal use remains blocked until live official authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and owner signoffs replace fixtures.
+
+Post-GA Hardening Passes 15-18 — Local test-readiness certification and handoff gate
+- Added configs/maine_local_test_readiness_policy.json defining source-only test readiness, offline fixture wiring, networked authority collection, and public GitHub staging as separate test modes.
+- Added LocalTestReadinessAuditor and scripts/run-test-readiness.py plus Windows PowerShell wrapper for C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data.
+- Added docs/enterprise-test-readiness.md with the exact local test commands, networked legal-data commands, and production-readiness boundary.
+- Added local_test_readiness_report.json generation proving whether the source tree is ready to test locally while keeping production legal readiness false until real external evidence and signoffs are supplied.
+- Added tests for the local test-readiness auditor, offline fixture-only validation, public GitHub source readiness, and production legal readiness blocking.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA test status: ready for local source/fixture testing; not ready for legal production use until external live authority, attorney-reviewed evals, real metrics, pilot/security evidence, and owner signoffs are attached.
+
+Post-GA Hardening Passes 19-22 — Reboot-safe local recovery and resume diagnostics
+- Added configs/maine_reboot_recovery_policy.json defining the Windows-first resume path for C:\dev\ME_FM_LLM and the external data root C:\dev\ME_FM_LLM_data.
+- Added RebootRecoveryAuditor plus scripts/run-reboot-safe-healthcheck.py and scripts/run-reboot-safe-healthcheck.ps1 to verify required scripts/configs, Python version, external data-root layout, write probes, forbidden source-repo data stores, and one-PASS_CHANGES.txt-only discipline after a reboot.
+- Added docs/reboot-safe-test-handoff.md and README reboot-resume commands so local testing can restart cleanly after workstation restart.
+- Integrated reboot recovery evidence into the quality-check bundle and added tests for reboot-safe local testing, skipped write-probe mode, and blocking data roots inside the source repo.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: reboot-safe local source/fixture testing is now explicitly checkable; production legal use remains blocked until live official authority, attorney-reviewed evals, real metrics, pilot/security evidence, and owner signoffs are attached.
+
+Post-GA Hardening Passes 23-26 — Operator test battery and public CI repair
+- Restored required public GitHub hygiene artifacts inside the source package: .gitignore, .github/workflows/ci.yml, issue template config, bug report template, and pull request template.
+- Added configs/maine_operator_test_battery_policy.json defining the one-command operator local-test battery, Windows commands, external data-root layout, networked authority commands, and production legal readiness blockers.
+- Added OperatorTestBatteryAuditor plus scripts/run-operator-test-battery.py and scripts/run-operator-test-battery.ps1 for C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data.
+- Added docs/operator-test-battery.md explaining the post-reboot/pre-GitHub local test battery and the boundary between source/local testing and legal production readiness.
+- Added tests for the operator battery pass path and for blocking a data root placed inside the source repository.
+- Repaired source-readiness audits so public repo readiness, enterprise preflight, local test readiness, enterprise acceptance, and supply-chain checks pass from the packaged ZIP.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: operator local-test battery is present and public-source readiness artifacts are packaged; production legal use remains blocked until live official authority, attorney-reviewed evals, real metrics, pilot/security evidence, and owner signoffs are attached.
+
+Post-GA Hardening Passes 27-32 — Networked source gate and operator handoff bundle
+- Added configs/maine_networked_source_gate_policy.json defining the hard boundary between local fixture/source tests and real networked official-source legal validation.
+- Added NetworkedSourceGateAuditor plus scripts/run-networked-source-gate.py and scripts/run-networked-source-gate.ps1 to verify the external data root contains required official authority, parsed authority, retrieval-index, attorney-reviewed gold-eval, and release-metrics manifests before any production legal readiness claim.
+- Added fixture-marker rejection in the networked source gate so offline-smoke, placeholder, synthetic-only, and fixture evidence cannot be treated as real production evidence.
+- Added docs/networked-source-gate.md with the exact C:\dev\ME_FM_LLM and C:\dev\ME_FM_LLM_data command path for live resource collection, authority ingestion, parsed store build, authority layer build, retrieval index build, and the final networked source gate.
+- Added configs/maine_operator_handoff_policy.json plus OperatorHandoffBundleBuilder and scripts/build-operator-handoff-bundle.py/.ps1 to produce a single JSON handoff bundle with script hashes, local operator commands, public-source readiness, networked source-gate status, and explicit non-production blockers.
+- Updated the operator test battery to require the new networked source gate and handoff scripts.
+- Added operator_handoff_bundle.json and networked_source_gate_report.json evidence files. The handoff bundle passes for source/local testing; the networked source gate is expected to fail until the external data root is populated with real non-fixture authority/eval/metric evidence.
+- Added tests for empty external-data failure, valid non-fixture external evidence pass, fixture-marker rejection, and operator handoff bundle generation.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: local operator testing and public source staging are further hardened; real legal-production readiness remains blocked until C:\dev\ME_FM_LLM_data contains live official Maine authority, parsed stores, retrieval indexes, attorney-reviewed gold evals, real metrics, pilot/security evidence, and signoffs.
+
+Post-GA Hardening Passes 33-38 — Production promotion gate and external evidence lock
+- Added configs/maine_production_promotion_policy.json defining the final production-legal-ready gate for C:\dev\ME_FM_LLM with external evidence in C:\dev\ME_FM_LLM_data.
+- Added ProductionPromotionGateAuditor plus scripts/run-production-promotion-gate.py and scripts/run-production-promotion-gate.ps1 to require the networked official-source gate, attorney-reviewed gold eval minimums, GA metric thresholds, pilot evidence, security/governance evidence, rollback package evidence, and owner signoffs before promotion.
+- Added strict fixture/offline/synthetic marker rejection so local smoke evidence cannot be promoted into production legal readiness.
+- Added docs/production-promotion-gate.md with the exact Windows commands for running the final source gate and production promotion gate.
+- Updated operator handoff and operator test battery policies to include the production promotion gate as a required local handoff/reporting step.
+- Added production_promotion_gate_report.json evidence showing promotion remains locked until real external evidence is supplied.
+- Added tests for empty-evidence failure, full non-fixture evidence pass, low-metric blocking, and fixture-marker rejection.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: local/source testing and public-source staging remain ready; production legal readiness is now locked behind a dedicated production-promotion gate requiring live authority, attorney-reviewed evals, real metrics, pilot/security evidence, rollback evidence, and owner signoffs in the external data root.
+
+
+Post-GA Hardening Passes 39-44 — Full GA workbench and evidence inventory gate
+- Added configs/maine_full_ga_workbench_policy.json defining the one-command full-GA workbench path from local/source testing through networked authority validation and final production promotion.
+- Added FullGAWorkbenchBuilder plus scripts/build-full-ga-workbench.py and scripts/build-full-ga-workbench.ps1 for C:\dev\ME_FM_LLM and external evidence in C:\dev\ME_FM_LLM_data.
+- Added full_ga_workbench_report.json generation with external evidence inventory, SHA-256 hashes, fixture-marker rejection, phase-by-phase readiness, and production_legal_ready locked to the production-promotion gate only.
+- Added docs/full-ga-workbench.md with exact Windows commands for driving the repo toward real full GA while preserving the boundary between fixture/source readiness and legal-production readiness.
+- Added tests proving empty external evidence stays blocked, complete non-fixture evidence can pass, fixture-marked evidence is rejected, and data roots inside the source repo are blocked.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: full-GA orchestration is now consolidated into a single workbench report; production legal readiness still requires real external official authority, attorney-reviewed gold evals, measured metrics, pilot/security/rollback evidence, and owner signoffs.
+
+Post-GA Hardening Passes 45-48 — Local Docker/containerization and networked-gate plumbing repair
+- Added a production-grade Dockerfile for the FastAPI service with Python 3.11 slim, non-root UID/GID 10001, /data as the external legal-data mount, no model/corpus/data-store copy steps, and a container healthcheck script.
+- Added .dockerignore coverage for external authority stores, parsed stores, embedding/vector stores, eval stores, matter files, OCR caches, model weights, runtime databases, PDFs, Office documents, secrets, and local state.
+- Hardened docker-compose.yml for local enterprise testing with /data mounted from MAINE_FAMILY_LAW_DATA_ROOT, repo mounted read-only at /app, localhost-only API port binding, non-root user, read-only root filesystem, tmpfs /tmp, no-new-privileges, dropped capabilities, and healthcheck wiring.
+- Added Windows and Linux Docker helper scripts for build, run, and smoke-test flows.
+- Fixed networked-source gate plumbing to accept canonical live manifest source_class names through explicit aliases without changing manifest data, including statute_title_pdf, court_rules_index, court_policy_index, court_forms_index, and law_court_opinion_index.
+- Fixed parsed/index manifest compatibility by emitting parsed_authority_manifest.json and retrieval_index_manifest.json while preserving legacy parsed_manifest.json and index_manifest.json outputs.
+- Extended the networked-source gate to accept configured alternate parsed/index manifest names, parse counts_by_collection from parsed store manifests, and infer bm25/vector/hybrid index presence from existing retrieval-index builder outputs.
+- Added Docker/containerization tests proving Dockerfile presence, .dockerignore boundary coverage, compose /data mounting and localhost-only port exposure, no baked official authority corpora, helper-script presence, and one-PASS_CHANGES.txt-only pass-log discipline.
+- Added networked-source gate regression coverage for actual source classes and legacy manifest names.
+- Ran pytest successfully across the repository after the containerization and gate-plumbing changes.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: source/container testing is improved for local enterprise validation; production legal readiness remains blocked until live official Maine authority gaps, attorney-reviewed evals, measured release metrics, pilot/security evidence, and owner signoffs are supplied through the external data root.
+
+Post-GA Hardening Passes 49-52 — Court-rules source repair and PDF parsing path
+- Repaired official Maine court-rules ingestion targets by adding the Maine Judicial Branch Court Rules index and replacing stale/nonexistent appellate/evidence/probate HTML targets with direct official PDF targets from the court rules index.
+- Added additional official rules/policy coverage for Maine Rules of Electronic Court Systems and the M.R. Civ. P. 120 family-matters standing order so eCourts, record-access, and Rule 52/findings workflows have explicit live-source targets.
+- Added redundant enterprise resource-collection targets for appellate, evidence, probate, and electronic-court-system rules so maine_court_rules has more official targets than the required minimum of four.
+- Added pypdf-backed PDF text extraction plus a Maine court-rules text parser so official rules PDFs can produce parsed rule references instead of being treated as generic statute PDF snapshots.
+- Updated the parsed authority store builder to route maine_rules_pdf snapshots into rules/rules_index.jsonl, preserving source hash/span traceability and avoiding any source-repo corpus packaging.
+- Made configs/maine_official_source_targets.json the runtime source of truth for official targets, preventing future drift between the JSON catalog and the Python loader.
+- Added regression tests for current court-rules targets, stale-rule-URL rejection, PDF rule-text parsing, and redundant maine_court_rules resource coverage.
+- Ran pytest successfully after the court-rules source repair and PDF parser changes.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: local source/container and official-source plumbing are stronger; production legal readiness remains blocked until live official Maine authority gaps, attorney-reviewed evals, measured release metrics, pilot/security evidence, rollback evidence, and owner signoffs are supplied through the external data root.
+
+Post-GA Hardening Passes 53-56 — Windows test bootstrap and generated-metadata audit hardening
+- Added httpx to both api and dev optional dependencies so FastAPI/Starlette TestClient support is installed by the normal python -m pip install -e ".[dev,api]" path.
+- Added scripts/clean-local-artifacts.py plus PowerShell and shell wrappers to remove generated pytest/ruff/cache/build/egg-info artifacts without touching external legal data roots, corpora, model stores, vector stores, or matter files.
+- Added scripts/install.ps1 for the Windows default repo/data layout, creating or reusing C:\dev\ME_FM_LLM_venv outside the source repo and installing the dev/API extras safely.
+- Added scripts/run-tests.ps1 and scripts/run-tests.sh to set MAINE_FAMILY_LAW_DATA_ROOT/PYTHONPATH, optionally install dependencies, clean generated local artifacts, and then run pytest.
+- Updated scripts/install.sh to install both dev and API extras and clean editable-install metadata after install.
+- Updated scripts/run-test-readiness.ps1 to clean local generated artifacts before producing the local readiness report.
+- Hardened source-readiness, public-release, reboot-recovery, post-GA-review, and release-manifest scanners to ignore generated virtualenv/build/cache/egg-info metadata while still blocking real source-repo TXT pass-log drift and private/runtime artifacts.
+- Updated Docker/containerization pass-log tests to ignore generated local tooling metadata instead of requiring users to hand-delete editable-install artifacts before every test run.
+- Updated package-release scripts to exclude build and egg-info metadata from release ZIPs.
+- Verified pytest passes even when a maine_family_law_llm.egg-info/SOURCES.txt file has been generated locally by editable install.
+
+Current completed implementation pass number: 51
+Remaining numbered roadmap passes to GA shipped: 0
+Post-GA hardening status: Windows local testing is now scriptable and resilient to normal Python editable-install metadata; production legal readiness remains blocked until live official Maine authority, attorney-reviewed evals, measured release metrics, pilot/security/rollback evidence, and owner signoffs are supplied through the external data root.
+
+Pass 28.1 - Local operator script hardening and release source package repair
+- Restored the `legal/corpus` source package to the release tree; this is source code/schema, not an external legal corpus, and is required by connectors, manifests, and source-registry tests.
+- Added local smoke scripts for Windows/Linux/Python that verify imports, API health/version in-process, external data-root boundaries, single running TXT log discipline, and source-only readiness without certifying production legal GA.
+- Added `scripts/run-local-api.ps1` and `.sh`, and replaced the placeholder local demo script with a working API launcher that prints the correct `/api/health`, `/api/version`, and `/docs` URLs.
+- Hardened release package scripts to clean generated local artifacts before packaging and to fail fast if required `legal/corpus` source files are missing.
+- Added regression tests covering corpus source package presence, local smoke JSON output, Windows operator scripts, and package-script corpus guards.
+- Bumped package version to 1.28.0.
+2026-05-23 v1 local workbench hardening
+- Added standalone maine_family_law_llm package for official-source manifest validation, fixture fetch/cache, normalization, citation-aware chunking, keyword retrieval, safety classification, source-grounded answer composition, draft outlines, CLI, and local FastAPI backend.
+- Added representative official-source seed manifest and small offline fixtures for tests. The seed corpus is not complete and must be verified against official pages before use.
+- Added local doctor/repair/start scripts and docs for source policy, safety policy, architecture, local development, and contribution guidance.
+- Repaired citation-first answer pipeline refusal metadata for insufficient source material, no relevant sources, and generator-fallback cases.
+
+2026-05-24 full corpus registry and federal Maine lane
+- Added source-controlled full-corpus requirements for Maine statutes, court
+  rules, family rules, standing orders, professional conduct, bar rules,
+  judicial conduct, evidence, appellate procedure, eCourts, court forms, public
+  guidance, Law Court opinions, U.S. District of Maine intake/relief materials,
+  federal rules, federal statutes, First Circuit opinions, and U.S. Supreme
+  Court opinions.
+- Added external-data-root commands for corpus requirements, manifest build,
+  official live fetch, normalization, parsed-record generation, required index
+  build, and corpus audit.
+- Legal-data GA remains blocked until raw fetch, normalization, structured
+  parsing, indexes, freshness checks, and attorney-reviewed eval minimums pass.
+
+2026-05-29 public repo cleanup and local GA-readiness hardening
+- Purged copied repository fragments and generated evidence artifacts from tests/, including tests/.github, tests/configs, tests/docs, tests/eval_data, tests/scripts, tests/Dockerfile, tests/pyproject.toml, and tests/*.json.
+- Added tests/test_public_repo_integrity.py to fail if copied project files, nested test roots, extra TXT files, or strict-doctor failures return.
+- Made scripts/doctor-local-repo.py strict by default, with safe_to_push true/false output, repo-local venv blocking, copied-tests contamination checks, runtime artifact detection, and clearer recovery hints.
+- Hardened scripts/clean-local-artifacts.py to remove nested tests contamination, generated cache/build/egg-info artifacts, .mfl_work, .proofs, .sentinel_tmp, .local_server.pid, and repo-local venvs when requested.
+- Repaired tests/test_cli_api_local_v1.py for cross-platform PYTHONPATH via os.pathsep, subprocess timeouts, PowerShell/pwsh detection, parser-skip behavior when PowerShell is unavailable, and strict doctor safe_to_push assertions.
+- Added STOP_LOCAL_TEST.ps1/.cmd, CHECK_LOCAL_REPO.ps1/.cmd, and CREATE_REVIEW_ZIP.ps1/.cmd for local operator lifecycle, strict hygiene checks, and clean review packaging.
+- Updated START_LOCAL_TEST.ps1 to use an external default venv at D:\dev\ME_FM_LLM_venv, install .[dev,api], support LocalWorkbench/Enterprise API mode, and avoid repo-local virtualenv contamination.
+- Updated scripts/local-test-spin-up.ps1 and scripts/run-tests.ps1 for cross-platform path separators and selectable API mode.
+- Added /api/health and /api/version aliases to the local workbench FastAPI app so local demo endpoints align with the enterprise API convention.
+- Repaired Dockerfile packaging for the local workbench by copying src/ and safe data fixtures while keeping official authority stores, parsed stores, vector indexes, models, and matter data external.
+- Bumped package version to 1.29.0.
+- Verified the test suite in five chunks: 250 tests passed and 1 PowerShell parser test skipped on the Linux runner because PowerShell was unavailable.
+
+Production legal GA status: still not claimed. Live official Maine authority ingestion, parsed authority stores, retrieval indexes, attorney-reviewed gold evals, real release metrics, pilot/security evidence, rollback evidence, and owner signoffs remain external blockers before any production legal-use claim.
+
+Pass 1.30.0 — Authority data-product execution harness hardening
+
+- Added `scripts/run-authority-data-product.py` plus PowerShell, cmd, and shell wrappers.
+- The new harness runs the external-data-root pipeline from official-source ingest through authority audit, parsed-store build/audit, source freshness update, authority layer, retrieval indexes, retrieval smoke eval, retrieval failure triage, and attorney annotation queue creation/audit.
+- Added `--plan-only` mode so operators can verify the exact Pass 19+ command sequence before touching the network.
+- Added `--dry-run` mode to `scripts/ingest-maine-authority.py` so the official target catalog and external data-root policy can be validated without fetching official sources.
+- Added optional `--strict-content-type` enforcement for official source fetches, with PDF/HTML-aware tolerance for common official-site response variants.
+- Added tests for strict content-type matching, ingest dry-run behavior, and the one-command authority pipeline plan.
+- Updated README instructions for the hardened one-command authority data-product path.
+
+Validation notes:
+
+- `python -m pytest -q tests/test_pass19_authority_execution_harness.py` passed locally.
+- This does not claim live Maine authority ingestion is complete; the real Pass 19 production blocker remains until run against an external data root in a networked environment.
+
+
+Pass 1.31.0 — Authority follow-up target derivation and direct-authority parser hooks
+
+- Added `legal/production/followup_targets.py` and `scripts/build-authority-followup-targets.py` to derive second-wave official source targets from parsed index snapshots.
+- The derived catalog writes to `<data-root>/official_authority_store/derived_authority_targets.json` and includes statute section, direct rule PDF/text, court form PDF/text, and Law Court opinion PDF/text targets.
+- Added `--target-catalog` support to `scripts/ingest-maine-authority.py` so generated follow-up catalogs can be ingested without editing the source repo config.
+- Added `--skip-followup-targets`, `--ingest-followup-targets`, and `--max-derived-targets` to `scripts/run-authority-data-product.py`.
+- The default authority data-product harness now derives follow-up targets after the parsed-store audit; operators can opt into fetching them with `--ingest-followup-targets` after first-wave indexes parse cleanly.
+- Added parser hooks for direct statute sections, court form PDFs/text, and Law Court opinion PDFs so second-wave snapshots can become structured parsed authority records.
+- Expanded parsed authority store support for `statutes/statute_sections.jsonl`, `forms/forms.jsonl`, and `opinions/opinions.jsonl`.
+- Added regression tests for follow-up target derivation and dry-run ingestion of generated target catalogs.
+- Bumped package version to 1.31.0.
+
+Validation notes:
+
+- `python -m pytest -q tests/test_pass19_followup_targets.py tests/test_pass19_authority_execution_harness.py` passed locally.
+- `python -m pytest -q tests/test_pass19_20_21_authority_data_product.py tests/test_pass22_23_24_25_authority_retrieval_product.py` passed locally.
+- This still does not claim live official-source ingestion or production legal GA; it removes the next blocker between first-wave official index snapshots and full direct-authority corpus expansion.
+
+
+Pass 1.32.0 — Direct parsed-authority audit gate
+
+- Added a direct-authority mode to `ParsedAuthorityStoreAuditor` so first-wave index/reference stores can be distinguished from retrieval-ready parsed authority.
+- Added `--require-direct-authority` to `scripts/audit-parsed-authority-store.py`; this blocks unless direct statute sections, court forms, and Law Court opinions are present with required text and metadata.
+- Added `--require-direct-authority` to `scripts/run-authority-data-product.py`; when paired with `--ingest-followup-targets`, the pipeline re-audits the rebuilt parsed store as a direct-authority handoff gate.
+- Audit output now includes `readiness`, `authority_kind_counts`, and `direct_authority` counts so release evidence cannot silently treat index-only records as full parsed law.
+- Added regression tests for index-only readiness, direct-authority blocking, direct-authority pass state, CLI flag behavior, and harness plan propagation.
+- Bumped package version to 1.32.0.
+
+Validation notes:
+
+- `python -m pytest -q tests/test_parsed_authority_direct_audit_pass.py tests/test_pass19_authority_execution_harness.py` passed locally.
+- This still does not claim live official-source ingestion or production legal GA; it adds a stricter handoff gate for the external follow-up corpus run.
+
+Pass 1.33.0 — Retrieval index artifact audit gate
+
+- Added `legal/production/retrieval_index_audit.py` and `scripts/audit-retrieval-indexes.py` to validate external BM25/vector/hybrid retrieval artifacts before treating them as retrieval-ready.
+- The audit checks manifest presence, required index files, JSON/JSONL validity, document/vector/source-card/parent-child count consistency, external embedding-store placement, and lookup artifact counts.
+- Added `--require-direct-lookups` so direct-authority handoffs require non-empty exact citation, statute-section, form-ID, and case-name lookup artifacts.
+- Wired `audit_retrieval_indexes` into `scripts/run-authority-data-product.py` immediately after `build_retrieval_indexes`; `--require-direct-authority` now also propagates to the retrieval lookup gate.
+- Updated README commands and added regression tests for missing artifacts, passing external indexes, empty direct lookups, CLI output, and harness plan propagation.
+- Bumped package version to 1.33.0.
+
+Validation notes:
+
+- `python -m pytest -q tests/test_retrieval_index_audit_pass.py tests/test_pass19_authority_execution_harness.py` passed locally.
+- This still does not claim live official-source ingestion, attorney-reviewed retrieval gold, or production legal GA; it adds a stricter Pass 23/24 artifact gate.
+
+Pass 1.34.0 - Retrieval smoke release gate hardening
+- Added configurable retrieval smoke thresholds: top_k, min_case_count, and min_recall_at_20.
+- Retrieval smoke reports now include blockers, thresholds, and an explicit non-attorney-reviewed evidence basis.
+- Added CLI flags to scripts/run-retrieval-smoke-eval.py for thresholded release evidence.
+- Added --require-retrieval-smoke wiring to scripts/run-authority-data-product.py so Pass 24 can be promoted from advisory evidence to a blocking gate.
+- Added tests proving blocked threshold behavior and authority-harness plan wiring.
+- Added missing subprocess timeouts to answering CLI guardrail tests to prevent local/CI hangs.
+
+
+Pass 1.35.0 - Gold eval and release metrics required-gate hardening
+- Added --require-ready to scripts/audit-gold-eval-pack.py so attorney-reviewed gold minimums can be promoted from advisory evidence to a blocking release gate.
+- Added --require-ready to scripts/build-gold-eval-pack-manifest.py and scripts/run-release-metrics-evidence.py.
+- Wired --require-gold-eval-pack and --require-release-metrics into scripts/run-authority-data-product.py.
+- The authority harness can now require gold eval pack readiness and measured release metrics evidence after external attorney-reviewed rows exist.
+- Added regression tests proving missing/seed gold evidence and missing release metrics fail closed when required.
+- Bumped package version to 1.35.0.
+
+
+Pass 1.36.0 - Batched release artifact hygiene, packaging, and root evidence cleanup
+- Moved historical root-level generated JSON evidence into docs/sample-evidence/ with a sample-only warning manifest.
+- Added legal/production/release_artifact_audit.py and scripts/audit-release-artifacts.py to block root evidence JSON, prohibited runtime/data directories, model files, PDFs, databases, and index artifacts from clean source packaging.
+- Made doctor-local-repo.py and clean-local-artifacts.py fail/clean root-level generated evidence JSON such as smoke_evidence*.json, source_sbom.json, source_release_lock.json, and local/enterprise report JSON files.
+- Hardened package-release.sh and package-release.ps1 to clean again after quality checks, run the release artifact audit, run strict doctor, and exclude generated evidence JSON/SBOM/lock artifacts.
+- Added regression tests for the release artifact audit, cleaner behavior, package scripts, and no generated evidence JSON at repo root.
+- Bumped package version to 1.36.0.
+
+## Pass 1.38.0 - Formal GA pass-count tracker
+
+- Added configs/maine_true_ga_pass_tracker.json covering true GA Pass 19 through Pass 51.
+- Added legal.production.ga_pass_tracker and scripts/report-ga-pass-count.py.
+- Added docs/ga-pass-count.md.
+- Added tests proving the formal true-GA count remains 33 until real exit criteria evidence closes Pass 19+.
+
+Pass 1.39.0 - GA pass evidence gate
+- Added machine-checkable GA pass evidence requirements for Pass 19-51.
+- Added GAPassEvidenceAuditor and scripts/audit-ga-pass-evidence.py.
+- Added tests proving repo-prep work cannot reduce the true GA count without external evidence.
+- Added docs/ga-pass-evidence-gate.md.
+
+
+
+Pass 1.40.0 - Close repo-only true-GA passes 39 and 40
+- Generated repo-local evidence for Pass 39 Production API completion and Pass 40 Production web UI completion.
+- Added openapi.json, docs/api-contract-test-report.json, docs/ui-completion-report.json, and docs/repo-ga-evidence-summary.json.
+- Added legal.production.repo_ga_evidence and scripts/generate-repo-ga-evidence.py.
+- Updated the true-GA tracker to mark only Pass 39 and Pass 40 complete because their evidence is repo-local and machine-audited.
+- Formal true-GA count is now 2 complete / 31 remaining; Pass 19 remains the next live external-data blocker.
+
+Pass 1.41.0 - Close repo-evidence true-GA passes 41 and 42
+- Generated machine-auditable repo evidence for Pass 41 Model registry and admission policy.
+- Generated machine-auditable repo evidence for Pass 42 prompt/document/tool-injection defense.
+- Added docs/model_registry_admission_report.json and docs/llm_injection_red_team_report.json.
+- Added scripts/generate-model-security-ga-evidence.py with --check mode.
+- Updated GA evidence requirements so Pass 41 and Pass 42 are audited from repo evidence, while production security/pilot/signoff passes remain externally blocked.
+- Updated true-GA tracker and docs/ga-pass-count.md: 4 complete / 29 remaining.
+- Added tests proving the new evidence artifacts are present, passing, and audited before count reduction.
+
+
+## 2026-05-30 - Pass 43-45 true-GA repo evidence closure
+
+- Bumped package version to 1.42.0.
+- Generated dedicated GA evidence artifacts for Pass 43, Pass 44, and Pass 45.
+- Updated GA evidence requirements to count repo-verifiable security/compliance/SRE artifacts.
+- Marked true GA Pass 43, Pass 44, and Pass 45 complete in the formal tracker.
+- Added regression tests proving completed true-GA count moves from 4 to 7 and remaining count drops to 26.
+- Kept Pass 19 as the next live external-data blocker.
+
+## v1.44.0 - GA evidence integrity hardening
+- Hardened `GAPassEvidenceAuditor` so completed true-GA pass claims require real non-empty evidence artifacts, not empty files/directories or malformed JSON placeholders.
+- Added manifest-shape validation for `source_manifest.json`; Pass 19 completion evidence must be a JSON array as produced by the official authority ingestion pipeline, not an ad-hoc wrapper object.
+- Added JSONL integrity checks for evidence queues/packs so empty generated annotation queues cannot reduce the formal GA remaining count.
+- Added regression tests proving placeholder Pass 19 manifests and empty Pass 26 annotation queues are blocked while completed repo-only passes 39-45 remain audit-valid.
+- Pass 19 remains OPEN until live official-source ingestion runs in a networked external data root and the real authority audit passes.
+- Hardened the release quality runner with subprocess timeouts and host-plugin isolation for pytest so packaging fails fast instead of freezing under injected CI/plugins.
+- Stabilized local CLI/API smoke coverage by avoiding repo-cleaning from inside the active pytest process; strict doctor hygiene remains covered by the dedicated doctor test and packaging scripts.
+
+## v1.45.0 - Release metric measurement integrity hardening
+- Hardened `ReleaseMetricsEvidenceBuilder` so attorney-reviewed gold rows alone no longer create placeholder GA metric values.
+- Added support for external task-specific release metric measurement files (`release_metric_measurements.json`, `release_metrics_measurements.json`, or `ga_release_metric_measurements.json`).
+- Added fail-closed blockers for missing task-specific metric measurements, repo-local metric measurement files, repo-local eval roots used for GA metrics, malformed metric values, and inflated sample sizes that exceed attorney-reviewed gold rows.
+- Strengthened source freshness metric handling so `source_update_report.json` must contain a passing freshness signal instead of merely existing.
+- Added regression tests proving missing measurement reports and inflated metric samples block GA, while valid external measurements still remain subject to GA thresholds and sample-size gates.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the next live external-data blocker.
+- Hardened release packaging scripts so final artifact audits and doctor checks run with bytecode generation disabled after cleanup, preventing the validation commands themselves from re-contaminating the repo with `__pycache__` before packaging.
+
+
+## v1.46.0 - Authority manifest containment hardening
+- Hardened the external official-authority build auditor so source manifests cannot pass with non-object rows or duplicate source IDs.
+- Added ISO-8601 retrieved_at validation and parser_audit shape/status consistency checks for official source records.
+- Blocked authority snapshot paths that resolve outside the external official_authority_store or inside the source repository, even when hashes match.
+- Added regression tests proving external evidence must be self-contained in the official authority store before Pass 19 evidence can count.
+- Bumped package version to 1.46.0.
+
+## v1.48.0 - GA evidence status hardening
+- Hardened GA evidence status checks so non-empty blockers and explicit negative gate booleans override legacy `status: pass` strings.
+- Blocked a loophole where a failed authority-build audit JSON could satisfy Pass 19 evidence if the command-level status remained `pass` while `production_ready` was false.
+- Added regression coverage for blocked authority audits with spoofable pass status strings.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the next live external-data blocker.
+
+## v1.49.0 - Source ZIP evidence packaging hardening
+
+- Regenerated missing Pass 41/42 model governance and injection-defense evidence artifacts that the formal GA evidence gate requires for the already-closed repo-only passes.
+- Removed broad `*_report.json` / `*_evidence.json` package exclusions that could silently drop machine-audited repo evidence from source ZIPs.
+- Added `scripts/audit-source-zip-contents.py` and wired package scripts to verify finished ZIPs contain required GA evidence artifacts while still excluding runtime/legal data products.
+- Added regression coverage proving packaged source ZIPs cannot omit required GA evidence files.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the live external-data blocker.
+
+
+## v1.50.0 - External audit CLI fail-closed hardening
+
+- Hardened `scripts/audit-authority-build.py` so the CLI exits non-zero unless the external official-authority build is actually `production_ready`; a legacy `status: pass` field can no longer let blocked live-ingestion evidence continue through subprocess gates.
+- Hardened `scripts/audit-enterprise-readiness.py` so the combined enterprise readiness audit exits non-zero unless the whole readiness report is production-ready.
+- Added regression tests proving missing external manifests and incomplete enterprise evidence fail closed, while a valid external authority manifest still exits cleanly.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the live external-data blocker.
+
+## v1.51.0 - GA tracker integrity hardening
+
+- Hardened the formal true-GA tracker so the configured completed-pass list, row-level complete statuses, contiguous Pass 19-51 range, duplicate pass checks, and next-pass marker must agree before the tracker reports pass.
+- Hardened `GAPassEvidenceAuditor` so a blocked or warning-bearing tracker blocks completed-pass evidence counting even when individual artifacts exist.
+- Added regression tests proving mismatched completion state and wrong next-pass markers fail closed.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the live external-data blocker.
+## v1.52.0 - External evidence report schema hardening
+
+- Hardened `GAPassEvidenceAuditor` so named true-GA evidence reports cannot be skeletal status-only JSON placeholders.
+- Pass 19 authority-build audit evidence now requires `production_ready: true`, `readiness: authority_build_ready`, a nonzero `total_records` value, no blockers, and an external manifest path that exists under the evidence root.
+- Pass 26 annotation queue audit evidence now requires nonempty queue counts, all queue rows to remain `needs_attorney_review`, zero private-training rows, and no blockers.
+- Added regression coverage proving `{"status":"pass"}` cannot close Pass 19 without the full production-ready audit fields.
+- True GA count remains 7 complete / 26 remaining; Pass 19 remains the live external-data blocker.
+
+
+
+## v1.58.0 - Direct parsed authority field quarantine hardening
+
+- Hardened direct parsed authority rebuild after large follow-up ingestion so malformed individual direct rows cannot block the entire authority data product.
+- Court form PDFs now derive a stable form identifier from parsed text, official URL, canonical metadata, or source filename fallback before writing `forms/forms.jsonl`.
+- Law Court opinion PDFs with no extractable text or no recoverable official citation are quarantined from direct parsed output instead of emitting invalid rows that fail the direct authority re-audit.
+- Added regression coverage for URL-derived court form identifiers and empty opinion PDF quarantine.
+- True GA count remains 7 complete / 26 remaining until the live external authority pipeline completes and its evidence is accepted.
+
+## v1.59.0 - Court form text identifier fallback hardening
+
+- Fixed the remaining direct-authority re-audit blocker from live v1.58 evidence: `court_form_text` rows now use the same fail-closed stable form identifier fallback path as court form PDFs.
+- `court_form_text` direct rows now quarantine empty text, derive `form_id` from parsed content, official URL, canonical metadata, source filename, or source ID fallback, and write `form_id_source` for auditability.
+- Added regression coverage proving official court form text snapshots without embedded FM/PA/CV/PB IDs still produce a stable nonempty `form_id` instead of blocking `--require-direct-authority`.
+- Targeted authority/retrieval tests passed: 42 passed. Strict local doctor passed and release artifact audit passed / safe_to_package true / production_legal_ga false.
+- True GA count remains 7 complete / 26 remaining until the live external authority pipeline completes and its evidence is accepted.
+
+
+## v1.62.0 - Public repo hygiene and Pass 19-25 evidence closure hardening
+
+- Restored public GitHub hygiene files removed by the local mirror copy: `.gitignore`, pull request template, issue templates, and source CI workflow.
+- Added strict doctor and regression coverage so missing GitHub hygiene files block `safe_to_push` before any future GitHub update.
+- Added source-safe external evidence summary for the passed authority data product run without packaging official authority snapshots, parsed stores, or retrieval indexes.
+- Marked true-GA Passes 19-25 complete from the uploaded external evidence summary: authority ingestion, parsed authority, source freshness, authority graph, retrieval indexes, measured retrieval smoke, and retrieval failure triage all passed.
+- Updated the formal true-GA counter to 14 complete / 19 remaining, with Pass 26 as the next true GA pass.
+- Hardened the pass evidence auditor so the bundled Pass 19-25 summary must cover the entire bundle, require every authority/retrieval gate step to pass, require source freshness to pass, and require retrieval Recall@20 to meet threshold.
+
+v1.63.0 - Pass 26 gold annotation queue operations closure
+- Imported source-safe Pass 26 evidence from the external authority data product run summary.
+- Marked Pass 26 complete: gold annotation queue generated/audited with 300 rows, 12 task families, double review required, zero private-training rows, zero parse errors, and zero missing fields.
+- Added pass26_gold_annotation_queue_operations_summary.json and strict auditor validation.
+- Updated true GA count to 18 remaining; next pass is 27 minimum viable gold eval pack.
+- Pass 27/28 remain explicitly open; this pass does not overclaim attorney-reviewed gold data or release metrics readiness.
+
+
+## v1.64.0 - Pass 27 gold eval pack promotion workbench
+
+- Added fail-closed promotion tooling for attorney-reviewed annotation queue rows into gold JSONL datasets.
+- Added `scripts/promote-reviewed-gold-annotations.py` with `--require-promoted` so queued rows cannot be treated as gold unless an attorney has reviewed them and all required fields are present.
+- Added Pass 27 operator runbook with exact promotion, manifest, audit, and evidence ZIP commands.
+- Hardened promotion rules to reject private-training rows, seed/synthetic methods, non-attorney review statuses, invalid dataset paths, parse errors, and missing required gold fields.
+- Fixed the release metrics readiness string regression covered by the existing gold-release gate tests.
+- True GA count remains 18 remaining; Pass 27 still requires actual attorney-reviewed gold datasets before the count can decrease.
+
+
+## v1.65.0 — Pass 28 release metrics measurement workbench
+- Added fail-closed release metric measurement template builder.
+- Added measurement audit CLI that rejects repo-local, seed, synthetic, fixture, smoke, source-derived, undersized, missing-review, and wrong-dataset metrics.
+- Added Pass 28 operator runbook and targeted tests.
+- Pass 28 remains open until attorney-reviewed gold datasets and external task-specific measurements exist.
+
+
+Pass 30 metric gate prep (v1.67.0)
+- Added fail-closed claim-support metric runner for citation_support.
+- Added Pass 30 production audit CLI and operator runbook.
+- Added tests proving attorney-reviewed rows pass and seed/missing evidence blocks.
+- Did not decrement true-GA count; external attorney-reviewed gold evidence is still required.
+
+## v1.68.0 - Operator source-backed gold lane
+
+- Added `review_mode=operator_source_backed` to Pass 29 citation/quote and Pass 30 claim-support metric runners.
+- Added operator-source-backed audit mode for Pass 29 and Pass 30 so non-attorney source-backed rows can pass without being mislabeled as attorney reviewed.
+- Added `scripts/build-operator-source-backed-gold-pack.py` to derive citation/quote/claim rows from verified external authority indexes and parsed authority text.
+- Added runbook and regression tests proving operator-source-backed rows pass while preserving attorney-reviewed fields as false/zero.
+- True GA count remains 18 until external operator-source-backed evidence is generated and audited; this pass does not claim attorney legal signoff.
+
+## v1.69.0 — Pass 31 stale-law/jurisdiction/form-freshness metric gate
+- Added production metric runner and audit CLI for Pass 31.
+- Added operator-source-backed support for stale-law, jurisdiction, negative-treatment, and form freshness rows.
+- Extended operator-source-backed gold pack builder to emit optional Pass 31 scope and form-freshness datasets.
+- Added documentation and targeted regression tests for Pass 31 fail-closed behavior.
+
+
+## v1.70.0 — Operator source-backed gold builder hardening
+
+- Fixed the operator-source-backed gold pack builder so authority-index source IDs can differ from parsed-authority source IDs without producing empty citation, quote, and scope datasets.
+- Added citation/section/compact-key lookup aliases from parsed authority records, preserving the original authority-index source ID for audit while using the parsed source ID for quote and claim text verification.
+- Added regression coverage for the exact external failure shape seen after Pass 31: populated authority index and parsed authority store, but zero source-backed citation/quote/scope rows.
+- True GA count remains 18 until external operator-source-backed evidence for Passes 29-31 is generated and audited; no attorney-review claim is made.
+
+## v1.71.0 — Passes 32-38 repo-engineering GA closure
+- Added scripts/run-pass32-38-engineering-evidence.py to generate deterministic repo evidence for Maine intelligence, secure matter/evidence, drafting workspace, and filing gate hardening.
+- Marked Passes 32-38 complete in the true GA tracker based on repo-engineering evidence, not attorney review or legal signoff.
+- Updated GA count to 22 completed / 11 remaining.
+- Remaining true GA passes are 27-31 and 46-51.
+
+## v1.72.0 — Pass 47 legal red-team engineering GA closure
+- Added scripts/run-pass47-red-team-closure-evidence.py to generate deterministic Pass 47 evidence.
+- Marked Pass 47 complete in the true GA tracker based on repo red-team evidence: false-premise legal queries, fake citations, stale-law/current-law misuse, jurisdiction mismatch, prompt/document/tool injection, confidentiality leakage, malicious upload, and filing-ready bypass attempts all fail safely.
+- Updated GA count to 23 completed / 10 remaining.
+- Did not close Pass 46, Passes 27-31, or Passes 48-51; those still require external release metrics, source-backed/gold evidence, pilots, release-candidate evidence, deployment/signoff, or shipped artifacts.
+
+
+## v1.73.0 - Passes 48-51 launch evidence gate preparation
+
+- Added fail-closed external evidence gate for Passes 48-51.
+- Added launch evidence auditor module and CLI.
+- Added tests proving missing pilot/signoff evidence blocks readiness.
+- Updated true-GA tracker repo-prep status for Passes 48-51 without marking them complete.
+- No pilot, attorney, legal, product, ops, or GA-shipped evidence is fabricated.
+
+## v1.74.0 - Pass 46 operator/source-backed release-eval gate preparation
+- Added non-attorney operator/source-backed Pass 46 release-eval lane.
+- Added strict fail-closed metric aggregation from retrieval smoke, source freshness, and Pass 29/30/31 partial measurements.
+- Added explicit boundary fields: attorney_reviewed=false, legal_signoff=false, pilot_signoff=false, true_ga_release_allowed=false.
+- Added CLI, docs, external evidence summary, and targeted tests.
+
+## v1.75.0 — Passes 27-31 and 46 operator/source-backed engineering closure
+
+- Added consolidated operator/source-backed closure runner for Passes 27-31 and 46.
+- Fixed quote-row construction so source-backed citation rows can produce quote-span rows from captured evidence text even when parsed source IDs differ from authority-index IDs.
+- Updated true GA tracker to count Passes 27-31 and 46 as complete for the operator/source-backed engineering lane only.
+- Remaining true GA passes are now 4: Passes 48-51.
+- This release does not claim attorney review, legal signoff, pilot signoff, production deployment, or true GA shipment.
+
+## v1.76.0 — local chat workbench and README hardening
+
+- Added a browser-based local chat workbench at `/` and `/workbench` for non-technical testers.
+- Added `/api/chat` and `/api/ask` aliases for the local source-backed answer endpoint.
+- Added `START_LOCAL_CHAT.ps1` and `START_LOCAL_CHAT.cmd` one-command Windows launchers.
+- Updated `START_LOCAL_TEST.ps1`, `scripts/local-test-spin-up.ps1`, and local API scripts to advertise the browser workbench URL.
+- Updated README download, install, local chat, local API, and CLI instructions.
+- Added `docs/local-chat-workbench.md` and local chat workbench evidence runner.
+- Preserved review-required / not-legal-advice boundaries and source-card visibility.
+
+## v1.77.0 — Chat input/output hardening and best-interest answer fix
+
+- Added deterministic source-backed answer path for Maine best-interest factors under 19-A M.R.S. § 1653(3).
+- Expanded the offline Title 19-A fixture so the local chat workbench can answer the best-interest-factor question without relying on model memory.
+- Added answer style, optional context/facts, copy-answer control, grounded/failure badges, and improved source-card outputs to the local browser UI.
+- Added chat hardening documentation and tests.
+- Does not claim attorney review, legal advice, or filing-ready output.
