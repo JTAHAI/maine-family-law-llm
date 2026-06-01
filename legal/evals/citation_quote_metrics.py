@@ -9,11 +9,17 @@ from typing import Any, Iterable
 from legal.verifiers.citation_parser import extract_citations
 from legal.verifiers.citation_resolver import SourceAuthorityIndex
 from legal.verifiers.quote_span_verifier import QuoteSpanVerifier
+from legal.evals.review_modes import (
+    basis_suffix,
+    is_attorney_reviewed,
+    is_operator_source_backed,
+    is_seed_or_synthetic,
+    normalize_review_mode,
+    reviewer_status_for_metric,
+)
 
 CITATION_TARGET = 0.99
 QUOTE_TARGET = 0.97
-ATTORNEY_REVIEW_MARKERS = ("attorney", "lawyer", "counsel", "reviewed_final", "final_reviewed")
-SEED_REVIEW_MARKERS = ("seed", "synthetic", "fixture", "generated", "schema_validation")
 
 
 @dataclass(frozen=True)
@@ -44,6 +50,7 @@ class VerifierMetricReport:
     citation_dataset: str
     quote_dataset: str
     authority_index_path: str
+    review_mode: str = "attorney_reviewed"
     source_text_basis: list[str] = field(default_factory=list)
     citation_total: int = 0
     citation_correct: int = 0
@@ -53,6 +60,8 @@ class VerifierMetricReport:
     quote_span_verification: float = 0.0
     citation_attorney_reviewed_rows: int = 0
     quote_attorney_reviewed_rows: int = 0
+    citation_operator_source_backed_rows: int = 0
+    quote_operator_source_backed_rows: int = 0
     citation_seed_or_synthetic_rows: int = 0
     quote_seed_or_synthetic_rows: int = 0
     blockers: list[str] = field(default_factory=list)
@@ -67,6 +76,7 @@ class VerifierMetricReport:
             "citation_dataset": self.citation_dataset,
             "quote_dataset": self.quote_dataset,
             "authority_index_path": self.authority_index_path,
+            "review_mode": self.review_mode,
             "source_text_basis": self.source_text_basis,
             "citation_total": self.citation_total,
             "citation_correct": self.citation_correct,
@@ -76,6 +86,8 @@ class VerifierMetricReport:
             "quote_span_verification": self.quote_span_verification,
             "citation_attorney_reviewed_rows": self.citation_attorney_reviewed_rows,
             "quote_attorney_reviewed_rows": self.quote_attorney_reviewed_rows,
+            "citation_operator_source_backed_rows": self.citation_operator_source_backed_rows,
+            "quote_operator_source_backed_rows": self.quote_operator_source_backed_rows,
             "citation_seed_or_synthetic_rows": self.citation_seed_or_synthetic_rows,
             "quote_seed_or_synthetic_rows": self.quote_seed_or_synthetic_rows,
             "blockers": sorted(set(self.blockers)),
@@ -99,10 +111,12 @@ class CitationQuoteVerifierMetricRunner:
         citation_target: float = CITATION_TARGET,
         quote_target: float = QUOTE_TARGET,
         require_attorney_review: bool = True,
+        review_mode: str = "attorney_reviewed",
     ) -> None:
         self.citation_target = citation_target
         self.quote_target = quote_target
         self.require_attorney_review = require_attorney_review
+        self.review_mode = normalize_review_mode(review_mode)
 
     def run(
         self,
@@ -158,11 +172,23 @@ class CitationQuoteVerifierMetricRunner:
             blockers.append("citation_existence_below_99_percent")
         if quote_result["total"] and quote_rate < self.quote_target:
             blockers.append("quote_span_verification_below_97_percent")
+        citation_review_key = "attorney_reviewed" if self.review_mode == "attorney_reviewed" else "operator_source_backed"
+        quote_review_key = citation_review_key
+        citation_reviewed = (
+            citation_result["total"] > 0
+            and citation_result[citation_review_key] == citation_result["total"]
+            and citation_result["seed_or_synthetic"] == 0
+        )
+        quote_reviewed = (
+            quote_result["total"] > 0
+            and quote_result[quote_review_key] == quote_result["total"]
+            and quote_result["seed_or_synthetic"] == 0
+        )
         if self.require_attorney_review:
-            if citation_result["attorney_reviewed"] != citation_result["total"]:
-                blockers.append("citation_gold_not_fully_attorney_reviewed")
-            if quote_result["attorney_reviewed"] != quote_result["total"]:
-                blockers.append("quote_gold_not_fully_attorney_reviewed")
+            if not citation_reviewed:
+                blockers.append(f"citation_gold_not_fully_{self.review_mode}")
+            if not quote_reviewed:
+                blockers.append(f"quote_gold_not_fully_{self.review_mode}")
             if citation_result["seed_or_synthetic"]:
                 blockers.append("citation_gold_contains_seed_or_synthetic_rows")
             if quote_result["seed_or_synthetic"]:
@@ -173,15 +199,10 @@ class CitationQuoteVerifierMetricRunner:
                 "name": "citation_existence",
                 "value": citation_rate,
                 "sample_size": citation_result["total"],
-                "basis": "pass29_verifier_metric_runner_over_attorney_reviewed_gold",
-                "attorney_reviewed": citation_result["total"] > 0
-                and citation_result["attorney_reviewed"] == citation_result["total"]
-                and citation_result["seed_or_synthetic"] == 0,
-                "reviewer_status": "attorney_reviewed"
-                if citation_result["total"] > 0
-                and citation_result["attorney_reviewed"] == citation_result["total"]
-                and citation_result["seed_or_synthetic"] == 0
-                else "blocked_missing_full_attorney_review",
+                "basis": f"pass29_verifier_metric_runner_over_{basis_suffix(self.review_mode)}_gold",
+                "attorney_reviewed": self.review_mode == "attorney_reviewed" and citation_reviewed,
+                "operator_source_backed": self.review_mode == "operator_source_backed" and citation_reviewed,
+                "reviewer_status": reviewer_status_for_metric(review_mode=self.review_mode, reviewed=citation_reviewed),
                 "source_dataset": "maine_citation_validity_gold.jsonl",
                 "minimum_sample_size": citation_result["total"],
                 "operator": ">=",
@@ -191,15 +212,10 @@ class CitationQuoteVerifierMetricRunner:
                 "name": "quote_span_verification",
                 "value": quote_rate,
                 "sample_size": quote_result["total"],
-                "basis": "pass29_verifier_metric_runner_over_attorney_reviewed_gold",
-                "attorney_reviewed": quote_result["total"] > 0
-                and quote_result["attorney_reviewed"] == quote_result["total"]
-                and quote_result["seed_or_synthetic"] == 0,
-                "reviewer_status": "attorney_reviewed"
-                if quote_result["total"] > 0
-                and quote_result["attorney_reviewed"] == quote_result["total"]
-                and quote_result["seed_or_synthetic"] == 0
-                else "blocked_missing_full_attorney_review",
+                "basis": f"pass29_verifier_metric_runner_over_{basis_suffix(self.review_mode)}_gold",
+                "attorney_reviewed": self.review_mode == "attorney_reviewed" and quote_reviewed,
+                "operator_source_backed": self.review_mode == "operator_source_backed" and quote_reviewed,
+                "reviewer_status": reviewer_status_for_metric(review_mode=self.review_mode, reviewed=quote_reviewed),
                 "source_dataset": "maine_quote_span_gold.jsonl",
                 "minimum_sample_size": quote_result["total"],
                 "operator": ">=",
@@ -213,6 +229,7 @@ class CitationQuoteVerifierMetricRunner:
             citation_dataset=str(citation_path),
             quote_dataset=str(quote_path),
             authority_index_path=str(Path(authority_index_path)),
+            review_mode=self.review_mode,
             source_text_basis=source_basis,
             citation_total=citation_result["total"],
             citation_correct=citation_result["correct"],
@@ -222,6 +239,8 @@ class CitationQuoteVerifierMetricRunner:
             quote_span_verification=quote_rate,
             citation_attorney_reviewed_rows=citation_result["attorney_reviewed"],
             quote_attorney_reviewed_rows=quote_result["attorney_reviewed"],
+            citation_operator_source_backed_rows=citation_result["operator_source_backed"],
+            quote_operator_source_backed_rows=quote_result["operator_source_backed"],
             citation_seed_or_synthetic_rows=citation_result["seed_or_synthetic"],
             quote_seed_or_synthetic_rows=quote_result["seed_or_synthetic"],
             blockers=blockers,
@@ -249,7 +268,7 @@ class CitationQuoteVerifierMetricRunner:
         findings: list[VerifierMetricFinding],
         blockers: list[str],
     ) -> dict[str, int]:
-        total = correct = attorney_reviewed = seed_or_synthetic = 0
+        total = correct = attorney_reviewed = operator_source_backed = seed_or_synthetic = 0
         for idx, row in enumerate(rows, start=1):
             citation_text = _first_text(row, "citation", "text_span", "raw_citation", "normalized_citation")
             expected_found = _expected_found(row)
@@ -257,6 +276,8 @@ class CitationQuoteVerifierMetricRunner:
             method = str(row.get("annotator_or_generation_method") or row.get("basis") or "")
             if _is_attorney_reviewed(review_status, method):
                 attorney_reviewed += 1
+            if _is_operator_source_backed(row, review_status, method):
+                operator_source_backed += 1
             if _is_seed_or_synthetic(review_status, method):
                 seed_or_synthetic += 1
             if not citation_text:
@@ -298,6 +319,7 @@ class CitationQuoteVerifierMetricRunner:
             "total": total,
             "correct": correct,
             "attorney_reviewed": attorney_reviewed,
+            "operator_source_backed": operator_source_backed,
             "seed_or_synthetic": seed_or_synthetic,
         }
 
@@ -309,7 +331,7 @@ class CitationQuoteVerifierMetricRunner:
         blockers: list[str],
     ) -> dict[str, int]:
         verifier = QuoteSpanVerifier()
-        total = correct = attorney_reviewed = seed_or_synthetic = 0
+        total = correct = attorney_reviewed = operator_source_backed = seed_or_synthetic = 0
         for idx, row in enumerate(rows, start=1):
             source_id = str(row.get("source_id") or row.get("record_id") or "")
             quote = _first_text(row, "quote", "quoted_text", "text_span")
@@ -318,6 +340,8 @@ class CitationQuoteVerifierMetricRunner:
             method = str(row.get("annotator_or_generation_method") or row.get("basis") or "")
             if _is_attorney_reviewed(review_status, method):
                 attorney_reviewed += 1
+            if _is_operator_source_backed(row, review_status, method):
+                operator_source_backed += 1
             if _is_seed_or_synthetic(review_status, method):
                 seed_or_synthetic += 1
             if not source_id or not quote:
@@ -375,6 +399,7 @@ class CitationQuoteVerifierMetricRunner:
             "total": total,
             "correct": correct,
             "attorney_reviewed": attorney_reviewed,
+            "operator_source_backed": operator_source_backed,
             "seed_or_synthetic": seed_or_synthetic,
         }
 
@@ -481,15 +506,15 @@ def _expected_found(row: dict[str, Any]) -> bool:
 
 
 def _is_attorney_reviewed(review_status: str, method: str) -> bool:
-    value = f"{review_status} {method}".lower()
-    return any(marker in value for marker in ATTORNEY_REVIEW_MARKERS) and not _is_seed_or_synthetic(
-        review_status, method
-    )
+    return is_attorney_reviewed(review_status, method)
+
+
+def _is_operator_source_backed(row: dict[str, Any], review_status: str, method: str) -> bool:
+    return is_operator_source_backed(row, review_status, method)
 
 
 def _is_seed_or_synthetic(review_status: str, method: str) -> bool:
-    value = f"{review_status} {method}".lower()
-    return any(marker in value for marker in SEED_REVIEW_MARKERS)
+    return is_seed_or_synthetic(review_status, method)
 
 
 def _ratio(numerator: int, denominator: int) -> float:

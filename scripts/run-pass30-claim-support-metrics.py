@@ -22,11 +22,13 @@ def main() -> int:
     parser.add_argument("--parsed-authority-root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--measurement-output", type=Path)
+    parser.add_argument("--review-mode", choices=["attorney_reviewed", "operator_source_backed"], default="attorney_reviewed")
     parser.add_argument("--allow-non-attorney-reviewed", action="store_true", help="Only for local fixtures; do not use for GA.")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
     report = ClaimSupportMetricRunner(
-        require_attorney_review=not args.allow_non_attorney_reviewed
+        require_attorney_review=not args.allow_non_attorney_reviewed,
+        review_mode=args.review_mode,
     ).run(
         eval_root=args.eval_root,
         source_text_jsonl=args.source_text_jsonl,

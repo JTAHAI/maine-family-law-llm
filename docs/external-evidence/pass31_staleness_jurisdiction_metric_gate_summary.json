@@ -1,0 +1,33 @@
+{
+  "pass": 31,
+  "status": "production_metric_gate_prepared",
+  "review_modes": [
+    "attorney_reviewed",
+    "operator_source_backed"
+  ],
+  "repo_artifacts": [
+    "legal/evals/staleness_jurisdiction_metrics.py",
+    "scripts/run-pass31-staleness-jurisdiction-metrics.py",
+    "scripts/audit-pass31-staleness-jurisdiction-production.py",
+    "docs/pass31-staleness-jurisdiction-production-metrics.md",
+    "tests/test_pass31_staleness_jurisdiction_metric_gate.py"
+  ],
+  "external_outputs": [
+    "pass31_staleness_jurisdiction_metrics.json",
+    "release_metric_measurements.pass31.partial.json",
+    "pass31_staleness_jurisdiction_metrics_audit.json"
+  ],
+  "release_metrics": [
+    {
+      "name": "scope_verification",
+      "target": 1.0,
+      "operator": ">="
+    },
+    {
+      "name": "form_freshness_detection",
+      "target": 0.99,
+      "operator": ">="
+    }
+  ],
+  "true_ga_closure_rule": "Pass 31 remains open until the external staleness/jurisdiction/form-freshness metrics and audit pass using attorney-reviewed or operator-source-backed rows."
+}

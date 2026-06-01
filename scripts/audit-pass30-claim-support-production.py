@@ -15,6 +15,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Audit a Pass 30 claim-support verifier metric report.")
     parser.add_argument("--metrics", type=Path, required=True)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--review-mode", choices=["attorney_reviewed", "operator_source_backed"], default="attorney_reviewed")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
     blockers: list[str] = []
@@ -35,8 +36,12 @@ def main() -> int:
             blockers.append("citation_support_below_95_percent")
         if int(report.get("claim_total") or 0) <= 0:
             blockers.append("claim_support_sample_empty")
-        if report.get("claim_attorney_reviewed_rows") != report.get("claim_total"):
-            blockers.append("claim_support_rows_not_fully_attorney_reviewed")
+        if args.review_mode == "attorney_reviewed":
+            if report.get("claim_attorney_reviewed_rows") != report.get("claim_total"):
+                blockers.append("claim_support_rows_not_fully_attorney_reviewed")
+        else:
+            if report.get("claim_operator_source_backed_rows") != report.get("claim_total"):
+                blockers.append("claim_support_rows_not_fully_operator_source_backed")
         if int(report.get("claim_seed_or_synthetic_rows") or 0):
             blockers.append("claim_support_seed_or_synthetic_rows_present")
         findings.extend(list(report.get("findings", []))[:50])
@@ -44,6 +49,7 @@ def main() -> int:
         "status": "pass" if not blockers else "blocked",
         "readiness": "pass30_true_ga_evidence_ready" if not blockers else "pass30_true_ga_evidence_blocked",
         "metrics_path": str(args.metrics),
+        "review_mode": args.review_mode,
         "blockers": sorted(set(blockers)),
         "findings": findings,
     }

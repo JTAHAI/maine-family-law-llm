@@ -15,6 +15,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Audit a Pass 29 citation/quote verifier metric report.")
     parser.add_argument("--metrics", type=Path, required=True)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--review-mode", choices=["attorney_reviewed", "operator_source_backed"], default="attorney_reviewed")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
     blockers: list[str] = []
@@ -39,10 +40,16 @@ def main() -> int:
             blockers.append("citation_sample_empty")
         if int(report.get("quote_total") or 0) <= 0:
             blockers.append("quote_sample_empty")
-        if report.get("citation_attorney_reviewed_rows") != report.get("citation_total"):
-            blockers.append("citation_rows_not_fully_attorney_reviewed")
-        if report.get("quote_attorney_reviewed_rows") != report.get("quote_total"):
-            blockers.append("quote_rows_not_fully_attorney_reviewed")
+        if args.review_mode == "attorney_reviewed":
+            if report.get("citation_attorney_reviewed_rows") != report.get("citation_total"):
+                blockers.append("citation_rows_not_fully_attorney_reviewed")
+            if report.get("quote_attorney_reviewed_rows") != report.get("quote_total"):
+                blockers.append("quote_rows_not_fully_attorney_reviewed")
+        else:
+            if report.get("citation_operator_source_backed_rows") != report.get("citation_total"):
+                blockers.append("citation_rows_not_fully_operator_source_backed")
+            if report.get("quote_operator_source_backed_rows") != report.get("quote_total"):
+                blockers.append("quote_rows_not_fully_operator_source_backed")
         if int(report.get("citation_seed_or_synthetic_rows") or 0):
             blockers.append("citation_seed_or_synthetic_rows_present")
         if int(report.get("quote_seed_or_synthetic_rows") or 0):
@@ -51,6 +58,7 @@ def main() -> int:
             "status": "pass" if not blockers else "blocked",
             "readiness": "pass29_true_ga_evidence_ready" if not blockers else "pass29_true_ga_evidence_blocked",
             "metrics_path": str(args.metrics),
+        "review_mode": args.review_mode,
             "blockers": sorted(set(blockers)),
             "findings": findings + list(report.get("findings", []))[:50],
         }

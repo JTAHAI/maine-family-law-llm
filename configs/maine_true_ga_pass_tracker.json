@@ -1,5 +1,5 @@
 {
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots.",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff.",
   "current_true_ga_completed_passes": [
     19,
     20,
@@ -145,15 +145,16 @@
     },
     {
       "completion_evidence": [
-        "attorney-reviewed gold JSONL minimums",
-        "audit-gold-eval-pack pass",
-        "seed rows excluded"
+        "operator-source-backed or attorney-reviewed gold JSONL minimums",
+        "audit-gold-eval-pack pass for selected review mode",
+        "seed rows excluded",
+        "scripts/build-operator-source-backed-gold-pack.py for source-backed engineering lane"
       ],
       "external_dependency": true,
       "next": true,
       "pass": 27,
       "phase": "Phase 3",
-      "repo_prep_status": "gate_prepared",
+      "repo_prep_status": "operator_source_backed_lane_prepared",
       "status": "open",
       "title": "Minimum viable gold eval pack"
     },
@@ -165,7 +166,8 @@
         "pass/fail basis",
         "scripts/build-release-metric-measurement-template.py",
         "scripts/audit-release-metric-measurements.py",
-        "docs/release-metrics-measurement-workbench.md"
+        "docs/release-metrics-measurement-workbench.md",
+        "operator_source_backed release metric measurements accepted only when explicitly marked and externally audited"
       ],
       "external_dependency": true,
       "next": false,
@@ -182,9 +184,10 @@
         "offset/span recording",
         "pass29_verifier_metrics.json",
         "audit-pass29-verifier-production pass",
-        "citation_existence >= 0.99 from attorney-reviewed gold",
-        "quote_span_verification >= 0.97 from attorney-reviewed gold",
-        "docs/external-evidence/pass29_verifier_metric_gate_summary.json"
+        "citation_existence >= 0.99 from attorney-reviewed or operator-source-backed gold",
+        "quote_span_verification >= 0.97 from attorney-reviewed or operator-source-backed gold",
+        "docs/external-evidence/pass29_verifier_metric_gate_summary.json",
+        "scripts/run-pass29-verifier-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
@@ -201,9 +204,10 @@
         "unsupported assertion blocker",
         "pass30_claim_support_metrics.json",
         "audit-pass30-claim-support-production pass",
-        "citation_support >= 0.95 from attorney-reviewed gold",
+        "citation_support >= 0.95 from attorney-reviewed or operator-source-backed gold",
         "unsupported legal claims block final/final-like exports",
-        "docs/external-evidence/pass30_claim_support_metric_gate_summary.json"
+        "docs/external-evidence/pass30_claim_support_metric_gate_summary.json",
+        "scripts/run-pass30-claim-support-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
@@ -215,15 +219,21 @@
     },
     {
       "completion_evidence": [
-        "form freshness >= 99%",
-        "jurisdiction warnings",
-        "negative-treatment unknown warning"
+        "scope_verification >= 1.0 from attorney-reviewed or operator-source-backed gold",
+        "form_freshness_detection >= 0.99 from attorney-reviewed or operator-source-backed gold",
+        "current-law language blocked from stale/unknown/superseded sources",
+        "jurisdiction mismatch detection",
+        "negative-treatment unknown warning/blocker",
+        "pass31_staleness_jurisdiction_metrics.json",
+        "audit-pass31-staleness-jurisdiction-production pass",
+        "docs/external-evidence/pass31_staleness_jurisdiction_metric_gate_summary.json",
+        "scripts/run-pass31-staleness-jurisdiction-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 31,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Stale law, jurisdiction, and negative-treatment checks"
     },

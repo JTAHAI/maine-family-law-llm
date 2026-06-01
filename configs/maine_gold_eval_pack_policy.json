@@ -1,4 +1,8 @@
 {
+  "accepted_review_modes": [
+    "attorney_reviewed",
+    "operator_source_backed"
+  ],
   "annotation_queue_policy": {
     "confidence_required_for_promotion": true,
     "conflict_resolution_required_for_disagreement": true,
@@ -22,8 +26,15 @@
     "rule_52_gap"
   ],
   "attorney_review_required": true,
+  "operator_source_backed_policy": {
+    "allowed_for_engineering_verifier_gates": true,
+    "attorney_reviewed_label_forbidden": true,
+    "private_data_training_flag_must_be_false": true,
+    "requires_verified_source_lineage": true,
+    "seed_synthetic_fixture_rows_block": true
+  },
   "private_data_training_allowed": false,
-  "purpose": "Gold evaluation pack policy for attorney-reviewed Maine legal data-product release gates.",
+  "purpose": "Gold evaluation pack policy for Maine legal data-product release gates. Attorney-reviewed evidence remains distinct from operator-source-backed engineering evidence.",
   "release_metrics_policy": {
     "attorney_review_required_for_legal_quality_metrics": true,
     "missing_metric_blocks_ga": true,
@@ -58,5 +69,5 @@
     "maine_rag_retrieval_gold.jsonl": 500,
     "maine_rule_52_gap_gold.jsonl": 100
   },
-  "version": "2.0-pass26-pass28-attorney-queue-gold-release-metrics"
+  "version": "2.1-pass27-pass30-operator-source-backed-lane"
 }

@@ -693,3 +693,18 @@ Pass 30 metric gate prep (v1.67.0)
 - Added Pass 30 production audit CLI and operator runbook.
 - Added tests proving attorney-reviewed rows pass and seed/missing evidence blocks.
 - Did not decrement true-GA count; external attorney-reviewed gold evidence is still required.
+
+## v1.68.0 - Operator source-backed gold lane
+
+- Added `review_mode=operator_source_backed` to Pass 29 citation/quote and Pass 30 claim-support metric runners.
+- Added operator-source-backed audit mode for Pass 29 and Pass 30 so non-attorney source-backed rows can pass without being mislabeled as attorney reviewed.
+- Added `scripts/build-operator-source-backed-gold-pack.py` to derive citation/quote/claim rows from verified external authority indexes and parsed authority text.
+- Added runbook and regression tests proving operator-source-backed rows pass while preserving attorney-reviewed fields as false/zero.
+- True GA count remains 18 until external operator-source-backed evidence is generated and audited; this pass does not claim attorney legal signoff.
+
+## v1.69.0 — Pass 31 stale-law/jurisdiction/form-freshness metric gate
+- Added production metric runner and audit CLI for Pass 31.
+- Added operator-source-backed support for stale-law, jurisdiction, negative-treatment, and form freshness rows.
+- Extended operator-source-backed gold pack builder to emit optional Pass 31 scope and form-freshness datasets.
+- Added documentation and targeted regression tests for Pass 31 fail-closed behavior.
+

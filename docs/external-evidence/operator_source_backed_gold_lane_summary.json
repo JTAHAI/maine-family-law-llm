@@ -1,0 +1,18 @@
+{
+  "status": "pass",
+  "readiness": "operator_source_backed_gold_lane_prepared",
+  "review_mode": "operator_source_backed",
+  "attorney_reviewed": false,
+  "operator_source_backed": true,
+  "scripts": [
+    "scripts/build-operator-source-backed-gold-pack.py",
+    "scripts/run-pass29-verifier-metrics.py --review-mode operator_source_backed",
+    "scripts/audit-pass29-verifier-production.py --review-mode operator_source_backed",
+    "scripts/run-pass30-claim-support-metrics.py --review-mode operator_source_backed",
+    "scripts/audit-pass30-claim-support-production.py --review-mode operator_source_backed"
+  ],
+  "tests": [
+    "tests/test_operator_source_backed_gold_lane.py"
+  ],
+  "notes": "This lane advances non-attorney source-backed engineering gates without labeling evidence as attorney reviewed."
+}

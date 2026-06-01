@@ -7,11 +7,17 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from legal.evals.citation_quote_metrics import load_source_texts, read_jsonl, write_json
+from legal.evals.review_modes import (
+    basis_suffix,
+    is_attorney_reviewed,
+    is_operator_source_backed,
+    is_seed_or_synthetic,
+    normalize_review_mode,
+    reviewer_status_for_metric,
+)
 from legal.verifiers.claim_support_verifier import ClaimSupportVerifier
 
 CLAIM_SUPPORT_TARGET = 0.95
-ATTORNEY_REVIEW_MARKERS = ("attorney", "lawyer", "counsel", "reviewed_final", "final_reviewed")
-SEED_REVIEW_MARKERS = ("seed", "synthetic", "fixture", "generated", "schema_validation")
 BLOCKING_CLAIM_STATUSES = {"unsupported", "contradicted", "stale", "jurisdiction_mismatch", "not_verifiable"}
 SUPPORTED_EXPECTATIONS = {"supported", "support", "valid", "valid_citation", "found", "true", "yes"}
 
@@ -42,11 +48,13 @@ class ClaimSupportMetricReport:
     readiness: str
     generated_at: str
     claim_dataset: str
+    review_mode: str = "attorney_reviewed"
     source_text_basis: list[str] = field(default_factory=list)
     claim_total: int = 0
     claim_correct: int = 0
     citation_support: float = 0.0
     claim_attorney_reviewed_rows: int = 0
+    claim_operator_source_backed_rows: int = 0
     claim_seed_or_synthetic_rows: int = 0
     blocking_claim_statuses_seen: int = 0
     blockers: list[str] = field(default_factory=list)
@@ -59,11 +67,13 @@ class ClaimSupportMetricReport:
             "readiness": self.readiness,
             "generated_at": self.generated_at,
             "claim_dataset": self.claim_dataset,
+            "review_mode": self.review_mode,
             "source_text_basis": self.source_text_basis,
             "claim_total": self.claim_total,
             "claim_correct": self.claim_correct,
             "citation_support": self.citation_support,
             "claim_attorney_reviewed_rows": self.claim_attorney_reviewed_rows,
+            "claim_operator_source_backed_rows": self.claim_operator_source_backed_rows,
             "claim_seed_or_synthetic_rows": self.claim_seed_or_synthetic_rows,
             "blocking_claim_statuses_seen": self.blocking_claim_statuses_seen,
             "blockers": sorted(set(self.blockers)),
@@ -80,9 +90,16 @@ class ClaimSupportMetricRunner:
     unsupported claim mismatches block readiness instead of yielding optimistic GA evidence.
     """
 
-    def __init__(self, *, target: float = CLAIM_SUPPORT_TARGET, require_attorney_review: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        target: float = CLAIM_SUPPORT_TARGET,
+        require_attorney_review: bool = True,
+        review_mode: str = "attorney_reviewed",
+    ) -> None:
         self.target = target
         self.require_attorney_review = require_attorney_review
+        self.review_mode = normalize_review_mode(review_mode)
         self.verifier = ClaimSupportVerifier()
 
     def run(
@@ -123,9 +140,15 @@ class ClaimSupportMetricRunner:
         support_rate = _ratio(result["correct"], result["total"])
         if result["total"] and support_rate < self.target:
             blockers.append("citation_support_below_95_percent")
+        review_key = "attorney_reviewed" if self.review_mode == "attorney_reviewed" else "operator_source_backed"
+        reviewed = (
+            result["total"] > 0
+            and result[review_key] == result["total"]
+            and result["seed_or_synthetic"] == 0
+        )
         if self.require_attorney_review:
-            if result["attorney_reviewed"] != result["total"]:
-                blockers.append("claim_support_gold_not_fully_attorney_reviewed")
+            if not reviewed:
+                blockers.append(f"claim_support_gold_not_fully_{self.review_mode}")
             if result["seed_or_synthetic"]:
                 blockers.append("claim_support_gold_contains_seed_or_synthetic_rows")
 
@@ -134,15 +157,10 @@ class ClaimSupportMetricRunner:
                 "name": "citation_support",
                 "value": support_rate,
                 "sample_size": result["total"],
-                "basis": "pass30_claim_support_metric_runner_over_attorney_reviewed_gold",
-                "attorney_reviewed": result["total"] > 0
-                and result["attorney_reviewed"] == result["total"]
-                and result["seed_or_synthetic"] == 0,
-                "reviewer_status": "attorney_reviewed"
-                if result["total"] > 0
-                and result["attorney_reviewed"] == result["total"]
-                and result["seed_or_synthetic"] == 0
-                else "blocked_missing_full_attorney_review",
+                "basis": f"pass30_claim_support_metric_runner_over_{basis_suffix(self.review_mode)}_gold",
+                "attorney_reviewed": self.review_mode == "attorney_reviewed" and reviewed,
+                "operator_source_backed": self.review_mode == "operator_source_backed" and reviewed,
+                "reviewer_status": reviewer_status_for_metric(review_mode=self.review_mode, reviewed=reviewed),
                 "source_dataset": "maine_citation_validity_gold.jsonl",
                 "minimum_sample_size": result["total"],
                 "operator": ">=",
@@ -154,11 +172,13 @@ class ClaimSupportMetricRunner:
             readiness="pass30_claim_support_metrics_ready" if not blockers else "pass30_claim_support_metrics_blocked",
             generated_at=generated_at,
             claim_dataset=str(claim_path),
+            review_mode=self.review_mode,
             source_text_basis=source_basis,
             claim_total=result["total"],
             claim_correct=result["correct"],
             citation_support=support_rate,
             claim_attorney_reviewed_rows=result["attorney_reviewed"],
+            claim_operator_source_backed_rows=result["operator_source_backed"],
             claim_seed_or_synthetic_rows=result["seed_or_synthetic"],
             blocking_claim_statuses_seen=result["blocking_statuses"],
             blockers=blockers,
@@ -186,12 +206,14 @@ class ClaimSupportMetricRunner:
         findings: list[ClaimSupportMetricFinding],
         blockers: list[str],
     ) -> dict[str, int]:
-        total = correct = attorney_reviewed = seed_or_synthetic = blocking_statuses = 0
+        total = correct = attorney_reviewed = operator_source_backed = seed_or_synthetic = blocking_statuses = 0
         for idx, row in enumerate(rows, start=1):
             review_status = str(row.get("review_status") or row.get("reviewer_status") or "")
             method = str(row.get("annotator_or_generation_method") or row.get("basis") or "")
             if _is_attorney_reviewed(review_status, method):
                 attorney_reviewed += 1
+            if _is_operator_source_backed(row, review_status, method):
+                operator_source_backed += 1
             if _is_seed_or_synthetic(review_status, method):
                 seed_or_synthetic += 1
 
@@ -244,6 +266,7 @@ class ClaimSupportMetricRunner:
             "total": total,
             "correct": correct,
             "attorney_reviewed": attorney_reviewed,
+            "operator_source_backed": operator_source_backed,
             "seed_or_synthetic": seed_or_synthetic,
             "blocking_statuses": blocking_statuses,
         }
@@ -329,13 +352,15 @@ def _status_matches(expected: str, actual: str) -> bool:
 
 
 def _is_attorney_reviewed(review_status: str, method: str) -> bool:
-    value = f"{review_status} {method}".lower()
-    return any(marker in value for marker in ATTORNEY_REVIEW_MARKERS) and not _is_seed_or_synthetic(review_status, method)
+    return is_attorney_reviewed(review_status, method)
+
+
+def _is_operator_source_backed(row: dict[str, Any], review_status: str, method: str) -> bool:
+    return is_operator_source_backed(row, review_status, method)
 
 
 def _is_seed_or_synthetic(review_status: str, method: str) -> bool:
-    value = f"{review_status} {method}".lower()
-    return any(marker in value for marker in SEED_REVIEW_MARKERS)
+    return is_seed_or_synthetic(review_status, method)
 
 
 def _ratio(numerator: int, denominator: int) -> float:

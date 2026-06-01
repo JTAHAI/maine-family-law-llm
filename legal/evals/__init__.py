@@ -1,5 +1,6 @@
 from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner, VerifierMetricReport
 from legal.evals.claim_support_metrics import ClaimSupportMetricReport, ClaimSupportMetricRunner
+from legal.evals.staleness_jurisdiction_metrics import StalenessJurisdictionMetricReport, StalenessJurisdictionMetricRunner
 from legal.evals.full_release_eval import FullReleaseEvalReport, FullReleaseEvalRunner, build_passing_fixture_metrics
 from legal.evals.gold_pack import (
     AnnotationQueueAuditReport,
@@ -28,6 +29,8 @@ __all__ = [
     "ClaimSupportMetricReport",
     "ClaimSupportMetricRunner",
     "VerifierMetricReport",
+    "StalenessJurisdictionMetricReport",
+    "StalenessJurisdictionMetricRunner",
     "FullReleaseEvalRunner",
     "FullReleaseEvalReport",
     "AnnotationQueueAuditReport",

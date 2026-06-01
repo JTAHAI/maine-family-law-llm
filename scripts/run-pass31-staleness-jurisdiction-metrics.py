@@ -10,31 +10,23 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner
+from legal.evals.staleness_jurisdiction_metrics import StalenessJurisdictionMetricRunner
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Run Pass 29 citation/quote verifier production metrics over external gold rows."
-    )
+    parser = argparse.ArgumentParser(description="Run Pass 31 stale-law, jurisdiction, negative-treatment, and form freshness metrics.")
     parser.add_argument("--eval-root", type=Path, required=True)
-    parser.add_argument("--authority-index", type=Path, required=True)
-    parser.add_argument("--source-text-jsonl", type=Path)
-    parser.add_argument("--parsed-authority-root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--measurement-output", type=Path)
     parser.add_argument("--review-mode", choices=["attorney_reviewed", "operator_source_backed"], default="attorney_reviewed")
     parser.add_argument("--allow-non-attorney-reviewed", action="store_true", help="Only for local fixtures; do not use for GA.")
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
-    report = CitationQuoteVerifierMetricRunner(
-        require_attorney_review=not args.allow_non_attorney_reviewed,
+    report = StalenessJurisdictionMetricRunner(
+        require_review=not args.allow_non_attorney_reviewed,
         review_mode=args.review_mode,
     ).run(
         eval_root=args.eval_root,
-        authority_index_path=args.authority_index,
-        source_text_jsonl=args.source_text_jsonl,
-        parsed_authority_root=args.parsed_authority_root,
         output_path=args.output,
         measurement_output_path=args.measurement_output,
     )
