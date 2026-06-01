@@ -21,10 +21,11 @@
     42,
     43,
     44,
-    45
+    45,
+    47
   ],
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff.",
-  "generated_at": "2026-06-01T19:33:10.245912+00:00",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff. Pass 47 is closed from deterministic legal red-team repo evidence that blocks false-premise, fake-citation, stale-law, jurisdiction, injection, confidentiality, malicious-upload, and filing-ready bypass attacks; this is not pilot signoff and not attorney legal review.",
+  "generated_at": "2026-06-01T19:42:00.187761+00:00",
   "next_true_ga_pass": 27,
   "next_true_ga_title": "Minimum viable gold eval pack",
   "passes": [
@@ -495,17 +496,23 @@
     },
     {
       "completion_evidence": [
-        "false-premise suite",
+        "docs/external-evidence/pass47_legal_red_team_engineering_closure_summary.json",
+        "scripts/run-pass47-red-team-closure-evidence.py --require-ready",
+        "false-premise legal query suite",
         "fake citation suite",
         "stale-law suite",
-        "filing-ready bypass tests"
+        "jurisdiction mismatch suite",
+        "prompt/document/tool-injection suites",
+        "confidentiality leakage tests",
+        "malicious uploaded document tests",
+        "filing-ready bypass blocked"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 47,
       "phase": "Phase 11",
-      "repo_prep_status": "gate_prepared",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Legal red-team and adversarial testing"
     },
     {
@@ -572,7 +579,7 @@
     }
   ],
   "phases_remaining": {
-    "Phase 11": 2,
+    "Phase 11": 1,
     "Phase 12": 4,
     "Phase 3": 2,
     "Phase 4": 3
@@ -584,16 +591,15 @@
     30,
     31,
     46,
-    47,
     48,
     49,
     50,
     51
   ],
   "repo_prep_summary": {
-    "complete": 14,
+    "complete": 15,
     "external_evidence_validated": 8,
-    "gate_prepared": 2,
+    "gate_prepared": 1,
     "measurement_workbench_prepared": 1,
     "operator_source_backed_lane_prepared": 1,
     "production_metric_gate_prepared": 3,
@@ -601,7 +607,7 @@
   },
   "status": "pass",
   "total_true_ga_passes": 33,
-  "true_ga_completed": 22,
-  "true_ga_remaining": 11,
+  "true_ga_completed": 23,
+  "true_ga_remaining": 10,
   "warnings": []
 }
