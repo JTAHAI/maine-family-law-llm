@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .answer import compose_answer
+from .local_workbench_ui import render_local_workbench_html
 from .draft import draft_from_sources
 from .safety import classify_prompt
 from .sources import get_source, load_seed_manifest
@@ -12,10 +13,12 @@ from .workbench import retrieve_fixture_sources
 
 try:
     from fastapi import FastAPI, HTTPException
+    from fastapi.responses import HTMLResponse
     from pydantic import BaseModel
 except Exception:  # pragma: no cover - lets CLI import without API extras
     FastAPI = None  # type: ignore[assignment]
     HTTPException = Exception  # type: ignore[assignment]
+    HTMLResponse = None  # type: ignore[assignment]
 
     class BaseModel:  # type: ignore[no-redef]
         pass
@@ -50,6 +53,23 @@ if FastAPI is not None:
     def _health_payload() -> dict[str, str]:
         return {"status": "ok", "mode": "local-workbench"}
 
+
+    @app.get("/", response_class=HTMLResponse)
+    def local_chat_workbench() -> str:
+        return render_local_workbench_html()
+
+    @app.get("/workbench", response_class=HTMLResponse)
+    def workbench() -> str:
+        return render_local_workbench_html()
+
+    @app.post("/api/chat")
+    def api_chat(payload: AskRequest) -> dict[str, Any]:
+        return ask(payload)
+
+    @app.post("/api/ask")
+    def api_ask(payload: AskRequest) -> dict[str, Any]:
+        return ask(payload)
+
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
         return _health_payload()
@@ -60,7 +80,7 @@ if FastAPI is not None:
 
     @app.get("/api/version")
     def api_version() -> dict[str, str]:
-        return {"version": "1.45.0", "api_mode": "local-workbench"}
+        return {"version": "1.76.0", "api_mode": "local-workbench", "workbench_url": "/"}
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:

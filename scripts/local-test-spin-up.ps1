@@ -45,5 +45,6 @@ $pidPath = Join-Path -Path $repo -ChildPath ".local_server.pid"
 [System.IO.File]::WriteAllText($pidPath, [string]$proc.Id, [System.Text.UTF8Encoding]::new($false))
 Write-Output "started_pid=$($proc.Id)"
 Write-Output "api_mode=$ApiMode"
+Write-Output "workbench_url=http://127.0.0.1:$Port/"
 Write-Output "docs_url=http://127.0.0.1:$Port/docs"
 Write-Output "pid_file=$pidPath"

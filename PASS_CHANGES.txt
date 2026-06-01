@@ -750,3 +750,13 @@ Pass 30 metric gate prep (v1.67.0)
 - Updated true GA tracker to count Passes 27-31 and 46 as complete for the operator/source-backed engineering lane only.
 - Remaining true GA passes are now 4: Passes 48-51.
 - This release does not claim attorney review, legal signoff, pilot signoff, production deployment, or true GA shipment.
+
+## v1.76.0 — local chat workbench and README hardening
+
+- Added a browser-based local chat workbench at `/` and `/workbench` for non-technical testers.
+- Added `/api/chat` and `/api/ask` aliases for the local source-backed answer endpoint.
+- Added `START_LOCAL_CHAT.ps1` and `START_LOCAL_CHAT.cmd` one-command Windows launchers.
+- Updated `START_LOCAL_TEST.ps1`, `scripts/local-test-spin-up.ps1`, and local API scripts to advertise the browser workbench URL.
+- Updated README download, install, local chat, local API, and CLI instructions.
+- Added `docs/local-chat-workbench.md` and local chat workbench evidence runner.
+- Preserved review-required / not-legal-advice boundaries and source-card visibility.

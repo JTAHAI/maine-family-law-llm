@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "1.66.0"
-description = "Standalone Maine family law legal AI with hardened external authority ingestion, manifest-safe follow-up source collection, hardened GA evidence integrity gates, fail-closed signoff evidence, measured release metric gates, Pass 29 verifier metric gates, public-repo hygiene, local workbench APIs, Docker fixture packaging, and external-data boundaries"
+version = "1.76.0"
+description = "Standalone Maine family law legal AI with source-backed local chat workbench, hardened external authority gates, operator-source-backed release evidence, public-repo hygiene, Docker fixture packaging, and external-data boundaries"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pypdf>=4.3"]

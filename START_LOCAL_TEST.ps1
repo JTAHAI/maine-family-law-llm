@@ -3,7 +3,8 @@ param(
   [int]$Port = 8000,
   [ValidateSet("LocalWorkbench", "Enterprise")]
   [string]$ApiMode = "LocalWorkbench",
-  [string]$VenvPath = "D:\dev\ME_FM_LLM_venv"
+  [string]$VenvPath = "D:\dev\ME_FM_LLM_venv",
+  [switch]$OpenBrowser
 )
 
 Set-StrictMode -Version Latest
@@ -48,3 +49,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 powershell -ExecutionPolicy Bypass -File .\scripts\local-test-spin-up.ps1 -RepoRoot $repo -Port $Port -SkipTests -PythonExe $python -ApiMode $ApiMode
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$url = "http://127.0.0.1:$Port/"
+Write-Output "workbench_url=$url"
+if ($OpenBrowser) { Start-Process $url }

@@ -1,0 +1,15 @@
+{
+  "api_aliases": [
+    "/ask",
+    "/api/ask",
+    "/api/chat"
+  ],
+  "api_docs_url": "http://127.0.0.1:8000/docs",
+  "blockers": [],
+  "nontechnical_start_script": "START_LOCAL_CHAT.ps1",
+  "readme_updated": true,
+  "schema": "maine_family_law_llm.local_chat_workbench_evidence.v1",
+  "source_cards_visible": true,
+  "status": "pass",
+  "workbench_url": "http://127.0.0.1:8000/"
+}

@@ -79,6 +79,7 @@ def test_local_scripts_exist_parse_and_doctor_json() -> None:
     shell = shutil.which("pwsh") or shutil.which("powershell")
     scripts = [
         ROOT / "START_LOCAL_TEST.ps1",
+        ROOT / "START_LOCAL_CHAT.ps1",
         ROOT / "STOP_LOCAL_TEST.ps1",
         ROOT / "CHECK_LOCAL_REPO.ps1",
         ROOT / "CREATE_REVIEW_ZIP.ps1",

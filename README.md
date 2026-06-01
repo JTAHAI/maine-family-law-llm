@@ -1,6 +1,99 @@
 # Maine Family Law LLM
 
-Standalone Maine family-law legal AI system scaffold for source-grounded research, matter intake, evidence mapping, timeline building, draft review, citation verification, quote verification, filing-readiness review, and authority-grounded retrieval.
+Standalone Maine family-law legal AI system for source-grounded research, drafting support, document review, issue spotting, evidence mapping, and Maine-specific legal workflow assistance.
+
+> **Plain-English status:** this repo can run a local source-backed chat workbench today. It is not legal advice, it is not a lawyer, and every draft/output remains review-required.
+
+## Download
+
+For most users, download the latest release ZIP from GitHub, extract it, and run the local chat starter.
+
+```powershell
+cd D:\dev
+# Put the downloaded ZIP in your Downloads folder first.
+$zipName = "ME_FM_LLM_latest.zip"
+$zipPath = "$env:USERPROFILE\Downloads\$zipName"
+
+Remove-Item D:\dev\ME_FM_LLM -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive $zipPath -DestinationPath D:\dev\ME_FM_LLM -Force
+cd D:\dev\ME_FM_LLM
+```
+
+Repository users can also clone it directly:
+
+```powershell
+git clone https://github.com/JTAHAI/maine-family-law-llm.git D:\dev\ME_FM_LLM
+cd D:\dev\ME_FM_LLM
+```
+
+## For non-technical local testing
+
+Run one command and use the browser chat screen:
+
+```powershell
+cd D:\dev\ME_FM_LLM
+.\START_LOCAL_CHAT.ps1
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+The page lets you type a Maine family-law question, press **Ask**, and see the source-backed answer plus source cards. It runs locally and uses the bundled offline fixture sources unless you separately build an external official authority store.
+
+Stop the local server:
+
+```powershell
+.\STOP_LOCAL_TEST.ps1
+```
+
+## Local chat/API endpoints
+
+Start the local workbench API manually:
+
+```powershell
+cd D:\dev\ME_FM_LLM
+python -m pip install -e ".[dev,api]"
+$env:PYTHONPATH = "$PWD\src;$PWD"
+python -m uvicorn maine_family_law_llm.api:app --host 127.0.0.1 --port 8000
+```
+
+Useful URLs:
+
+```text
+http://127.0.0.1:8000/          # non-technical chat workbench
+http://127.0.0.1:8000/docs      # Swagger API docs
+http://127.0.0.1:8000/sources   # loaded source manifest
+http://127.0.0.1:8000/api/health
+```
+
+PowerShell chat test:
+
+```powershell
+$body = @{ question = "What Maine sources should I check before drafting a parental rights motion?" } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/chat" -Method Post -ContentType "application/json" -Body $body
+```
+
+## Command-line testing
+
+```powershell
+cd D:\dev\ME_FM_LLM
+python -m pip install -e ".[dev,api]"
+python -m maine_family_law_llm.cli sources validate
+python -m maine_family_law_llm.cli sources fetch --fixtures
+python -m maine_family_law_llm.cli sources normalize --fixtures
+python -m maine_family_law_llm.cli index build --fixtures
+python -m maine_family_law_llm.cli ask "What Maine sources should I check for child support?"
+python -m maine_family_law_llm.cli draft "checklist for a child support issue"
+```
+
+## What this is and is not
+
+This is a local-first Maine family-law AI workbench. It prioritizes official/source-backed Maine authority over model memory. It can help test retrieval, source cards, citation-aware answers, review-required drafting, and release gates. It does **not** certify legal advice, does **not** create an attorney-client relationship, and does **not** mark filings ready without verification gates.
+
+---
 
 ## V1 local legal-source workbench
 
@@ -146,7 +239,7 @@ C:\dev\ME_FM_LLM_venv\Scripts\Activate.ps1
 .\scripts\run-local-api.ps1 -RepoRoot C:\dev\ME_FM_LLM -DataRoot C:\dev\ME_FM_LLM_data
 ```
 
-Open `http://127.0.0.1:8000/api/health`, `http://127.0.0.1:8000/api/version`, or `http://127.0.0.1:8000/docs`. The root URL `/` is intentionally not a product UI route yet.
+Open `http://127.0.0.1:8000/` for the non-technical chat workbench, or use `http://127.0.0.1:8000/api/health`, `http://127.0.0.1:8000/api/version`, and `http://127.0.0.1:8000/docs` for API testing.
 
 The smoke script is a source-only local operator check. It does not certify production legal GA and does not require official authority corpora to be baked into the repo.
 
