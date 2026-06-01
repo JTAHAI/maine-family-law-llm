@@ -1,0 +1,36 @@
+{
+  "version": "1.81.0",
+  "artifact": "ME_FM_LLM_v1.81.0_chat_prompt_packs_source_drilldown_20260601.zip",
+  "generated_at": "2026-06-01T23:15:23.824681+00:00",
+  "status": "pass_focused_chat_ui_evidence",
+  "changes": [
+    "Expanded deterministic source-backed chat library from 54 to 78 items.",
+    "Added role-specific starter prompt packs for parent, lawyer/advocate, caregiver, counselor, and therapist users.",
+    "Added /api/starter-prompt-packs endpoint.",
+    "Added questions_to_ask answer style separating lawyer/reviewer questions from court-clerk logistics questions.",
+    "Added source-card inspector in local workbench UI.",
+    "Added JSON transcript export containing messages, latest payload metadata, and source cards.",
+    "Refreshed chat-library evidence runner to cover 40 sample questions and new UI checks.",
+    "Added v1.81 focused regression tests."
+  ],
+  "focused_tests": {
+    "command": "pytest -q tests/test_chat_prompt_packs_source_drilldown_v181.py tests/test_chat_library_ui_hardening_v180.py tests/test_chat_library_expansion_and_error_recovery.py tests/test_chat_question_library_and_workbench_ux.py tests/test_local_chat_workbench_ui.py tests/test_best_interest_chat_answer.py tests/test_answer_safety_v1.py",
+    "result": "28 passed"
+  },
+  "evidence_runner": {
+    "command": "PYTHONPATH=src:. python scripts/run-chat-library-evidence.py --output docs/external-evidence/chat_library_workbench_evidence_v181.json --require-ready",
+    "result": "pass",
+    "library_count": 78,
+    "topic_count": 20,
+    "starter_prompt_pack_count": 6,
+    "sample_question_count": 40
+  },
+  "broad_pytest_note": "A full pytest run was attempted but hit the 300-second execution timeout before completion; no failure report was produced in that timed-out run. Focused chat/UI regression tests and evidence passed.",
+  "guardrails": [
+    "Outputs remain review_required.",
+    "No output is filing-ready.",
+    "No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status is claimed.",
+    "Private matter data, runtime DBs, vector stores, model weights, and corpora remain excluded from the source ZIP."
+  ],
+  "remaining_true_ga_passes": 4
+}
