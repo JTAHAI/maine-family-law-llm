@@ -1,3 +1,4 @@
+from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner, VerifierMetricReport
 from legal.evals.full_release_eval import FullReleaseEvalReport, FullReleaseEvalRunner, build_passing_fixture_metrics
 from legal.evals.gold_pack import (
     AnnotationQueueAuditReport,
@@ -22,6 +23,8 @@ from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalRep
 
 __all__ = [
     "build_passing_fixture_metrics",
+    "CitationQuoteVerifierMetricRunner",
+    "VerifierMetricReport",
     "FullReleaseEvalRunner",
     "FullReleaseEvalReport",
     "AnnotationQueueAuditReport",

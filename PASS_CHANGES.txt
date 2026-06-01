@@ -1,3 +1,12 @@
+## v1.66.0 - Pass 29 verifier production metric gate
+
+- Added a Pass 29 citation/quote verifier metric runner over external attorney-reviewed gold rows.
+- Added a fail-closed Pass 29 production audit script requiring citation existence >= 99% and quote-span verification >= 97%.
+- Added partial release-metric measurement output for citation_existence and quote_span_verification.
+- Added tests proving attorney-reviewed rows can pass while seed/synthetic or missing-source-text rows block.
+- Pass 29 is not decremented by this source ZIP alone; it still requires the external metric run against attorney-reviewed gold and source text/authority index evidence.
+- Remaining true-GA passes stay at 18.
+
 ## v1.61.0 - Retrieval smoke performance and progress hardening
 
 - Fixed the live v1.60 pipeline blocker where `run_retrieval_smoke_eval` could consume the full 7200-second step timeout while brute-forcing thousands of source-derived retrieval smoke cases.

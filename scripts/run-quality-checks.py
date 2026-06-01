@@ -102,6 +102,7 @@ def run_pytest_batches() -> dict:
             "tests/test_pass22_23_24_25_authority_retrieval_product.py",
             "tests/test_pass26_27_28_gold_release_metrics.py",
             "tests/test_pass29_30_31_verifier_intelligence.py",
+            "tests/test_pass29_verifier_metric_gate.py",
             "tests/test_pass32_33_34_maine_intelligence.py",
             "tests/test_pass35_pass36_secure_matter_evidence.py",
             "tests/test_pass37_pass38_drafting_filing_gate.py",

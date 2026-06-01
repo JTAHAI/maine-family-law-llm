@@ -179,13 +179,18 @@
       "completion_evidence": [
         "citation existence >= 99%",
         "quote-span verification >= 97%",
-        "offset/span recording"
+        "offset/span recording",
+        "pass29_verifier_metrics.json",
+        "audit-pass29-verifier-production pass",
+        "citation_existence >= 0.99 from attorney-reviewed gold",
+        "quote_span_verification >= 0.97 from attorney-reviewed gold",
+        "docs/external-evidence/pass29_verifier_metric_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 29,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Citation and quote verifier production upgrade"
     },

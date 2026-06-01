@@ -1,0 +1,21 @@
+{
+  "pass": 29,
+  "title": "Citation and quote verifier production metric gate",
+  "status": "repo_prepared_external_metrics_required",
+  "readiness": "pass29_metric_gate_available_not_true_ga_evidence",
+  "added": [
+    "legal/evals/citation_quote_metrics.py",
+    "scripts/run-pass29-verifier-metrics.py",
+    "scripts/audit-pass29-verifier-production.py",
+    "tests/test_pass29_verifier_metric_gate.py",
+    "docs/pass29-verifier-production-metrics.md"
+  ],
+  "true_ga_exit_criteria": {
+    "citation_existence_minimum": 0.99,
+    "quote_span_verification_minimum": 0.97,
+    "attorney_review_required": true,
+    "seed_synthetic_fixture_rows_allowed_for_ga": false
+  },
+  "remaining_true_ga_count_after_this_source_zip": 18,
+  "note": "Pass 29 remains open until the metric runner passes against external attorney-reviewed gold rows and an external source-text/authority index basis."
+}
