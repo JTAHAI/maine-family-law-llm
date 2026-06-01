@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .answer import compose_answer
+from .chat_library import expand_query_for_library, public_library
 from .local_workbench_ui import render_local_workbench_html
 from .draft import draft_from_sources
 from .safety import classify_prompt
@@ -12,13 +13,15 @@ from .sources import get_source, load_seed_manifest
 from .workbench import retrieve_fixture_sources
 
 try:
-    from fastapi import FastAPI, HTTPException
-    from fastapi.responses import HTMLResponse
+    from fastapi import FastAPI, HTTPException, Request
+    from fastapi.responses import HTMLResponse, JSONResponse
     from pydantic import BaseModel
 except Exception:  # pragma: no cover - lets CLI import without API extras
     FastAPI = None  # type: ignore[assignment]
     HTTPException = Exception  # type: ignore[assignment]
     HTMLResponse = None  # type: ignore[assignment]
+    JSONResponse = None  # type: ignore[assignment]
+    Request = object  # type: ignore[assignment]
 
     class BaseModel:  # type: ignore[no-redef]
         pass
@@ -45,7 +48,7 @@ if FastAPI is None:  # pragma: no cover
 else:
     app = FastAPI(
         title="Maine Family Law LLM Local Workbench",
-        version="1.0.0",
+        version="1.79.0",
         description="Local legal-information workbench. No legal advice, no cloud deploy, source receipts required.",
     )
 
@@ -54,6 +57,18 @@ if FastAPI is not None:
 
     def _health_payload() -> dict[str, str]:
         return {"status": "ok", "mode": "local-workbench"}
+
+
+    @app.exception_handler(Exception)
+    async def json_exception_handler(request: Request, exc: Exception) -> JSONResponse:  # type: ignore[type-arg]
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "internal_server_error",
+                "message": str(exc) or exc.__class__.__name__,
+                "recovery_hint": "Restart START_LOCAL_CHAT.ps1, refresh the browser, and retry. If this persists, paste the terminal traceback into the issue.",
+            },
+        )
 
 
     @app.get("/", response_class=HTMLResponse)
@@ -82,15 +97,20 @@ if FastAPI is not None:
 
     @app.get("/api/version")
     def api_version() -> dict[str, str]:
-        return {"version": "1.77.0", "api_mode": "local-workbench", "workbench_url": "/"}
+        return {"version": "1.79.0", "api_mode": "local-workbench", "workbench_url": "/"}
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:
         return [entry.to_dict() for entry in load_seed_manifest()]
 
+    @app.get("/api/question-library")
+    def question_library() -> list[dict[str, Any]]:
+        return public_library()
+
     @app.post("/retrieve")
     def retrieve(payload: QueryRequest) -> dict[str, Any]:
-        response = retrieve_fixture_sources(payload.query, limit=payload.limit)
+        expanded_query = expand_query_for_library(payload.query)
+        response = retrieve_fixture_sources(expanded_query, limit=payload.limit)
         return {
             "query": response.query,
             "failure_class": response.failure_class,
@@ -100,25 +120,55 @@ if FastAPI is not None:
 
     @app.post("/ask")
     def ask(payload: AskRequest) -> dict[str, Any]:
-        query_text = payload.question
-        if payload.matter_context.strip():
-            query_text = f"{payload.question}\n\nContext: {payload.matter_context.strip()}"
-        safety = classify_prompt(query_text)
-        retrieval = retrieve_fixture_sources(query_text)
-        answer = compose_answer(
-            payload.question,
-            retrieval.results,
-            safety,
-            answer_style=payload.answer_style,
-            matter_context=payload.matter_context,
-        )
-        return {
-            "question": payload.question,
-            "answer_style": payload.answer_style,
-            "matter_context_used": bool(payload.matter_context.strip()),
-            "safety": safety.to_dict(),
-            **answer.to_dict(),
-        }
+        question = (payload.question or "").strip()
+        if not question:
+            return {
+                "question": payload.question,
+                "answer_style": payload.answer_style,
+                "matter_context_used": bool((payload.matter_context or "").strip()),
+                "safety": {"category": "general", "requires_citations": False, "requires_disclaimer": True, "requires_emergency_language": False},
+                "answer": "Type a Maine family-law question, then press Enter or click Ask.",
+                "grounded": False,
+                "failure_class": "empty_question",
+                "recovery_hint": "Enter a question such as: What are Maine's best-interest factors?",
+                "citations": [],
+            }
+        try:
+            query_text = question
+            if payload.matter_context.strip():
+                query_text = f"{question}\n\nContext: {payload.matter_context.strip()}"
+            safety = classify_prompt(query_text)
+            retrieval = retrieve_fixture_sources(expand_query_for_library(query_text))
+            answer = compose_answer(
+                question,
+                retrieval.results,
+                safety,
+                answer_style=payload.answer_style,
+                matter_context=payload.matter_context,
+            )
+            return {
+                "question": question,
+                "answer_style": payload.answer_style,
+                "matter_context_used": bool(payload.matter_context.strip()),
+                "safety": safety.to_dict(),
+                **answer.to_dict(),
+            }
+        except Exception as exc:
+            return {
+                "question": question,
+                "answer_style": payload.answer_style,
+                "matter_context_used": bool((payload.matter_context or "").strip()),
+                "safety": {"category": "error", "requires_citations": False, "requires_disclaimer": True, "requires_emergency_language": False},
+                "answer": (
+                    "The local workbench hit an internal error, but the browser recovered instead of crashing. "
+                    "Restart START_LOCAL_CHAT.ps1 if needed and paste the terminal traceback into the next review pass.\n\n"
+                    f"Error class: {exc.__class__.__name__}\nRecovery hint: retry the question, or use a starter prompt from the library."
+                ),
+                "grounded": False,
+                "failure_class": "local_workbench_internal_error",
+                "recovery_hint": "Restart START_LOCAL_CHAT.ps1, refresh the browser, and retry. If this persists, paste the terminal traceback into the issue.",
+                "citations": [],
+            }
 
     @app.post("/draft")
     def draft(payload: DraftRequest) -> dict[str, Any]:

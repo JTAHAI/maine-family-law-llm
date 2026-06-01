@@ -26,6 +26,36 @@ git clone https://github.com/JTAHAI/maine-family-law-llm.git D:\dev\ME_FM_LLM
 cd D:\dev\ME_FM_LLM
 ```
 
+
+## Local chat question library
+
+The browser workbench now includes a built-in starter question library for parents, lawyers, caregivers, counselors, and therapists. Start it with:
+
+```powershell
+.\START_LOCAL_CHAT.ps1
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+Usability notes:
+
+- Press **Enter** to ask.
+- Press **Shift+Enter** for a new line.
+- Use the audience selector to browse parent, lawyer, caregiver, counselor, and therapist starter prompts.
+- Use **Download transcript** to save a local text transcript.
+- API/server errors are shown in the page instead of crashing with a JSON parse error.
+- Answers remain source-backed, review-required, and not legal advice.
+
+Evidence check:
+
+```powershell
+python scripts/run-chat-library-evidence.py --require-ready
+```
+
 ## For non-technical local testing
 
 Run one command and use the browser chat screen:
@@ -474,3 +504,16 @@ What should I review before drafting a child support checklist?
 ```
 
 The browser workbench now includes answer style controls, optional context, copyable answers, grounded/failure badges, and source cards. The bundled fixture contains a short source-backed excerpt of **19-A M.R.S. § 1653(3)** so the offline demo can answer the best-interest-factor question without model memory. Always verify against the current official statute before relying on the answer.
+
+## v1.79 chat library expansion
+
+The browser workbench now includes a larger starter-question library for parents, lawyers/advocates, caregivers, counselors, and therapists. Use the audience selector and the question-library search box to find starter questions such as:
+
+- I was served with family court papers. What should I do first?
+- How do I organize evidence for family court?
+- Can my child choose which parent to live with?
+- What jurisdiction issues should I flag in a Maine custody matter?
+- Should I write a court letter for a parent?
+- Can therapy records be used in family court?
+
+The local `/ask` endpoint now returns structured JSON recovery payloads for empty questions and internal workbench exceptions so the browser UI should show a usable recovery message instead of crashing on a plain `Internal Server Error` response.

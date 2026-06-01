@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .best_interest import compose_best_interest_answer
+from .chat_library import compose_library_answer
 from .cite import render_citation_appendix
 from .retrieve import SearchResult
 from .safety import SafetyResult
@@ -46,10 +47,19 @@ def compose_answer(
     special = compose_best_interest_answer(question + " " + matter_context, results, answer_style=answer_style)
     if special is not None:
         body = special.text
-        if safety_result.requires_disclaimer:
+        if DISCLAIMER.lower() not in body.lower():
             body += "\n\n" + DISCLAIMER
         body += "\n\n" + render_citation_appendix(special.citations)
         return ComposedAnswer(answer=body, citations=special.citations, grounded=True)
+
+    library_answer = compose_library_answer(
+        question,
+        results,
+        answer_style=answer_style,
+        matter_context=matter_context,
+    )
+    if library_answer is not None:
+        return ComposedAnswer(answer=library_answer.text, citations=library_answer.citations, grounded=True)
 
     if safety_result.category == "general" and not safety_result.requires_citations:
         return ComposedAnswer(

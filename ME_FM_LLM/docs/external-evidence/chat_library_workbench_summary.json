@@ -1,0 +1,12 @@
+{
+  "schema_version": "external_evidence_summary_v1",
+  "pass": "v1.78.0_chat_library_workbench_ux_branding",
+  "status": "prepared",
+  "claims": [
+    "question library added for parents, lawyers, caregivers, counselors, and therapists",
+    "browser error handling now accepts non-JSON API failures",
+    "Enter submits; Shift+Enter creates a newline",
+    "FOCAF-flavored local branding added",
+    "answers remain source-backed and review-required"
+  ]
+}

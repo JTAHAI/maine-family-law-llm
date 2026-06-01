@@ -1,0 +1,129 @@
+{
+  "generated_at": "2026-06-01T22:50:44.845246+00:00",
+  "schema_version": "chat_library_workbench_evidence_v1",
+  "status": "pass",
+  "blockers": [],
+  "library_count": 29,
+  "audiences": [
+    "caregiver",
+    "counselor",
+    "lawyer",
+    "parent",
+    "therapist"
+  ],
+  "ui_checks": {
+    "enter_to_submit": true,
+    "json_error_handling": true,
+    "question_library": true,
+    "branding": true,
+    "transcript": true,
+    "library_search": true,
+    "served_papers_starter": true
+  },
+  "sample_results": [
+    {
+      "question": "What are Maine's best-interest factors under 19-A M.R.S. \u00a7 1653?",
+      "grounded": true,
+      "citation_count": 2,
+      "failure_class": "none",
+      "answer_preview": "Maine's best-interest factors for parental rights and responsibilities are in 19-A M.R.S. \u00a7 1653(3). For residence and parent-child contact decisions, the child's safety and well-being are primary.\n\nA. The age of the child.\nB. The relationship of the child with the child's parents and any other persons who may significantly affect the child's welfare.\nC. The",
+      "status": "pass"
+    },
+    {
+      "question": "How do I use the best-interest factors in my parenting case?",
+      "grounded": true,
+      "citation_count": 3,
+      "failure_class": "none",
+      "answer_preview": "Maine parental-rights decisions are organized around the child's best interest. The most useful way to prepare is to connect each important fact to one or more 19-A M.R.S. \u00a7 1653(3) factors, especially safety, stability, the child's relationships, adjustment to home/school/community, parental cooperation, domestic abuse, child abuse, and whether the proposed",
+      "status": "pass"
+    },
+    {
+      "question": "Can a therapist decide whether visits happen?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "A therapist or counselor should be very careful about appearing to decide legal parenting time. The workbench should flag this as a non-delegation / contact-restriction issue: parenting contact decisions need court authority, source-backed findings, and review under the relevant Maine family-law standards, not an unsourced clinical veto.\n\nPractical next step",
+      "status": "pass"
+    },
+    {
+      "question": "What should I gather for child support?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "Checklist: What should I gather for child support?\n\nFor a Maine child-support issue, start with the current court forms and official child-support information. The common preparation tasks are identifying income, support-affidavit requirements, health-insurance or childcare issues, the current order if one exists, and whether the issue is initial support, mo",
+      "status": "pass"
+    },
+    {
+      "question": "What if I need protection from abuse?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "If someone is in immediate danger, call 911 or local emergency services. For non-immediate but serious safety concerns, use official protection-from-abuse and court resources. In a family case, keep safety facts separate from ordinary parenting disagreements and make sure any requested contact limits are tied to evidence.\n\nPractical next steps:\n- Use emergen",
+      "status": "pass"
+    },
+    {
+      "question": "How do I start a parental rights case in Maine?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "A Maine family matter usually begins with the correct Judicial Branch forms, filing, service, scheduling, and court review. The local workbench cannot tell you which filing is right for your facts, but it can point you to the official family-process and forms sources so you can verify the current packet and instructions.\n\nPractical next steps:\n- Identify whe",
+      "status": "pass"
+    },
+    {
+      "question": "How do I check a proposed order for Rule 52 findings?",
+      "grounded": true,
+      "citation_count": 3,
+      "failure_class": "none",
+      "answer_preview": "For a Maine family-law proposed order, review whether the order connects conclusions to findings and whether the best-interest factors that matter to the dispute are addressed with record-supported facts. The local workbench should flag missing findings, unsupported contact restrictions, PFA-family overlap issues, and best-interest factor gaps for human revi",
+      "status": "pass"
+    },
+    {
+      "question": "I am a caregiver for a child. What should I ask the court about?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "Caregivers should first identify what legal role is actually at issue: informal care, parental rights/contact, guardianship, protection-from-abuse overlap, or another court process. This local tool can help organize questions and source cards, but it should not tell a caregiver that they have rights without checking the proper Maine statute, form, and proced",
+      "status": "pass"
+    },
+    {
+      "question": "I was served with family court papers. What should I do first?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "Start by reading the papers carefully and identifying the court, docket number, case type, deadlines, scheduled events, and what the other party is asking for. The workbench can help organize the documents and point to official court-process and forms sources, but it cannot decide your legal response or deadline strategy.\n\nPractical next steps:\n- Write down ",
+      "status": "pass"
+    },
+    {
+      "question": "How do I organize evidence for family court?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "Organize proof by issue and date, not by emotion. For each claim, write the fact, date, source of proof, and which issue it supports. In a parental-rights dispute, connect facts to the best-interest factors and keep safety evidence separate from ordinary disagreement evidence.\n\nPractical next steps:\n- Build a timeline with date, event, document/witness, and ",
+      "status": "pass"
+    },
+    {
+      "question": "Can my child choose which parent to live with?",
+      "grounded": true,
+      "citation_count": 3,
+      "failure_class": "none",
+      "answer_preview": "The child's preference can be one factor if the child is old enough to express a meaningful preference, but it is not the only factor. Maine's best-interest analysis considers the full set of relevant factors, including safety, relationships, stability, adjustment, cooperation, and other welfare concerns.\n\nPractical next steps:\n- Do not pressure the child to",
+      "status": "pass"
+    },
+    {
+      "question": "Should I write a court letter for a parent?",
+      "grounded": true,
+      "citation_count": 4,
+      "failure_class": "none",
+      "answer_preview": "Before writing a court letter, a counselor should consider role, consent, confidentiality, records rules, subpoena/order issues, clinical boundaries, and whether the letter risks becoming legal advocacy. The workbench can flag boundaries, but it cannot provide professional ethics advice or substitute for counsel/supervision.\n\nPractical next steps:\n- Clarify ",
+      "status": "pass"
+    },
+    {
+      "question": "Can therapy records be used in family court?",
+      "grounded": true,
+      "citation_count": 2,
+      "failure_class": "none",
+      "answer_preview": "Do not upload private therapy notes or confidential clinical records into a public repo, shared model, or unapproved system. For family-court use, records issues require consent, orders/subpoenas, professional rules, and legal review. The workbench can help with general orientation only.\n\nPractical next steps:\n- Keep records in approved clinical/legal system",
+      "status": "pass"
+    }
+  ]
+}

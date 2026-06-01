@@ -768,3 +768,21 @@ Pass 30 metric gate prep (v1.67.0)
 - Added answer style, optional context/facts, copy-answer control, grounded/failure badges, and improved source-card outputs to the local browser UI.
 - Added chat hardening documentation and tests.
 - Does not claim attorney review, legal advice, or filing-ready output.
+
+
+## v1.78.0 - Chat library, workbench UX, error handling, and FOCAF branding
+
+- Added deterministic source-backed chat question library for parents, lawyers, caregivers, counselors, and therapists.
+- Added question-library API endpoint and workbench browsing controls.
+- Fixed browser JSON parse crash on plain-text/Internal Server Error responses.
+- Added Enter-to-submit and Shift+Enter newline behavior.
+- Added transcript panel and transcript download.
+- Added FOCAF-flavored branding and https://focaf.jtforme.com link.
+- Added chat library evidence runner and tests.
+
+v1.79.0_chat_library_expansion_and_error_recovery
+- Expanded deterministic source-backed chat library to 25+ multi-audience starter answers.
+- Added parent/caregiver/lawyer/counselor/therapist questions for served papers, evidence organization, child preference, mediation prep, jurisdiction flags, court-letter caution, and therapy-record boundaries.
+- Added question-library search in the local browser workbench.
+- Hardened /ask so empty questions and internal workbench errors return JSON payloads rather than plain Internal Server Error text.
+- Added tests and evidence coverage for library depth, common grounded questions, UI search, and JSON recovery.

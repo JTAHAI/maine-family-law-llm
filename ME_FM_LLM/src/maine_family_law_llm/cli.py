@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 from .answer import compose_answer
+from .chat_library import expand_query_for_library
 from .corpus_build import (
     audit_external_corpus,
     build_required_indexes,
@@ -136,7 +137,7 @@ def _index(args: argparse.Namespace) -> int:
 
 def _ask(question: str) -> int:
     safety = classify_prompt(question)
-    response = retrieve_fixture_sources(question)
+    response = retrieve_fixture_sources(expand_query_for_library(question))
     answer = compose_answer(question, response.results, safety)
     print(answer.answer)
     return 0 if answer.failure_class == "none" else 1
