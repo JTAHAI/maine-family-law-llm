@@ -1,5 +1,5 @@
 {
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff. Pass 47 is closed from deterministic legal red-team repo evidence that blocks false-premise, fake-citation, stale-law, jurisdiction, injection, confidentiality, malicious-upload, and filing-ready bypass attacks; this is not pilot signoff and not attorney legal review Pass 46 now has an operator/source-backed release-eval lane prepared; that lane can pass engineering release metrics without attorney review, but does not imply true GA shipment, legal signoff, pilot signoff, or attorney review.",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff. Pass 47 is closed from deterministic legal red-team repo evidence that blocks false-premise, fake-citation, stale-law, jurisdiction, injection, confidentiality, malicious-upload, and filing-ready bypass attacks; this is not pilot signoff and not attorney legal review Pass 46 now has an operator/source-backed release-eval lane prepared; that lane can pass engineering release metrics without attorney review, but does not imply true GA shipment, legal signoff, pilot signoff, or attorney review. Passes 27-31 and 46 are closed for the operator/source-backed engineering lane only: rows and metrics must be explicitly operator_source_backed; attorney_reviewed, legal_signoff, pilot_signoff, and true_ga_release_allowed remain false.",
   "current_true_ga_completed_passes": [
     19,
     20,
@@ -9,6 +9,11 @@
     24,
     25,
     26,
+    27,
+    28,
+    29,
+    30,
+    31,
     32,
     33,
     34,
@@ -23,6 +28,7 @@
     43,
     44,
     45,
+    46,
     47
   ],
   "passes": [
@@ -156,14 +162,17 @@
         "operator-source-backed or attorney-reviewed gold JSONL minimums",
         "audit-gold-eval-pack pass for selected review mode",
         "seed rows excluded",
-        "scripts/build-operator-source-backed-gold-pack.py for source-backed engineering lane"
+        "scripts/build-operator-source-backed-gold-pack.py for source-backed engineering lane",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
-      "next": true,
+      "next": false,
       "pass": 27,
       "phase": "Phase 3",
-      "repo_prep_status": "operator_source_backed_lane_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Minimum viable gold eval pack"
     },
     {
@@ -175,14 +184,17 @@
         "scripts/build-release-metric-measurement-template.py",
         "scripts/audit-release-metric-measurements.py",
         "docs/release-metrics-measurement-workbench.md",
-        "operator_source_backed release metric measurements accepted only when explicitly marked and externally audited"
+        "operator_source_backed release metric measurements accepted only when explicitly marked and externally audited",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 28,
       "phase": "Phase 3",
-      "repo_prep_status": "measurement_workbench_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Eval runner and release metrics evidence"
     },
     {
@@ -195,14 +207,17 @@
         "citation_existence >= 0.99 from attorney-reviewed or operator-source-backed gold",
         "quote_span_verification >= 0.97 from attorney-reviewed or operator-source-backed gold",
         "docs/external-evidence/pass29_verifier_metric_gate_summary.json",
-        "scripts/run-pass29-verifier-metrics.py --review-mode operator_source_backed"
+        "scripts/run-pass29-verifier-metrics.py --review-mode operator_source_backed",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 29,
       "phase": "Phase 4",
-      "repo_prep_status": "production_metric_gate_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Citation and quote verifier production upgrade"
     },
     {
@@ -215,14 +230,17 @@
         "citation_support >= 0.95 from attorney-reviewed or operator-source-backed gold",
         "unsupported legal claims block final/final-like exports",
         "docs/external-evidence/pass30_claim_support_metric_gate_summary.json",
-        "scripts/run-pass30-claim-support-metrics.py --review-mode operator_source_backed"
+        "scripts/run-pass30-claim-support-metrics.py --review-mode operator_source_backed",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 30,
       "phase": "Phase 4",
-      "repo_prep_status": "production_metric_gate_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Claim-support verifier"
     },
     {
@@ -235,14 +253,17 @@
         "pass31_staleness_jurisdiction_metrics.json",
         "audit-pass31-staleness-jurisdiction-production pass",
         "docs/external-evidence/pass31_staleness_jurisdiction_metric_gate_summary.json",
-        "scripts/run-pass31-staleness-jurisdiction-metrics.py --review-mode operator_source_backed"
+        "scripts/run-pass31-staleness-jurisdiction-metrics.py --review-mode operator_source_backed",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 31,
       "phase": "Phase 4",
-      "repo_prep_status": "production_metric_gate_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Stale law, jurisdiction, and negative-treatment checks"
     },
     {
@@ -485,14 +506,17 @@
         "pass46_operator_source_backed_release_eval.json",
         "release_metric_measurements.operator_source_backed.json",
         "operator_release_allowed true while true_ga_release_allowed remains false without signoffs",
-        "docs/external-evidence/pass46_operator_source_backed_release_eval_gate_summary.json"
+        "docs/external-evidence/pass46_operator_source_backed_release_eval_gate_summary.json",
+        "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+        "operator_source_backed metrics accepted without attorney/legal/pilot signoff",
+        "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 46,
       "phase": "Phase 11",
-      "repo_prep_status": "operator_source_backed_release_eval_gate_prepared",
-      "status": "open",
+      "repo_prep_status": "operator_source_backed_engineering_closed",
+      "status": "complete",
       "title": "Full release eval run"
     },
     {
@@ -525,7 +549,7 @@
         "scripts/run-pass48-51-launch-evidence-gates.py verifies attorney_sandbox_pilot_report.json"
       ],
       "external_dependency": true,
-      "next": false,
+      "next": true,
       "pass": 48,
       "phase": "Phase 12",
       "repo_prep_status": "external_evidence_gate_prepared",

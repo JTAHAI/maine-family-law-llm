@@ -40,8 +40,10 @@ def test_true_ga_tracker_marks_pass32_38_complete_without_closing_attorney_or_pi
     completed = tracker["current_true_ga_completed_passes"]
     for pass_number in range(32, 39):
         assert pass_number in completed
-    for pass_number in [27, 28, 29, 30, 31, 46, 47, 48, 49, 50, 51]:
+    for pass_number in [27, 28, 29, 30, 31, 46, 47]:
+        assert pass_number in completed
+    for pass_number in [48, 49, 50, 51]:
         assert pass_number not in completed
     rows = {row["pass"]: row for row in tracker["passes"]}
     assert all(rows[pass_number]["status"] == "complete" for pass_number in range(32, 39))
-    assert rows[27]["next"] is True
+    assert rows[48]["next"] is True

@@ -53,9 +53,11 @@ def test_pass47_reduces_tracker_count_without_closing_external_release_or_pilot_
     report = GAPassTracker(project_root=ROOT).report().as_dict()
 
     assert report["status"] == "pass"
-    assert report["true_ga_completed"] == 23
-    assert report["true_ga_remaining"] == 10
+    assert report["true_ga_completed"] == 29
+    assert report["true_ga_remaining"] == 4
     assert 47 in report["completed_passes"]
-    for pass_number in [27, 28, 29, 30, 31, 46, 48, 49, 50, 51]:
+    for pass_number in [27, 28, 29, 30, 31, 46]:
+        assert pass_number in report["completed_passes"]
+    for pass_number in [48, 49, 50, 51]:
         assert pass_number in report["remaining_passes"]
-    assert report["next_true_ga_pass"] == 27
+    assert report["next_true_ga_pass"] == 48

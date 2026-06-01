@@ -1,0 +1,30 @@
+{
+  "attorney_reviewed": false,
+  "evidence_runner": "scripts/run-pass27-31-46-operator-closure.py --require-ready",
+  "legal_signoff": false,
+  "notes": [
+    "Operator/source-backed engineering lane only.",
+    "Launch/pilot/signoff passes remain open."
+  ],
+  "passes_closed": [
+    27,
+    28,
+    29,
+    30,
+    31,
+    46
+  ],
+  "pilot_signoff": false,
+  "readiness": "operator_source_backed_engineering_closure_recorded",
+  "remaining_passes": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "remaining_true_ga_passes": 4,
+  "review_mode": "operator_source_backed",
+  "schema_version": "pass27_31_46_operator_source_backed_closure_summary_v1",
+  "status": "pass",
+  "true_ga_release_allowed": false
+}

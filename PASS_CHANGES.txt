@@ -742,3 +742,11 @@ Pass 30 metric gate prep (v1.67.0)
 - Added strict fail-closed metric aggregation from retrieval smoke, source freshness, and Pass 29/30/31 partial measurements.
 - Added explicit boundary fields: attorney_reviewed=false, legal_signoff=false, pilot_signoff=false, true_ga_release_allowed=false.
 - Added CLI, docs, external evidence summary, and targeted tests.
+
+## v1.75.0 — Passes 27-31 and 46 operator/source-backed engineering closure
+
+- Added consolidated operator/source-backed closure runner for Passes 27-31 and 46.
+- Fixed quote-row construction so source-backed citation rows can produce quote-span rows from captured evidence text even when parsed source IDs differ from authority-index IDs.
+- Updated true GA tracker to count Passes 27-31 and 46 as complete for the operator/source-backed engineering lane only.
+- Remaining true GA passes are now 4: Passes 48-51.
+- This release does not claim attorney review, legal signoff, pilot signoff, production deployment, or true GA shipment.

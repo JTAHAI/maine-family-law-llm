@@ -371,7 +371,11 @@ def _build_quote_rows(rows: list[dict[str, Any]], source_texts: dict[str, str], 
     quote_rows: list[dict[str, Any]] = []
     for row in rows:
         source_id = row["source_id"]
-        quote = _snippet(source_texts.get(source_id, ""))
+        # Prefer the exact evidence text captured during citation-row construction.
+        # External parsed stores may expose the source text under record_id/citation keys
+        # that differ from the final matched source_id. Falling back to evidence_text
+        # prevents a valid source-backed citation row from producing an empty quote row.
+        quote = _snippet(str(row.get("evidence_text") or "")) or _snippet(source_texts.get(source_id, ""))
         if not quote:
             continue
         quote_rows.append(
