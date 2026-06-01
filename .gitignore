@@ -1,0 +1,27 @@
+﻿__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+dist/
+build/
+
+# Local/runtime data must not be committed
+.mfl_work/
+ME_FM_LLM_data/
+official_authority_store/
+eval_store/
+parsed_authority_store/
+embedding_store/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

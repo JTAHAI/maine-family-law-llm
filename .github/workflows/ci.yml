@@ -1,0 +1,34 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  focused-chat-workbench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[api,dev]"
+      - name: Focused tests
+        run: |
+          python -m pytest -q \
+            tests/test_chat_library_expansion_and_error_recovery.py \
+            tests/test_chat_question_library_and_workbench_ux.py \
+            tests/test_best_interest_chat_answer.py \
+            tests/test_local_chat_workbench_ui.py \
+            tests/test_cli_api_local_v1.py \
+            tests/test_chat_library_ui_hardening_v180.py \
+            tests/test_chat_prompt_packs_source_drilldown_v181.py \
+            tests/test_chat_missing_info_handoff_v182.py
+      - name: Chat evidence
+        run: |
+          python scripts/run-chat-library-evidence.py --require-ready
