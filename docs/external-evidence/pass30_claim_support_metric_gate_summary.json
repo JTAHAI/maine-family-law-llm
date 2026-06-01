@@ -1,0 +1,21 @@
+{
+  "pass": 30,
+  "title": "Claim-support verifier production metric gate",
+  "status": "gate_prepared_not_closed",
+  "true_ga_count_decrement": false,
+  "reason_not_closed": "Requires external attorney-reviewed claim-support/citation-validity gold rows and source text evidence before Pass 30 can close.",
+  "added_files": [
+    "legal/evals/claim_support_metrics.py",
+    "scripts/run-pass30-claim-support-metrics.py",
+    "scripts/audit-pass30-claim-support-production.py",
+    "docs/pass30-claim-support-production-metrics.md",
+    "tests/test_pass30_claim_support_metric_gate.py"
+  ],
+  "required_external_outputs": [
+    "pass30_claim_support_metrics.json",
+    "pass30_claim_support_metrics_audit.json",
+    "release_metric_measurements.pass30.partial.json"
+  ],
+  "release_metric": "citation_support",
+  "target": 0.95
+}

@@ -14,7 +14,7 @@ Run:
 ```powershell
 python scripts/run-pass29-verifier-metrics.py `
   --eval-root D:\dev\ME_FM_LLM_data\eval_store `
-  --authority-index D:\dev\ME_FM_LLM_data\authority_layer\citation_index.json `
+  --authority-index D:\dev\ME_FM_LLM_data\authority_data_product\citation_index.jsonl `
   --parsed-authority-root D:\dev\ME_FM_LLM_data\parsed_authority_store `
   --output D:\dev\ME_FM_LLM_data\pass29_verifier_metrics.json `
   --measurement-output D:\dev\ME_FM_LLM_data\release_metric_measurements.pass29.partial.json `

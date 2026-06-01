@@ -686,3 +686,10 @@ v1.63.0 - Pass 26 gold annotation queue operations closure
 - Added measurement audit CLI that rejects repo-local, seed, synthetic, fixture, smoke, source-derived, undersized, missing-review, and wrong-dataset metrics.
 - Added Pass 28 operator runbook and targeted tests.
 - Pass 28 remains open until attorney-reviewed gold datasets and external task-specific measurements exist.
+
+
+Pass 30 metric gate prep (v1.67.0)
+- Added fail-closed claim-support metric runner for citation_support.
+- Added Pass 30 production audit CLI and operator runbook.
+- Added tests proving attorney-reviewed rows pass and seed/missing evidence blocks.
+- Did not decrement true-GA count; external attorney-reviewed gold evidence is still required.

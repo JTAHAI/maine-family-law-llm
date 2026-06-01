@@ -198,13 +198,18 @@
       "completion_evidence": [
         "claim extraction",
         "claim-to-source statuses",
-        "unsupported assertion blocker"
+        "unsupported assertion blocker",
+        "pass30_claim_support_metrics.json",
+        "audit-pass30-claim-support-production pass",
+        "citation_support >= 0.95 from attorney-reviewed gold",
+        "unsupported legal claims block final/final-like exports",
+        "docs/external-evidence/pass30_claim_support_metric_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 30,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Claim-support verifier"
     },
