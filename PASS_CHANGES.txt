@@ -708,3 +708,10 @@ Pass 30 metric gate prep (v1.67.0)
 - Extended operator-source-backed gold pack builder to emit optional Pass 31 scope and form-freshness datasets.
 - Added documentation and targeted regression tests for Pass 31 fail-closed behavior.
 
+
+## v1.70.0 — Operator source-backed gold builder hardening
+
+- Fixed the operator-source-backed gold pack builder so authority-index source IDs can differ from parsed-authority source IDs without producing empty citation, quote, and scope datasets.
+- Added citation/section/compact-key lookup aliases from parsed authority records, preserving the original authority-index source ID for audit while using the parsed source ID for quote and claim text verification.
+- Added regression coverage for the exact external failure shape seen after Pass 31: populated authority index and parsed authority store, but zero source-backed citation/quote/scope rows.
+- True GA count remains 18 until external operator-source-backed evidence for Passes 29-31 is generated and audited; no attorney-review claim is made.

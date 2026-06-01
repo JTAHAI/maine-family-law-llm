@@ -48,7 +48,7 @@ def main() -> int:
     source_texts, source_basis = load_source_texts(parsed_authority_root=args.parsed_authority_root)
     citation_entries = list(_iter_authority_index(args.authority_index))
     source_records = list(_iter_parsed_records(args.parsed_authority_root))
-    rows = _build_rows(citation_entries, source_texts, limit=args.limit)
+    rows = _build_rows(citation_entries, source_texts, source_records, limit=args.limit)
     quote_rows = _build_quote_rows(rows, source_texts, limit=args.limit)
     scope_rows = _build_scope_rows(citation_entries, rows, limit=args.limit)
     form_rows = _build_form_rows(source_records, limit=args.limit)
@@ -59,7 +59,7 @@ def main() -> int:
     _write_jsonl(forms_path, form_rows)
     manifest = {
         "schema_version": "operator_source_backed_gold_pack_v1",
-        "status": "pass" if rows and quote_rows else "blocked",
+        "status": "pass" if rows and quote_rows and scope_rows else "blocked",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "review_mode": REVIEW_STATUS,
         "attorney_reviewed": False,
@@ -81,7 +81,7 @@ def main() -> int:
             "authority_index_entries": len(citation_entries),
             "parsed_authority_records": len(source_records),
         },
-        "blockers": [] if rows and quote_rows else ["no_source_backed_rows_built"],
+        "blockers": _manifest_blockers(rows=rows, quote_rows=quote_rows, scope_rows=scope_rows, form_rows=form_rows),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(manifest, indent=2, sort_keys=True))
@@ -221,22 +221,37 @@ def _find_form_id(record: dict[str, Any]) -> str:
     return ""
 
 
-def _build_rows(index_rows: list[dict[str, Any]], source_texts: dict[str, str], *, limit: int) -> list[dict[str, Any]]:
+def _build_rows(
+    index_rows: list[dict[str, Any]],
+    source_texts: dict[str, str],
+    source_records: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
     built: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
+    lookup = _build_text_lookup(source_texts, source_records)
     for row in index_rows:
-        source_id = str(row.get("source_id") or row.get("record_id") or "").strip()
+        index_source_id = str(row.get("source_id") or row.get("record_id") or "").strip()
         citation = str(row.get("normalized_citation") or row.get("citation") or "").strip()
-        if not source_id or not citation or (source_id, citation) in seen:
+        if not index_source_id or not citation or (index_source_id, citation) in seen:
             continue
-        source_text = source_texts.get(source_id, "")
+        matched_source_id, source_text = _lookup_source_text(
+            row=row,
+            citation=citation,
+            source_texts=source_texts,
+            text_lookup=lookup,
+        )
         claim = _claim_from_text(source_text)
         evidence = _snippet(source_text)
         if not claim or not evidence:
             continue
+        source_id = matched_source_id or index_source_id
         built.append(
             {
                 "source_id": source_id,
+                "source_ids": [value for value in [source_id, index_source_id] if value],
+                "authority_index_source_id": index_source_id,
                 "citation": citation,
                 "claim": claim,
                 "evidence_text": evidence,
@@ -255,10 +270,101 @@ def _build_rows(index_rows: list[dict[str, Any]], source_texts: dict[str, str], 
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
         )
-        seen.add((source_id, citation))
+        seen.add((index_source_id, citation))
         if len(built) >= limit:
             break
     return built
+
+
+def _build_text_lookup(source_texts: dict[str, str], source_records: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
+    lookup: dict[str, tuple[str, str]] = {}
+    for source_id, text in source_texts.items():
+        if source_id and text:
+            _add_lookup(lookup, source_id, source_id, text)
+    for record in source_records:
+        text = str(record.get("text") or record.get("source_text") or record.get("content") or "").strip()
+        source_id = str(record.get("source_id") or record.get("record_id") or record.get("id") or "").strip()
+        if not source_id or not text:
+            continue
+        keys = [
+            source_id,
+            str(record.get("record_id") or ""),
+            str(record.get("id") or ""),
+            str(record.get("citation") or ""),
+            str(record.get("normalized_citation") or ""),
+            str(record.get("canonical_citation") or ""),
+            _compact_key(str(record.get("citation") or "")),
+            _compact_key(str(record.get("normalized_citation") or "")),
+            _section_key(str(record.get("citation") or "")),
+            _section_key(source_id),
+        ]
+        for key in keys:
+            _add_lookup(lookup, key, source_id, text)
+    return lookup
+
+
+def _lookup_source_text(
+    *,
+    row: dict[str, Any],
+    citation: str,
+    source_texts: dict[str, str],
+    text_lookup: dict[str, tuple[str, str]],
+) -> tuple[str, str]:
+    index_source_id = str(row.get("source_id") or row.get("record_id") or "").strip()
+    candidate_keys = [
+        index_source_id,
+        str(row.get("record_id") or ""),
+        str(row.get("id") or ""),
+        citation,
+        str(row.get("normalized_citation") or ""),
+        str(row.get("citation") or ""),
+        _compact_key(citation),
+        _section_key(citation),
+        _section_key(index_source_id),
+    ]
+    metadata = row.get("metadata")
+    if isinstance(metadata, dict):
+        candidate_keys.extend(
+            [
+                str(metadata.get("source_id") or ""),
+                str(metadata.get("record_id") or ""),
+                str(metadata.get("citation") or ""),
+                str(metadata.get("normalized_citation") or ""),
+                _compact_key(str(metadata.get("citation") or "")),
+                _section_key(str(metadata.get("citation") or "")),
+            ]
+        )
+    for key in candidate_keys:
+        if not key:
+            continue
+        direct = source_texts.get(key)
+        if direct:
+            return key, direct
+        match = text_lookup.get(key) or text_lookup.get(_compact_key(key)) or text_lookup.get(_section_key(key))
+        if match:
+            return match
+    return index_source_id, ""
+
+
+def _add_lookup(lookup: dict[str, tuple[str, str]], key: str, source_id: str, text: str) -> None:
+    cleaned = str(key or "").strip()
+    if cleaned and cleaned not in lookup:
+        lookup[cleaned] = (source_id, text)
+    compact = _compact_key(cleaned)
+    if compact and compact not in lookup:
+        lookup[compact] = (source_id, text)
+
+
+def _compact_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9§]+", "", str(value or "").lower())
+
+
+def _section_key(value: str) -> str:
+    text = str(value or "")
+    match = re.search(r"(?:§|sec(?:tion)?|section|title)?\s*(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)*)", text, re.I)
+    if not match:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "", match.group(1).lower())
 
 
 def _build_quote_rows(rows: list[dict[str, Any]], source_texts: dict[str, str], *, limit: int) -> list[dict[str, Any]]:
@@ -325,6 +431,17 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def _manifest_blockers(*, rows: list[dict[str, Any]], quote_rows: list[dict[str, Any]], scope_rows: list[dict[str, Any]], form_rows: list[dict[str, Any]]) -> list[str]:
+    blockers: list[str] = []
+    if not rows:
+        blockers.append("no_citation_claim_rows_built")
+    if not quote_rows:
+        blockers.append("no_quote_rows_built")
+    if not scope_rows:
+        blockers.append("no_scope_rows_built")
+    return blockers
 
 
 if __name__ == "__main__":

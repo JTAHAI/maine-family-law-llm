@@ -175,3 +175,64 @@ def test_operator_source_backed_audits_accept_operator_rows(tmp_path: Path) -> N
         check=False,
     )
     assert result30.returncode == 0, result30.stdout + result30.stderr
+
+
+def test_operator_source_backed_builder_matches_index_source_ids_to_parsed_citations(tmp_path: Path) -> None:
+    parsed_root = tmp_path / "parsed_authority_store"
+    authority_index = tmp_path / "authority_layer" / "citation_index.json"
+    eval_root = tmp_path / "eval_store"
+    _write_jsonl(
+        parsed_root / "statutes" / "title19a.jsonl",
+        [
+            {
+                "source_id": "parsed-title-19a-section-1653",
+                "record_id": "parsed-title-19a-section-1653",
+                "source_class": "statute",
+                "jurisdiction": "maine",
+                "citation": "19-A M.R.S. § 1653",
+                "text": "The court shall apply the best interest of the child standard when allocating parental rights and responsibilities.",
+            }
+        ],
+    )
+    _write_json(
+        authority_index,
+        [
+            {
+                "source_id": "authority-index-row-873",
+                "kind": "maine_statute",
+                "normalized_citation": "19-A M.R.S. § 1653",
+                "authority_status": "verified_official_maine",
+                "metadata": {"jurisdiction": "maine"},
+            }
+        ],
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/build-operator-source-backed-gold-pack.py",
+            "--eval-root",
+            str(eval_root),
+            "--parsed-authority-root",
+            str(parsed_root),
+            "--authority-index",
+            str(authority_index),
+            "--limit",
+            "10",
+            "--overwrite",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    # No forms are present in this narrow fixture, so the manifest is allowed to block;
+    # the regression target is that citation/quote/scope rows are no longer empty when
+    # authority-index source IDs differ from parsed-authority record IDs.
+    manifest = json.loads((eval_root / "operator_source_backed_gold_pack_manifest.json").read_text())
+    assert manifest["counts"]["citation_claim_rows"] == 1, result.stdout + result.stderr
+    assert manifest["counts"]["quote_rows"] == 1
+    assert manifest["counts"]["scope_rows"] == 1
+    quote_row = json.loads((eval_root / "maine_quote_span_gold.jsonl").read_text().splitlines()[0])
+    assert quote_row["source_id"] == "parsed-title-19a-section-1653"

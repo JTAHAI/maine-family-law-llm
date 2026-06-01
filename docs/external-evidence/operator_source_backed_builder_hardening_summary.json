@@ -1,0 +1,21 @@
+{
+  "schema_version": "external_evidence_summary_v1",
+  "pass_range": "29-31",
+  "artifact": "operator_source_backed_builder_hardening",
+  "status": "repo_gate_passed_external_rerun_required",
+  "attorney_reviewed": false,
+  "operator_source_backed_supported": true,
+  "fixes": [
+    "authority index source IDs may differ from parsed authority source IDs",
+    "citation rows can now resolve source text by citation aliases, compact citation keys, and section keys",
+    "quote rows now use the matched parsed-authority source ID so quote verification can load source text",
+    "scope rows are produced from matched citation rows instead of remaining empty"
+  ],
+  "external_gate_required": [
+    "build-operator-source-backed-gold-pack.py",
+    "run-pass29-verifier-metrics.py --review-mode operator_source_backed",
+    "run-pass30-claim-support-metrics.py --review-mode operator_source_backed",
+    "run-pass31-staleness-jurisdiction-metrics.py --review-mode operator_source_backed"
+  ],
+  "true_ga_count_decrement": false
+}
