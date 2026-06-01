@@ -1,0 +1,73 @@
+{
+  "audit": {
+    "assigned_rows": 0,
+    "double_review_rows": 300,
+    "missing_required_fields": 0,
+    "needs_attorney_review_rows": 300,
+    "parse_errors": 0,
+    "private_training_rows": 0,
+    "rows": 300,
+    "task_type_counts": {
+      "authority_ranking": 25,
+      "citation_validity": 25,
+      "drafting_review": 25,
+      "fact_to_evidence": 25,
+      "forms_freshness": 25,
+      "hallucination_negative": 25,
+      "issue_classification": 25,
+      "law_court_holding": 25,
+      "posture_classification": 25,
+      "quote_span": 25,
+      "rag_retrieval": 25,
+      "rule_52_gap": 25
+    }
+  },
+  "authority_data_product_blockers": [],
+  "authority_data_product_status": "pass",
+  "covered_true_ga_passes": [
+    26
+  ],
+  "data_root_external": true,
+  "does_not_claim_pass27_or_28": true,
+  "external_evidence_not_packaged": true,
+  "generated_at": "2026-06-01T16:34:57.395109+00:00",
+  "generated_from": "ME_FM_LLM_PASS_19_25_EVIDENCE.zip/authority_data_product_run.json",
+  "next_blocker": "Pass 27 still requires attorney-reviewed gold datasets; this summary only closes queue-generation operations.",
+  "official_authority_sources_not_packaged": true,
+  "pipeline_steps": [
+    {
+      "error": null,
+      "name": "build_gold_annotation_queue",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_gold_annotation_queue",
+      "status": "pass"
+    }
+  ],
+  "queue": {
+    "assigned_rows": 0,
+    "conflict_resolution_status": "not_started",
+    "double_review_required": true,
+    "queue_rows": 300,
+    "review_status": "needs_attorney_review",
+    "source_records": 1041,
+    "task_types": [
+      "rag_retrieval",
+      "citation_validity",
+      "quote_span",
+      "hallucination_negative",
+      "forms_freshness",
+      "drafting_review",
+      "issue_classification",
+      "posture_classification",
+      "authority_ranking",
+      "fact_to_evidence",
+      "law_court_holding",
+      "rule_52_gap"
+    ]
+  },
+  "release_note": "Source-safe summary only. Raw queue rows, official snapshots, parsed stores, and indexes remain outside source releases.",
+  "status": "pass"
+}

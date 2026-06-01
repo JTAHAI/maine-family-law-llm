@@ -129,6 +129,7 @@ class GAPassEvidenceAuditor:
             if requirements_path
             else self.project_root / "configs" / "maine_ga_pass_evidence_requirements.json"
         )
+        self._active_completed_passes: set[int] = set()
 
     def _root_path(self, alias: str) -> Path | None:
         alias = alias.lower().strip()
@@ -347,7 +348,165 @@ class GAPassEvidenceAuditor:
             if not isinstance(metrics, list) or not metrics:
                 return "release_metrics_missing_metrics"
 
+        if name == "pass19_25_authority_retrieval_gate_summary.json":
+            return self._pass19_25_external_summary_blocker(payload)
+
+        if name == "pass26_gold_annotation_queue_operations_summary.json":
+            return self._pass26_gold_annotation_queue_summary_blocker(payload)
+
         return None
+
+    def _pass26_gold_annotation_queue_summary_blocker(self, payload: Any) -> str | None:
+        """Validate the source-safe closure summary for Pass 26.
+
+        Pass 26 closes the operational queue generation/audit gate only. It does
+        not claim attorney-reviewed gold datasets, production-ready eval packs,
+        or release metrics. Those remain Passes 27-28 and must stay blocked until
+        separately evidenced.
+        """
+        if not isinstance(payload, dict):
+            return "pass26_summary_not_object"
+        if payload.get("status") != "pass":
+            return "pass26_summary_not_pass"
+        if payload.get("external_evidence_not_packaged") is not True:
+            return "pass26_summary_packages_external_evidence"
+        if payload.get("data_root_external") is not True:
+            return "pass26_summary_data_root_not_external"
+        if payload.get("covered_true_ga_passes") != [26]:
+            return "pass26_summary_wrong_pass_scope"
+        if 26 not in self._active_completed_passes:
+            return "pass26_summary_pass_not_marked_complete"
+
+        steps = payload.get("pipeline_steps")
+        if not isinstance(steps, list) or not steps:
+            return "pass26_summary_missing_pipeline_steps"
+        step_status = {str(item.get("name")): str(item.get("status")) for item in steps if isinstance(item, dict)}
+        for required_step in ("build_gold_annotation_queue", "audit_gold_annotation_queue"):
+            if step_status.get(required_step) != "pass":
+                return f"pass26_summary_step_not_pass_{required_step}"
+
+        queue = payload.get("queue")
+        if not isinstance(queue, dict):
+            return "pass26_summary_missing_queue"
+        audit = payload.get("audit")
+        if not isinstance(audit, dict):
+            return "pass26_summary_missing_audit"
+        try:
+            queue_rows = int(queue.get("queue_rows") or 0)
+            audit_rows = int(audit.get("rows") or 0)
+            needs_review = int(audit.get("needs_attorney_review_rows") or -1)
+            double_review = int(audit.get("double_review_rows") or -1)
+            missing_required = int(audit.get("missing_required_fields") or 0)
+            parse_errors = int(audit.get("parse_errors") or 0)
+            private_training = int(audit.get("private_training_rows") or 0)
+        except (TypeError, ValueError):
+            return "pass26_summary_queue_metrics_invalid"
+        if queue_rows <= 0 or audit_rows <= 0:
+            return "pass26_summary_queue_empty"
+        if queue_rows != audit_rows:
+            return "pass26_summary_queue_audit_row_mismatch"
+        if needs_review != audit_rows:
+            return "pass26_summary_not_all_rows_need_attorney_review"
+        if double_review != audit_rows:
+            return "pass26_summary_not_all_rows_double_review"
+        if missing_required != 0:
+            return "pass26_summary_missing_required_fields"
+        if parse_errors != 0:
+            return "pass26_summary_parse_errors"
+        if private_training != 0:
+            return "pass26_summary_private_training_rows"
+        task_type_counts = audit.get("task_type_counts")
+        if not isinstance(task_type_counts, dict) or len(task_type_counts) < 10:
+            return "pass26_summary_missing_task_type_counts"
+        if any(int(value or 0) <= 0 for value in task_type_counts.values()):
+            return "pass26_summary_empty_task_type"
+        if payload.get("does_not_claim_pass27_or_28") is not True:
+            return "pass26_summary_overclaims_later_passes"
+        return None
+
+    def _pass19_25_external_summary_blocker(self, payload: Any) -> str | None:
+        """Validate the source-safe closure summary for Passes 19-25.
+
+        The underlying official PDFs, parsed stores, and indexes must stay outside the
+        public source repo.  This checked-in summary is acceptable only when it records
+        a completed local authority data product run, passing source freshness, and a
+        measured retrieval smoke eval above the configured Recall@20 threshold.
+        """
+        if not isinstance(payload, dict):
+            return "pass19_25_summary_not_object"
+        if payload.get("status") != "pass":
+            return "pass19_25_summary_not_pass"
+        if payload.get("external_evidence_not_packaged") is not True:
+            return "pass19_25_summary_packages_external_evidence"
+        if payload.get("official_authority_sources_not_packaged") is not True:
+            return "pass19_25_summary_packages_official_authority"
+        if payload.get("data_root_external") is not True:
+            return "pass19_25_summary_data_root_not_external"
+        if payload.get("covered_true_ga_passes") != [19, 20, 21, 22, 23, 24, 25]:
+            return "pass19_25_summary_wrong_pass_scope"
+        if not set(payload["covered_true_ga_passes"]).issubset(self._active_completed_passes):
+            return "pass19_25_summary_bundle_not_fully_completed"
+        if payload.get("authority_data_product_status") != "pass":
+            return "pass19_25_summary_authority_product_not_pass"
+        if payload.get("authority_data_product_blockers") not in ([], None):
+            return "pass19_25_summary_authority_product_has_blockers"
+
+        steps = payload.get("pipeline_steps")
+        if not isinstance(steps, list) or not steps:
+            return "pass19_25_summary_missing_pipeline_steps"
+        required_steps = {
+            "ingest_official_authority",
+            "audit_authority_build",
+            "build_parsed_authority_store",
+            "audit_parsed_authority_store",
+            "build_authority_followup_targets",
+            "ingest_derived_authority_targets",
+            "rebuild_parsed_authority_store",
+            "reaudit_parsed_authority_store",
+            "build_source_update_report",
+            "build_authority_layer",
+            "build_retrieval_indexes",
+            "audit_retrieval_indexes",
+            "run_retrieval_smoke_eval",
+            "triage_retrieval_failures",
+        }
+        step_status = {str(item.get("name")): str(item.get("status")) for item in steps if isinstance(item, dict)}
+        missing_steps = sorted(required_steps - set(step_status))
+        if missing_steps:
+            return f"pass19_25_summary_missing_step_{missing_steps[0]}"
+        failed_steps = sorted(name for name in required_steps if step_status.get(name) != "pass")
+        if failed_steps:
+            return f"pass19_25_summary_step_not_pass_{failed_steps[0]}"
+
+        source_update = payload.get("source_update")
+        if not isinstance(source_update, dict) or source_update.get("status") != "pass":
+            return "pass19_25_summary_source_update_not_pass"
+        if source_update.get("blockers") not in ([], None):
+            return "pass19_25_summary_source_update_has_blockers"
+
+        retrieval = payload.get("retrieval_smoke")
+        if not isinstance(retrieval, dict) or retrieval.get("status") != "pass":
+            return "pass19_25_summary_retrieval_not_pass"
+        if retrieval.get("blockers") not in ([], {}, None):
+            return "pass19_25_summary_retrieval_has_blockers"
+        if retrieval.get("failures") not in ([], {}, None):
+            return "pass19_25_summary_retrieval_has_failures"
+        try:
+            case_count = int(retrieval.get("case_count") or 0)
+            metrics = retrieval.get("metrics") or {}
+            thresholds = retrieval.get("thresholds") or {}
+            recall_at_20 = float(metrics.get("recall_at_20") or 0.0)
+            min_recall_at_20 = float(thresholds.get("min_recall_at_20") or 0.95)
+            min_case_count = int(thresholds.get("min_case_count") or 25)
+        except (TypeError, ValueError):
+            return "pass19_25_summary_retrieval_metrics_invalid"
+        if case_count < min_case_count:
+            return "pass19_25_summary_retrieval_case_count_below_threshold"
+        if recall_at_20 < min_recall_at_20:
+            return "pass19_25_summary_retrieval_recall_below_threshold"
+
+        return None
+
 
     def _source_manifest_integrity_blocker(self, payload: Any, *, root_path: Path | None = None) -> str | None:
         if not isinstance(payload, list):
@@ -466,6 +625,7 @@ class GAPassEvidenceAuditor:
         tracker_report = self._load_tracker_report()
         requirements = self._load_requirements()
         completed = [int(item) for item in tracker_report.get("completed_passes") or []]
+        self._active_completed_passes = set(completed)
         blockers: list[str] = []
         warnings: list[str] = []
         tracker_warnings = [str(item) for item in tracker_report.get("warnings") or []]

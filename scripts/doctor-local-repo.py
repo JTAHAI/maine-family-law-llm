@@ -70,6 +70,15 @@ VENV_DIR_NAMES = {"venv", ".venv", "ME_FM_LLM_venv", "env"}
 
 TESTS_ALLOWED_TOP_LEVEL_FILES = {"conftest.py", "__init__.py"}
 TESTS_ALLOWED_TOP_LEVEL_PREFIXES = ("test_",)
+
+REQUIRED_PUBLIC_REPO_FILES = {
+    ".gitignore",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/workflows/ci.yml",
+}
+
 TESTS_FORBIDDEN_TOP_LEVEL_NAMES = {
     ".dockerignore",
     ".github",
@@ -158,6 +167,10 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         if path.is_file() and path.suffix.lower() == ".txt" and rel.as_posix() != "PASS_CHANGES.txt":
             forbidden.append(rel.as_posix())
 
+    missing_required = sorted(
+        rel_path for rel_path in REQUIRED_PUBLIC_REPO_FILES if not (repo_root / rel_path).is_file()
+    )
+    forbidden.extend(f"missing_required_public_repo_file:{item}" for item in missing_required)
     forbidden.extend(_scan_tests_contamination(repo_root))
     forbidden = sorted(set(forbidden))
     status = "pass" if not forbidden else "fail"
@@ -169,6 +182,7 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         "strict_by_default": True,
         "venv_allowed": allow_venv,
         "forbidden_paths": forbidden,
+        "required_public_repo_files": sorted(REQUIRED_PUBLIC_REPO_FILES),
         "recovery_hint": (
             "Run REPAIR_LOCAL_REPO.ps1 -IncludeVenv or python scripts/clean-local-artifacts.py "
             "--repo-root <repo> --include-venv, then re-run the doctor."

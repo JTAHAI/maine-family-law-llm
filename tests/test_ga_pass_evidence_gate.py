@@ -56,12 +56,55 @@ def _write_tracker(path: Path, completed: list[int]) -> None:
     path.write_text(json.dumps(source), encoding="utf-8")
 
 
+def _write_pass19_external_requirements(path: Path) -> None:
+    payload = {
+        "counting_rule": "test external Pass 19 evidence requirements",
+        "passes": [
+            {
+                "pass": 19,
+                "required_artifacts": [
+                    {
+                        "root": "data",
+                        "glob": "official_authority_store/source_manifest.json",
+                    },
+                    {
+                        "root": "data",
+                        "glob": "official_authority_store/authority_build_audit.json",
+                        "status_values": ["pass"],
+                    },
+                ],
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_pass26_external_requirements(path: Path) -> None:
+    payload = {
+        "counting_rule": "test external Pass 26 evidence requirements",
+        "passes": [
+            {
+                "pass": 26,
+                "required_artifacts": [
+                    {"root": "data", "glob": "eval_store/gold_annotation_queue.jsonl"},
+                    {
+                        "root": "data",
+                        "glob": "eval_store/gold_annotation_queue_audit.json",
+                        "status_values": ["pass"],
+                    },
+                ],
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_default_ga_pass_evidence_audit_accepts_completed_repo_evidence_passes() -> None:
     report = GAPassEvidenceAuditor(project_root=ROOT).run().as_dict()
     assert report["status"] == "pass"
-    assert report["true_ga_completed_claimed"] == [39, 40, 41, 42, 43, 44, 45]
-    assert report["true_ga_remaining"] == 26
-    assert report["audited_completed_passes"] == [39, 40, 41, 42, 43, 44, 45]
+    assert report["true_ga_completed_claimed"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
+    assert report["true_ga_remaining"] == 18
+    assert report["audited_completed_passes"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
 
 
 def test_completed_true_ga_pass_without_real_external_evidence_is_blocked(tmp_path: Path) -> None:
@@ -69,10 +112,13 @@ def test_completed_true_ga_pass_without_real_external_evidence_is_blocked(tmp_pa
     _write_tracker(tracker, [19])
     data_root = tmp_path / "external_data"
     data_root.mkdir()
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert report["audited_completed_passes"] == []
@@ -87,10 +133,13 @@ def test_completed_pass19_with_required_external_evidence_passes(tmp_path: Path)
     store.mkdir(parents=True)
     (store / "source_manifest.json").write_text(json.dumps([_manifest_record(store)]), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps(_authority_audit_payload(store)), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "pass"
     assert report["audited_completed_passes"] == [19]
@@ -107,10 +156,13 @@ def test_completed_pass19_rejects_skeletal_authority_audit_status_only(tmp_path:
     store.mkdir(parents=True)
     (store / "source_manifest.json").write_text(json.dumps([_manifest_record(store)]), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("authority_build_audit_not_production_ready" in blocker for blocker in report["blockers"])
@@ -134,10 +186,13 @@ def test_completed_pass19_rejects_blocked_authority_audit_even_with_status_pass(
         ),
         encoding="utf-8",
     )
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("json_report_has_blockers" in blocker for blocker in report["blockers"])
@@ -150,10 +205,13 @@ def test_completed_pass19_rejects_failed_audit_json(tmp_path: Path) -> None:
     store.mkdir(parents=True)
     (store / "source_manifest.json").write_text(json.dumps([_manifest_record(store)]), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps({"status": "blocked"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("authority_build_audit_not_production_ready" in blocker for blocker in report["blockers"])
@@ -167,10 +225,13 @@ def test_completed_pass19_rejects_minimal_placeholder_manifest_record(tmp_path: 
     store.mkdir(parents=True)
     (store / "source_manifest.json").write_text(json.dumps([{"source_id": "official-fixture"}]), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("source_manifest_record_missing" in blocker for blocker in report["blockers"])
@@ -186,10 +247,13 @@ def test_completed_pass19_rejects_manifest_with_missing_snapshot(tmp_path: Path)
     Path(record["snapshot_path"]).unlink()
     (store / "source_manifest.json").write_text(json.dumps([record]), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("source_manifest_snapshot_missing" in blocker for blocker in report["blockers"])
@@ -203,10 +267,13 @@ def test_completed_pass19_rejects_placeholder_manifest_shape(tmp_path: Path) -> 
     store.mkdir(parents=True)
     (store / "source_manifest.json").write_text(json.dumps({"sources": []}), encoding="utf-8")
     (store / "authority_build_audit.json").write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass19_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("source_manifest_not_array" in blocker for blocker in report["blockers"])
@@ -220,10 +287,13 @@ def test_completed_pass26_rejects_empty_generated_queue(tmp_path: Path) -> None:
     eval_store.mkdir(parents=True)
     (eval_store / "gold_annotation_queue.jsonl").write_text("", encoding="utf-8")
     (eval_store / "gold_annotation_queue_audit.json").write_text(json.dumps({"status": "pass"}), encoding="utf-8")
+    requirements = tmp_path / "requirements.json"
+    _write_pass26_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("empty_artifact_file" in blocker for blocker in report["blockers"])
@@ -255,10 +325,13 @@ def test_completed_pass26_rejects_skeletal_annotation_queue_audit(tmp_path: Path
         json.dumps({"status": "pass"}),
         encoding="utf-8",
     )
+    requirements = tmp_path / "requirements.json"
+    _write_pass26_external_requirements(requirements)
     report = GAPassEvidenceAuditor(
         project_root=ROOT,
         data_root=data_root,
         tracker_path=tracker,
+        requirements_path=requirements,
     ).run().as_dict()
     assert report["status"] == "blocked"
     assert any("gold_annotation_queue_audit_empty" in blocker for blocker in report["blockers"])
@@ -276,8 +349,8 @@ def test_ga_pass_evidence_script_outputs_json() -> None:
     assert completed.returncode == 0, completed.stderr
     payload = json.loads(completed.stdout)
     assert payload["status"] == "pass"
-    assert payload["true_ga_remaining"] == 26
-    assert payload["audited_completed_passes"] == [39, 40, 41, 42, 43, 44, 45]
+    assert payload["true_ga_remaining"] == 18
+    assert payload["audited_completed_passes"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
 
 
 def test_completed_pass50_rejects_signed_report_with_blocked_status(tmp_path: Path) -> None:
@@ -328,3 +401,9 @@ def test_completed_pass50_accepts_signed_report_without_negative_status(tmp_path
     ).run().as_dict()
     assert report["status"] == "pass"
     assert report["audited_completed_passes"] == [50]
+
+def test_completed_pass26_accepts_source_safe_queue_operations_summary() -> None:
+    report = GAPassEvidenceAuditor(project_root=ROOT).run().as_dict()
+    assert report["status"] == "pass"
+    assert 26 in report["audited_completed_passes"]
+    assert report["true_ga_remaining"] == 18

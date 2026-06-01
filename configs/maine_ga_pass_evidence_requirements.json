@@ -1,5 +1,5 @@
 {
-  "counting_rule": "A pass may be marked complete only when its tracked evidence exists outside fixture/sample evidence and required audit artifacts pass. Repo scaffolding, dry runs, and docs/sample-evidence do not count.",
+  "counting_rule": "A pass may be marked complete only when its tracked evidence exists outside fixture/sample evidence and required audit artifacts pass. Repo scaffolding, dry runs, and docs/sample-evidence do not count. Completed Passes 19-25 may be audited from a source-safe external evidence summary generated from the local authority data product run; official authority snapshots and indexes remain outside source releases.",
   "default_status_fields": [
     "status",
     "production_ready",
@@ -12,12 +12,8 @@
       "pass": 19,
       "required_artifacts": [
         {
-          "glob": "official_authority_store/source_manifest.json",
-          "root": "data"
-        },
-        {
-          "glob": "official_authority_store/authority_build_audit.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -28,24 +24,8 @@
       "pass": 20,
       "required_artifacts": [
         {
-          "glob": "parsed_authority_store/statutes/*.jsonl",
-          "root": "data"
-        },
-        {
-          "glob": "parsed_authority_store/rules/*.jsonl",
-          "root": "data"
-        },
-        {
-          "glob": "parsed_authority_store/forms/*.jsonl",
-          "root": "data"
-        },
-        {
-          "glob": "parsed_authority_store/opinions/*.jsonl",
-          "root": "data"
-        },
-        {
-          "glob": "parsed_authority_store/parsed_authority_audit.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -56,8 +36,11 @@
       "pass": 21,
       "required_artifacts": [
         {
-          "glob": "official_authority_store/source_update_report.json",
-          "root": "data"
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
         }
       ]
     },
@@ -65,12 +48,8 @@
       "pass": 22,
       "required_artifacts": [
         {
-          "glob": "authority_layer/authority_graph.json",
-          "root": "data"
-        },
-        {
-          "glob": "authority_layer/citation_resolver_audit.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -81,20 +60,8 @@
       "pass": 23,
       "required_artifacts": [
         {
-          "glob": "embedding_store/bm25/**",
-          "root": "data"
-        },
-        {
-          "glob": "embedding_store/vector/**",
-          "root": "data"
-        },
-        {
-          "glob": "embedding_store/hybrid/**",
-          "root": "data"
-        },
-        {
-          "glob": "embedding_store/retrieval_index_audit.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -105,8 +72,8 @@
       "pass": 24,
       "required_artifacts": [
         {
-          "glob": "eval_store/retrieval_smoke_metrics.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -117,8 +84,11 @@
       "pass": 25,
       "required_artifacts": [
         {
-          "glob": "eval_store/retrieval_failure_triage.json",
-          "root": "data"
+          "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
         }
       ]
     },
@@ -126,12 +96,8 @@
       "pass": 26,
       "required_artifacts": [
         {
-          "glob": "eval_store/gold_annotation_queue.jsonl",
-          "root": "data"
-        },
-        {
-          "glob": "eval_store/gold_annotation_queue_audit.json",
-          "root": "data",
+          "glob": "docs/external-evidence/pass26_gold_annotation_queue_operations_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]

@@ -1,0 +1,1217 @@
+{
+  "authority_data_product_blockers": [],
+  "authority_data_product_status": "pass",
+  "covered_true_ga_passes": [
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "data_root_external": true,
+  "external_evidence_not_packaged": true,
+  "generated_at": "2026-06-01T15:53:03.894598+00:00",
+  "generated_from": "ME_FM_LLM_PASS_19_25_EVIDENCE.zip",
+  "official_authority_sources_not_packaged": true,
+  "pipeline_steps": [
+    {
+      "error": null,
+      "name": "ingest_official_authority",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_authority_build",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_parsed_authority_store",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_parsed_authority_store",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_authority_followup_targets",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "ingest_derived_authority_targets",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "rebuild_parsed_authority_store",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "reaudit_parsed_authority_store",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_source_update_report",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_authority_layer",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_retrieval_indexes",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_retrieval_indexes",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "run_retrieval_smoke_eval",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "triage_retrieval_failures",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_gold_annotation_queue",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_gold_annotation_queue",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_gold_eval_pack_manifest",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "audit_gold_eval_pack",
+      "status": "pass"
+    },
+    {
+      "error": null,
+      "name": "build_release_metrics_evidence",
+      "status": "pass"
+    }
+  ],
+  "release_note": "This file is a source-safe evidence summary only. Official snapshots, parsed stores, indexes, and raw authority data remain outside the Git repo.",
+  "retrieval_smoke": {
+    "blockers": [],
+    "case_count": 25,
+    "failures": [],
+    "metrics": {
+      "mrr": 0.853,
+      "ndcg_at_20": 0.886,
+      "per_case": [
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "court_form_text",
+            "query": "FM-261",
+            "relevant_source_ids": [
+              "me-court-form-e6d2c3f826ce"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0,
+            "precision_at_5": 1.0,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-court-form-e6d2c3f826ce"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "court_forms_index",
+            "query": "FM-171",
+            "relevant_source_ids": [
+              "me-court-form-e6d2c3f826ce"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 1.0,
+            "precision_at_20": 1.0,
+            "precision_at_5": 1.0,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-court-form-e6d2c3f826ce"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2024 ME 51",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-002b13e05720"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-002b13e05720",
+            "me-lawcourt-opinion-13dff2ed5d6c",
+            "me-court-rule-1fa2ca46123f",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-lawcourt-opinion-18dc15f10260",
+            "me-lawcourt-opinion-59999a78ba00",
+            "me-lawcourt-opinion-7d2d65f147f5",
+            "me-lawcourt-opinion-d8c57986a675",
+            "me-lawcourt-opinion-93d02c3d4ae7",
+            "me-lawcourt-opinion-4a5ccffeca19",
+            "me-lawcourt-opinion-46bc58a3dec6"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2020 ME 72",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-012be361332f"
+            ]
+          },
+          "metrics": {
+            "mrr": 0.5,
+            "ndcg_at_10": 0.631,
+            "ndcg_at_20": 0.631,
+            "ndcg_at_5": 0.631,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-b8675a33b8c9",
+            "me-lawcourt-opinion-012be361332f",
+            "me-lawcourt-opinion-301320a25306",
+            "me-court-rule-2f4c88b74533",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-lawcourt-opinion-dd33d56e1050",
+            "me-lawcourt-opinion-168a2f56c3c8",
+            "me-lawcourt-opinion-895d3d58783d",
+            "me-lawcourt-opinion-734350c01c0f",
+            "me-lawcourt-opinion-bbb8a27671bd",
+            "me-lawcourt-opinion-13dff2ed5d6c",
+            "me-lawcourt-opinion-938b1aaa8e81",
+            "me-lawcourt-opinion-d5cec50e51b4",
+            "me-lawcourt-opinion-cf7486f0c7cd",
+            "me-lawcourt-opinion-bf4be8da0d2b",
+            "me-lawcourt-opinion-b9636835e736",
+            "me-lawcourt-opinion-c3dd29ca4a83",
+            "me-lawcourt-opinion-3097305d3320"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2023 ME 12",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-013d9cd8aac9"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-013d9cd8aac9",
+            "me-lawcourt-opinion-64bfe5a54355",
+            "me-court-rule-27bdad575bf3",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-court-rule-d191d3d9b374",
+            "me-court-rule-cdb9b7bd8c72",
+            "me-lawcourt-opinion-fb250b445be1",
+            "me-lawcourt-opinion-7bee19a9421a",
+            "me-lawcourt-opinion-1f5226dc5f6e",
+            "me-lawcourt-opinion-dcbc8386c866",
+            "me-lawcourt-opinion-68c5208855c4"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2020 ME 7",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-01a9dc2c5c8b"
+            ]
+          },
+          "metrics": {
+            "mrr": 0.062,
+            "ndcg_at_10": 0.0,
+            "ndcg_at_20": 0.245,
+            "ndcg_at_5": 0.0,
+            "precision_at_10": 0.0,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.0,
+            "recall_at_10": 0.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 0.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-6f70780e3fdc",
+            "me-lawcourt-opinion-d9bb2b7363b7",
+            "me-lawcourt-opinion-c5b1bd6d6af4",
+            "me-lawcourt-opinion-b8675a33b8c9",
+            "me-lawcourt-opinion-734350c01c0f",
+            "me-lawcourt-opinion-2531b60610cf",
+            "me-lawcourt-opinion-93681aa1e7f7",
+            "me-lawcourt-opinion-528bb18ebbc9",
+            "me-lawcourt-opinion-65bbeb930a09",
+            "me-lawcourt-opinion-012be361332f",
+            "me-lawcourt-opinion-dd33d56e1050",
+            "me-lawcourt-opinion-13dff2ed5d6c",
+            "me-lawcourt-opinion-b74a7c4f1c4f",
+            "me-lawcourt-opinion-a387c0e5749a",
+            "me-lawcourt-opinion-01afe97aea97",
+            "me-lawcourt-opinion-01a9dc2c5c8b",
+            "me-lawcourt-opinion-ff1ccc2eb309",
+            "me-lawcourt-opinion-301320a25306",
+            "me-lawcourt-opinion-c23ab11c037a",
+            "me-lawcourt-opinion-38285af8a9ca"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2020 ME 76",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-01afe97aea97"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-01afe97aea97",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-lawcourt-opinion-c64e42013919",
+            "me-lawcourt-opinion-686b3705c153",
+            "me-lawcourt-opinion-d1e613c00d2d",
+            "me-lawcourt-opinion-a658940ed654",
+            "me-lawcourt-opinion-83a0b17536f1",
+            "me-lawcourt-opinion-dd8742deceac",
+            "me-lawcourt-opinion-b564433594ee",
+            "me-lawcourt-opinion-770021ad5d47",
+            "me-lawcourt-opinion-6ab051b8a7cf",
+            "me-lawcourt-opinion-cbeff6e450da",
+            "me-lawcourt-opinion-d82429f38cca",
+            "me-lawcourt-opinion-47aef699f358",
+            "me-lawcourt-opinion-f6e2c3425ab7",
+            "me-lawcourt-opinion-13dff2ed5d6c",
+            "me-lawcourt-opinion-7e601ae4b51a"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2023 ME 46",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-029ea79b7e7f"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-029ea79b7e7f",
+            "me-lawcourt-opinion-381d76689807",
+            "me-court-rule-c553fd1eca8a",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-lawcourt-opinion-57c0406536e3",
+            "me-lawcourt-opinion-d5cec50e51b4",
+            "me-lawcourt-opinion-3122699ee3e0",
+            "me-lawcourt-opinion-4144ece5129b",
+            "me-lawcourt-opinion-73eed64d97b9",
+            "me-lawcourt-opinion-0c286f21ece5",
+            "me-lawcourt-opinion-d382bcfe2806"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 30",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-02b4c07d65f0"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-02b4c07d65f0",
+            "me-court-rule-a2b3769f9074",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-lawcourt-opinion-9509e3f1529a",
+            "me-lawcourt-opinion-10d11bf4a6bd",
+            "me-lawcourt-opinion-2e36ac5017ed",
+            "me-lawcourt-opinion-1afafd0026f9",
+            "me-lawcourt-opinion-20a14586e11e",
+            "me-lawcourt-opinion-70eee3990470",
+            "me-lawcourt-opinion-91fb7328f122",
+            "me-lawcourt-opinion-189673fb5f25",
+            "me-lawcourt-opinion-4f04bfabd744",
+            "me-lawcourt-opinion-89184aac1c35",
+            "me-lawcourt-opinion-953a4af45e3e",
+            "me-lawcourt-opinion-a125ac32a7da",
+            "me-lawcourt-opinion-7d99c2739f11"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 129",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-03963d407d28"
+            ]
+          },
+          "metrics": {
+            "mrr": 0.5,
+            "ndcg_at_10": 0.631,
+            "ndcg_at_20": 0.631,
+            "ndcg_at_5": 0.631,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-6827f2579db5",
+            "me-lawcourt-opinion-03963d407d28",
+            "me-lawcourt-opinion-40c608605bef",
+            "me-court-rule-2f6808e69873",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-lawcourt-opinion-52dfb54a8199",
+            "me-lawcourt-opinion-012be361332f",
+            "me-lawcourt-opinion-e890dc48dc88",
+            "me-lawcourt-opinion-d11f2e2e1029",
+            "me-lawcourt-opinion-2ebd41d4c297",
+            "me-lawcourt-opinion-3992550b489f",
+            "me-lawcourt-opinion-23d17265a2a4",
+            "me-lawcourt-opinion-61dc40cde672",
+            "me-lawcourt-opinion-9b2676b9abaa",
+            "me-lawcourt-opinion-1234c5eb0cb3"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 75",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-040e23e27351"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-040e23e27351",
+            "me-lawcourt-opinion-18b55f64cd75",
+            "me-lawcourt-opinion-50e1dadfc8c3",
+            "me-lawcourt-opinion-69e2a9d7575e",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-lawcourt-opinion-3992550b489f",
+            "me-lawcourt-opinion-7a692b40a314",
+            "me-lawcourt-opinion-8358ecb37179",
+            "me-lawcourt-opinion-61dc40cde672",
+            "me-lawcourt-opinion-04653996cc71",
+            "me-lawcourt-opinion-0b743f06cae6",
+            "me-lawcourt-opinion-eb035dd4f795",
+            "me-lawcourt-opinion-183de7f5ebb8",
+            "me-lawcourt-opinion-ef13fbb58e6b"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 17",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-0421c281a441"
+            ]
+          },
+          "metrics": {
+            "mrr": 0.167,
+            "ndcg_at_10": 0.356,
+            "ndcg_at_20": 0.356,
+            "ndcg_at_5": 0.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.0,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 0.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-609d3d83e22e",
+            "me-lawcourt-opinion-ed1852e727b0",
+            "me-lawcourt-opinion-85476f4a6d70",
+            "me-lawcourt-opinion-5b3c2b4cc9e4",
+            "me-lawcourt-opinion-c09bdd11e743",
+            "me-lawcourt-opinion-0421c281a441",
+            "me-lawcourt-opinion-0bd2303b2cdc",
+            "me-lawcourt-opinion-9b2676b9abaa",
+            "me-lawcourt-opinion-d848c230f594",
+            "me-lawcourt-opinion-0bf835847ed5",
+            "me-lawcourt-opinion-f358ab8a6043",
+            "me-lawcourt-opinion-05ac73a0c855",
+            "me-lawcourt-opinion-756df1be3444",
+            "me-lawcourt-opinion-3122699ee3e0",
+            "me-lawcourt-opinion-6c4cbd4a2916",
+            "me-court-rule-5d5efa28f6fd",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 119",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-04653996cc71"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-04653996cc71",
+            "me-lawcourt-opinion-62f64ba72845",
+            "me-court-rule-469aa5eb7bd5",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-lawcourt-opinion-d30c6f55933b",
+            "me-lawcourt-opinion-a125ac32a7da",
+            "me-lawcourt-opinion-0ed9ac1f8624",
+            "me-lawcourt-opinion-d14f0bcdb082",
+            "me-lawcourt-opinion-403dd509c31d",
+            "me-lawcourt-opinion-dfeca9889a8a",
+            "me-lawcourt-opinion-7b6bc4397559",
+            "me-lawcourt-opinion-f631ef4fa6ee",
+            "me-lawcourt-opinion-5efb24768c9a",
+            "me-lawcourt-opinion-3303402a3b9c",
+            "me-lawcourt-opinion-ec96dab99427"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 163",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-049f9d74c820"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-049f9d74c820",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-lawcourt-opinion-8f9dd5c5221c",
+            "me-lawcourt-opinion-6f4f8999cfd5",
+            "me-lawcourt-opinion-eb3e25572f18",
+            "me-lawcourt-opinion-075a72c59af8",
+            "me-lawcourt-opinion-fe6c84282e99",
+            "me-lawcourt-opinion-de8c61e7e35f",
+            "me-lawcourt-opinion-63455488e73c",
+            "me-lawcourt-opinion-85476f4a6d70",
+            "me-lawcourt-opinion-d263f53ed2ed",
+            "me-lawcourt-opinion-0a09ccc785e9",
+            "me-lawcourt-opinion-47aef699f358",
+            "me-lawcourt-opinion-eef007edf8dd"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 67",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-05161408b084"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-05161408b084",
+            "me-court-rule-7870ef10d7e6",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-lawcourt-opinion-c1ddae713e4a",
+            "me-lawcourt-opinion-0a09ccc785e9",
+            "me-lawcourt-opinion-e2f49cf451c2",
+            "me-lawcourt-opinion-33efbe29c29e",
+            "me-lawcourt-opinion-d6b2cdcd5b17",
+            "me-lawcourt-opinion-3290ae1ca177",
+            "me-lawcourt-opinion-47aef699f358",
+            "me-lawcourt-opinion-93d02c3d4ae7",
+            "me-lawcourt-opinion-eb3925601894",
+            "me-lawcourt-opinion-667eb68ea7d9",
+            "me-lawcourt-opinion-80954c4df734",
+            "me-lawcourt-opinion-7f0a37e4b442"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 171",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-05ac73a0c855"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-05ac73a0c855",
+            "me-lawcourt-opinion-0bf835847ed5",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-3ec188e1ebec",
+            "me-court-rule-9d0dd06ac979",
+            "me-court-rule-93a0dcb3912f",
+            "me-court-rule-fc7cd6afe50e",
+            "me-lawcourt-opinion-a125ac32a7da",
+            "me-lawcourt-opinion-c393588560f1",
+            "me-lawcourt-opinion-7b6bc4397559",
+            "me-lawcourt-opinion-d45c487e00c1",
+            "me-lawcourt-opinion-eb3925601894",
+            "me-lawcourt-opinion-0c286f21ece5",
+            "me-lawcourt-opinion-5ee3a5a01c5c"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2020 ME 123",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-0613df4d88b4"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-0613df4d88b4",
+            "me-lawcourt-opinion-8566bcd9516a",
+            "me-lawcourt-opinion-92962efe999a",
+            "me-court-rule-2d4e86f9eb11",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-lawcourt-opinion-fd8fd14315f6",
+            "me-lawcourt-opinion-8976fbba557b",
+            "me-lawcourt-opinion-3c28db2329b3",
+            "me-lawcourt-opinion-ee1aed4ddd45",
+            "me-lawcourt-opinion-21843fd9c3b4",
+            "me-lawcourt-opinion-d382bcfe2806",
+            "me-lawcourt-opinion-f66c7848a798",
+            "me-lawcourt-opinion-4d9d66399799",
+            "me-lawcourt-opinion-abe55e155395",
+            "me-lawcourt-opinion-89b6fae452cb",
+            "me-lawcourt-opinion-2660a09e4051",
+            "me-lawcourt-opinion-fe6c84282e99",
+            "me-lawcourt-opinion-c3075c330476"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2024 ME 56",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-06e67334b18b"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-06e67334b18b",
+            "me-lawcourt-opinion-1ad5323e3d4f",
+            "me-lawcourt-opinion-ceca9b69946c",
+            "me-lawcourt-opinion-779456532d39",
+            "me-court-rule-645b626836a5",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-218ebfe8f717",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-lawcourt-opinion-26605e3495d8",
+            "me-lawcourt-opinion-50d5cbee78c4",
+            "me-lawcourt-opinion-d5ec0012ede7",
+            "me-lawcourt-opinion-895519170eb3"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2019 ME 86",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-075a72c59af8"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-075a72c59af8",
+            "me-lawcourt-opinion-ff1ccc2eb309",
+            "me-court-rule-fb6767aac2d3",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-lawcourt-opinion-9a9f44ede654",
+            "me-lawcourt-opinion-756df1be3444",
+            "me-lawcourt-opinion-1afafd0026f9",
+            "me-lawcourt-opinion-80954c4df734",
+            "me-lawcourt-opinion-669f8ceb50b2",
+            "me-lawcourt-opinion-183de7f5ebb8",
+            "me-lawcourt-opinion-895d3d58783d",
+            "me-lawcourt-opinion-194fe1f1062a",
+            "me-lawcourt-opinion-5e88feaf198b",
+            "me-lawcourt-opinion-7b6bc4397559",
+            "me-lawcourt-opinion-23d17265a2a4"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2023 ME 66",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-07e99a404242"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-07e99a404242",
+            "me-court-rule-b619f4e1b2c9",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-court-rule-a4e29e4d6594",
+            "me-lawcourt-opinion-1f5226dc5f6e",
+            "me-lawcourt-opinion-76348c881986",
+            "me-lawcourt-opinion-1bec13a1c7ef",
+            "me-lawcourt-opinion-d382bcfe2806",
+            "me-lawcourt-opinion-8976fbba557b",
+            "me-lawcourt-opinion-2d0aa5d04896",
+            "me-lawcourt-opinion-d02063807fc1"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2025 ME 28",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-085a74efe57d"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-085a74efe57d",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-f655a4f282e3",
+            "me-court-rule-a2e8796392d9",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ef4c1d3f048b",
+            "me-lawcourt-opinion-779456532d39",
+            "me-lawcourt-opinion-4a5ccffeca19",
+            "me-lawcourt-opinion-fca895a660ae",
+            "me-lawcourt-opinion-611cba6bd0ce",
+            "me-lawcourt-opinion-5eebd44bfffa",
+            "me-lawcourt-opinion-224d74e2db1e",
+            "me-lawcourt-opinion-aa69f8226387",
+            "me-lawcourt-opinion-c23ab11c037a"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2020 ME 19",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-08629e8a349e"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-08629e8a349e",
+            "me-court-rule-215f0abaad6f",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "statute-title-19",
+            "me-court-rule-464d7d7ca828",
+            "me-lawcourt-opinion-c5b1bd6d6af4",
+            "me-lawcourt-opinion-b8675a33b8c9",
+            "me-lawcourt-opinion-4b496bbd25bc",
+            "me-lawcourt-opinion-cf7486f0c7cd",
+            "me-lawcourt-opinion-3992550b489f",
+            "me-lawcourt-opinion-54a425a863cf",
+            "me-lawcourt-opinion-6f4f8999cfd5",
+            "me-lawcourt-opinion-7b6bc4397559",
+            "me-lawcourt-opinion-92962efe999a",
+            "me-lawcourt-opinion-97a32075e653",
+            "me-lawcourt-opinion-237a0e1312f3",
+            "me-lawcourt-opinion-e5631689b52d",
+            "me-lawcourt-opinion-f6d381c3198c",
+            "me-lawcourt-opinion-07e99a404242"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2025 ME 9",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-0871bf3f87ee"
+            ]
+          },
+          "metrics": {
+            "mrr": 0.1,
+            "ndcg_at_10": 0.289,
+            "ndcg_at_20": 0.289,
+            "ndcg_at_5": 0.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.0,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 0.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-611cba6bd0ce",
+            "me-lawcourt-opinion-4a5ccffeca19",
+            "me-lawcourt-opinion-9190f313d412",
+            "me-lawcourt-opinion-7d99c2739f11",
+            "me-lawcourt-opinion-5acafdca3c49",
+            "me-lawcourt-opinion-f234bc7d5d0d",
+            "me-lawcourt-opinion-9d1fbfa4ceba",
+            "me-lawcourt-opinion-d5323c226248",
+            "me-lawcourt-opinion-af502fb2061c",
+            "me-lawcourt-opinion-0871bf3f87ee",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-f655a4f282e3",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ef4c1d3f048b"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2024 ME 79",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-09a97e21a114"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-09a97e21a114",
+            "me-court-rule-a5acffa3809e",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-lawcourt-opinion-3122699ee3e0",
+            "me-lawcourt-opinion-6649e7b5dd47",
+            "me-lawcourt-opinion-559d8a9c7128",
+            "me-lawcourt-opinion-79d1a4186390",
+            "me-lawcourt-opinion-959be14a9cd5",
+            "me-lawcourt-opinion-a9158f39c2f1",
+            "me-lawcourt-opinion-5054d6d9aa1c",
+            "me-lawcourt-opinion-ec5115512d41"
+          ]
+        },
+        {
+          "case": {
+            "case_type": "exact_citation_lookup",
+            "expected_source_class": "law_court_opinion_pdf",
+            "query": "2023 ME 50",
+            "relevant_source_ids": [
+              "me-lawcourt-opinion-09b0dc0dd75d"
+            ]
+          },
+          "metrics": {
+            "mrr": 1.0,
+            "ndcg_at_10": 1.0,
+            "ndcg_at_20": 1.0,
+            "ndcg_at_5": 1.0,
+            "precision_at_10": 0.1,
+            "precision_at_20": 0.05,
+            "precision_at_5": 0.2,
+            "recall_at_10": 1.0,
+            "recall_at_20": 1.0,
+            "recall_at_5": 1.0
+          },
+          "retrieved_source_ids": [
+            "me-lawcourt-opinion-09b0dc0dd75d",
+            "me-lawcourt-opinion-40c608605bef",
+            "me-court-rule-8ce849067eb2",
+            "me-court-rule-2f0e2b1ac993",
+            "me-court-rule-44afff6e3d72",
+            "me-court-rule-464d7d7ca828",
+            "me-court-rule-5f87ec2b335c",
+            "me-court-rule-821961e65f7a",
+            "me-court-rule-ad6fc5594994",
+            "me-court-rule-afe2609618bd",
+            "me-court-rule-b938742f7ce6",
+            "me-court-rule-ef4c1d3f048b",
+            "me-court-rule-f655a4f282e3",
+            "me-court-rule-669d6965da89",
+            "me-court-rule-836182da51ec",
+            "me-lawcourt-opinion-fa1e1212eeac",
+            "me-lawcourt-opinion-ffea6cc48647",
+            "me-lawcourt-opinion-6ab051b8a7cf",
+            "me-lawcourt-opinion-e1478ec3fd2e",
+            "me-lawcourt-opinion-0f720887527c"
+          ]
+        }
+      ],
+      "recall_at_10": 0.96,
+      "recall_at_20": 1.0,
+      "recall_at_5": 0.88
+    },
+    "status": "pass",
+    "thresholds": {
+      "basis": "source-derived smoke cases; not attorney-reviewed GA gold",
+      "max_case_count": 25,
+      "min_case_count": 25,
+      "min_recall_at_20": 0.95,
+      "progress_report": "D:\\dev\\ME_FM_LLM_data\\eval_store\\retrieval_smoke_progress.json",
+      "top_k": 20
+    }
+  },
+  "retrieval_smoke_progress": {
+    "completed_cases": 25,
+    "elapsed_seconds": 4624.89,
+    "failures_so_far": 0,
+    "percent_complete": 100.0,
+    "total_cases": 25
+  },
+  "schema": "maine_family_law_llm.external_ga_evidence_summary.v1",
+  "source_update": {
+    "blockers": [],
+    "fresh_source_count": null,
+    "status": "pass",
+    "total_source_count": null,
+    "unknown_freshness_count": null
+  },
+  "status": "pass"
+}

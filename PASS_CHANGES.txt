@@ -644,3 +644,19 @@ Pass 1.41.0 - Close repo-evidence true-GA passes 41 and 42
 - Targeted authority/retrieval tests passed: 42 passed. Strict local doctor passed and release artifact audit passed / safe_to_package true / production_legal_ga false.
 - True GA count remains 7 complete / 26 remaining until the live external authority pipeline completes and its evidence is accepted.
 
+
+## v1.62.0 - Public repo hygiene and Pass 19-25 evidence closure hardening
+
+- Restored public GitHub hygiene files removed by the local mirror copy: `.gitignore`, pull request template, issue templates, and source CI workflow.
+- Added strict doctor and regression coverage so missing GitHub hygiene files block `safe_to_push` before any future GitHub update.
+- Added source-safe external evidence summary for the passed authority data product run without packaging official authority snapshots, parsed stores, or retrieval indexes.
+- Marked true-GA Passes 19-25 complete from the uploaded external evidence summary: authority ingestion, parsed authority, source freshness, authority graph, retrieval indexes, measured retrieval smoke, and retrieval failure triage all passed.
+- Updated the formal true-GA counter to 14 complete / 19 remaining, with Pass 26 as the next true GA pass.
+- Hardened the pass evidence auditor so the bundled Pass 19-25 summary must cover the entire bundle, require every authority/retrieval gate step to pass, require source freshness to pass, and require retrieval Recall@20 to meet threshold.
+
+v1.63.0 - Pass 26 gold annotation queue operations closure
+- Imported source-safe Pass 26 evidence from the external authority data product run summary.
+- Marked Pass 26 complete: gold annotation queue generated/audited with 300 rows, 12 task families, double review required, zero private-training rows, zero parse errors, and zero missing fields.
+- Added pass26_gold_annotation_queue_operations_summary.json and strict auditor validation.
+- Updated true GA count to 18 remaining; next pass is 27 minimum viable gold eval pack.
+- Pass 27/28 remain explicitly open; this pass does not overclaim attorney-reviewed gold data or release metrics readiness.

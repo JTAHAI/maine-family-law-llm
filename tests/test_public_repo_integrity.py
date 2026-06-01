@@ -104,3 +104,22 @@ def test_no_generated_evidence_json_at_repo_root() -> None:
         }
     )
     assert offenders == []
+
+
+def test_public_github_hygiene_files_are_present() -> None:
+    required = {
+        ".gitignore",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
+        ".github/ISSUE_TEMPLATE/config.yml",
+        ".github/workflows/ci.yml",
+    }
+    missing = sorted(item for item in required if not (ROOT / item).is_file())
+    assert missing == []
+
+
+def test_github_ci_runs_source_quality_gate() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "python -m pytest -q" in workflow
+    assert "python scripts/run-quality-checks.py" in workflow
+    assert "pull_request" in workflow

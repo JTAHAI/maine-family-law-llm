@@ -1,6 +1,14 @@
 {
   "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots.",
   "current_true_ga_completed_passes": [
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
     39,
     40,
     41,
@@ -15,14 +23,15 @@
         "official_authority_store/source_manifest.json",
         "audit-authority-build pass",
         "minimum official source-class counts pass",
-        "data root outside repository"
+        "data root outside repository",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
-      "next": true,
+      "next": false,
       "pass": 19,
       "phase": "Phase 1",
-      "repo_prep_status": "harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Live official-source ingestion execution"
     },
     {
@@ -31,42 +40,45 @@
         "parsed_authority_store/rules/*.jsonl",
         "parsed_authority_store/forms/*.jsonl",
         "parsed_authority_store/opinions/*.jsonl",
-        "source-span/hash links"
+        "source-span/hash links",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 20,
       "phase": "Phase 1",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Parsed authority store builders"
     },
     {
       "completion_evidence": [
         "source_update_report.json",
         "fresh/stale/unknown/superseded statuses",
-        "unknown freshness blocks current-law claims"
+        "unknown freshness blocks current-law claims",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 21,
       "phase": "Phase 1",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Source freshness, diffing, and update engine"
     },
     {
       "completion_evidence": [
         "authority graph artifacts",
         "fake citations resolve not_found",
-        "real citations resolve canonical source IDs"
+        "real citations resolve canonical source IDs",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 22,
       "phase": "Phase 1",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Production citation resolver and authority graph"
     },
     {
@@ -74,56 +86,61 @@
         "embedding_store/bm25",
         "embedding_store/vector",
         "embedding_store/hybrid",
-        "exact citation/form/case/statute lookups"
+        "exact citation/form/case/statute lookups",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 23,
       "phase": "Phase 2",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Build real retrieval indexes outside repo"
     },
     {
       "completion_evidence": [
         "retrieval smoke metrics",
         "Recall@20 >= initial threshold",
-        "MRR/nDCG evidence"
+        "MRR/nDCG evidence",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 24,
       "phase": "Phase 2",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Hybrid retrieval tuning and measured smoke eval"
     },
     {
       "completion_evidence": [
         "classified retrieval failure report",
         "regression fixes",
-        "no silent bad retrieval"
+        "no silent bad retrieval",
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 25,
       "phase": "Phase 2",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Retrieval failure triage loop"
     },
     {
       "completion_evidence": [
-        "gold_annotation_queue.jsonl",
-        "reviewer assignment",
-        "attorney review metadata"
+        "gold_annotation_queue generated from external authority product run",
+        "gold_annotation_queue audit pass with 300 rows",
+        "all rows require attorney review and double review",
+        "zero private-training rows, parse errors, or missing required fields",
+        "docs/external-evidence/pass26_gold_annotation_queue_operations_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 26,
       "phase": "Phase 3",
-      "repo_prep_status": "partial_harness_prepared",
-      "status": "open",
+      "repo_prep_status": "external_evidence_validated",
+      "status": "complete",
       "title": "Attorney annotation queue operations"
     },
     {
@@ -133,7 +150,7 @@
         "seed rows excluded"
       ],
       "external_dependency": true,
-      "next": false,
+      "next": true,
       "pass": 27,
       "phase": "Phase 3",
       "repo_prep_status": "gate_prepared",

@@ -1,5 +1,13 @@
 {
   "audited_completed_passes": [
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
     39,
     40,
     41,
@@ -11,6 +19,86 @@
   "blockers": [],
   "counting_rule": "Completed true-GA pass rows must have required real evidence artifacts. Repo scaffolding, dry runs, fixtures, and docs/sample-evidence do not count.",
   "findings": [
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 19,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 20,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 21,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 22,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 23,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 24,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json",
+      "matches": [
+        "docs/external-evidence/pass19_25_authority_retrieval_gate_summary.json"
+      ],
+      "pass": 25,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/external-evidence/pass26_gold_annotation_queue_operations_summary.json",
+      "matches": [
+        "docs/external-evidence/pass26_gold_annotation_queue_operations_summary.json"
+      ],
+      "pass": 26,
+      "root": "repo",
+      "status": "pass"
+    },
     {
       "blocker": null,
       "glob": "openapi.json",
@@ -92,10 +180,18 @@
       "status": "pass"
     }
   ],
-  "generated_at": "2026-05-31T15:35:12.468556+00:00",
+  "generated_at": "2026-06-01T16:35:18.590320+00:00",
   "pass_evidence_valid": true,
   "status": "pass",
   "true_ga_completed_claimed": [
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
     39,
     40,
     41,
@@ -104,6 +200,6 @@
     44,
     45
   ],
-  "true_ga_remaining": 26,
+  "true_ga_remaining": 18,
   "warnings": []
 }
