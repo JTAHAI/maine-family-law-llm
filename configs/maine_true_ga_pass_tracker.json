@@ -1,5 +1,5 @@
 {
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff. Pass 47 is closed from deterministic legal red-team repo evidence that blocks false-premise, fake-citation, stale-law, jurisdiction, injection, confidentiality, malicious-upload, and filing-ready bypass attacks; this is not pilot signoff and not attorney legal review.",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff. Pass 47 is closed from deterministic legal red-team repo evidence that blocks false-premise, fake-citation, stale-law, jurisdiction, injection, confidentiality, malicious-upload, and filing-ready bypass attacks; this is not pilot signoff and not attorney legal review Pass 46 now has an operator/source-backed release-eval lane prepared; that lane can pass engineering release metrics without attorney review, but does not imply true GA shipment, legal signoff, pilot signoff, or attorney review.",
   "current_true_ga_completed_passes": [
     19,
     20,
@@ -481,13 +481,17 @@
       "completion_evidence": [
         "GA metrics from real gold files",
         "minimum sample sizes",
-        "attorney review"
+        "attorney review",
+        "pass46_operator_source_backed_release_eval.json",
+        "release_metric_measurements.operator_source_backed.json",
+        "operator_release_allowed true while true_ga_release_allowed remains false without signoffs",
+        "docs/external-evidence/pass46_operator_source_backed_release_eval_gate_summary.json"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 46,
       "phase": "Phase 11",
-      "repo_prep_status": "gate_prepared",
+      "repo_prep_status": "operator_source_backed_release_eval_gate_prepared",
       "status": "open",
       "title": "Full release eval run"
     },

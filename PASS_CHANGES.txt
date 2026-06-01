@@ -736,3 +736,9 @@ Pass 30 metric gate prep (v1.67.0)
 - Added tests proving missing pilot/signoff evidence blocks readiness.
 - Updated true-GA tracker repo-prep status for Passes 48-51 without marking them complete.
 - No pilot, attorney, legal, product, ops, or GA-shipped evidence is fabricated.
+
+## v1.74.0 - Pass 46 operator/source-backed release-eval gate preparation
+- Added non-attorney operator/source-backed Pass 46 release-eval lane.
+- Added strict fail-closed metric aggregation from retrieval smoke, source freshness, and Pass 29/30/31 partial measurements.
+- Added explicit boundary fields: attorney_reviewed=false, legal_signoff=false, pilot_signoff=false, true_ga_release_allowed=false.
+- Added CLI, docs, external evidence summary, and targeted tests.

@@ -1,0 +1,19 @@
+{
+  "attorney_reviewed": false,
+  "generated_at": "2026-06-01T21:40:52.673875+00:00",
+  "legal_signoff": false,
+  "notes": "This prepares a non-attorney source-backed release-eval lane and does not close pilot, legal signoff, attorney review, RC, or shipped gates.",
+  "pass": 46,
+  "pilot_signoff": false,
+  "readiness": "external_operator_source_backed_metrics_required",
+  "repo_changes": [
+    "legal/evals/operator_release_eval.py",
+    "scripts/run-pass46-operator-source-backed-release-eval.py",
+    "tests/test_pass46_operator_source_backed_release_eval.py",
+    "docs/pass46-operator-source-backed-release-eval.md"
+  ],
+  "schema_version": "pass46_operator_source_backed_release_eval_gate_summary_v1",
+  "status": "prepared",
+  "title": "Full release eval run - operator/source-backed lane",
+  "true_ga_release_allowed": false
+}
