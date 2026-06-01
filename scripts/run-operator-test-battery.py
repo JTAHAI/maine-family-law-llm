@@ -16,7 +16,7 @@ from legal.ops import OperatorTestBatteryAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the operator local-test acceptance battery.")
     parser.add_argument("--data-root", default=None, help="External data root. Defaults to policy Windows data root.")
-    parser.add_argument("--output", default=str(ROOT / "operator_test_battery_evidence.json"))
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "operator_test_battery_evidence.json"))
     parser.add_argument("--no-create-dirs", action="store_true")
     parser.add_argument("--skip-write-probe", action="store_true")
     args = parser.parse_args()

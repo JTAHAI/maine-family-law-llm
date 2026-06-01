@@ -1,6 +1,6 @@
 param(
     [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-    [string]$Output = "operator_handoff_bundle.json"
+    [string]$Output = "docs/sample-evidence/operator_handoff_bundle.json"
 )
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)

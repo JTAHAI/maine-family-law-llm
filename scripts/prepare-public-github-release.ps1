@@ -1,6 +1,6 @@
 param(
   [string]$ProjectRoot = "C:\dev\ME_FM_LLM",
-  [string]$Output = "public_release_readiness.json"
+  [string]$Output = "docs/sample-evidence/public_release_readiness.json"
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"

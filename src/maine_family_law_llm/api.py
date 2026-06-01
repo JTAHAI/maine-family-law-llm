@@ -47,9 +47,20 @@ else:
 
 if FastAPI is not None:
 
+    def _health_payload() -> dict[str, str]:
+        return {"status": "ok", "mode": "local-workbench"}
+
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
-        return {"status": "ok", "mode": "local-only"}
+        return _health_payload()
+
+    @app.get("/api/health")
+    def api_health() -> dict[str, str]:
+        return _health_payload()
+
+    @app.get("/api/version")
+    def api_version() -> dict[str, str]:
+        return {"version": "1.45.0", "api_mode": "local-workbench"}
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:

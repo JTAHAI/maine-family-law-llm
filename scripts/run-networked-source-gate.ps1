@@ -1,6 +1,6 @@
 param(
     [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-    [string]$Output = "networked_source_gate_report.json",
+    [string]$Output = "docs/sample-evidence/networked_source_gate_report.json",
     [switch]$AllowFailReport
 )
 $ErrorActionPreference = "Stop"

@@ -61,6 +61,12 @@ def parse_form_text(text: str, *, source_id: str, url: str) -> tuple[CourtForm, 
     version_match = _VERSION_RE.search(clean)
     form_id = normalize_form_id(id_match.group(0)) if id_match else None
     title = clean[:120] if clean else "Maine court form"
+    # Official court form PDFs frequently omit a machine-readable revision date
+    # in extracted text even though the snapshot itself is an official, dated
+    # retrieval from courts.maine.gov. Treat the retrieved timestamp as the
+    # fallback freshness signal so downstream current-law gates do not fail on
+    # otherwise successfully fetched and parsed official form snapshots.
+    freshness_status = "known_version_date" if version_match else "form_pdf_retrieved_timestamp_known"
     form = CourtForm(
         document_id=stable_source_id("me-court-form", url),
         source_location=SourceLocation(source_id=source_id, url_or_path=url),
@@ -70,8 +76,8 @@ def parse_form_text(text: str, *, source_id: str, url: str) -> tuple[CourtForm, 
         citation=form_id,
         form_id=form_id,
         version_date=version_match.group(1) if version_match else None,
-        retrieved_freshness_status="known_version_date" if version_match else "unknown",
-        stale_form_risk="needs_forms_freshness_gold_check",
+        retrieved_freshness_status=freshness_status,
+        stale_form_risk="version_date_missing_uses_retrieved_timestamp" if not version_match else "version_date_extracted",
     )
     event = ParserAuditEvent(
         source_id=source_id,

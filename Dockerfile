@@ -9,10 +9,11 @@ LABEL org.opencontainers.image.title="Maine Family Law LLM" \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PYTHONPATH=/app \
+    PYTHONPATH=/app/src:/app \
     MAINE_FAMILY_LAW_DATA_ROOT=/data \
     UVICORN_HOST=0.0.0.0 \
-    UVICORN_PORT=8000
+    UVICORN_PORT=8000 \
+    UVICORN_APP=maine_family_law_llm.api:app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -27,7 +28,9 @@ WORKDIR /app
 COPY --chown=app:app pyproject.toml README.md LICENSE.md ./
 COPY --chown=app:app app ./app
 COPY --chown=app:app legal ./legal
+COPY --chown=app:app src ./src
 COPY --chown=app:app configs ./configs
+COPY --chown=app:app data ./data
 COPY --chown=app:app scripts ./scripts
 
 RUN python -m pip install --upgrade pip \
@@ -39,4 +42,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python /app/scripts/container-healthcheck.py --url "http://127.0.0.1:${UVICORN_PORT}/api/health"
 
-CMD ["sh", "-c", "uvicorn app.api.main:app --host ${UVICORN_HOST} --port ${UVICORN_PORT}"]
+CMD ["sh", "-c", "uvicorn ${UVICORN_APP} --host ${UVICORN_HOST} --port ${UVICORN_PORT}"]

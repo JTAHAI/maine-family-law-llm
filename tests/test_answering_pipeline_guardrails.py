@@ -121,6 +121,7 @@ def test_ask_local_cli_returns_grounded_citations_with_local_corpus(
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
     assert completed.returncode == 0
@@ -174,6 +175,7 @@ def test_ask_local_cli_json_refusal_is_machine_readable(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
     payload = json.loads(completed.stdout)
@@ -216,6 +218,7 @@ def test_ask_local_cli_json_success_respects_max_sources(tmp_path: Path) -> None
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
     payload = json.loads(completed.stdout)
@@ -280,6 +283,7 @@ def test_ask_local_json_shape_includes_warning_field_for_success(
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
     payload = json.loads(completed.stdout)

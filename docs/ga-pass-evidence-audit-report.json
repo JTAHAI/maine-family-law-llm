@@ -1,0 +1,109 @@
+{
+  "audited_completed_passes": [
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "blockers": [],
+  "counting_rule": "Completed true-GA pass rows must have required real evidence artifacts. Repo scaffolding, dry runs, fixtures, and docs/sample-evidence do not count.",
+  "findings": [
+    {
+      "blocker": null,
+      "glob": "openapi.json",
+      "matches": [
+        "openapi.json"
+      ],
+      "pass": 39,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/api-contract-test-report.json",
+      "matches": [
+        "docs/api-contract-test-report.json"
+      ],
+      "pass": 39,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/ui-completion-report.json",
+      "matches": [
+        "docs/ui-completion-report.json"
+      ],
+      "pass": 40,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/model_registry_admission_report.json",
+      "matches": [
+        "docs/model_registry_admission_report.json"
+      ],
+      "pass": 41,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/llm_injection_red_team_report.json",
+      "matches": [
+        "docs/llm_injection_red_team_report.json"
+      ],
+      "pass": 42,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/enterprise-security-test-report.json",
+      "matches": [
+        "docs/enterprise-security-test-report.json"
+      ],
+      "pass": 43,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/governance-compliance-packet-report.json",
+      "matches": [
+        "docs/governance-compliance-packet-report.json"
+      ],
+      "pass": 44,
+      "root": "repo",
+      "status": "pass"
+    },
+    {
+      "blocker": null,
+      "glob": "docs/sre-reliability-report.json",
+      "matches": [
+        "docs/sre-reliability-report.json"
+      ],
+      "pass": 45,
+      "root": "repo",
+      "status": "pass"
+    }
+  ],
+  "generated_at": "2026-05-31T15:35:12.468556+00:00",
+  "pass_evidence_valid": true,
+  "status": "pass",
+  "true_ga_completed_claimed": [
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "true_ga_remaining": 26,
+  "warnings": []
+}

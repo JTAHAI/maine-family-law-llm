@@ -118,7 +118,7 @@ def build_pass49() -> dict:
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass48_pass49_pilot_operations.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass48_pass49_pilot_operations.json"
     pass48 = build_pass48()
     pass49 = build_pass49()
     evidence = {

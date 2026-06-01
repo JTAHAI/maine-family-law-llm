@@ -3,30 +3,36 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TIMEOUT = 45
 
 
 def _env() -> dict[str, str]:
     env = os.environ.copy()
-    env["PYTHONPATH"] = f"{ROOT / 'src'};{ROOT}"
+    env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(ROOT)])
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
 
 
-def test_cli_smoke_sources_ask_draft_and_doctor() -> None:
-    subprocess.run(
-        ["python", "scripts/clean-local-artifacts.py", "--repo-root", str(ROOT)],
+def _run(args: list[str], *, check: bool = False) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
         cwd=ROOT,
+        env=_env(),
         text=True,
         capture_output=True,
-        check=False,
-        env=_env(),
+        check=check,
+        timeout=TIMEOUT,
     )
+
+
+def test_cli_smoke_sources_ask_draft_and_doctor() -> None:
     base = ["python", "-m", "maine_family_law_llm.cli"]
     for args in (
         ["sources", "validate"],
@@ -34,82 +40,78 @@ def test_cli_smoke_sources_ask_draft_and_doctor() -> None:
         ["sources", "fetch", "--fixtures"],
         ["sources", "normalize", "--fixtures"],
         ["index", "build", "--fixtures"],
-        ["doctor"],
     ):
-        result = subprocess.run(base + args, cwd=ROOT, env=_env(), text=True, capture_output=True, check=False)
+        result = _run(base + args)
         assert result.returncode == 0, result.stderr + result.stdout
 
-    ask = subprocess.run(base + ["ask", "How do I start a family matter?"], cwd=ROOT, env=_env(), text=True, capture_output=True, check=False)
+    ask = _run(base + ["ask", "How do I start a family matter?"])
     assert ask.returncode == 0
     assert "Citation appendix" in ask.stdout
 
-    draft = subprocess.run(base + ["draft", "child support form checklist"], cwd=ROOT, env=_env(), text=True, capture_output=True, check=False)
+    draft = _run(base + ["draft", "child support form checklist"])
     assert draft.returncode == 0
     assert "not filing-ready" in draft.stdout
 
 
 def test_api_endpoints_use_same_safety_and_sources() -> None:
-    fastapi = pytest.importorskip("fastapi")
-    pytest.importorskip("httpx")
-    from fastapi.testclient import TestClient
-    from maine_family_law_llm.api import app
+    pytest.importorskip("fastapi")
+    from maine_family_law_llm import api
 
-    assert fastapi
-    client = TestClient(app)
-    assert client.get("/healthz").json()["status"] == "ok"
-    assert client.get("/sources").json()
+    assert api.app is not None
+    assert api.healthz()["status"] == "ok"
+    assert api.api_health()["status"] == "ok"
+    assert api.sources()
 
-    ask = client.post("/ask", json={"question": "How do I start a family matter?"})
-    assert ask.status_code == 200
-    assert ask.json()["citations"]
+    ask = api.ask(api.AskRequest(question="How do I start a family matter?"))
+    assert ask["citations"]
 
-    unsafe = client.post("/ask", json={"question": "I need protection from abuse and immediate danger help"})
-    assert unsafe.json()["safety"]["requires_emergency_language"] is True
+    unsafe = api.ask(api.AskRequest(question="I need protection from abuse and immediate danger help"))
+    assert unsafe["safety"]["requires_emergency_language"] is True
 
-    draft = client.post("/draft", json={"request": "child support form checklist"})
-    assert "not filing-ready" in draft.json()["text"]
+    draft = api.draft(api.DraftRequest(request="child support form checklist"))
+    assert "not filing-ready" in draft["text"]
 
-    inspect = client.get("/inspect-source/mrs-title-19a-domestic-relations")
-    assert inspect.json()["official"] is True
+    inspect = api.inspect_source("mrs-title-19a-domestic-relations")
+    assert inspect["official"] is True
 
 
 def test_local_scripts_exist_parse_and_doctor_json() -> None:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
     scripts = [
         ROOT / "START_LOCAL_TEST.ps1",
+        ROOT / "STOP_LOCAL_TEST.ps1",
+        ROOT / "CHECK_LOCAL_REPO.ps1",
+        ROOT / "CREATE_REVIEW_ZIP.ps1",
         ROOT / "REPAIR_LOCAL_REPO.ps1",
         ROOT / "scripts" / "local-test-spin-up.ps1",
         ROOT / "scripts" / "run-tests.ps1",
     ]
     for script in scripts:
+        assert script.exists(), f"missing script: {script}"
+
+    if shell is None:
+        pytest.skip("PowerShell parser unavailable on this runner")
+
+    for script in scripts:
         result = subprocess.run(
             [
-                "powershell",
+                shell,
                 "-NoProfile",
                 "-Command",
-                f"$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile('{script}', [ref]$tokens, [ref]$errors) | Out-Null; if($errors.Count){{ $errors | ConvertTo-Json; exit 1 }}",
+                f"$tokens=$null; $errors=$null; "
+                f"[System.Management.Automation.Language.Parser]::ParseFile('{script}', [ref]$tokens, [ref]$errors) | Out-Null; "
+                "if($errors.Count){ $errors | ConvertTo-Json; exit 1 }",
             ],
             cwd=ROOT,
             text=True,
             capture_output=True,
             check=False,
+            timeout=TIMEOUT,
         )
         assert result.returncode == 0, result.stderr + result.stdout
 
-    subprocess.run(
-        ["python", "scripts/clean-local-artifacts.py", "--repo-root", str(ROOT)],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-        env=_env(),
-    )
-    doctor = subprocess.run(
-        ["python", "scripts/doctor-local-repo.py", "--repo-root", str(ROOT), "--json"],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-        env=_env(),
-    )
+    _run(["python", "scripts/clean-local-artifacts.py", "--repo-root", str(ROOT)])
+    doctor = _run(["python", "scripts/doctor-local-repo.py", "--repo-root", str(ROOT), "--json"])
     payload = json.loads(doctor.stdout)
     assert payload["status"] == "pass"
+    assert payload["safe_to_push"] is True

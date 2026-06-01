@@ -16,7 +16,7 @@ from legal.ops import FullGAWorkbenchBuilder
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a single full-GA readiness workbench report.")
     parser.add_argument("--data-root", default=None, help="External data root. Defaults to C:\\dev\\ME_FM_LLM_data policy path.")
-    parser.add_argument("--output", default=str(ROOT / "full_ga_workbench_report.json"))
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "full_ga_workbench_report.json"))
     parser.add_argument("--no-create-dirs", action="store_true", help="Do not create external data-root directories during local operator checks.")
     parser.add_argument("--write-probe", action="store_true", help="Write a temporary probe file into the external data root.")
     parser.add_argument("--allow-fail-report", action="store_true", help="Write the report and exit 0 even when full GA remains blocked.")

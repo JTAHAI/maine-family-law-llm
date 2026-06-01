@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from legal.connectors.maine_forms import parse_forms_index
-from legal.connectors.maine_revisor import parse_revisor_html
+from legal.connectors.maine_forms import normalize_form_id, parse_form_text, parse_forms_index
+from legal.connectors.maine_revisor import parse_revisor_html, parse_revisor_section_html
 from legal.connectors.maine_rules import parse_rules_index, parse_rules_text
 from legal.connectors.pdf_text import extract_pdf_text
-from legal.connectors.maine_sjc_opinions import parse_law_court_opinion_index
+from legal.connectors.maine_sjc_opinions import parse_law_court_opinion_index, parse_law_court_opinion_text
 from legal.data_boundaries import StoreName
 
 
@@ -94,6 +95,99 @@ def _base_record(record: dict[str, Any], *, authority_kind: str, source_span: di
         "source_span": source_span,
         "parser_audit": record.get("parser_audit", {}),
     }
+
+_CITATION_RE = re.compile(r"\b(20\d{2}\s+ME\s+\d+)\b")
+_FORM_ID_RE = re.compile(r"\b(FM|PA|CV|PB)-?\s?(\d{3}[A-Z]?)\b", re.I)
+
+
+def _first_nonempty(*values: Any) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def _canonical_examples(record: dict[str, Any]) -> list[dict[str, Any]]:
+    examples = record.get("canonical_examples")
+    if isinstance(examples, list):
+        return [item for item in examples if isinstance(item, dict)]
+    return []
+
+
+def _record_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    metadata = record.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _parser_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    parser_audit = record.get("parser_audit")
+    if not isinstance(parser_audit, dict):
+        return {}
+    metadata = parser_audit.get("metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _fallback_form_id(*, parsed_form_id: str | None, title: str | None, url: str, record: dict[str, Any]) -> tuple[str | None, str | None]:
+    candidates: list[tuple[str | None, str]] = [
+        (parsed_form_id, "parsed_text"),
+        (title, "parsed_title"),
+        (url, "source_url"),
+        (_record_metadata(record).get("target_id"), "target_id"),
+    ]
+    for example in _canonical_examples(record):
+        candidates.extend(
+            [
+                (example.get("form_id"), "canonical_example"),
+                (example.get("citation"), "canonical_example"),
+                (example.get("title"), "canonical_example"),
+            ]
+        )
+    for value, source in candidates:
+        if not value:
+            continue
+        match = _FORM_ID_RE.search(str(value))
+        if match:
+            return normalize_form_id(match.group(0)), source
+    basename = url.rsplit("/", 1)[-1].split("?", 1)[0].split("#", 1)[0].strip()
+    stem = basename.rsplit(".", 1)[0].strip() if basename else ""
+    if stem:
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", stem).strip("-").upper()
+        if slug:
+            return f"OFFICIAL-FORM-{slug}", "source_url_filename_fallback"
+    source_id = str(record.get("source_id") or "").strip()
+    if source_id:
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", source_id).strip("-").upper()
+        if slug:
+            return f"OFFICIAL-FORM-{slug}", "source_id_fallback"
+    return None, None
+
+
+def _fallback_opinion_citation(*, parsed_citation: str | None, text: str, record: dict[str, Any]) -> tuple[str | None, str | None]:
+    candidates: list[tuple[str | None, str]] = [
+        (parsed_citation, "parsed_text"),
+        (_parser_metadata(record).get("citation"), "parser_audit_metadata"),
+        (_record_metadata(record).get("citation"), "record_metadata"),
+        (_record_metadata(record).get("target_id"), "target_id"),
+        (record.get("source_url_or_path"), "source_url"),
+        (text, "extracted_text"),
+    ]
+    for example in _canonical_examples(record):
+        candidates.extend(
+            [
+                (example.get("citation"), "canonical_example"),
+                (example.get("title"), "canonical_example"),
+            ]
+        )
+    for value, source in candidates:
+        if not value:
+            continue
+        match = _CITATION_RE.search(str(value))
+        if match:
+            return match.group(1), source
+    return None, None
 
 
 class ParsedAuthorityStoreBuilder:
@@ -192,8 +286,110 @@ class ParsedAuthorityStoreBuilder:
                         "rule_set": rule.rule_set,
                         "rule_number": rule.rule_number,
                         "href": rule.source_location.url_or_path,
+                        "text": pdf_text,
                     }
                     for rule in rules
+                ]
+            except Exception as exc:
+                self.findings.append(
+                    ParsedAuthorityFinding("parse_failed", f"{type(exc).__name__}: {exc}", source_id)
+                )
+                return None, []
+
+        if parser_name == "maine_form_pdf" or source_class == "court_form_pdf":
+            try:
+                form_text = extract_pdf_text(content)
+                form, _audit = parse_form_text(
+                    form_text, source_id=source_id, url=str(record.get("source_url_or_path") or "")
+                )
+                clean_text = str(form.text or form_text or "").strip()
+                if not clean_text:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "court_form_pdf produced no extractable text; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                form_id, form_id_source = _fallback_form_id(
+                    parsed_form_id=form.form_id or form.citation,
+                    title=form.title,
+                    url=str(record.get("source_url_or_path") or ""),
+                    record=record,
+                )
+                if not form_id:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "court_form_pdf produced no stable form identifier; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                return "forms/forms.jsonl", [
+                    {
+                        **_base_record(record, authority_kind="court_form", source_span=span),
+                        "record_id": form.document_id,
+                        "title": form.title,
+                        "citation": form.citation or form_id,
+                        "form_id": form_id,
+                        "form_id_source": form_id_source,
+                        "version_date": form.version_date,
+                        "required_fields": form.required_fields,
+                        "stale_form_risk": form.stale_form_risk,
+                        "text": clean_text,
+                    }
+                ]
+            except Exception as exc:
+                self.findings.append(
+                    ParsedAuthorityFinding("parse_failed", f"{type(exc).__name__}: {exc}", source_id)
+                )
+                return None, []
+
+        if parser_name == "maine_law_court_opinion_pdf" or source_class == "law_court_opinion_pdf":
+            try:
+                opinion_text = extract_pdf_text(content)
+                clean_text = str(opinion_text or "").strip()
+                if not clean_text:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "law_court_opinion_pdf produced no extractable text; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                opinion, _audit = parse_law_court_opinion_text(
+                    clean_text, source_id=source_id, url=str(record.get("source_url_or_path") or "")
+                )
+                citation, citation_source = _fallback_opinion_citation(
+                    parsed_citation=opinion.citation,
+                    text=clean_text,
+                    record=record,
+                )
+                if not citation:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "law_court_opinion_pdf produced no stable official citation; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                return "opinions/opinions.jsonl", [
+                    {
+                        **_base_record(record, authority_kind="law_court_opinion", source_span=span),
+                        "record_id": opinion.opinion_id,
+                        "title": opinion.title,
+                        "citation": citation,
+                        "citation_source": citation_source,
+                        "decision_date": opinion.decision_date,
+                        "docket_number": opinion.docket_number,
+                        "court": opinion.court,
+                        "href": opinion.href,
+                        "text": clean_text,
+                    }
                 ]
             except Exception as exc:
                 self.findings.append(
@@ -214,6 +410,24 @@ class ParsedAuthorityStoreBuilder:
             ]
         text = content.decode("utf-8", errors="replace")
         try:
+            if parser_name == "maine_revisor_section" or source_class == "statute_section":
+                section, _audit = parse_revisor_section_html(text, source_id=source_id, url=str(record.get("source_url_or_path") or ""))
+                return "statutes/statute_sections.jsonl", [
+                    {
+                        **_base_record(record, authority_kind="statute_section", source_span=span),
+                        "record_id": section.document_id,
+                        "title": section.title,
+                        "citation": section.citation,
+                        "title_number": section.title_number,
+                        "section_number": section.section_number,
+                        "section_heading": section.section_heading,
+                        "subsections": section.subsections,
+                        "subsection_count": len(section.subsections),
+                        "data_extracted_at": section.metadata.get("data_extracted_at"),
+                        "text": section.text,
+                    }
+                ]
+
             if parser_name == "maine_revisor_title_index" or source_class == "statute_title_index":
                 document, _audit = parse_revisor_html(text, source_id=source_id, url=str(record.get("source_url_or_path") or ""))
                 rows = [
@@ -271,6 +485,48 @@ class ParsedAuthorityStoreBuilder:
                     }
                     for form in forms
                 ]
+            if parser_name == "maine_form_text" or source_class == "court_form_text":
+                url = str(record.get("source_url_or_path") or "")
+                form, _audit = parse_form_text(text, source_id=source_id, url=url)
+                clean_text = str(form.text or text or "").strip()
+                if not clean_text:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "court_form_text produced no extractable text; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                form_id, form_id_source = _fallback_form_id(
+                    parsed_form_id=form.form_id or form.citation,
+                    title=form.title,
+                    url=url,
+                    record=record,
+                )
+                if not form_id:
+                    self.findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_row_quarantined",
+                            "court_form_text produced no stable form identifier; skipped direct parsed row",
+                            source_id,
+                        )
+                    )
+                    return None, []
+                return "forms/forms.jsonl", [
+                    {
+                        **_base_record(record, authority_kind="court_form", source_span=span),
+                        "record_id": form.document_id,
+                        "title": form.title,
+                        "citation": form.citation or form_id,
+                        "form_id": form_id,
+                        "form_id_source": form_id_source,
+                        "version_date": form.version_date,
+                        "required_fields": form.required_fields,
+                        "stale_form_risk": form.stale_form_risk,
+                        "text": clean_text,
+                    }
+                ]
             if parser_name == "maine_law_court_opinion_index" or source_class == "law_court_opinion_index":
                 opinions, _audit = parse_law_court_opinion_index(text, source_id=source_id, url=str(record.get("source_url_or_path") or ""))
                 return "opinions/opinion_index.jsonl", [
@@ -298,7 +554,14 @@ class ParsedAuthorityStoreBuilder:
 
 
 class ParsedAuthorityStoreAuditor:
-    """Audit parsed authority store outputs without requiring live network access."""
+    """Audit parsed authority store outputs without requiring live network access.
+
+    The default audit validates first-wave index parsing.  ``require_direct_authority``
+    promotes the audit to the Pass 20/23 handoff contract: direct statute
+    sections, direct forms, and direct Law Court opinions must exist and carry
+    enough text/metadata to support retrieval, source cards, and citation/quote
+    verification.
+    """
 
     REQUIRED_COLLECTIONS = {
         "statutes/statute_title_indexes.jsonl": 1,
@@ -306,19 +569,48 @@ class ParsedAuthorityStoreAuditor:
         "forms/forms_index.jsonl": 1,
         "opinions/opinion_index.jsonl": 1,
     }
+    DIRECT_AUTHORITY_COLLECTIONS = {
+        "statutes/statute_sections.jsonl": 1,
+        "forms/forms.jsonl": 1,
+        "opinions/opinions.jsonl": 1,
+    }
+    DIRECT_REQUIRED_FIELDS = {
+        "statute_section": ("citation", "title_number", "section_number", "text"),
+        "court_form": ("form_id", "title", "text"),
+        "law_court_opinion": ("citation", "title", "text"),
+    }
 
-    def __init__(self, *, data_root: str | Path, required_collections: dict[str, int] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        data_root: str | Path,
+        required_collections: dict[str, int] | None = None,
+        require_direct_authority: bool = False,
+    ) -> None:
         self.data_root = Path(data_root).resolve()
         self.parsed_store = self.data_root / "parsed_authority_store"
-        self.required_collections = required_collections or self.REQUIRED_COLLECTIONS
+        self.required_collections = dict(required_collections or self.REQUIRED_COLLECTIONS)
+        self.require_direct_authority = require_direct_authority
+        if require_direct_authority:
+            self.required_collections.update(self.DIRECT_AUTHORITY_COLLECTIONS)
 
     def run(self) -> dict[str, Any]:
         findings: list[ParsedAuthorityFinding] = []
         counts: dict[str, int] = {}
+        authority_kind_counts: dict[str, int] = {}
+        direct_counts = {"statute_section": 0, "court_form": 0, "law_court_opinion": 0}
+        reference_count = 0
+        full_text_count = 0
+
         for relative, minimum in self.required_collections.items():
             path = self.parsed_store / relative
             if not path.exists():
-                findings.append(ParsedAuthorityFinding("parsed_collection_missing", f"Missing {relative}"))
+                code = (
+                    "missing_direct_authority_collection"
+                    if relative in self.DIRECT_AUTHORITY_COLLECTIONS
+                    else "parsed_collection_missing"
+                )
+                findings.append(ParsedAuthorityFinding(code, f"Missing {relative}"))
                 counts[relative] = 0
                 continue
             rows = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -345,11 +637,74 @@ class ParsedAuthorityStoreAuditor:
                                 str(row.get("source_id") or ""),
                             )
                         )
+                authority_kind = str(row.get("authority_kind") or "unknown")
+                authority_kind_counts[authority_kind] = authority_kind_counts.get(authority_kind, 0) + 1
+                if authority_kind.endswith("_reference") or authority_kind.endswith("_index"):
+                    reference_count += 1
+                if str(row.get("text") or "").strip():
+                    full_text_count += 1
+                if authority_kind in direct_counts:
+                    direct_counts[authority_kind] += 1
+                    self._validate_direct_row(
+                        row=row,
+                        relative=relative,
+                        index=index,
+                        authority_kind=authority_kind,
+                        findings=findings,
+                    )
+
+        if self.require_direct_authority:
+            for authority_kind, count in direct_counts.items():
+                if count < 1:
+                    findings.append(
+                        ParsedAuthorityFinding(
+                            "direct_authority_kind_missing",
+                            f"No direct parsed records found for {authority_kind}. Run follow-up target ingest and rebuild parsed authority.",
+                        )
+                    )
+
+        readiness = self._readiness(direct_counts=direct_counts, full_text_count=full_text_count)
         status = "pass" if not findings else "blocked"
         return {
             "status": status,
+            "readiness": readiness,
+            "require_direct_authority": self.require_direct_authority,
             "data_root": str(self.data_root),
             "parsed_store": str(self.parsed_store),
             "counts_by_collection": counts,
+            "authority_kind_counts": authority_kind_counts,
+            "direct_authority": {
+                "required_kinds": sorted(direct_counts),
+                "counts_by_kind": direct_counts,
+                "full_text_record_count": full_text_count,
+                "reference_record_count": reference_count,
+            },
             "findings": [finding.as_dict() for finding in findings],
         }
+
+    def _validate_direct_row(
+        self,
+        *,
+        row: dict[str, Any],
+        relative: str,
+        index: int,
+        authority_kind: str,
+        findings: list[ParsedAuthorityFinding],
+    ) -> None:
+        for field_name in self.DIRECT_REQUIRED_FIELDS.get(authority_kind, ()):  # defensive for future kinds
+            if row.get(field_name) in (None, "") or (field_name == "text" and not str(row.get(field_name)).strip()):
+                findings.append(
+                    ParsedAuthorityFinding(
+                        "direct_authority_required_field_missing",
+                        f"{relative}:{index} {authority_kind} missing {field_name}",
+                        str(row.get("source_id") or ""),
+                    )
+                )
+
+    @staticmethod
+    def _readiness(*, direct_counts: dict[str, int], full_text_count: int) -> str:
+        if all(count > 0 for count in direct_counts.values()):
+            return "direct_authority_ready"
+        if any(count > 0 for count in direct_counts.values()) or full_text_count > 0:
+            return "direct_authority_partial"
+        return "index_only"

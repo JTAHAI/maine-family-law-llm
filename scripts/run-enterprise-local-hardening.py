@@ -64,7 +64,8 @@ def main() -> int:
         "results": results,
         "note": "Network-dependent authority and resource download failures are recorded as blockers, not hidden.",
     }
-    out = ROOT / "enterprise_local_hardening_evidence.json"
+    out = ROOT / "docs" / "sample-evidence" / "enterprise_local_hardening_evidence.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if status == "pass" else 1

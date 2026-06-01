@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,10 +90,75 @@ def build_evidence() -> dict:
     }
 
 
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def write_split_reports(evidence: dict, output_dir: Path) -> dict[str, str]:
+    """Write dedicated GA evidence artifacts for Pass 43, Pass 44, and Pass 45."""
+
+    security_report = {
+        "status": evidence["security_implementation"].get("status", "fail"),
+        "pass": 43,
+        "title": "Security implementation",
+        "generated_at": evidence["generated_at"],
+        "security_implementation": evidence["security_implementation"],
+    }
+    governance_report = {
+        "status": evidence["governance_compliance_packet"].get("status", "fail"),
+        "pass": 44,
+        "title": "Governance and compliance evidence packet",
+        "generated_at": evidence["generated_at"],
+        "governance_compliance_packet": evidence["governance_compliance_packet"],
+    }
+    sre_report = {
+        "status": evidence["reliability_sre"].get("status", "fail"),
+        "pass": 45,
+        "title": "Reliability, scale, and SRE",
+        "generated_at": evidence["generated_at"],
+        "reliability_sre": evidence["reliability_sre"],
+    }
+    output_dir = output_dir.resolve()
+    paths = {
+        "combined": output_dir / "security-compliance-sre-evidence-report.json",
+        "pass43": output_dir / "enterprise-security-test-report.json",
+        "pass44": output_dir / "governance-compliance-packet-report.json",
+        "pass45": output_dir / "sre-reliability-report.json",
+    }
+    _write_json(paths["combined"], evidence)
+    _write_json(paths["pass43"], security_report)
+    _write_json(paths["pass44"], governance_report)
+    _write_json(paths["pass45"], sre_report)
+    return {key: str(path.resolve().relative_to(ROOT)) if ROOT in (path.resolve(), *path.resolve().parents) else str(path.resolve()) for key, path in paths.items()}
+
+
 def main() -> int:
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json"
+    parser = argparse.ArgumentParser(description="Generate Pass 43-45 security/compliance/SRE GA evidence reports.")
+    parser.add_argument(
+        "output",
+        nargs="?",
+        type=Path,
+        default=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json",
+        help="Backward-compatible combined sample evidence output path.",
+    )
+    parser.add_argument(
+        "--ga-output-dir",
+        type=Path,
+        default=ROOT / "docs",
+        help="Directory for dedicated Pass 43/44/45 GA evidence reports.",
+    )
+    parser.add_argument(
+        "--sample-only",
+        action="store_true",
+        help="Only write the backward-compatible sample evidence file.",
+    )
+    args = parser.parse_args()
     evidence = build_evidence()
-    out.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
+    _write_json(args.output, evidence)
+    if not args.sample_only:
+        evidence["ga_evidence_reports"] = write_split_reports(evidence, args.ga_output_dir)
+        _write_json(args.output, evidence)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence["status"] == "pass" else 1
 

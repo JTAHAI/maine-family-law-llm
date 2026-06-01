@@ -19,7 +19,7 @@ def main() -> int:
     args = parser.parse_args()
     report = AuthorityBuildAuditor(project_root=ROOT, data_root=args.data_root).run()
     print(json.dumps(report.as_dict(), indent=2, sort_keys=True))
-    return 0 if report.status == "pass" else 1
+    return 0 if report.production_ready else 2
 
 
 if __name__ == "__main__":

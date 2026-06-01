@@ -1,6 +1,6 @@
 param(
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "operator_test_battery_evidence.json"
+  [string]$Output = "docs/sample-evidence/operator_test_battery_evidence.json"
 )
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)

@@ -19,7 +19,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run post-GA enterprise hardening evidence bundle.")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--data-root", default="/tmp/maine-family-law-llm-post-ga-hardening-data")
-    parser.add_argument("--output", default="smoke_evidence_post_ga_enterprise_hardening.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "smoke_evidence_post_ga_enterprise_hardening.json"))
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
     data_root = Path(args.data_root).expanduser().resolve()

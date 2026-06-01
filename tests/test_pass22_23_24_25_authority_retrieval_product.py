@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
@@ -153,6 +155,27 @@ def test_pass24_runs_measured_retrieval_smoke_eval(tmp_path):
     assert (data_root / "eval_store" / "retrieval_smoke_eval.json").exists()
 
 
+def test_pass24_retrieval_smoke_caps_source_derived_cases_and_writes_progress(tmp_path):
+    data_root = _fixture_data_root(tmp_path)
+    ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
+    RetrievalIndexBuilder(data_root=data_root).build()
+
+    report = RetrievalSmokeEvalRunner(data_root=data_root).run(
+        write_report=True,
+        min_case_count=2,
+        max_case_count=2,
+        progress_interval=1,
+    )
+
+    assert report.status == "pass"
+    assert report.case_count == 2
+    assert report.thresholds["max_case_count"] == 2
+    progress = json.loads((data_root / "retrieval_smoke_progress.json").read_text(encoding="utf-8"))
+    assert progress["completed_cases"] == 2
+    assert progress["total_cases"] == 2
+    assert (data_root / "retrieval_smoke_report.json").exists()
+
+
 def test_pass25_triages_retrieval_failures_into_fix_tickets(tmp_path):
     data_root = _fixture_data_root(tmp_path)
     RetrievalIndexBuilder(data_root=data_root).build()
@@ -180,3 +203,46 @@ def test_pass25_triages_retrieval_failures_into_fix_tickets(tmp_path):
     assert report["clusters"] == {"missed_exact_citation": 1}
     assert report["tickets"][0]["remediation"].startswith("add or repair exact citation")
     assert (eval_root / "retrieval_failure_tickets.jsonl").exists()
+
+
+def test_pass24_retrieval_smoke_blocks_when_case_threshold_not_met(tmp_path):
+    data_root = _fixture_data_root(tmp_path)
+    ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
+    RetrievalIndexBuilder(data_root=data_root).build()
+
+    report = RetrievalSmokeEvalRunner(data_root=data_root).run(write_report=True, min_case_count=99)
+
+    assert report.status == "blocked"
+    assert any(blocker["code"] == "insufficient_case_count" for blocker in report.blockers)
+    payload = json.loads((data_root / "eval_store" / "retrieval_smoke_eval.json").read_text(encoding="utf-8"))
+    assert payload["thresholds"]["min_case_count"] == 99
+    assert payload["thresholds"]["basis"] == "source-derived smoke cases; not attorney-reviewed GA gold"
+
+
+def test_pass24_retrieval_smoke_cli_accepts_release_thresholds(tmp_path):
+    data_root = _fixture_data_root(tmp_path)
+    ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
+    RetrievalIndexBuilder(data_root=data_root).build()
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run-retrieval-smoke-eval.py",
+            "--data-root",
+            str(data_root),
+            "--min-case-count",
+            "99",
+            "--min-recall-at-20",
+            "0.95",
+        ],
+        text=True,
+        capture_output=True,
+        timeout=45,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "blocked"
+    assert payload["thresholds"]["min_recall_at_20"] == 0.95
+    assert any(blocker["code"] == "insufficient_case_count" for blocker in payload["blockers"])

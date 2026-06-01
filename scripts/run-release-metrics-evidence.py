@@ -17,11 +17,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build release metrics evidence from gold eval artifacts.")
     parser.add_argument("--eval-root", type=Path, default=ROOT / "eval_data")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Exit non-zero unless all release gates are allowed by measured evidence.",
+    )
     args = parser.parse_args()
     report = ReleaseMetricsEvidenceBuilder(project_root=ROOT, eval_root=args.eval_root).build(
         output_path=args.output,
     )
-    print(json.dumps(report.as_dict(), indent=2, sort_keys=True))
+    data = report.as_dict()
+    print(json.dumps(data, indent=2, sort_keys=True))
+    if args.require_ready and not data.get("release_gate_report", {}).get("release_allowed"):
+        return 2
     return 0
 
 

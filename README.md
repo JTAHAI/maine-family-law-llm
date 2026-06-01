@@ -202,8 +202,10 @@ This release adds an enterprise data-product gate. The source ZIP is still a cle
 This release advances the external legal data-product workstream:
 
 - Pass 19 hardens official-source ingestion with retry/backoff, rate limiting, robots handling, failed-source reporting, and run reports.
-- Pass 20 adds parsed authority JSONL builders/auditors for statute title indexes, PDF snapshots, rules, forms, and Law Court opinion indexes.
+- Pass 20 adds parsed authority JSONL builders/auditors for statute title indexes, direct statute sections, PDF snapshots, rules, forms, and Law Court opinion indexes.
 - Pass 21 adds source freshness classification, manifest diffing, and `source_update_report.json` generation.
+- Pass 1.31 adds second-wave target derivation from parsed official indexes, producing `official_authority_store/derived_authority_targets.json` for direct section/rule/form/opinion ingestion.
+- Pass 1.32 adds a direct-authority parsed-store audit mode so index-only stores cannot be mistaken for retrieval-ready full legal authority.
 
 Run the authority data-product path in a networked environment with an external data root:
 
@@ -212,7 +214,37 @@ python scripts/ingest-maine-authority.py --data-root <external-data-root>
 python scripts/audit-authority-build.py --data-root <external-data-root>
 python scripts/build-parsed-authority-store.py --data-root <external-data-root>
 python scripts/audit-parsed-authority-store.py --data-root <external-data-root>
+python scripts/build-authority-followup-targets.py --data-root <external-data-root>
+python scripts/ingest-maine-authority.py --data-root <external-data-root> --target-catalog <external-data-root>/official_authority_store/derived_authority_targets.json
+python scripts/build-parsed-authority-store.py --data-root <external-data-root>
+python scripts/audit-parsed-authority-store.py --data-root <external-data-root> --require-direct-authority
 python scripts/build-source-update-report.py --data-root <external-data-root>
+```
+
+Or run the hardened one-command external authority pipeline, which records each required and optional step in one evidence JSON:
+
+```bash
+python scripts/run-authority-data-product.py --data-root <external-data-root> --strict-content-type
+python scripts/run-authority-data-product.py --data-root <external-data-root> --strict-content-type --ingest-followup-targets --require-direct-authority
+python scripts/run-authority-data-product.py --data-root <external-data-root> --strict-content-type --ingest-followup-targets --require-direct-authority --require-retrieval-smoke --require-gold-eval-pack --require-release-metrics
+```
+
+Useful preflight commands before touching the network:
+
+```bash
+python scripts/ingest-maine-authority.py --data-root <external-data-root> --dry-run
+python scripts/run-authority-data-product.py --data-root <external-data-root> --plan-only
+python scripts/run-authority-data-product.py --data-root <external-data-root> --plan-only --require-direct-authority
+
+Gold eval and release metrics gates can be run independently:
+
+```bash
+python scripts/audit-gold-eval-pack.py --eval-root <external-eval-root> --require-ready
+python scripts/run-release-metrics-evidence.py --eval-root <external-eval-root> --output <external-eval-root>/release_metrics_evidence.json --require-ready
+```
+
+These flags intentionally fail closed until real attorney-reviewed JSONL rows and task-specific measured metrics exist. Annotation queues and seed rows do not count as GA evidence.
+python scripts/build-authority-followup-targets.py --data-root <external-data-root> --no-write
 ```
 
 Quality evidence for this release is written to:
@@ -238,6 +270,7 @@ This release turns parsed authority records into an external authority/retrieval
 - Pass 23 builds external `embedding_store/bm25/`, `embedding_store/vector/`, and `embedding_store/hybrid/` artifacts, including exact citation, form ID, case name, statute section, parent-child chunk, and source-card indexes.
 - Pass 24 adds measured source-derived retrieval smoke eval with Recall@5, Recall@10, Recall@20, MRR, and nDCG.
 - Pass 25 adds retrieval failure clustering/tickets and query-expansion output.
+- The retrieval index audit blocks missing, empty, in-repo, or internally inconsistent index artifacts before retrieval smoke metrics are accepted.
 
 Run the authority/retrieval data-product path in a networked environment with an external data root:
 
@@ -246,9 +279,14 @@ python scripts/ingest-maine-authority.py --data-root <external-data-root>
 python scripts/audit-authority-build.py --data-root <external-data-root>
 python scripts/build-parsed-authority-store.py --data-root <external-data-root>
 python scripts/audit-parsed-authority-store.py --data-root <external-data-root>
+python scripts/build-authority-followup-targets.py --data-root <external-data-root>
+python scripts/ingest-maine-authority.py --data-root <external-data-root> --target-catalog <external-data-root>/official_authority_store/derived_authority_targets.json
+python scripts/build-parsed-authority-store.py --data-root <external-data-root>
+python scripts/audit-parsed-authority-store.py --data-root <external-data-root> --require-direct-authority
 python scripts/build-source-update-report.py --data-root <external-data-root>
 python scripts/build-authority-layer.py --data-root <external-data-root>
 python scripts/build-retrieval-indexes.py --data-root <external-data-root>
+python scripts/audit-retrieval-indexes.py --data-root <external-data-root> --require-direct-lookups
 python scripts/run-retrieval-smoke-eval.py --data-root <external-data-root>
 python scripts/triage-retrieval-failures.py --data-root <external-data-root>
 ```
@@ -318,3 +356,16 @@ See `docs/full_corpus_requirements.md` and
 scaffold and fetch official raw sources, but enterprise GA legal-data readiness
 remains blocked until the full parse/index pipeline and attorney-reviewed eval
 pack pass.
+
+
+## Release artifact hygiene
+
+Generated evidence JSON, SBOMs, release locks, smoke reports, official authority stores, parsed stores, retrieval indexes, model files, and matter data must not live at the repository root or be packaged as source. Use explicit output paths or the external data/evidence root for current run evidence. Historical JSON under `docs/sample-evidence/` is sample-only and does not prove production legal GA.
+
+Before creating a public review ZIP, run:
+
+```bash
+python scripts/clean-local-artifacts.py --repo-root .
+python scripts/audit-release-artifacts.py --repo-root . --require-ready
+python scripts/doctor-local-repo.py --repo-root . --json
+```

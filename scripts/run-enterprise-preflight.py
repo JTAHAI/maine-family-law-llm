@@ -16,7 +16,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run Windows-first enterprise local preflight.")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--data-root", default=None)
-    parser.add_argument("--output", default="enterprise_preflight_report.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "enterprise_preflight_report.json"))
     parser.add_argument("--no-create", action="store_true", help="Do not create external data directories.")
     args = parser.parse_args()
     report = EnterprisePreflightRunner(repo_root=args.repo_root, data_root=args.data_root).write(

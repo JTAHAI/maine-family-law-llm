@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -11,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+SAMPLE_EVIDENCE_DIR = ROOT / "docs" / "sample-evidence"
 
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
 from legal.evals import (
@@ -50,13 +53,81 @@ from app.api.main import app
 from app.web.ui_contracts import UICompletionAuditor
 
 
-def run_command(command: list[str]) -> dict:
-    result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+def run_command(command: list[str], *, timeout: int = 300) -> dict:
+    env = os.environ.copy()
+    if "pytest" in command:
+        # Third-party pytest plugins injected by host environments can slow or hang
+        # subprocess-heavy smoke tests. Keep the release quality runner pinned to
+        # project tests only unless a caller explicitly opts back in.
+        env.setdefault("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "command": " ".join(command),
+            "returncode": 124,
+            "stdout": (exc.stdout or "")[-4000:],
+            "stderr": ((exc.stderr or "") + f"\ntimeout after {timeout}s")[-4000:],
+            "timeout_seconds": timeout,
+        }
     return {
         "command": " ".join(command),
         "returncode": result.returncode,
         "stdout": result.stdout[-4000:],
         "stderr": result.stderr[-4000:],
+        "timeout_seconds": timeout,
+    }
+
+
+def run_pytest_batches() -> dict:
+    batches = [
+        ["tests/test_cli_api_local_v1.py"],
+        [
+            "tests/test_ga_pass_evidence_gate.py",
+            "tests/test_ga_pass_tracker.py",
+            "tests/test_ga_tracker_integrity_hardening.py",
+            "tests/test_release_artifact_hygiene_pass.py",
+            "tests/test_sample_evidence_output_hygiene.py",
+            "tests/test_pass19_authority_execution_harness.py",
+        ],
+        [
+            "tests/test_pass22_23_24_25_authority_retrieval_product.py",
+            "tests/test_pass26_27_28_gold_release_metrics.py",
+            "tests/test_pass29_30_31_verifier_intelligence.py",
+            "tests/test_pass32_33_34_maine_intelligence.py",
+            "tests/test_pass35_pass36_secure_matter_evidence.py",
+            "tests/test_pass37_pass38_drafting_filing_gate.py",
+            "tests/test_pass39_pass40_api_ui_completion.py",
+            "tests/test_pass41_pass42_model_governance_injection_defense.py",
+            "tests/test_pass43_pass44_pass45_security_compliance_sre.py",
+            "tests/test_pass46_pass47_release_eval_red_team.py",
+            "tests/test_pass48_pass49_pilot_operations.py",
+            "tests/test_pass50_pass51_ga_release.py",
+        ],
+    ]
+    results = []
+    for batch in batches:
+        command = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *batch]
+        results.append(run_command(command, timeout=300))
+    return {
+        "command": "batched pytest release-smoke suite",
+        "returncode": 0 if all(item["returncode"] == 0 for item in results) else 1,
+        "batches": results,
+        "stdout": "\n".join(item.get("stdout", "") for item in results)[-4000:],
+        "stderr": "\n".join(item.get("stderr", "") for item in results)[-4000:],
+        "timeout_seconds": sum(int(item.get("timeout_seconds", 0)) for item in results),
+        "note": (
+            "Batched to avoid host/pytest teardown hangs from subprocess-heavy smoke tests; "
+            "each batch runs in a fresh interpreter with plugin autoload disabled."
+        ),
     }
 
 
@@ -556,10 +627,10 @@ def run_pass41_42_offline_smoke() -> dict:
 
 def run_pass46_47_offline_smoke() -> dict:
     release_eval = FullReleaseEvalRunner(project_root=ROOT, eval_root=ROOT / "eval_data").run(
-        output_path=ROOT / "smoke_evidence_pass46_full_release_eval.json"
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass46_full_release_eval.json"
     )
     red_team = LegalRedTeamRunner(project_root=ROOT).run(
-        output_path=ROOT / "smoke_evidence_pass47_legal_red_team.json"
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass47_legal_red_team.json"
     )
     blockers = []
     if release_eval.status != "pass":
@@ -588,14 +659,14 @@ def run_pass50_51_offline_smoke() -> dict:
         signoffs=signoffs,
         blockers=[],
         audit_enterprise_readiness_status="pass",
-        output_path=ROOT / "smoke_evidence_pass50_release_candidate.json",
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass50_release_candidate.json",
     )
     ga_shipment = GAShipmentAuditor().audit(
         version=version,
         release_candidate_report=release_candidate,
         artifacts=ga_artifacts,
         controls=build_ga_control_fixture(),
-        output_path=ROOT / "smoke_evidence_pass51_ga_shipment.json",
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass51_ga_shipment.json",
     )
     blocked_candidate = ReleaseCandidateAuditor(project_root=ROOT).audit(
         version=version,
@@ -629,18 +700,19 @@ def run_pass50_51_offline_smoke() -> dict:
     }
 
 def main() -> int:
-    pytest_result = run_command([sys.executable, "-m", "pytest", "-q"])
+    SAMPLE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    pytest_result = run_pytest_batches()
     orchestrator_result = EvaluationOrchestrator(ROOT).run_all()
     pass22_25_smoke = run_pass22_25_offline_smoke()
     pass26_28_smoke = run_pass26_28_offline_smoke()
     verifier_evidence_result = run_command([
         sys.executable,
         "scripts/run-verifier-evidence.py",
-        "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json",
+        str(SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json"),
     ])
     try:
         verifier_evidence = json.loads(
-            (ROOT / "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json").read_text(
+            (ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -654,11 +726,11 @@ def main() -> int:
     maine_intelligence_evidence_result = run_command([
         sys.executable,
         "scripts/run-maine-intelligence-evidence.py",
-        "smoke_evidence_pass32_pass33_pass34_maine_intelligence.json",
+        str(SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass32_pass33_pass34_maine_intelligence.json"),
     ])
     try:
         maine_intelligence_evidence = json.loads(
-            (ROOT / "smoke_evidence_pass32_pass33_pass34_maine_intelligence.json").read_text(encoding="utf-8")
+            (ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass32_pass33_pass34_maine_intelligence.json").read_text(encoding="utf-8")
         )
     except Exception as exc:  # pragma: no cover - defensive evidence path
         maine_intelligence_evidence = {"status": "fail", "error": str(exc)}
@@ -669,18 +741,18 @@ def main() -> int:
     pass48_49_evidence_result = run_command([
         sys.executable,
         "scripts/run-pilot-evidence.py",
-        "smoke_evidence_pass48_pass49_pilot_operations.json",
+        str(SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass48_pass49_pilot_operations.json"),
     ])
     try:
         pass48_49_evidence = json.loads(
-            (ROOT / "smoke_evidence_pass48_pass49_pilot_operations.json").read_text(encoding="utf-8")
+            (ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass48_pass49_pilot_operations.json").read_text(encoding="utf-8")
         )
     except Exception as exc:  # pragma: no cover - defensive evidence path
         pass48_49_evidence = {"status": "fail", "error": str(exc)}
 
     pass50_51_smoke = run_pass50_51_offline_smoke()
     post_ga_repo_review = PostGARepoReviewer(project_root=ROOT).review(
-        output_path=ROOT / "post_ga_repo_review_build_path.json"
+        output_path=ROOT / "docs" / "sample-evidence" / "post_ga_repo_review_build_path.json"
     ).as_dict()
     enterprise_local_plan = EnterpriseResourcePlanBuilder(project_root=ROOT).build(
         repo_root=ROOT,
@@ -696,31 +768,31 @@ def main() -> int:
     post_ga_reboot_recovery = RebootRecoveryAuditor(
         repo_root=ROOT,
         data_root=post_ga_hardening_data_root,
-    ).write(ROOT / "reboot_recovery_healthcheck.json").as_dict()
+    ).write(ROOT / "docs" / "sample-evidence" / "reboot_recovery_healthcheck.json").as_dict()
     post_ga_offline_validation_pack = OfflineValidationPackBuilder(
         data_root=post_ga_hardening_data_root,
     ).build().as_dict()
     post_ga_attribution_kit = AttributionKitBuilder(project_root=ROOT).build(write=True).as_dict()
     post_ga_supply_chain = SupplyChainAuditor(project_root=ROOT).audit(
         write_sbom=True,
-        output_path=ROOT / "source_sbom.json",
+        output_path=ROOT / "docs" / "sample-evidence" / "source_sbom.json",
     ).as_dict()
     post_ga_public_release_readiness = PublicRepoReadinessAuditor(project_root=ROOT).audit().as_dict()
     post_ga_release_provenance = ReleaseProvenanceBuilder(project_root=ROOT).build().as_dict()
-    post_ga_release_lock = ReleaseLockfileBuilder(project_root=ROOT).write(ROOT / "source_release_lock.json").as_dict()
-    post_ga_release_lock_audit = ReleaseLockfileBuilder(project_root=ROOT).audit(ROOT / "source_release_lock.json").as_dict()
+    post_ga_release_lock = ReleaseLockfileBuilder(project_root=ROOT).write(ROOT / "docs" / "sample-evidence" / "source_release_lock.json").as_dict()
+    post_ga_release_lock_audit = ReleaseLockfileBuilder(project_root=ROOT).audit(ROOT / "docs" / "sample-evidence" / "source_release_lock.json").as_dict()
     post_ga_enterprise_acceptance = EnterpriseAcceptanceAuditor(project_root=ROOT).write(
-        ROOT / "enterprise_acceptance_evidence.json"
+        ROOT / "docs" / "sample-evidence" / "enterprise_acceptance_evidence.json"
     ).as_dict()
 
     pass50_51_evidence_result = run_command([
         sys.executable,
         "scripts/run-ga-release-evidence.py",
-        "smoke_evidence_pass50_pass51_ga_release.json",
+        str(SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass50_pass51_ga_release.json"),
     ])
     try:
         pass50_51_evidence = json.loads(
-            (ROOT / "smoke_evidence_pass50_pass51_ga_release.json").read_text(encoding="utf-8")
+            (SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass50_pass51_ga_release.json").read_text(encoding="utf-8")
         )
     except Exception as exc:  # pragma: no cover - defensive evidence path
         pass50_51_evidence = {"status": "fail", "error": str(exc)}
@@ -728,11 +800,11 @@ def main() -> int:
     pass43_45_evidence_result = run_command([
         sys.executable,
         "scripts/run-security-compliance-sre-evidence.py",
-        "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json",
+        str(SAMPLE_EVIDENCE_DIR / "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json"),
     ])
     try:
         pass43_45_evidence = json.loads(
-            (ROOT / "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json").read_text(encoding="utf-8")
+            (ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass43_pass44_pass45_security_compliance_sre.json").read_text(encoding="utf-8")
         )
     except Exception as exc:  # pragma: no cover - defensive evidence path
         pass43_45_evidence = {"status": "fail", "error": str(exc)}
@@ -849,7 +921,7 @@ def main() -> int:
         ),
     }
 
-    output_path = ROOT / "smoke_evidence_pass43_pass51_quality.json"
+    output_path = ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass43_pass51_quality.json"
     output_path.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence["status"] == "pass" else 1

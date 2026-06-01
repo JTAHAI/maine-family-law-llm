@@ -68,7 +68,7 @@ def _complete_gate_payload() -> dict:
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass37_pass38_drafting_filing_gate.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass37_pass38_drafting_filing_gate.json"
     workspace = DraftWorkspaceBuilder().build(
         template_id="motion",
         issue_type="motion_to_modify",

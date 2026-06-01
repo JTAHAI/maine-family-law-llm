@@ -1,0 +1,454 @@
+{
+  "counting_rule": "A pass may be marked complete only when its tracked evidence exists outside fixture/sample evidence and required audit artifacts pass. Repo scaffolding, dry runs, and docs/sample-evidence do not count.",
+  "default_status_fields": [
+    "status",
+    "production_ready",
+    "release_allowed",
+    "safe_to_package",
+    "safe_to_push"
+  ],
+  "passes": [
+    {
+      "pass": 19,
+      "required_artifacts": [
+        {
+          "glob": "official_authority_store/source_manifest.json",
+          "root": "data"
+        },
+        {
+          "glob": "official_authority_store/authority_build_audit.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 20,
+      "required_artifacts": [
+        {
+          "glob": "parsed_authority_store/statutes/*.jsonl",
+          "root": "data"
+        },
+        {
+          "glob": "parsed_authority_store/rules/*.jsonl",
+          "root": "data"
+        },
+        {
+          "glob": "parsed_authority_store/forms/*.jsonl",
+          "root": "data"
+        },
+        {
+          "glob": "parsed_authority_store/opinions/*.jsonl",
+          "root": "data"
+        },
+        {
+          "glob": "parsed_authority_store/parsed_authority_audit.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 21,
+      "required_artifacts": [
+        {
+          "glob": "official_authority_store/source_update_report.json",
+          "root": "data"
+        }
+      ]
+    },
+    {
+      "pass": 22,
+      "required_artifacts": [
+        {
+          "glob": "authority_layer/authority_graph.json",
+          "root": "data"
+        },
+        {
+          "glob": "authority_layer/citation_resolver_audit.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 23,
+      "required_artifacts": [
+        {
+          "glob": "embedding_store/bm25/**",
+          "root": "data"
+        },
+        {
+          "glob": "embedding_store/vector/**",
+          "root": "data"
+        },
+        {
+          "glob": "embedding_store/hybrid/**",
+          "root": "data"
+        },
+        {
+          "glob": "embedding_store/retrieval_index_audit.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 24,
+      "required_artifacts": [
+        {
+          "glob": "eval_store/retrieval_smoke_metrics.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 25,
+      "required_artifacts": [
+        {
+          "glob": "eval_store/retrieval_failure_triage.json",
+          "root": "data"
+        }
+      ]
+    },
+    {
+      "pass": 26,
+      "required_artifacts": [
+        {
+          "glob": "eval_store/gold_annotation_queue.jsonl",
+          "root": "data"
+        },
+        {
+          "glob": "eval_store/gold_annotation_queue_audit.json",
+          "root": "data",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 27,
+      "required_artifacts": [
+        {
+          "glob": "gold_eval_pack_manifest.json",
+          "root": "eval"
+        },
+        {
+          "glob": "gold_eval_pack_audit.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 28,
+      "required_artifacts": [
+        {
+          "glob": "release_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 29,
+      "required_artifacts": [
+        {
+          "glob": "verifier_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 30,
+      "required_artifacts": [
+        {
+          "glob": "claim_support_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 31,
+      "required_artifacts": [
+        {
+          "glob": "staleness_jurisdiction_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 32,
+      "required_artifacts": [
+        {
+          "glob": "law_court_intelligence_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 33,
+      "required_artifacts": [
+        {
+          "glob": "forms_intelligence_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 34,
+      "required_artifacts": [
+        {
+          "glob": "findings_engine_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 35,
+      "required_artifacts": [
+        {
+          "glob": "matter_ingestion_security_audit.json",
+          "root": "security",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 36,
+      "required_artifacts": [
+        {
+          "glob": "matter_work_product_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 37,
+      "required_artifacts": [
+        {
+          "glob": "drafting_workspace_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 38,
+      "required_artifacts": [
+        {
+          "glob": "filing_ready_gate_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 39,
+      "required_artifacts": [
+        {
+          "glob": "openapi.json",
+          "root": "repo"
+        },
+        {
+          "glob": "docs/api-contract-test-report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 40,
+      "required_artifacts": [
+        {
+          "glob": "docs/ui-completion-report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 41,
+      "required_artifacts": [
+        {
+          "glob": "docs/model_registry_admission_report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 42,
+      "required_artifacts": [
+        {
+          "glob": "docs/llm_injection_red_team_report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 43,
+      "required_artifacts": [
+        {
+          "glob": "docs/enterprise-security-test-report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 44,
+      "required_artifacts": [
+        {
+          "glob": "docs/governance-compliance-packet-report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 45,
+      "required_artifacts": [
+        {
+          "glob": "docs/sre-reliability-report.json",
+          "root": "repo",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 46,
+      "required_artifacts": [
+        {
+          "glob": "full_release_eval_metrics.json",
+          "root": "eval",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 47,
+      "required_artifacts": [
+        {
+          "glob": "legal_red_team_report.json",
+          "root": "security",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 48,
+      "required_artifacts": [
+        {
+          "glob": "attorney_sandbox_pilot_report.json",
+          "root": "pilot",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 49,
+      "required_artifacts": [
+        {
+          "glob": "limited_real_matter_pilot_report.json",
+          "root": "pilot",
+          "status_values": [
+            "pass"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 50,
+      "required_artifacts": [
+        {
+          "glob": "ga_release_candidate_signoff.json",
+          "root": "pilot",
+          "status_values": [
+            "pass",
+            "signed"
+          ]
+        }
+      ]
+    },
+    {
+      "pass": 51,
+      "required_artifacts": [
+        {
+          "glob": "ga_shipment_signoff.json",
+          "root": "pilot",
+          "status_values": [
+            "pass",
+            "signed"
+          ]
+        }
+      ]
+    }
+  ],
+  "purpose": "Machine-checkable evidence requirements for reducing the formal true-GA Pass 19-51 count.",
+  "schema_version": "1.0"
+}

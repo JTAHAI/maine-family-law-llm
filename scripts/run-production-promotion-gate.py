@@ -16,7 +16,7 @@ from legal.ops import ProductionPromotionGateAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the hard production-promotion gate for external legal evidence.")
     parser.add_argument("--data-root", default=None, help="External data root. Defaults to C:\\dev\\ME_FM_LLM_data policy path.")
-    parser.add_argument("--output", default=str(ROOT / "production_promotion_gate_report.json"))
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "production_promotion_gate_report.json"))
     parser.add_argument("--allow-fail-report", action="store_true", help="Write the report and exit 0 even when production promotion is locked.")
     args = parser.parse_args()
 

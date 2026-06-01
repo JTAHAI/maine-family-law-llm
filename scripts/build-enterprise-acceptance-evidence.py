@@ -13,7 +13,7 @@ from legal.ops import EnterpriseAcceptanceAuditor
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "enterprise_acceptance_evidence.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "enterprise_acceptance_evidence.json"
     auditor = EnterpriseAcceptanceAuditor(ROOT)
     report = auditor.write(output)
     print(json.dumps(report.as_dict(), indent=2, sort_keys=True))

@@ -129,10 +129,19 @@ class SourceUpdateEngine:
     ) -> str:
         source_id = str(record.get("source_id") or "__missing_source_id__")
         freshness = str(record.get("freshness_status") or "").lower()
-        if freshness in UNKNOWN_FRESHNESS:
+        retrieved_timestamp_fallback = self._allows_retrieved_timestamp_fallback(record, freshness)
+        if freshness in UNKNOWN_FRESHNESS and not retrieved_timestamp_fallback:
             blockers.append("freshness_unknown_blocks_current_law_claims")
             findings.append(SourceFreshnessFinding(source_id, "freshness_unknown", f"Freshness status is {freshness!r}."))
             return "unknown"
+        if freshness in UNKNOWN_FRESHNESS and retrieved_timestamp_fallback:
+            findings.append(
+                SourceFreshnessFinding(
+                    source_id,
+                    "freshness_retrieved_timestamp_fallback",
+                    "Court form snapshot lacks extracted version date; using official retrieved_at timestamp per form_version_or_retrieved_timestamp strategy.",
+                )
+            )
         retrieved_at = str(record.get("retrieved_at") or "")
         try:
             parsed = datetime.fromisoformat(retrieved_at.replace("Z", "+00:00"))
@@ -148,6 +157,30 @@ class SourceUpdateEngine:
             findings.append(SourceFreshnessFinding(source_id, "source_stale", f"Source snapshot is {age_days} days old; max age is {self.max_age_days}."))
             return "stale"
         return "fresh"
+
+
+    @staticmethod
+    def _allows_retrieved_timestamp_fallback(record: dict[str, Any], freshness: str) -> bool:
+        """Allow narrow freshness fallback for official Maine court form snapshots.
+
+        Some official court form PDFs do not expose a reliable revision date in
+        extracted text.  The derived target catalog explicitly marks those
+        targets with the ``form_version_or_retrieved_timestamp`` strategy, so a
+        valid ``retrieved_at`` timestamp is an acceptable freshness signal for
+        the source update gate.  Keep this exception narrow so unknown statutes,
+        opinions, rules, or unrelated source classes still fail closed.
+        """
+        if freshness not in UNKNOWN_FRESHNESS:
+            return False
+        if str(record.get("data_class") or "") != "official_public_authority":
+            return False
+        if str(record.get("source_class") or "") not in {"court_form_pdf", "court_form_text"}:
+            return False
+        metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
+        strategy = str(metadata.get("freshness_strategy") or "")
+        if strategy != "form_version_or_retrieved_timestamp":
+            return False
+        return bool(record.get("retrieved_at"))
 
     def _diff(self, previous: list[dict[str, Any]], current: list[dict[str, Any]]) -> dict[str, list[str]]:
         prev_by_id = {str(item.get("source_id")): item for item in previous if item.get("source_id")}

@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Write a Windows-first local enterprise build plan.")
     parser.add_argument("--repo-root", type=Path, default=Path(r"C:\dev\ME_FM_LLM"))
     parser.add_argument("--data-root", type=Path, default=Path(r"C:\dev\ME_FM_LLM_data"))
-    parser.add_argument("--output", type=Path, default=ROOT / "enterprise_local_build_plan.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "docs" / "sample-evidence" / "enterprise_local_build_plan.json")
     args = parser.parse_args()
     plan = EnterpriseResourcePlanBuilder(project_root=ROOT).build(
         repo_root=args.repo_root,

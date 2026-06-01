@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run reboot-safe local enterprise health checks.")
     parser.add_argument("--repo-root", default=str(ROOT), help="Source repository root. Defaults to this checkout.")
     parser.add_argument("--data-root", default=None, help="External data root, e.g. C:\\dev\\ME_FM_LLM_data.")
-    parser.add_argument("--output", default="reboot_recovery_healthcheck.json", help="Output JSON path.")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "reboot_recovery_healthcheck.json"), help="Output JSON path.")
     parser.add_argument("--no-create-dirs", action="store_true", help="Do not create external data-root directories.")
     parser.add_argument("--no-write-probe", action="store_true", help="Skip external data-root write probe.")
     args = parser.parse_args()

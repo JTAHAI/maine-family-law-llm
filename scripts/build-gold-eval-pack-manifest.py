@@ -17,12 +17,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build gold eval pack manifest from audited JSONL datasets.")
     parser.add_argument("--eval-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Exit non-zero unless the manifest shows production-ready attorney-reviewed gold data.",
+    )
     args = parser.parse_args()
     manifest = GoldEvalPackManifestBuilder(project_root=ROOT).build(
         eval_root=args.eval_root,
         output_path=args.output,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))
+    if args.require_ready and not manifest.get("production_ready"):
+        return 2
     return 0
 
 

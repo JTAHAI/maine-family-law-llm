@@ -13,7 +13,7 @@ from legal.ops import run_final_local_acceptance
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "final_local_acceptance_evidence.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "final_local_acceptance_evidence.json"
     evidence = run_final_local_acceptance(ROOT)
     output.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(evidence, indent=2, sort_keys=True))

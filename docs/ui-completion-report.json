@@ -1,0 +1,18 @@
+{
+  "drilldown_chain_required": [
+    "answer",
+    "claim",
+    "citation",
+    "source_text",
+    "verifier_result"
+  ],
+  "evidence_basis": "repo_ui_contract_marker_tests",
+  "generated_at": "2026-05-30T19:41:23.654819+00:00",
+  "missing_markers": {},
+  "missing_views": [],
+  "pass": 40,
+  "production_legal_ga": false,
+  "required_view_count": 14,
+  "schema": "maine_family_law_llm.pass40.ui_completion_report.v1",
+  "status": "pass"
+}

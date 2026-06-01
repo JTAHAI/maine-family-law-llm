@@ -16,7 +16,7 @@ from legal.release import AttributionKitBuilder
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate public attribution/license kit for GitHub staging.")
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--output", default="public_attribution_kit_report.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "public_attribution_kit_report.json"))
     args = parser.parse_args()
     report = AttributionKitBuilder(project_root=args.project_root).build(write=True)
     Path(args.output).write_text(json.dumps(report.as_dict(), indent=2, sort_keys=True), encoding="utf-8")

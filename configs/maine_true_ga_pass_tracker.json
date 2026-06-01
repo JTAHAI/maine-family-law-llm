@@ -1,0 +1,506 @@
+{
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots.",
+  "current_true_ga_completed_passes": [
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "passes": [
+    {
+      "completion_evidence": [
+        "official_authority_store/source_manifest.json",
+        "audit-authority-build pass",
+        "minimum official source-class counts pass",
+        "data root outside repository"
+      ],
+      "external_dependency": true,
+      "next": true,
+      "pass": 19,
+      "phase": "Phase 1",
+      "repo_prep_status": "harness_prepared",
+      "status": "open",
+      "title": "Live official-source ingestion execution"
+    },
+    {
+      "completion_evidence": [
+        "parsed_authority_store/statutes/*.jsonl",
+        "parsed_authority_store/rules/*.jsonl",
+        "parsed_authority_store/forms/*.jsonl",
+        "parsed_authority_store/opinions/*.jsonl",
+        "source-span/hash links"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 20,
+      "phase": "Phase 1",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Parsed authority store builders"
+    },
+    {
+      "completion_evidence": [
+        "source_update_report.json",
+        "fresh/stale/unknown/superseded statuses",
+        "unknown freshness blocks current-law claims"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 21,
+      "phase": "Phase 1",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Source freshness, diffing, and update engine"
+    },
+    {
+      "completion_evidence": [
+        "authority graph artifacts",
+        "fake citations resolve not_found",
+        "real citations resolve canonical source IDs"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 22,
+      "phase": "Phase 1",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Production citation resolver and authority graph"
+    },
+    {
+      "completion_evidence": [
+        "embedding_store/bm25",
+        "embedding_store/vector",
+        "embedding_store/hybrid",
+        "exact citation/form/case/statute lookups"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 23,
+      "phase": "Phase 2",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Build real retrieval indexes outside repo"
+    },
+    {
+      "completion_evidence": [
+        "retrieval smoke metrics",
+        "Recall@20 >= initial threshold",
+        "MRR/nDCG evidence"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 24,
+      "phase": "Phase 2",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Hybrid retrieval tuning and measured smoke eval"
+    },
+    {
+      "completion_evidence": [
+        "classified retrieval failure report",
+        "regression fixes",
+        "no silent bad retrieval"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 25,
+      "phase": "Phase 2",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Retrieval failure triage loop"
+    },
+    {
+      "completion_evidence": [
+        "gold_annotation_queue.jsonl",
+        "reviewer assignment",
+        "attorney review metadata"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 26,
+      "phase": "Phase 3",
+      "repo_prep_status": "partial_harness_prepared",
+      "status": "open",
+      "title": "Attorney annotation queue operations"
+    },
+    {
+      "completion_evidence": [
+        "attorney-reviewed gold JSONL minimums",
+        "audit-gold-eval-pack pass",
+        "seed rows excluded"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 27,
+      "phase": "Phase 3",
+      "repo_prep_status": "gate_prepared",
+      "status": "open",
+      "title": "Minimum viable gold eval pack"
+    },
+    {
+      "completion_evidence": [
+        "release metrics JSON",
+        "sample sizes",
+        "reviewer status",
+        "pass/fail basis"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 28,
+      "phase": "Phase 3",
+      "repo_prep_status": "gate_prepared",
+      "status": "open",
+      "title": "Eval runner and release metrics evidence"
+    },
+    {
+      "completion_evidence": [
+        "citation existence >= 99%",
+        "quote-span verification >= 97%",
+        "offset/span recording"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 29,
+      "phase": "Phase 4",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Citation and quote verifier production upgrade"
+    },
+    {
+      "completion_evidence": [
+        "claim extraction",
+        "claim-to-source statuses",
+        "unsupported assertion blocker"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 30,
+      "phase": "Phase 4",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Claim-support verifier"
+    },
+    {
+      "completion_evidence": [
+        "form freshness >= 99%",
+        "jurisdiction warnings",
+        "negative-treatment unknown warning"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 31,
+      "phase": "Phase 4",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Stale law, jurisdiction, and negative-treatment checks"
+    },
+    {
+      "completion_evidence": [
+        "holding/disposition/standard-of-review extraction",
+        "Rule 52/appellate red flags",
+        "structured case briefs"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 32,
+      "phase": "Phase 5",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Law Court opinion intelligence"
+    },
+    {
+      "completion_evidence": [
+        "form catalog",
+        "version tracker",
+        "required-field extraction",
+        "dependency graph"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 33,
+      "phase": "Phase 5",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Maine forms intelligence"
+    },
+    {
+      "completion_evidence": [
+        "proposed findings checklist",
+        "best-interest coverage",
+        "missing findings blocker"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 34,
+      "phase": "Phase 5",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Rule 52 / best-interest / findings engine"
+    },
+    {
+      "completion_evidence": [
+        "matter isolation",
+        "OCR/text extraction",
+        "PII/confidentiality flags",
+        "local encryption"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 35,
+      "phase": "Phase 6",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Secure matter ingestion"
+    },
+    {
+      "completion_evidence": [
+        "fact extraction",
+        "timeline",
+        "evidence map",
+        "missing-record checklist"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 36,
+      "phase": "Phase 6",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Evidence map, timeline, and missing-record checklist"
+    },
+    {
+      "completion_evidence": [
+        "review_required drafts",
+        "source-card sidebar",
+        "claim support sidebar",
+        "missing-fact sidebar"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 37,
+      "phase": "Phase 7",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Review-required drafting workspace"
+    },
+    {
+      "completion_evidence": [
+        "false-pass rate = 0",
+        "immutable gate report",
+        "override logging"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 38,
+      "phase": "Phase 7",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Filing-ready gate hardening"
+    },
+    {
+      "completion_evidence": [
+        "openapi.json",
+        "docs/api-contract-test-report.json",
+        "contract tests",
+        "auth/RBAC headers",
+        "audit event headers"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 39,
+      "phase": "Phase 8",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Production API completion"
+    },
+    {
+      "completion_evidence": [
+        "docs/ui-completion-report.json",
+        "required UI views",
+        "source/review/blocker/drilldown markers"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 40,
+      "phase": "Phase 8",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Production web UI completion"
+    },
+    {
+      "completion_evidence": [
+        "docs/model_registry_admission_report.json",
+        "model registry/admission audit pass",
+        "generator cannot self-certify legal correctness",
+        "replacement ledger verified"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 41,
+      "phase": "Phase 9",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Model registry and admission policy"
+    },
+    {
+      "completion_evidence": [
+        "docs/llm_injection_red_team_report.json",
+        "prompt/document/tool-injection red-team cases pass",
+        "retrieved documents treated as untrusted content",
+        "system prompt leakage blocked"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 42,
+      "phase": "Phase 9",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Prompt, document, and tool-injection defense"
+    },
+    {
+      "completion_evidence": [
+        "docs/enterprise-security-test-report.json",
+        "auth/RBAC enforced",
+        "tenant isolation",
+        "hash-chained audit and export logs",
+        "key rotation ledger",
+        "admin provenance explanation"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 43,
+      "phase": "Phase 10",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Security implementation"
+    },
+    {
+      "completion_evidence": [
+        "docs/governance-compliance-packet-report.json",
+        "NIST AI RMF mapping",
+        "NIST AI 600-1 mapping",
+        "OWASP LLM mapping",
+        "PIA/vendor/incident/SOP packet inventory"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 44,
+      "phase": "Phase 10",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Governance and compliance evidence packet"
+    },
+    {
+      "completion_evidence": [
+        "docs/sre-reliability-report.json",
+        "SLO policy",
+        "offline SLO measurements",
+        "backup/restore drill",
+        "degraded-mode coverage"
+      ],
+      "external_dependency": false,
+      "next": false,
+      "pass": 45,
+      "phase": "Phase 10",
+      "repo_prep_status": "complete",
+      "status": "complete",
+      "title": "Reliability, scale, and SRE"
+    },
+    {
+      "completion_evidence": [
+        "GA metrics from real gold files",
+        "minimum sample sizes",
+        "attorney review"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 46,
+      "phase": "Phase 11",
+      "repo_prep_status": "gate_prepared",
+      "status": "open",
+      "title": "Full release eval run"
+    },
+    {
+      "completion_evidence": [
+        "false-premise suite",
+        "fake citation suite",
+        "stale-law suite",
+        "filing-ready bypass tests"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 47,
+      "phase": "Phase 11",
+      "repo_prep_status": "gate_prepared",
+      "status": "open",
+      "title": "Legal red-team and adversarial testing"
+    },
+    {
+      "completion_evidence": [
+        "attorney onboarding",
+        "feedback workflow",
+        "pilot dashboard",
+        "no critical issues"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 48,
+      "phase": "Phase 12",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Attorney-only sandbox pilot"
+    },
+    {
+      "completion_evidence": [
+        "privacy consent",
+        "tenant isolation",
+        "human review",
+        "daily pilot review"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 49,
+      "phase": "Phase 12",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "Limited real-matter pilot"
+    },
+    {
+      "completion_evidence": [
+        "versioned manifests",
+        "metrics",
+        "security/pilot evidence",
+        "rollback package",
+        "signoffs"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 50,
+      "phase": "Phase 12",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "GA release candidate"
+    },
+    {
+      "completion_evidence": [
+        "clean source ZIP",
+        "data/index/eval manifests",
+        "release/security/pilot evidence",
+        "guides/runbooks",
+        "production deployment"
+      ],
+      "external_dependency": true,
+      "next": false,
+      "pass": 51,
+      "phase": "Phase 12",
+      "repo_prep_status": "scaffolded",
+      "status": "open",
+      "title": "GA shipped"
+    }
+  ],
+  "roadmap_end_pass": 51,
+  "roadmap_start_pass": 19,
+  "schema_version": "1.0"
+}

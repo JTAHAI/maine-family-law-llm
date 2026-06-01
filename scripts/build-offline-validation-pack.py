@@ -15,7 +15,7 @@ from legal.resources import OfflineValidationPackBuilder
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build external offline validation fixture pack.")
     parser.add_argument("--data-root", required=True)
-    parser.add_argument("--output", default="offline_validation_pack_report.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "offline_validation_pack_report.json"))
     args = parser.parse_args()
     report = OfflineValidationPackBuilder(data_root=args.data_root).write(args.output)
     print(report.as_dict())

@@ -17,8 +17,8 @@ from legal.release import AttributionKitBuilder, PublicRepoReadinessAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run public/GitHub supply-chain and attribution hardening checks.")
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--output", default="smoke_evidence_public_supply_chain_hardening.json")
-    parser.add_argument("--sbom-output", default="source_sbom.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "smoke_evidence_public_supply_chain_hardening.json"))
+    parser.add_argument("--sbom-output", default=str(ROOT / "docs" / "sample-evidence" / "source_sbom.json"))
     args = parser.parse_args()
     project_root = Path(args.project_root).resolve()
     attribution = AttributionKitBuilder(project_root=project_root).build(write=True)

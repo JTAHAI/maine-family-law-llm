@@ -144,3 +144,163 @@ def test_pass17_ingest_manifest_includes_snapshot_path_and_parser_audit(tmp_path
     assert manifest[0]["snapshot_path"] == result.snapshot_path
     assert manifest[0]["parser_audit"]["status"] == "parsed"
     assert Path(manifest[0]["snapshot_path"]).exists()
+
+
+def test_pass17_authority_build_blocks_non_object_manifest_rows(tmp_path):
+    official_store = tmp_path / "official_authority_store"
+    official_store.mkdir(parents=True)
+    (official_store / "source_manifest.json").write_text(json.dumps(["not-a-record"]), encoding="utf-8")
+    policy = {
+        "version": "test-non-object",
+        "external_data_root_required": True,
+        "official_store_name": "official_authority_store",
+        "manifest_filename": "source_manifest.json",
+        "minimum_ingested_targets": 0,
+        "required_source_class_minimums": {},
+        "acceptable_parser_statuses": ["parsed", "snapshot_only"],
+        "parsed_status_required_for_classes": [],
+        "snapshot_only_allowed_for_classes": [],
+        "required_manifest_fields": [],
+        "minimum_snapshot_bytes": 1,
+        "require_snapshot_files_exist": False,
+        "require_manifest_hash_matches_snapshot": False,
+    }
+
+    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+
+    assert report.production_ready is False
+    assert "manifest_record_not_object" in report.blockers
+
+
+def test_pass17_authority_build_blocks_duplicate_source_ids(tmp_path):
+    official_store = tmp_path / "official_authority_store"
+    manifest = [
+        _record(official_store, source_id="duplicate", source_class="statute_title_index"),
+        _record(official_store, source_id="duplicate", source_class="statute_title_index"),
+    ]
+    (official_store / "source_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    policy = {
+        "version": "test-duplicate",
+        "external_data_root_required": True,
+        "official_store_name": "official_authority_store",
+        "manifest_filename": "source_manifest.json",
+        "minimum_ingested_targets": 2,
+        "required_source_class_minimums": {"statute_title_index": 2},
+        "acceptable_parser_statuses": ["parsed"],
+        "parsed_status_required_for_classes": ["statute_title_index"],
+        "snapshot_only_allowed_for_classes": [],
+        "required_manifest_fields": [
+            "source_id",
+            "source_class",
+            "jurisdiction",
+            "retrieved_at",
+            "hash",
+            "parser_status",
+            "freshness_status",
+            "data_class",
+            "source_url_or_path",
+            "snapshot_path",
+            "parser_audit",
+        ],
+        "minimum_snapshot_bytes": 1,
+        "require_snapshot_files_exist": True,
+        "require_manifest_hash_matches_snapshot": True,
+    }
+
+    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+
+    assert report.production_ready is False
+    assert "duplicate_source_id" in report.blockers
+
+
+def test_pass17_authority_build_blocks_snapshot_path_outside_official_store(tmp_path):
+    official_store = tmp_path / "official_authority_store"
+    outside = tmp_path / "elsewhere" / "snapshot.html"
+    outside.parent.mkdir(parents=True)
+    body = b"official bytes outside store"
+    outside.write_bytes(body)
+    manifest = [
+        {
+            **_record(official_store, source_id="title19a", source_class="statute_title_index"),
+            "snapshot_path": str(outside),
+            "hash": hashlib.sha256(body).hexdigest(),
+        }
+    ]
+    (official_store / "source_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    policy = {
+        "version": "test-snapshot-containment",
+        "external_data_root_required": True,
+        "official_store_name": "official_authority_store",
+        "manifest_filename": "source_manifest.json",
+        "minimum_ingested_targets": 1,
+        "required_source_class_minimums": {"statute_title_index": 1},
+        "acceptable_parser_statuses": ["parsed"],
+        "parsed_status_required_for_classes": ["statute_title_index"],
+        "snapshot_only_allowed_for_classes": [],
+        "required_manifest_fields": [
+            "source_id",
+            "source_class",
+            "jurisdiction",
+            "retrieved_at",
+            "hash",
+            "parser_status",
+            "freshness_status",
+            "data_class",
+            "source_url_or_path",
+            "snapshot_path",
+            "parser_audit",
+        ],
+        "minimum_snapshot_bytes": 1,
+        "require_snapshot_files_exist": True,
+        "require_manifest_hash_matches_snapshot": True,
+    }
+
+    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+
+    assert report.production_ready is False
+    assert "snapshot_path_outside_official_store" in report.blockers
+
+
+def test_pass17_authority_build_blocks_invalid_timestamp_and_parser_audit_mismatch(tmp_path):
+    official_store = tmp_path / "official_authority_store"
+    manifest = [
+        {
+            **_record(official_store, source_id="title19a", source_class="statute_title_index"),
+            "retrieved_at": "not-a-timestamp",
+            "parser_audit": {"status": "snapshot_only", "parser_version": "test_v1"},
+        }
+    ]
+    (official_store / "source_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    policy = {
+        "version": "test-timestamp-parser-audit",
+        "external_data_root_required": True,
+        "official_store_name": "official_authority_store",
+        "manifest_filename": "source_manifest.json",
+        "minimum_ingested_targets": 1,
+        "required_source_class_minimums": {"statute_title_index": 1},
+        "acceptable_parser_statuses": ["parsed"],
+        "parsed_status_required_for_classes": ["statute_title_index"],
+        "snapshot_only_allowed_for_classes": [],
+        "required_manifest_fields": [
+            "source_id",
+            "source_class",
+            "jurisdiction",
+            "retrieved_at",
+            "hash",
+            "parser_status",
+            "freshness_status",
+            "data_class",
+            "source_url_or_path",
+            "snapshot_path",
+            "parser_audit",
+        ],
+        "minimum_snapshot_bytes": 1,
+        "require_snapshot_files_exist": True,
+        "require_manifest_hash_matches_snapshot": True,
+    }
+
+    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+
+    assert report.production_ready is False
+    assert "retrieved_timestamp_invalid" in report.blockers
+    assert "parser_audit_status_mismatch" in report.blockers

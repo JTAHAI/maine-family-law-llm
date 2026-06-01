@@ -1,7 +1,7 @@
 param(
   [string]$ProjectRoot = "C:\dev\ME_FM_LLM",
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "full_ga_workbench_report.json",
+  [string]$Output = "docs/sample-evidence/full_ga_workbench_report.json",
   [switch]$AllowFailReport
 )
 

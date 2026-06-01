@@ -13,7 +13,7 @@ from legal.ops import ReleaseLockfileBuilder
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "source_release_lock.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "source_release_lock.json"
     report = ReleaseLockfileBuilder(ROOT).write(output)
     print(json.dumps(report.as_dict(), indent=2, sort_keys=True))
     return 0 if report.status == "pass" else 1

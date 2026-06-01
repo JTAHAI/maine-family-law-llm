@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from legal.production.ga_pass_tracker import GAPassTracker
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Report the formal true-GA Pass 19-51 count.")
+    parser.add_argument("--output", type=Path, default=None, help="Optional JSON output path.")
+    parser.add_argument("--summary", action="store_true", help="Print a compact text summary instead of JSON.")
+    args = parser.parse_args()
+    report = GAPassTracker(project_root=ROOT).report()
+    payload = report.as_dict()
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    if args.summary:
+        print(
+            f"true_ga_remaining={payload['true_ga_remaining']} "
+            f"true_ga_completed={payload['true_ga_completed']} "
+            f"next_pass={payload['next_true_ga_pass']} "
+            f"next_title={payload['next_true_ga_title']}"
+        )
+    else:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if report.status == "pass" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

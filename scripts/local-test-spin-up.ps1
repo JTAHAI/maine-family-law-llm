@@ -2,7 +2,9 @@ param(
   [string]$RepoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path,
   [int]$Port = 8000,
   [switch]$SkipTests,
-  [string]$PythonExe = ""
+  [string]$PythonExe = "",
+  [ValidateSet("LocalWorkbench", "Enterprise")]
+  [string]$ApiMode = "LocalWorkbench"
 )
 
 Set-StrictMode -Version Latest
@@ -11,9 +13,10 @@ $ErrorActionPreference = "Stop"
 $repo = [System.IO.Path]::GetFullPath($RepoRoot)
 Set-Location -LiteralPath $repo
 $env:PYTHONDONTWRITEBYTECODE = "1"
-$env:PYTHONPATH = "$repo\src;$repo"
+$sep = [System.IO.Path]::PathSeparator
+$env:PYTHONPATH = "$repo\src$sep$repo"
 
-python .\scripts\doctor-local-repo.py --repo-root $repo --json --allow-venv
+python .\scripts\doctor-local-repo.py --repo-root $repo --json
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not $SkipTests) {
   python -m pytest -q
@@ -35,10 +38,12 @@ try {
 }
 
 $python = if ($PythonExe) { $PythonExe } else { (Get-Command python).Source }
-$argsList = @("-m", "uvicorn", "maine_family_law_llm.api:app", "--host", "127.0.0.1", "--port", [string]$Port)
+$appTarget = if ($ApiMode -eq "Enterprise") { "app.api.main:app" } else { "maine_family_law_llm.api:app" }
+$argsList = @("-m", "uvicorn", $appTarget, "--host", "127.0.0.1", "--port", [string]$Port)
 $proc = Start-Process -FilePath $python -ArgumentList $argsList -WorkingDirectory $repo -WindowStyle Hidden -PassThru
 $pidPath = Join-Path -Path $repo -ChildPath ".local_server.pid"
 [System.IO.File]::WriteAllText($pidPath, [string]$proc.Id, [System.Text.UTF8Encoding]::new($false))
 Write-Output "started_pid=$($proc.Id)"
+Write-Output "api_mode=$ApiMode"
 Write-Output "docs_url=http://127.0.0.1:$Port/docs"
 Write-Output "pid_file=$pidPath"

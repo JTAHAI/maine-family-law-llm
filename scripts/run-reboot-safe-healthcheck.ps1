@@ -1,7 +1,7 @@
 param(
   [string]$RepoRoot = "C:\dev\ME_FM_LLM",
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "reboot_recovery_healthcheck.json"
+  [string]$Output = "docs/sample-evidence/reboot_recovery_healthcheck.json"
 )
 
 Set-StrictMode -Version Latest

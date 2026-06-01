@@ -15,6 +15,7 @@ def test_answering_smoke_script_is_non_mutating_and_green() -> None:
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
     assert completed.returncode == 0

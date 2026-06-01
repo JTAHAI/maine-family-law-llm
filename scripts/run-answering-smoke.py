@@ -18,6 +18,7 @@ def run_command(args: list[str]) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         check=False,
+        timeout=45,
     )
 
 

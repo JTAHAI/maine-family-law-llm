@@ -32,14 +32,14 @@ def build_evidence(output_path: Path) -> dict:
         signoffs=signoffs,
         blockers=[],
         audit_enterprise_readiness_status="pass",
-        output_path=ROOT / "smoke_evidence_pass50_release_candidate.json",
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass50_release_candidate.json",
     )
     ga_shipment = GAShipmentAuditor().audit(
         version=version,
         release_candidate_report=release_candidate,
         artifacts=ga_artifacts,
         controls=build_ga_control_fixture(),
-        output_path=ROOT / "smoke_evidence_pass51_ga_shipment.json",
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass51_ga_shipment.json",
     )
 
     blocked_candidate = ReleaseCandidateAuditor(project_root=ROOT).audit(
@@ -90,7 +90,7 @@ def build_evidence(output_path: Path) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate Pass 50-51 GA release evidence.")
-    parser.add_argument("output", nargs="?", default="smoke_evidence_pass50_pass51_ga_release.json")
+    parser.add_argument("output", nargs="?", default=str(ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass50_pass51_ga_release.json"))
     args = parser.parse_args()
     evidence = build_evidence(ROOT / args.output)
     print(json.dumps(evidence, indent=2, sort_keys=True))

@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-05-31T01:38:48.286464+00:00",
+  "pass": 45,
+  "reliability_sre": {
+    "blockers": [],
+    "degraded_modes": {
+      "model_provider_down": "research_only_mode_no_generation_exports",
+      "source_store_down": "block_current_law_claims_and_exports",
+      "vector_index_down": "fall_back_to_bm25_and_exact_citation_lookup_review_required"
+    },
+    "implemented_operational_controls": [
+      "backup_restore_drill",
+      "chaos_restore_test_plan",
+      "cost_controls",
+      "degraded_mode_model_provider_down",
+      "degraded_mode_source_store_down",
+      "degraded_mode_vector_index_down",
+      "error_budget_policy",
+      "load_test_plan",
+      "observability_dashboards",
+      "queue_monitoring"
+    ],
+    "missing_operational_controls": [],
+    "policy_version": "1.0-pass45-reliability-sre",
+    "readiness": "source_implemented_sre_controls_pending_real_load_and_restore_drills",
+    "restore_drill": {
+      "backup_id": "backup-offline-demo-001",
+      "checksum_after": "abc123",
+      "checksum_before": "abc123",
+      "completed_at": "2026-05-31T01:38:48.286406+00:00",
+      "restore_target": "/tmp/maine-family-law-llm-restore-drill",
+      "status": "pass"
+    },
+    "slo_measurements": [
+      {
+        "name": "api_p95_latency_ms",
+        "operator": "<=",
+        "sample_size": 1,
+        "status": "pass",
+        "target": 1500.0,
+        "value": 42
+      },
+      {
+        "name": "retrieval_p95_latency_ms",
+        "operator": "<=",
+        "sample_size": 1,
+        "status": "pass",
+        "target": 2500.0,
+        "value": 65
+      },
+      {
+        "name": "draft_p95_latency_ms",
+        "operator": "<=",
+        "sample_size": 1,
+        "status": "pass",
+        "target": 10000.0,
+        "value": 80
+      },
+      {
+        "name": "uptime_monthly",
+        "operator": ">=",
+        "sample_size": 1,
+        "status": "pass",
+        "target": 0.995,
+        "value": 0.999
+      }
+    ],
+    "status": "pass"
+  },
+  "status": "pass",
+  "title": "Reliability, scale, and SRE"
+}

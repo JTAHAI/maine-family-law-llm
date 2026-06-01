@@ -15,12 +15,12 @@ from legal.security import LegalRedTeamRunner
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass46_pass47_release_eval_red_team.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass46_pass47_release_eval_red_team.json"
     release_eval = FullReleaseEvalRunner(project_root=ROOT, eval_root=ROOT / "eval_data").run(
-        output_path=ROOT / "smoke_evidence_pass46_full_release_eval.json"
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass46_full_release_eval.json"
     )
     red_team = LegalRedTeamRunner(project_root=ROOT).run(
-        output_path=ROOT / "smoke_evidence_pass47_legal_red_team.json"
+        output_path=ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass47_legal_red_team.json"
     )
     evidence = {
         "stage": "enterprise_pass_46_47_full_release_eval_and_legal_red_team",

@@ -16,7 +16,7 @@ from legal.ops import NetworkedSourceGateAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the hard gate for networked official-source evidence.")
     parser.add_argument("--data-root", default=None, help="External data root. Defaults to C:\\dev\\ME_FM_LLM_data policy path.")
-    parser.add_argument("--output", default=str(ROOT / "networked_source_gate_report.json"))
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "networked_source_gate_report.json"))
     parser.add_argument("--allow-fail-report", action="store_true", help="Write the report and exit 0 even when production evidence is not ready.")
     args = parser.parse_args()
 

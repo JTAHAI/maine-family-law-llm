@@ -160,3 +160,32 @@ def test_pass21_source_update_report_measures_freshness_and_diffs(tmp_path):
     assert current[-1]["source_id"] in report.changed_since_last_build["added"]
     assert current[0]["source_id"] in report.changed_since_last_build["hash_changed"]
     assert (data_root / "source_update_report.json").exists()
+
+
+def test_pass21_source_update_report_allows_court_form_retrieved_timestamp_fallback(tmp_path):
+    data_root = tmp_path / "external_data"
+    official_store = data_root / "official_authority_store"
+    official_store.mkdir(parents=True)
+    now = datetime.now(timezone.utc).isoformat()
+    manifest = [
+        {
+            "source_id": "court-form-pdf-no-version",
+            "source_class": "court_form_pdf",
+            "jurisdiction": "maine",
+            "retrieved_at": now,
+            "hash": "hash-form",
+            "parser_status": "parsed",
+            "freshness_status": "unknown",
+            "data_class": "official_public_authority",
+            "source_url_or_path": "https://www.courts.maine.gov/forms/fm-088.pdf",
+            "metadata": {"freshness_strategy": "form_version_or_retrieved_timestamp"},
+        }
+    ]
+    (official_store / "source_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    report = SourceUpdateEngine(data_root=data_root, max_age_days=999999).run(write_report=True)
+
+    assert report.status == "pass"
+    assert report.freshness_counts["fresh"] == 1
+    assert report.freshness_counts["unknown"] == 0
+    assert any(finding.code == "freshness_retrieved_timestamp_fallback" for finding in report.findings)

@@ -251,21 +251,21 @@ OFFICIAL_SOURCE_TARGETS: tuple[SourceTarget, ...] = (
         target_id='me-courts-records-access-policy',
         source_class='court_policy_index',
         jurisdiction='maine',
-        url='https://www.courts.maine.gov/maine-courts/records.html',
+        url='https://www.courts.maine.gov/help/records.html',
         parser_name='maine_rules_index',
         priority=2,
         freshness_strategy='page_updated_or_retrieved_timestamp',
-        notes='Maine Judicial Branch public record access policy source for privacy/sealed-record checks.',
+        notes='Maine Judicial Branch court-records help page for public-access, privacy, and sealed-record checks.',
     ),
     SourceTarget(
-        target_id='me-lawcourt-opinions-2026',
+        target_id='me-lawcourt-opinions-2019',
         source_class='law_court_opinion_index',
         jurisdiction='maine',
-        url='https://www.courts.maine.gov/courts/sjc/lawcourt/2026/index.html',
+        url='https://www.courts.maine.gov/courts/sjc/lawcourt/2019/index.html',
         parser_name='maine_law_court_opinion_index',
-        priority=1,
+        priority=2,
         freshness_strategy='retrieved_timestamp_and_opinion_links',
-        notes='Maine Supreme Judicial Court / Law Court published opinions index for 2026.',
+        notes='Maine Supreme Judicial Court / Law Court published opinions index for 2019; included as a stable seventh opinion-year baseline when no current-year index is published yet.',
     ),
     SourceTarget(
         target_id='me-lawcourt-opinions-2025',
@@ -361,4 +361,25 @@ def load_official_source_targets() -> list[SourceTarget]:
     problems = [problem for target in targets for problem in target.validate()]
     if problems:
         raise ValueError("invalid official source catalog: " + "; ".join(problems))
+    return targets
+
+
+def _load_rows_from_source_target_catalog(path: str | Path) -> list[dict[str, Any]]:
+    loaded = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(loaded, list):
+        rows = loaded
+    elif isinstance(loaded, dict):
+        rows = loaded.get("targets", [])
+    else:
+        raise ValueError("source target catalog must be a JSON array or an object with a targets array")
+    if not isinstance(rows, list):
+        raise ValueError("source target catalog targets must be a list")
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def load_source_targets_from_file(path: str | Path) -> list[SourceTarget]:
+    targets = [_target_from_config(row) for row in _load_rows_from_source_target_catalog(path)]
+    problems = [problem for target in targets for problem in target.validate()]
+    if problems:
+        raise ValueError("invalid source target catalog: " + "; ".join(problems))
     return targets

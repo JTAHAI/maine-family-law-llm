@@ -1,7 +1,7 @@
 param(
   [string]$RepoRoot = "C:\dev\ME_FM_LLM",
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "local_test_readiness_report.json",
+  [string]$Output = "docs/sample-evidence/local_test_readiness_report.json",
   [switch]$SkipPytest,
   [switch]$IncludeQualityChecks,
   [int]$TimeoutSeconds = 180

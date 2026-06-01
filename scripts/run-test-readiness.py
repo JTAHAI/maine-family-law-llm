@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run local enterprise test-readiness certification.")
     parser.add_argument("--repo-root", default=str(ROOT))
     parser.add_argument("--data-root", default=None)
-    parser.add_argument("--output", default="local_test_readiness_report.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "local_test_readiness_report.json"))
     parser.add_argument("--skip-pytest", action="store_true")
     parser.add_argument("--include-quality-checks", action="store_true")
     parser.add_argument("--timeout-seconds", type=int, default=180)

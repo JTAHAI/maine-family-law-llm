@@ -51,3 +51,35 @@ def parse_law_court_opinion_index(
         metadata={"text_length": len(visible_text)},
     )
     return opinions, event
+
+
+_CITATION_RE = re.compile(r"\b(20\d{2}\s+ME\s+\d+)\b")
+
+
+def parse_law_court_opinion_text(
+    text: str, *, source_id: str, url: str
+) -> tuple[OpinionReference, ParserAuditEvent]:
+    visible_text = normalize_whitespace(text)
+    first_line = visible_text.split(".")[0][:220] if visible_text else url.rsplit("/", 1)[-1]
+    citation_match = _CITATION_RE.search(visible_text)
+    docket_match = _DOCKET_RE.search(visible_text)
+    date_match = _DATE_RE.search(visible_text)
+    opinion = OpinionReference(
+        opinion_id=_opinion_id_from_href(url),
+        title=first_line or url.rsplit("/", 1)[-1],
+        href=url,
+        decision_date=date_match.group(1) if date_match else None,
+        docket_number=docket_match.group(1) if docket_match else None,
+        citation=citation_match.group(1) if citation_match else None,
+        source_id=source_id,
+    )
+    event = ParserAuditEvent(
+        source_id=source_id,
+        parser_name="maine_law_court_opinion_pdf",
+        parser_version=PARSER_VERSION,
+        status="parsed" if visible_text else "partial",
+        message="parsed Maine Law Court opinion text extracted from official snapshot",
+        extracted_count=1 if visible_text else 0,
+        metadata={"text_length": len(visible_text), "citation": opinion.citation},
+    )
+    return opinion, event

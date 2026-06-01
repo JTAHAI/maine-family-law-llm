@@ -202,7 +202,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run local source-only smoke checks.")
     parser.add_argument("--repo-root", default=str(Path(__file__).resolve().parents[1]))
     parser.add_argument("--data-root", default=os.environ.get("MAINE_FAMILY_LAW_DATA_ROOT", "C:/dev/ME_FM_LLM_data"))
-    parser.add_argument("--output", default="local_smoke_report.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "local_smoke_report.json"))
     parser.add_argument("--run-pytest", action="store_true")
     args = parser.parse_args()
 

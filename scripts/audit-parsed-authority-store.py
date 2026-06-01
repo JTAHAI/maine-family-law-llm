@@ -16,8 +16,16 @@ from legal.authority_store import ParsedAuthorityStoreAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit parsed authority JSONL store.")
     parser.add_argument("--data-root", type=Path, required=True, help="External data root.")
+    parser.add_argument(
+        "--require-direct-authority",
+        action="store_true",
+        help="Require direct statute sections, forms, and Law Court opinions, not just first-wave indexes.",
+    )
     args = parser.parse_args()
-    report = ParsedAuthorityStoreAuditor(data_root=args.data_root).run()
+    report = ParsedAuthorityStoreAuditor(
+        data_root=args.data_root,
+        require_direct_authority=args.require_direct_authority,
+    ).run()
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1
 

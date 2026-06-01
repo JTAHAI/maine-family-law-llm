@@ -15,7 +15,7 @@ from legal.ops import ReleaseProvenanceBuilder
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build source release provenance inventory.")
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--output", default="release_provenance.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "release_provenance.json"))
     args = parser.parse_args()
     report = ReleaseProvenanceBuilder(project_root=args.project_root).write(args.output)
     print(report.as_dict())

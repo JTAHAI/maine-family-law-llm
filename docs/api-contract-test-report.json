@@ -1,0 +1,57 @@
+{
+  "evidence_basis": "repo_contract_tests_and_openapi_schema",
+  "generated_at": "2026-05-30T19:41:23.654819+00:00",
+  "inventory": {
+    "extra": [
+      {
+        "method": "POST",
+        "path": "/api/intake/report"
+      }
+    ],
+    "missing": [],
+    "registered_count": 16,
+    "required_count": 15,
+    "status": "pass"
+  },
+  "openapi": {
+    "documented_count": 15,
+    "missing": [],
+    "protected_paths": [
+      "/api/intake/matter",
+      "/api/intake/document",
+      "/api/query",
+      "/api/research",
+      "/api/draft",
+      "/api/review",
+      "/api/citations/verify",
+      "/api/quotes/verify",
+      "/api/evidence/map",
+      "/api/timeline/build",
+      "/api/filing-ready/check",
+      "/api/sources/{source_id}",
+      "/api/matters/{matter_id}/evidence-packet"
+    ],
+    "public_paths": [
+      "/api/health",
+      "/api/version"
+    ],
+    "required_count": 15,
+    "status": "pass",
+    "undocumented": []
+  },
+  "pass": 39,
+  "policy": {
+    "audit_events_required": true,
+    "auth_rbac_enforced": true,
+    "blocked_export_explanations_required": true,
+    "contract_tests_required": true,
+    "draft_review_status_required": true,
+    "endpoint_count": 15,
+    "protected_endpoint_count": 13,
+    "public_endpoint_count": 2,
+    "source_cards_required_for_answers": true
+  },
+  "production_legal_ga": false,
+  "schema": "maine_family_law_llm.pass39.api_contract_report.v1",
+  "status": "pass"
+}

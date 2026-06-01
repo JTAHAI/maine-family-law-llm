@@ -66,3 +66,17 @@ def test_rules_text_parser_extracts_pdf_rule_numbers_and_rule_set():
     assert audit.metadata["rule_set"] == "Maine Rules of Appellate Procedure"
     assert [rule.rule_number for rule in rules[:2]] == ["1", "8"]
     assert all(rule.source_location.url_or_path.endswith(f"#rule-{rule.rule_number}") for rule in rules)
+
+
+def test_form_text_parser_uses_retrieved_timestamp_fallback_when_version_missing():
+    form, audit = parse_form_text(
+        "FM-088 Motion to Modify Parental Rights and Responsibilities",
+        source_id="form-fm-088",
+        url="https://www.courts.maine.gov/forms/pdf/fm-088.pdf",
+    )
+
+    assert audit.status == "parsed"
+    assert form.form_id == "FM-088"
+    assert form.version_date is None
+    assert form.retrieved_freshness_status == "form_pdf_retrieved_timestamp_known"
+    assert form.stale_form_risk == "version_date_missing_uses_retrieved_timestamp"

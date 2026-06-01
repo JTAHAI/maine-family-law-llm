@@ -108,7 +108,7 @@ def build_evidence() -> dict:
 
 
 def main() -> int:
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass41_pass42_model_governance_injection_defense.json"
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass41_pass42_model_governance_injection_defense.json"
     evidence = build_evidence()
     out.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps(evidence, indent=2, sort_keys=True))

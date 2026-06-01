@@ -18,7 +18,7 @@ from legal.matter.models import Matter
 
 
 def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass35_pass36_secure_matter_evidence.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass35_pass36_secure_matter_evidence.json"
     data_root = Path("/tmp/maine-family-law-llm-pass35-pass36-evidence-script").resolve()
     if data_root.exists():
         shutil.rmtree(data_root)

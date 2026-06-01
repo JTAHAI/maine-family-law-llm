@@ -1,7 +1,7 @@
 param(
   [string]$RepoRoot = "C:\dev\ME_FM_LLM",
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "local_smoke_report.json",
+  [string]$Output = "docs/sample-evidence/local_smoke_report.json",
   [switch]$RunPytest
 )
 

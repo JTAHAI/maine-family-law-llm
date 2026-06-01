@@ -15,7 +15,7 @@ from legal.release import PublicRepoReadinessAuditor
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit source tree readiness for public GitHub staging.")
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--output", default="public_release_readiness.json")
+    parser.add_argument("--output", default=str(ROOT / "docs" / "sample-evidence" / "public_release_readiness.json"))
     args = parser.parse_args()
     report = PublicRepoReadinessAuditor(project_root=args.project_root).write(args.output)
     print(report.as_dict())

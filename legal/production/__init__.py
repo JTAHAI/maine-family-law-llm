@@ -7,7 +7,14 @@ from legal.production.authority_build import (
 from legal.production.data_product_readiness import EnterpriseDataProductAuditor, EnterpriseDataProductReport
 from legal.production.enterprise_readiness import EnterpriseReadinessAuditor, EnterpriseReadinessReport
 from legal.production.failure_clustering import FailureCluster, FailureClusterer
+from legal.production.ga_pass_evidence import GAPassEvidenceAuditor, GAPassEvidenceReport
 from legal.production.source_update_engine import SourceUpdateEngine, SourceUpdateReport
+
+from legal.production.followup_targets import (
+    AuthorityFollowupTargetBuilder,
+    DerivedAuthorityTargetsReport,
+    DerivedTargetFinding,
+)
 from legal.production.release_gates import (
     DEFAULT_RELEASE_THRESHOLDS,
     ReleaseGateResult,
@@ -19,13 +26,18 @@ from legal.production.release_gates import (
 __all__ = [
     "DEFAULT_RELEASE_THRESHOLDS",
     "AuthorityBuildAuditor",
+    "AuthorityFollowupTargetBuilder",
     "AuthorityBuildReport",
     "AuthorityManifestFinding",
     "AuthoritySourceClassCoverage",
+    "DerivedAuthorityTargetsReport",
+    "DerivedTargetFinding",
     "EnterpriseDataProductAuditor",
     "EnterpriseDataProductReport",
     "EnterpriseReadinessAuditor",
     "EnterpriseReadinessReport",
+    "GAPassEvidenceAuditor",
+    "GAPassEvidenceReport",
     "FailureCluster",
     "FailureClusterer",
     "ReleaseGateResult",

@@ -8,11 +8,11 @@ from typing import Any
 
 from legal.connectors.base import ParserAuditEvent, RetrievedSource, SourceFetcher, SourceTarget
 from legal.connectors.http_fetcher import OfficialSourceFetchError
-from legal.connectors.maine_forms import parse_forms_index
+from legal.connectors.maine_forms import parse_form_text, parse_forms_index
 from legal.connectors.maine_revisor import parse_revisor_html
 from legal.connectors.maine_rules import parse_rules_index, parse_rules_text
 from legal.connectors.pdf_text import extract_pdf_text
-from legal.connectors.maine_sjc_opinions import parse_law_court_opinion_index
+from legal.connectors.maine_sjc_opinions import parse_law_court_opinion_index, parse_law_court_opinion_text
 from legal.corpus.source_normalizer import stable_source_id
 from legal.corpus.source_registry import SourceRecord
 from legal.corpus.source_snapshotter import SourceSnapshotter
@@ -115,6 +115,22 @@ class OfficialAuthorityIngestor:
             freshness_status = "rules_pdf_retrieved_and_text_extracted"
             return audit, canonical_count, examples, freshness_status
 
+        if target.parser_name in {"maine_form_pdf", "maine_form_text"}:
+            source_text = extract_pdf_text(retrieved.content) if "pdf" in target.expected_content_type.lower() else retrieved.text
+            form, audit = parse_form_text(source_text, source_id=source_id, url=target.url)
+            canonical_count = 1 if form.form_id else 0
+            examples = [{"document_id": form.document_id, "title": form.title, "form_id": form.form_id}]
+            freshness_status = form.retrieved_freshness_status
+            return audit, canonical_count, examples, freshness_status
+
+        if target.parser_name == "maine_law_court_opinion_pdf":
+            opinion_text = extract_pdf_text(retrieved.content)
+            opinion, audit = parse_law_court_opinion_text(opinion_text, source_id=source_id, url=target.url)
+            canonical_count = 1 if opinion.title else 0
+            examples = [{"opinion_id": opinion.opinion_id, "title": opinion.title, "citation": opinion.citation}]
+            freshness_status = "opinion_pdf_retrieved_and_text_extracted"
+            return audit, canonical_count, examples, freshness_status
+
         if "pdf" in target.expected_content_type.lower() or target.parser_name == "pdf_snapshot":
             audit = ParserAuditEvent(
                 source_id=source_id,
@@ -128,11 +144,19 @@ class OfficialAuthorityIngestor:
             return audit, canonical_count, examples, freshness_status
 
         text = retrieved.text
-        if target.parser_name == "maine_revisor_title_index":
+        if target.parser_name in {"maine_revisor_title_index", "maine_revisor_section"}:
             document, audit = parse_revisor_html(text, source_id=source_id, url=target.url)
             canonical_count = len(getattr(document, "section_links", [])) or 1
             freshness_status = document.retrieved_freshness_status
             examples = getattr(document, "section_links", [])[:3]
+            if not examples and getattr(document, "section_number", None):
+                examples = [
+                    {
+                        "document_id": document.document_id,
+                        "title": document.title,
+                        "section_number": document.section_number,
+                    }
+                ]
             return audit, canonical_count, examples, freshness_status
 
         if target.parser_name == "maine_forms_index":

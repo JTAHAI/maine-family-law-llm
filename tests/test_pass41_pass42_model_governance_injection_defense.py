@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 from legal.model_orchestration import (
@@ -137,3 +140,32 @@ def test_pass42_output_filter_blocks_prompt_leak_and_missing_review_required_mar
     assert report["status"] == "blocked"
     assert "output_filter:system_prompt_leakage" in report["blockers"]
     assert "output_filter:review_required_status_missing" in report["blockers"]
+
+
+def test_pass41_pass42_true_ga_evidence_artifacts_are_present_and_passing():
+    model_report = json.loads((ROOT / "docs/model_registry_admission_report.json").read_text(encoding="utf-8"))
+    injection_report = json.loads((ROOT / "docs/llm_injection_red_team_report.json").read_text(encoding="utf-8"))
+
+    assert model_report["status"] == "pass"
+    assert model_report["pass"] == 41
+    assert model_report["exit_criteria"]["generator_cannot_self_certify"] is True
+    assert model_report["exit_criteria"]["replacement_ledger_verified"] is True
+    assert injection_report["status"] == "pass"
+    assert injection_report["pass"] == 42
+    assert injection_report["exit_criteria"]["retrieved_documents_untrusted"] is True
+    assert injection_report["exit_criteria"]["red_team_cases_pass"] is True
+
+
+def test_generate_model_security_ga_evidence_cli_check_mode():
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "generate-model-security-ga-evidence.py"), "--check"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "pass"
+    assert payload["completed_true_ga_passes"] == [41, 42]

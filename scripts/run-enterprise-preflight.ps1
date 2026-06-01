@@ -1,7 +1,7 @@
 param(
   [string]$RepoRoot = "C:\dev\ME_FM_LLM",
   [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
-  [string]$Output = "enterprise_preflight_report.json"
+  [string]$Output = "docs/sample-evidence/enterprise_preflight_report.json"
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"

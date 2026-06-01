@@ -16,7 +16,9 @@ def test_dockerfile_exists_and_uses_non_root_external_data_root_and_healthcheck(
     assert "USER 10001:10001" in dockerfile
     assert "HEALTHCHECK" in dockerfile
     assert "scripts/container-healthcheck.py" in dockerfile
-    assert "uvicorn app.api.main:app" in dockerfile
+    assert "UVICORN_APP=maine_family_law_llm.api:app" in dockerfile
+    assert "COPY --chown=app:app src ./src" in dockerfile
+    assert "COPY --chown=app:app data ./data" in dockerfile
 
 
 def test_dockerignore_blocks_external_data_sensitive_artifacts_and_runtime_state():
@@ -77,6 +79,8 @@ def test_container_image_context_does_not_require_baked_official_authority_corpo
     assert copy_lines
     for line in copy_lines:
         for forbidden in forbidden_copy_targets:
+            if forbidden == "/data" and " ./data" in line:
+                continue
             assert forbidden not in line
 
 

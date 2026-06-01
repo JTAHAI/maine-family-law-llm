@@ -1,0 +1,187 @@
+{
+  "generated_at": "2026-05-31T01:38:48.286464+00:00",
+  "pass": 43,
+  "security_implementation": {
+    "audit_trail": {
+      "admin_explanation_available": true,
+      "explanation": {
+        "export_status": "blocked_review_required",
+        "matter": "matter-demo-001",
+        "model": "maine-final-generator-review-required-001",
+        "output_hash": "f32f7b879977f785275a55362ee43672a97b6f83ff706db56f6dfa7accb017da",
+        "prompt_hash": "7800d766530b55ad592281b05a875cc437a18e02c74613bfdca4c9bb67e5bb76",
+        "retrieved_context_hash": "280536ba838bf1700914283a5ba1d45eaa51c615637b0172e58d528dedfe04b5",
+        "source": "statute-19a-1653",
+        "tenant": "tenant-maine-demo",
+        "verifier_status": "review_required_verified_sources_pending_human_review",
+        "who": "admin-001"
+      },
+      "missing_fields": [],
+      "status": "pass"
+    },
+    "blockers": [],
+    "control_results": [
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "audit_logs",
+        "evidence": [
+          "InMemoryAuditLog",
+          "AnswerProvenanceTrail"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "authentication",
+        "evidence": [
+          "app.api.security.require_api_role",
+          "bearer_or_internal_service_token_required_for_protected_routes"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "backup_disaster_recovery",
+        "evidence": [
+          "BackupRestoreRunbook",
+          "restore_drill_report"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "encryption_at_rest",
+        "evidence": [
+          "LocalEnvelopeEncryptor",
+          "external_matter_store_encrypted_payloads"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "policy_required",
+        "control": "encryption_in_transit",
+        "evidence": [
+          "tls_required_at_reverse_proxy_or_deployment_edge",
+          "plaintext_http_forbidden_in_production_config"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "immutable_export_logs",
+        "evidence": [
+          "ImmutableExportLog",
+          "hash_chained_export_events"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "key_rotation",
+        "evidence": [
+          "KeyRotationLedger",
+          "active_key_age_limit_days"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "matter_level_permissions",
+        "evidence": [
+          "matter_id_membership_required",
+          "admin_only_cross_matter_policy"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "rbac",
+        "evidence": [
+          "legal.security.RBACPolicy",
+          "role_permission_matrix"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "retention_deletion_controls",
+        "evidence": [
+          "configs/maine_retention_policy.json",
+          "retention_delete_required_by_data_class"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "policy_required",
+        "control": "secrets_management",
+        "evidence": [
+          "environment_secret_store_only",
+          "no_dotenv_or_secret_files_packaged"
+        ],
+        "status": "pass"
+      },
+      {
+        "blocks_release_if_missing": true,
+        "configured_status": "implemented",
+        "control": "tenant_isolation",
+        "evidence": [
+          "legal.security.MatterAccessPolicy",
+          "tenant_id_match_required"
+        ],
+        "status": "pass"
+      }
+    ],
+    "immutable_export_log": {
+      "chain_head": "d936c4f62433d9c91d899b373669f444ae0176ea66202a4f18eb9f0bd4a30d5e",
+      "event_count": 1,
+      "events": [
+        {
+          "event_hash": "d936c4f62433d9c91d899b373669f444ae0176ea66202a4f18eb9f0bd4a30d5e",
+          "export_id": "export-demo-001",
+          "export_status": "blocked_review_required",
+          "filing_ready_gate_hash": "5f87b8e9b47f79dd44fe4448c5f036fabea743ff935dca04bd09b2d0a0622e3f",
+          "matter_id": "matter-demo-001",
+          "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "tenant_id": "tenant-maine-demo",
+          "timestamp": "2026-05-31T01:38:48.284515+00:00",
+          "user_id": "admin-001",
+          "verifier_status": "review_required_verified_sources_pending_human_review"
+        }
+      ],
+      "verified": true
+    },
+    "key_rotation_ledger": {
+      "chain_head": "b7e049566a108f71df02b6c68f82ffac6fbde1c09fc8b63d5763607fdb80d604",
+      "event_count": 1,
+      "events": [
+        {
+          "action": "rotate",
+          "actor": "security-admin",
+          "event_hash": "b7e049566a108f71df02b6c68f82ffac6fbde1c09fc8b63d5763607fdb80d604",
+          "key_id": "tenant-maine-demo-kek-2026-05",
+          "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "reason": "pass43 scheduled key rotation evidence",
+          "timestamp": "2026-05-31T01:38:48.284401+00:00"
+        }
+      ],
+      "verified": true
+    },
+    "missing_controls": [],
+    "policy_version": "1.0-pass43-enterprise-security",
+    "readiness": "source_implemented_security_controls_pending_external_security_review",
+    "status": "pass"
+  },
+  "status": "pass",
+  "title": "Security implementation"
+}

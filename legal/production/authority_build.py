@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -113,9 +114,23 @@ class AuthorityBuildAuditor:
 
         records = self._load_manifest(findings, blockers)
         counts: dict[str, int] = {}
+        seen_source_ids: set[str] = set()
         parsed_records = 0
         snapshot_only_records = 0
         for record in records:
+            source_id = str(record.get("source_id", ""))
+            if not source_id:
+                source_id = "__missing_source_id__"
+            elif source_id in seen_source_ids:
+                blockers.append("duplicate_source_id")
+                findings.append(
+                    AuthorityManifestFinding(
+                        source_id=source_id,
+                        code="duplicate_source_id",
+                        message="Source manifest source_id values must be unique.",
+                    )
+                )
+            seen_source_ids.add(source_id)
             source_id = str(record.get("source_id", "__missing_source_id__"))
             source_class = str(record.get("source_class", ""))
             if source_class:
@@ -197,7 +212,20 @@ class AuthorityBuildAuditor:
                 )
             )
             return []
-        return [item for item in loaded if isinstance(item, dict)]
+        records: list[dict[str, Any]] = []
+        for index, item in enumerate(loaded):
+            if not isinstance(item, dict):
+                blockers.append("manifest_record_not_object")
+                findings.append(
+                    AuthorityManifestFinding(
+                        source_id=f"__manifest_row_{index}__",
+                        code="manifest_record_not_object",
+                        message="Every source manifest row must be a JSON object.",
+                    )
+                )
+                continue
+            records.append(item)
+        return records
 
     def _validate_record(
         self,
@@ -219,7 +247,41 @@ class AuthorityBuildAuditor:
                     )
                 )
 
+        retrieved_at = str(record.get("retrieved_at", ""))
+        if retrieved_at:
+            try:
+                datetime.fromisoformat(retrieved_at.replace("Z", "+00:00"))
+            except ValueError:
+                blockers.append("retrieved_timestamp_invalid")
+                findings.append(
+                    AuthorityManifestFinding(
+                        source_id=source_id,
+                        code="retrieved_timestamp_invalid",
+                        message=f"retrieved_at must be an ISO-8601 timestamp; got {retrieved_at!r}.",
+                    )
+                )
+
         parser_status = str(record.get("parser_status", ""))
+        parser_audit = record.get("parser_audit")
+        if not isinstance(parser_audit, dict):
+            blockers.append("parser_audit_invalid")
+            findings.append(
+                AuthorityManifestFinding(
+                    source_id=source_id,
+                    code="parser_audit_invalid",
+                    message="parser_audit must be a JSON object.",
+                )
+            )
+        elif parser_audit.get("status") and str(parser_audit.get("status")) != parser_status:
+            blockers.append("parser_audit_status_mismatch")
+            findings.append(
+                AuthorityManifestFinding(
+                    source_id=source_id,
+                    code="parser_audit_status_mismatch",
+                    message="parser_audit.status must match parser_status.",
+                )
+            )
+
         acceptable = set(self.policy.get("acceptable_parser_statuses", []))
         if parser_status not in acceptable:
             blockers.append("parser_status_not_acceptable")
@@ -288,6 +350,27 @@ class AuthorityBuildAuditor:
         snapshot_path = Path(str(snapshot_value)).expanduser()
         if not snapshot_path.is_absolute():
             snapshot_path = self.official_store / snapshot_path
+        snapshot_path = snapshot_path.resolve()
+        try:
+            snapshot_path.relative_to(self.official_store.resolve())
+        except ValueError:
+            blockers.append("snapshot_path_outside_official_store")
+            findings.append(
+                AuthorityManifestFinding(
+                    source_id=source_id,
+                    code="snapshot_path_outside_official_store",
+                    message="Snapshot paths must resolve inside the external official authority store.",
+                )
+            )
+        if is_inside_project_repo(snapshot_path, self.project_root):
+            blockers.append("snapshot_path_inside_repo")
+            findings.append(
+                AuthorityManifestFinding(
+                    source_id=source_id,
+                    code="snapshot_path_inside_repo",
+                    message="Official authority snapshots must not point inside the source repository.",
+                )
+            )
         if not snapshot_path.exists():
             blockers.append("snapshot_missing")
             findings.append(

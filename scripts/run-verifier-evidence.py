@@ -113,7 +113,7 @@ def build_report(output_path: str | Path | None = None) -> dict:
 
 
 if __name__ == "__main__":
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json"
+    output = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "sample-evidence" / "smoke_evidence_pass29_pass30_pass31_verifier_intelligence.json"
     evidence = build_report(output)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     raise SystemExit(0 if evidence["status"] == "pass" else 1)

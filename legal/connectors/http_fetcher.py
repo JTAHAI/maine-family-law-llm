@@ -85,6 +85,7 @@ class OfficialSourceFetcher:
         max_retries: int = 2,
         retry_backoff_seconds: float = 1.5,
         respect_robots_txt: bool = True,
+        strict_content_type: bool = False,
     ) -> None:
         self.timeout_seconds = timeout_seconds
         self.min_delay_seconds = min_delay_seconds
@@ -92,6 +93,7 @@ class OfficialSourceFetcher:
         self.max_retries = max(0, max_retries)
         self.retry_backoff_seconds = max(0.0, retry_backoff_seconds)
         self.respect_robots_txt = respect_robots_txt
+        self.strict_content_type = strict_content_type
         self._last_fetch_monotonic: float | None = None
         self._robots_cache: dict[str, RobotsCacheEntry] = {}
 
@@ -147,6 +149,31 @@ class OfficialSourceFetcher:
                 message=f"robots.txt disallows fetching {target.url}",
             )
 
+
+    @staticmethod
+    def _content_type_matches(expected: str | None, actual: str | None, content: bytes) -> bool:
+        """Return whether a response matches the target's expected content type.
+
+        Official sites sometimes include charset parameters or serve PDFs as
+        ``application/octet-stream``.  In strict mode, HTML must be HTML-like
+        and PDF targets must either advertise a PDF-ish content type or begin
+        with a PDF file signature.
+        """
+        expected_norm = (expected or "").split(";", 1)[0].strip().lower()
+        actual_norm = (actual or "").split(";", 1)[0].strip().lower()
+        if not expected_norm or expected_norm == "*/*":
+            return True
+        if expected_norm == actual_norm:
+            return True
+        if expected_norm == "application/pdf":
+            return actual_norm in {"application/octet-stream", "binary/octet-stream"} or content.startswith(b"%PDF")
+        if expected_norm == "text/html":
+            prefix = content[:512].lstrip().lower()
+            return actual_norm in {"application/xhtml+xml", "text/plain"} and (b"<html" in prefix or b"<!doctype html" in prefix)
+        if expected_norm.startswith("text/") and actual_norm.startswith("text/"):
+            return True
+        return False
+
     def fetch(self, target: SourceTarget) -> RetrievedSource:
         self._check_robots(target)
         attempts: list[FetchAttempt] = []
@@ -161,6 +188,25 @@ class OfficialSourceFetcher:
                 )
                 with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                     content = response.read()
+                    content_type = response.headers.get("Content-Type")
+                    if self.strict_content_type and not self._content_type_matches(
+                        target.expected_content_type, content_type, content
+                    ):
+                        elapsed = time.monotonic() - started
+                        last_message = (
+                            f"content type mismatch: expected {target.expected_content_type!r}, "
+                            f"got {content_type!r}"
+                        )
+                        attempts.append(
+                            FetchAttempt(
+                                attempt_number=attempt_number,
+                                status="content_type_mismatch",
+                                message=last_message,
+                                elapsed_seconds=elapsed,
+                                status_code=getattr(response, "status", None),
+                            )
+                        )
+                        break
                     elapsed = time.monotonic() - started
                     attempts.append(
                         FetchAttempt(
@@ -175,7 +221,7 @@ class OfficialSourceFetcher:
                         target=target,
                         content=content,
                         retrieved_at=datetime.now(timezone.utc),
-                        content_type=response.headers.get("Content-Type"),
+                        content_type=content_type,
                         status_code=getattr(response, "status", None),
                         final_url=response.geturl(),
                     )

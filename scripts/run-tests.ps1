@@ -11,7 +11,8 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $RepoRoot
 $env:MAINE_FAMILY_LAW_DATA_ROOT = $DataRoot
-$env:PYTHONPATH = "$RepoRoot\src;$RepoRoot"
+$sep = [System.IO.Path]::PathSeparator
+$env:PYTHONPATH = "$RepoRoot\src$sep$RepoRoot"
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 if ($Install) {

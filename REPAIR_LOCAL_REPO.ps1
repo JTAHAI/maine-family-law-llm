@@ -1,6 +1,7 @@
 param(
   [string]$RepoRoot = (Split-Path -Parent $MyInvocation.MyCommand.Path),
-  [switch]$IncludeVenv
+  [switch]$IncludeVenv,
+  [switch]$PreserveVenv
 )
 
 Set-StrictMode -Version Latest
@@ -11,19 +12,15 @@ Set-Location -LiteralPath $repo
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 $cleanArgs = @(".\scripts\clean-local-artifacts.py", "--repo-root", $repo)
-if ($IncludeVenv) { $cleanArgs += "--include-venv" }
+if ($IncludeVenv -or -not $PreserveVenv) { $cleanArgs += "--include-venv" }
 python @cleanArgs
 
-$localTmp = Join-Path -Path $repo -ChildPath ".local_tmp"
-if (Test-Path -LiteralPath $localTmp) {
-  Remove-Item -LiteralPath $localTmp -Recurse -Force
-  Write-Output "removed .local_tmp"
-}
-
-$workDir = Join-Path -Path $repo -ChildPath ".mfl_work"
-if (Test-Path -LiteralPath $workDir) {
-  Remove-Item -LiteralPath $workDir -Recurse -Force
-  Write-Output "removed .mfl_work"
+foreach ($name in @(".local_tmp", ".mfl_work", ".proofs", ".sentinel_tmp")) {
+  $path = Join-Path -Path $repo -ChildPath $name
+  if (Test-Path -LiteralPath $path) {
+    Remove-Item -LiteralPath $path -Recurse -Force
+    Write-Output "removed $name"
+  }
 }
 
 $pidFile = Join-Path -Path $repo -ChildPath ".local_server.pid"
@@ -32,8 +29,8 @@ if (Test-Path -LiteralPath $pidFile) {
   Write-Output "removed .local_server.pid"
 }
 
-if ($IncludeVenv) {
-  foreach ($name in @(".venv", "venv", "ME_FM_LLM_venv")) {
+if (-not $PreserveVenv) {
+  foreach ($name in @(".venv", "venv", "env", "ME_FM_LLM_venv")) {
     $path = Join-Path -Path $repo -ChildPath $name
     if (Test-Path -LiteralPath $path) {
       Remove-Item -LiteralPath $path -Recurse -Force
@@ -43,5 +40,5 @@ if ($IncludeVenv) {
 }
 
 $doctorArgs = @(".\scripts\doctor-local-repo.py", "--repo-root", $repo, "--json")
-if (-not $IncludeVenv) { $doctorArgs += "--allow-venv" }
+if ($PreserveVenv) { $doctorArgs += "--allow-venv" }
 python @doctorArgs
