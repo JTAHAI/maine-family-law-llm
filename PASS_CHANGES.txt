@@ -660,3 +660,13 @@ v1.63.0 - Pass 26 gold annotation queue operations closure
 - Added pass26_gold_annotation_queue_operations_summary.json and strict auditor validation.
 - Updated true GA count to 18 remaining; next pass is 27 minimum viable gold eval pack.
 - Pass 27/28 remain explicitly open; this pass does not overclaim attorney-reviewed gold data or release metrics readiness.
+
+
+## v1.64.0 - Pass 27 gold eval pack promotion workbench
+
+- Added fail-closed promotion tooling for attorney-reviewed annotation queue rows into gold JSONL datasets.
+- Added `scripts/promote-reviewed-gold-annotations.py` with `--require-promoted` so queued rows cannot be treated as gold unless an attorney has reviewed them and all required fields are present.
+- Added Pass 27 operator runbook with exact promotion, manifest, audit, and evidence ZIP commands.
+- Hardened promotion rules to reject private-training rows, seed/synthetic methods, non-attorney review statuses, invalid dataset paths, parse errors, and missing required gold fields.
+- Fixed the release metrics readiness string regression covered by the existing gold-release gate tests.
+- True GA count remains 18 remaining; Pass 27 still requires actual attorney-reviewed gold datasets before the count can decrease.

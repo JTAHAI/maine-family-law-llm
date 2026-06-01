@@ -116,7 +116,7 @@ class ReleaseMetricsEvidenceBuilder:
             readiness=(
                 "release_metrics_ready"
                 if not blockers and gate_report.get("release_allowed")
-                else "release_metrics_blocked_until_real_attorney_reviewed_gold_and_measured_metrics"
+                else "release_metrics_blocked_until_real_attorney_reviewed_gold_evidence"
             ),
         )
         if output_path:

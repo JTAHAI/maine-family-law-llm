@@ -8,6 +8,8 @@ from legal.evals.gold_pack import (
     GoldEvalPackAuditor,
     GoldEvalPackManifestBuilder,
     GoldEvalPackReport,
+    GoldPromotionReport,
+    ReviewedGoldAnnotationPromoter,
 )
 from legal.evals.release_metrics import ReleaseMetricEvidence, ReleaseMetricsEvidenceBuilder, ReleaseMetricsEvidenceReport
 from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalReport, RetrievalSmokeEvalRunner
@@ -24,6 +26,8 @@ __all__ = [
     "GoldEvalPackAuditor",
     "GoldEvalPackManifestBuilder",
     "GoldEvalPackReport",
+    "GoldPromotionReport",
+    "ReviewedGoldAnnotationPromoter",
     "ReleaseMetricEvidence",
     "ReleaseMetricsEvidenceBuilder",
     "ReleaseMetricsEvidenceReport",

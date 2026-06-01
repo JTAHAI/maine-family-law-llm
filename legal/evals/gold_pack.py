@@ -454,6 +454,243 @@ class GoldEvalPackManifestBuilder:
         return manifest
 
 
+
+@dataclass(frozen=True)
+class GoldPromotionReport:
+    input_path: str
+    eval_root: str
+    output_report_path: str | None
+    status: str
+    eligible_rows: int
+    skipped_rows: int
+    written_rows: int
+    dataset_counts: dict[str, int]
+    blockers: list[str] = field(default_factory=list)
+    findings: list[dict[str, Any]] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "input_path": self.input_path,
+            "eval_root": self.eval_root,
+            "output_report_path": self.output_report_path,
+            "status": self.status,
+            "eligible_rows": self.eligible_rows,
+            "skipped_rows": self.skipped_rows,
+            "written_rows": self.written_rows,
+            "dataset_counts": dict(sorted(self.dataset_counts.items())),
+            "blockers": sorted(set(self.blockers)),
+            "findings": self.findings,
+        }
+
+
+class ReviewedGoldAnnotationPromoter:
+    """Promote attorney-reviewed annotation queue rows into gold JSONL datasets.
+
+    This is deliberately fail-closed: queued rows are not gold; only rows marked as
+    attorney-reviewed and containing the required gold fields can be promoted. The
+    promoter never writes private-training rows and never fabricates labels or spans.
+    """
+
+    ATTORNEY_REVIEW_STATUSES = {
+        "attorney_reviewed",
+        "attorney_reviewed_final",
+        "attorney_reviewed_approved",
+        "attorney_approved",
+    }
+
+    def __init__(self, *, project_root: str | Path = ".", policy: dict[str, Any] | None = None) -> None:
+        self.project_root = Path(project_root).resolve()
+        self.policy = policy or json.loads(
+            (self.project_root / "configs" / "maine_gold_eval_pack_policy.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.required_fields = list(self.policy.get("required_fields", []))
+
+    def promote(
+        self,
+        *,
+        reviewed_queue_path: str | Path,
+        eval_root: str | Path,
+        output_report_path: str | Path | None = None,
+        append: bool = False,
+    ) -> GoldPromotionReport:
+        input_path = Path(reviewed_queue_path)
+        root = Path(eval_root)
+        findings: list[dict[str, Any]] = []
+        blockers: list[str] = []
+        dataset_rows: dict[str, list[dict[str, Any]]] = {}
+        skipped_rows = 0
+        eligible_rows = 0
+
+        if not input_path.exists():
+            blockers.append("reviewed_annotation_queue_missing")
+            return self._finish(
+                input_path=input_path,
+                eval_root=root,
+                output_report_path=output_report_path,
+                status="blocked",
+                eligible_rows=0,
+                skipped_rows=0,
+                written_rows=0,
+                dataset_counts={},
+                blockers=blockers,
+                findings=findings,
+            )
+
+        with input_path.open("r", encoding="utf-8") as handle:
+            for row_number, line in enumerate(handle, start=1):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                try:
+                    row = json.loads(stripped)
+                except json.JSONDecodeError as exc:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "json_parse_error",
+                            "message": str(exc),
+                        }
+                    )
+                    continue
+
+                review_status = str(row.get("review_status", "")).lower()
+                if review_status not in self.ATTORNEY_REVIEW_STATUSES:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "not_attorney_reviewed",
+                            "message": f"review_status={review_status or '<missing>'}",
+                        }
+                    )
+                    continue
+
+                if row.get("private_data_allowed_for_training") is True:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "private_training_not_allowed",
+                            "message": "private_data_allowed_for_training must be false",
+                        }
+                    )
+                    continue
+
+                missing = [field for field in self.required_fields if field not in row]
+                if missing:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "missing_required_gold_fields",
+                            "message": ", ".join(missing),
+                        }
+                    )
+                    continue
+
+                method = str(row.get("annotator_or_generation_method", "")).lower()
+                if "attorney" not in method or "seed" in method or "synthetic" in method:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "invalid_annotator_method",
+                            "message": "annotator_or_generation_method must be attorney_review and not seed/synthetic",
+                        }
+                    )
+                    continue
+
+                dataset = str(row.get("promoted_gold_dataset") or _dataset_for_task_type(str(row.get("task_type", ""))))
+                if not dataset.endswith(".jsonl") or "/" in dataset or "\\" in dataset:
+                    skipped_rows += 1
+                    findings.append(
+                        {
+                            "row_number": row_number,
+                            "code": "invalid_promoted_gold_dataset",
+                            "message": dataset,
+                        }
+                    )
+                    continue
+
+                gold_row = {field: row.get(field) for field in self.required_fields}
+                for optional_field in (
+                    "task_type",
+                    "queue_id",
+                    "source_url_or_path",
+                    "snapshot_hash",
+                    "reviewer_id",
+                    "primary_reviewer_id",
+                    "secondary_reviewer_id",
+                    "conflict_status",
+                    "conflict_resolver_id",
+                ):
+                    if optional_field in row:
+                        gold_row[optional_field] = row.get(optional_field)
+                dataset_rows.setdefault(dataset, []).append(gold_row)
+                eligible_rows += 1
+
+        if eligible_rows == 0:
+            blockers.append("no_attorney_reviewed_gold_rows_to_promote")
+
+        written_rows = 0
+        if not blockers:
+            root.mkdir(parents=True, exist_ok=True)
+            for dataset, rows in sorted(dataset_rows.items()):
+                target = root / dataset
+                mode = "a" if append and target.exists() else "w"
+                with target.open(mode, encoding="utf-8") as handle:
+                    for row in rows:
+                        handle.write(json.dumps(row, sort_keys=True) + "\n")
+                        written_rows += 1
+
+        return self._finish(
+            input_path=input_path,
+            eval_root=root,
+            output_report_path=output_report_path,
+            status="pass" if not blockers else "blocked",
+            eligible_rows=eligible_rows,
+            skipped_rows=skipped_rows,
+            written_rows=written_rows,
+            dataset_counts={dataset: len(rows) for dataset, rows in dataset_rows.items()},
+            blockers=blockers,
+            findings=findings,
+        )
+
+    def _finish(
+        self,
+        *,
+        input_path: Path,
+        eval_root: Path,
+        output_report_path: str | Path | None,
+        status: str,
+        eligible_rows: int,
+        skipped_rows: int,
+        written_rows: int,
+        dataset_counts: dict[str, int],
+        blockers: list[str],
+        findings: list[dict[str, Any]],
+    ) -> GoldPromotionReport:
+        report_path = Path(output_report_path) if output_report_path else None
+        report = GoldPromotionReport(
+            input_path=str(input_path),
+            eval_root=str(eval_root),
+            output_report_path=str(report_path) if report_path else None,
+            status=status,
+            eligible_rows=eligible_rows,
+            skipped_rows=skipped_rows,
+            written_rows=written_rows,
+            dataset_counts=dataset_counts,
+            blockers=blockers,
+            findings=findings,
+        )
+        if report_path:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(report.as_dict(), indent=2, sort_keys=True), encoding="utf-8")
+        return report
+
 def export_annotation_queue_csv(rows: list[dict[str, Any]], output_path: str | Path) -> None:
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
