@@ -1,0 +1,160 @@
+{
+  "attorney_reviewed": false,
+  "evidence_basis": [
+    "legal/law_court/intelligence.py",
+    "legal/forms/intelligence.py",
+    "legal/drafting/findings_engine.py",
+    "legal/matter/document_ingestor.py",
+    "legal/matter/matter_store.py",
+    "legal/evidence/matter_work_product.py",
+    "legal/drafting/workspace.py",
+    "legal/drafting/filing_ready_gate.py",
+    "tests/test_pass32_33_34_maine_intelligence.py",
+    "tests/test_pass35_pass36_secure_matter_evidence.py",
+    "tests/test_pass37_pass38_drafting_filing_gate.py"
+  ],
+  "generated_at": "2026-06-01T19:40:10.698217+00:00",
+  "not_legal_signoff": true,
+  "operator_source_backed": true,
+  "pass_results": {
+    "32": {
+      "signals": {
+        "appellate_red_flags_feed_draft_review": true,
+        "standard_of_review": "mixed",
+        "structured_case_brief": true
+      },
+      "status": "pass",
+      "title": "Law Court opinion intelligence"
+    },
+    "33": {
+      "signals": {
+        "dependency_graph_entries": 2,
+        "form_count": 2,
+        "required_fields_extracted": true,
+        "stale_forms": [
+          "FM-001"
+        ]
+      },
+      "status": "pass",
+      "title": "Maine forms intelligence"
+    },
+    "34": {
+      "signals": {
+        "blockers": [
+          "contact_restriction_without_supported_findings",
+          "pfa_family_overlap_independent_analysis_missing",
+          "rule52:best_interest_analysis_too_sparse",
+          "rule52:findings_of_fact_section_missing"
+        ],
+        "checklist_size": 7,
+        "missing_findings": [
+          "findings_of_fact_section_missing",
+          "best_interest_analysis_too_sparse"
+        ]
+      },
+      "status": "pass",
+      "title": "Rule 52 / best-interest / findings engine"
+    },
+    "35": {
+      "signals": {
+        "cross_tenant_blocked": true,
+        "data_class": "user_provided_confidential_matter_data",
+        "encrypted_envelope_algorithm": "local-pbkdf2-sha256-xor-hmac-demo-envelope",
+        "encrypted_plaintext_absent": true,
+        "pii_findings": [
+          "date_of_birth"
+        ],
+        "tenant_allowed": true,
+        "training_blocked": true
+      },
+      "status": "pass",
+      "title": "Secure matter ingestion"
+    },
+    "36": {
+      "signals": {
+        "evidence_map_count": 3,
+        "export_status": "review_required",
+        "issue_labels": [
+          "child_support",
+          "parental_rights_responsibilities"
+        ],
+        "missing_record_checklist": [
+          "financial_disclosure_or_child_support_worksheet_missing",
+          "underlying_order_missing"
+        ],
+        "procedural_posture": "motion_to_modify",
+        "timeline_count": 1
+      },
+      "status": "pass",
+      "title": "Evidence map, timeline, and missing-record checklist"
+    },
+    "37": {
+      "signals": {
+        "export_status": "blocked",
+        "gate_blockers": [
+          "citation_report_missing",
+          "citations_resolved",
+          "claim_support_report_missing",
+          "fact_to_evidence_map_missing",
+          "facts_mapped_to_evidence",
+          "forms_current",
+          "forms_freshness_report_missing",
+          "human_review_complete",
+          "legal_claims_supported",
+          "procedure_posture_checked",
+          "procedure_posture_report_missing",
+          "quote_report_missing",
+          "quotes_found"
+        ],
+        "review_required": true,
+        "sidebars": [
+          "authority_matrix",
+          "citation_report",
+          "claim_support",
+          "missing_facts",
+          "quote_report",
+          "source_cards"
+        ]
+      },
+      "status": "pass",
+      "title": "Review-required drafting workspace"
+    },
+    "38": {
+      "signals": {
+        "blocked_payload_ready": false,
+        "blockers": [
+          "claim_not_supported:claim-bad",
+          "forms_current",
+          "legal_claims_supported",
+          "stale_form:FM-001"
+        ],
+        "complete_payload_allowed": true,
+        "mandatory_checks": {
+          "authority_verified": true,
+          "citations_resolved": true,
+          "facts_mapped_to_evidence": true,
+          "forms_current": true,
+          "human_review_complete": true,
+          "legal_claims_supported": true,
+          "procedure_posture_checked": true,
+          "quotes_found": true
+        },
+        "override_logged_without_silent_pass": true
+      },
+      "status": "pass",
+      "title": "Filing-ready gate hardening"
+    }
+  },
+  "passes_closed": [
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38
+  ],
+  "review_mode": "repo_engineering_evidence",
+  "schema_version": "pass32_38_engineering_closure_v1",
+  "status": "pass"
+}

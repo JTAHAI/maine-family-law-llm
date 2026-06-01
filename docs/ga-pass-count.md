@@ -1,10 +1,16 @@
 # True GA Pass Count
 
-Generated after importing source-safe Pass 26 evidence from the external authority data product run.
+Generated after Pass 32-38 repo-engineering closure.
 
-- True GA completed: 15 / 33
-- True GA remaining: 18
-- Completed passes: 19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45
-- Next true GA pass: 27 — Minimum viable gold eval pack
+- Total true GA passes: 33
+- Completed true GA passes: 22
+- Remaining true GA passes: 11
+- Completed passes: 19-26, 32-45
+- Remaining passes: 27-31, 46-51
+- Next pass: 27 — Minimum viable gold eval pack
 
-Pass 26 closes only the attorney annotation queue operations gate. Passes 27 and 28 remain open until attorney-reviewed gold datasets and release-ready metrics evidence exist.
+Notes:
+
+- Passes 27-31 remain open until operator-source-backed or attorney-reviewed external evidence gates pass.
+- Passes 32-38 are closed as repo-engineering passes with deterministic tests and generated evidence. This is not attorney review and not legal signoff.
+- Passes 46-51 remain open because they require full release metrics, red-team/pilot evidence, release-candidate/signoff, and deployment evidence.

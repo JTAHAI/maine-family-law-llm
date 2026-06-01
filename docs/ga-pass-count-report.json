@@ -8,6 +8,13 @@
     24,
     25,
     26,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
     39,
     40,
     41,
@@ -16,8 +23,8 @@
     44,
     45
   ],
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots.",
-  "generated_at": "2026-06-01T16:35:12.871705+00:00",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff.",
+  "generated_at": "2026-06-01T19:33:10.245912+00:00",
   "next_true_ga_pass": 27,
   "next_true_ga_title": "Minimum viable gold eval pack",
   "passes": [
@@ -148,15 +155,16 @@
     },
     {
       "completion_evidence": [
-        "attorney-reviewed gold JSONL minimums",
-        "audit-gold-eval-pack pass",
-        "seed rows excluded"
+        "operator-source-backed or attorney-reviewed gold JSONL minimums",
+        "audit-gold-eval-pack pass for selected review mode",
+        "seed rows excluded",
+        "scripts/build-operator-source-backed-gold-pack.py for source-backed engineering lane"
       ],
       "external_dependency": true,
       "next": true,
       "pass": 27,
       "phase": "Phase 3",
-      "repo_prep_status": "gate_prepared",
+      "repo_prep_status": "operator_source_backed_lane_prepared",
       "status": "open",
       "title": "Minimum viable gold eval pack"
     },
@@ -165,13 +173,17 @@
         "release metrics JSON",
         "sample sizes",
         "reviewer status",
-        "pass/fail basis"
+        "pass/fail basis",
+        "scripts/build-release-metric-measurement-template.py",
+        "scripts/audit-release-metric-measurements.py",
+        "docs/release-metrics-measurement-workbench.md",
+        "operator_source_backed release metric measurements accepted only when explicitly marked and externally audited"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 28,
       "phase": "Phase 3",
-      "repo_prep_status": "gate_prepared",
+      "repo_prep_status": "measurement_workbench_prepared",
       "status": "open",
       "title": "Eval runner and release metrics evidence"
     },
@@ -179,13 +191,19 @@
       "completion_evidence": [
         "citation existence >= 99%",
         "quote-span verification >= 97%",
-        "offset/span recording"
+        "offset/span recording",
+        "pass29_verifier_metrics.json",
+        "audit-pass29-verifier-production pass",
+        "citation_existence >= 0.99 from attorney-reviewed or operator-source-backed gold",
+        "quote_span_verification >= 0.97 from attorney-reviewed or operator-source-backed gold",
+        "docs/external-evidence/pass29_verifier_metric_gate_summary.json",
+        "scripts/run-pass29-verifier-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 29,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Citation and quote verifier production upgrade"
     },
@@ -193,27 +211,39 @@
       "completion_evidence": [
         "claim extraction",
         "claim-to-source statuses",
-        "unsupported assertion blocker"
+        "unsupported assertion blocker",
+        "pass30_claim_support_metrics.json",
+        "audit-pass30-claim-support-production pass",
+        "citation_support >= 0.95 from attorney-reviewed or operator-source-backed gold",
+        "unsupported legal claims block final/final-like exports",
+        "docs/external-evidence/pass30_claim_support_metric_gate_summary.json",
+        "scripts/run-pass30-claim-support-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 30,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Claim-support verifier"
     },
     {
       "completion_evidence": [
-        "form freshness >= 99%",
-        "jurisdiction warnings",
-        "negative-treatment unknown warning"
+        "scope_verification >= 1.0 from attorney-reviewed or operator-source-backed gold",
+        "form_freshness_detection >= 0.99 from attorney-reviewed or operator-source-backed gold",
+        "current-law language blocked from stale/unknown/superseded sources",
+        "jurisdiction mismatch detection",
+        "negative-treatment unknown warning/blocker",
+        "pass31_staleness_jurisdiction_metrics.json",
+        "audit-pass31-staleness-jurisdiction-production pass",
+        "docs/external-evidence/pass31_staleness_jurisdiction_metric_gate_summary.json",
+        "scripts/run-pass31-staleness-jurisdiction-metrics.py --review-mode operator_source_backed"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 31,
       "phase": "Phase 4",
-      "repo_prep_status": "scaffolded",
+      "repo_prep_status": "production_metric_gate_prepared",
       "status": "open",
       "title": "Stale law, jurisdiction, and negative-treatment checks"
     },
@@ -221,14 +251,17 @@
       "completion_evidence": [
         "holding/disposition/standard-of-review extraction",
         "Rule 52/appellate red flags",
-        "structured case briefs"
+        "structured case briefs",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 32,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Law Court opinion intelligence"
     },
     {
@@ -236,28 +269,34 @@
         "form catalog",
         "version tracker",
         "required-field extraction",
-        "dependency graph"
+        "dependency graph",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 33,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Maine forms intelligence"
     },
     {
       "completion_evidence": [
         "proposed findings checklist",
         "best-interest coverage",
-        "missing findings blocker"
+        "missing findings blocker",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 34,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Rule 52 / best-interest / findings engine"
     },
     {
@@ -265,14 +304,17 @@
         "matter isolation",
         "OCR/text extraction",
         "PII/confidentiality flags",
-        "local encryption"
+        "local encryption",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass35_pass36_secure_matter_evidence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 35,
       "phase": "Phase 6",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Secure matter ingestion"
     },
     {
@@ -280,14 +322,17 @@
         "fact extraction",
         "timeline",
         "evidence map",
-        "missing-record checklist"
+        "missing-record checklist",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass35_pass36_secure_matter_evidence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 36,
       "phase": "Phase 6",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Evidence map, timeline, and missing-record checklist"
     },
     {
@@ -295,28 +340,34 @@
         "review_required drafts",
         "source-card sidebar",
         "claim support sidebar",
-        "missing-fact sidebar"
+        "missing-fact sidebar",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass37_pass38_drafting_filing_gate.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 37,
       "phase": "Phase 7",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Review-required drafting workspace"
     },
     {
       "completion_evidence": [
         "false-pass rate = 0",
         "immutable gate report",
-        "override logging"
+        "override logging",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass37_pass38_drafting_filing_gate.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 38,
       "phase": "Phase 7",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Filing-ready gate hardening"
     },
     {
@@ -524,10 +575,7 @@
     "Phase 11": 2,
     "Phase 12": 4,
     "Phase 3": 2,
-    "Phase 4": 3,
-    "Phase 5": 3,
-    "Phase 6": 2,
-    "Phase 7": 2
+    "Phase 4": 3
   },
   "remaining_passes": [
     27,
@@ -535,13 +583,6 @@
     29,
     30,
     31,
-    32,
-    33,
-    34,
-    35,
-    36,
-    37,
-    38,
     46,
     47,
     48,
@@ -550,14 +591,17 @@
     51
   ],
   "repo_prep_summary": {
-    "complete": 7,
+    "complete": 14,
     "external_evidence_validated": 8,
-    "gate_prepared": 4,
-    "scaffolded": 14
+    "gate_prepared": 2,
+    "measurement_workbench_prepared": 1,
+    "operator_source_backed_lane_prepared": 1,
+    "production_metric_gate_prepared": 3,
+    "scaffolded": 4
   },
   "status": "pass",
   "total_true_ga_passes": 33,
-  "true_ga_completed": 15,
-  "true_ga_remaining": 18,
+  "true_ga_completed": 22,
+  "true_ga_remaining": 11,
   "warnings": []
 }

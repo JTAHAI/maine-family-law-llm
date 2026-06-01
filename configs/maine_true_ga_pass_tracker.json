@@ -1,5 +1,5 @@
 {
-  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff.",
+  "counting_rule": "True-GA passes reduce the remaining count only when their configured exit evidence exists. Repo-only passes may close from repo evidence; live authority, retrieval, eval, security, pilot, and signoff passes require external evidence roots. Operator-source-backed evidence may be counted for engineering verifier gates only when rows are explicitly marked operator_source_backed and external audits pass; it is not attorney legal signoff. Passes 32-38 are repo-engineering closures backed by deterministic tests and generated evidence, not attorney/legal signoff.",
   "current_true_ga_completed_passes": [
     19,
     20,
@@ -9,6 +9,13 @@
     24,
     25,
     26,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
     39,
     40,
     41,
@@ -241,14 +248,17 @@
       "completion_evidence": [
         "holding/disposition/standard-of-review extraction",
         "Rule 52/appellate red flags",
-        "structured case briefs"
+        "structured case briefs",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 32,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Law Court opinion intelligence"
     },
     {
@@ -256,28 +266,34 @@
         "form catalog",
         "version tracker",
         "required-field extraction",
-        "dependency graph"
+        "dependency graph",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 33,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Maine forms intelligence"
     },
     {
       "completion_evidence": [
         "proposed findings checklist",
         "best-interest coverage",
-        "missing findings blocker"
+        "missing findings blocker",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass32_33_34_maine_intelligence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 34,
       "phase": "Phase 5",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Rule 52 / best-interest / findings engine"
     },
     {
@@ -285,14 +301,17 @@
         "matter isolation",
         "OCR/text extraction",
         "PII/confidentiality flags",
-        "local encryption"
+        "local encryption",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass35_pass36_secure_matter_evidence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 35,
       "phase": "Phase 6",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Secure matter ingestion"
     },
     {
@@ -300,14 +319,17 @@
         "fact extraction",
         "timeline",
         "evidence map",
-        "missing-record checklist"
+        "missing-record checklist",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass35_pass36_secure_matter_evidence.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 36,
       "phase": "Phase 6",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Evidence map, timeline, and missing-record checklist"
     },
     {
@@ -315,28 +337,34 @@
         "review_required drafts",
         "source-card sidebar",
         "claim support sidebar",
-        "missing-fact sidebar"
+        "missing-fact sidebar",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass37_pass38_drafting_filing_gate.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 37,
       "phase": "Phase 7",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Review-required drafting workspace"
     },
     {
       "completion_evidence": [
         "false-pass rate = 0",
         "immutable gate report",
-        "override logging"
+        "override logging",
+        "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+        "scripts/run-pass32-38-engineering-evidence.py --require-ready",
+        "tests/test_pass37_pass38_drafting_filing_gate.py"
       ],
-      "external_dependency": true,
+      "external_dependency": false,
       "next": false,
       "pass": 38,
       "phase": "Phase 7",
-      "repo_prep_status": "scaffolded",
-      "status": "open",
+      "repo_prep_status": "complete",
+      "status": "complete",
       "title": "Filing-ready gate hardening"
     },
     {

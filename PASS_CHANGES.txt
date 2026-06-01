@@ -715,3 +715,9 @@ Pass 30 metric gate prep (v1.67.0)
 - Added citation/section/compact-key lookup aliases from parsed authority records, preserving the original authority-index source ID for audit while using the parsed source ID for quote and claim text verification.
 - Added regression coverage for the exact external failure shape seen after Pass 31: populated authority index and parsed authority store, but zero source-backed citation/quote/scope rows.
 - True GA count remains 18 until external operator-source-backed evidence for Passes 29-31 is generated and audited; no attorney-review claim is made.
+
+## v1.71.0 — Passes 32-38 repo-engineering GA closure
+- Added scripts/run-pass32-38-engineering-evidence.py to generate deterministic repo evidence for Maine intelligence, secure matter/evidence, drafting workspace, and filing gate hardening.
+- Marked Passes 32-38 complete in the true GA tracker based on repo-engineering evidence, not attorney review or legal signoff.
+- Updated GA count to 22 completed / 11 remaining.
+- Remaining true GA passes are 27-31 and 46-51.
