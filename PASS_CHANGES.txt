@@ -670,3 +670,10 @@ v1.63.0 - Pass 26 gold annotation queue operations closure
 - Hardened promotion rules to reject private-training rows, seed/synthetic methods, non-attorney review statuses, invalid dataset paths, parse errors, and missing required gold fields.
 - Fixed the release metrics readiness string regression covered by the existing gold-release gate tests.
 - True GA count remains 18 remaining; Pass 27 still requires actual attorney-reviewed gold datasets before the count can decrease.
+
+
+## v1.65.0 — Pass 28 release metrics measurement workbench
+- Added fail-closed release metric measurement template builder.
+- Added measurement audit CLI that rejects repo-local, seed, synthetic, fixture, smoke, source-derived, undersized, missing-review, and wrong-dataset metrics.
+- Added Pass 28 operator runbook and targeted tests.
+- Pass 28 remains open until attorney-reviewed gold datasets and external task-specific measurements exist.

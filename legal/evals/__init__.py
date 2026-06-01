@@ -12,6 +12,12 @@ from legal.evals.gold_pack import (
     ReviewedGoldAnnotationPromoter,
 )
 from legal.evals.release_metrics import ReleaseMetricEvidence, ReleaseMetricsEvidenceBuilder, ReleaseMetricsEvidenceReport
+from legal.evals.release_measurements import (
+    ReleaseMetricMeasurementAuditReport,
+    ReleaseMetricMeasurementAuditor,
+    ReleaseMetricMeasurementTemplateBuilder,
+    required_external_metric_names,
+)
 from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalReport, RetrievalSmokeEvalRunner
 
 __all__ = [
@@ -29,6 +35,10 @@ __all__ = [
     "GoldPromotionReport",
     "ReviewedGoldAnnotationPromoter",
     "ReleaseMetricEvidence",
+    "ReleaseMetricMeasurementAuditReport",
+    "ReleaseMetricMeasurementAuditor",
+    "ReleaseMetricMeasurementTemplateBuilder",
+    "required_external_metric_names",
     "ReleaseMetricsEvidenceBuilder",
     "ReleaseMetricsEvidenceReport",
     "RetrievalEvalCase",

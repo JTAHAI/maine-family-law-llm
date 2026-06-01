@@ -1,0 +1,14 @@
+{
+  "pass": 28,
+  "title": "Eval runner and release metrics evidence",
+  "status": "repo_workbench_prepared_external_gold_metrics_required",
+  "remaining_count_change": 0,
+  "evidence": [
+    "legal/evals/release_measurements.py",
+    "scripts/build-release-metric-measurement-template.py",
+    "scripts/audit-release-metric-measurements.py",
+    "docs/release-metrics-measurement-workbench.md",
+    "tests/test_pass28_release_metrics_measurement_workbench.py"
+  ],
+  "blocker_to_close_pass": "attorney-reviewed gold datasets and measured external task-specific metrics are still required before Pass 28 can be marked complete"
+}

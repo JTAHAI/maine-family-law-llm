@@ -162,13 +162,16 @@
         "release metrics JSON",
         "sample sizes",
         "reviewer status",
-        "pass/fail basis"
+        "pass/fail basis",
+        "scripts/build-release-metric-measurement-template.py",
+        "scripts/audit-release-metric-measurements.py",
+        "docs/release-metrics-measurement-workbench.md"
       ],
       "external_dependency": true,
       "next": false,
       "pass": 28,
       "phase": "Phase 3",
-      "repo_prep_status": "gate_prepared",
+      "repo_prep_status": "measurement_workbench_prepared",
       "status": "open",
       "title": "Eval runner and release metrics evidence"
     },
