@@ -174,7 +174,7 @@ def main() -> int:
         "served_papers_starter": "Served papers" in html,
         "appeals_routing_starter": "What court handles appeals?" in html,
         "runtime_diagnostics_panel": "id=\"runtime-diagnostics\"" in html and "/api/runtime-diagnostics" in html,
-        "live_ui_version_marker": "1.85.0-branded-ui-asset-integration" in html,
+        "live_ui_version_marker": "1.86.0-classic-desktop-focaf-workbench" in html,
         "visible_brand_shell": "id=\"focaf-brand-shell\"" in html and "FOCAF" in html,
         "enter_submit_hint_visible": "Press <strong>Enter</strong>" in html and "Shift+Enter" in html,
         "no_broken_js_newline_literals": "join('\n" not in html and "].join('\n" not in html,

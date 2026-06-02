@@ -27,13 +27,13 @@ def test_v184_runtime_diagnostics_endpoint_and_html_markers() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
     diagnostics = api.runtime_diagnostics()
-    assert diagnostics["version"] == "1.85.0"
-    assert diagnostics["ui_version"] == "1.85.0-branded-ui-asset-integration"
+    assert diagnostics["version"] == "1.86.0"
+    assert diagnostics["ui_version"] == "1.86.0-classic-desktop-focaf-workbench"
     assert diagnostics["enter_to_submit"] is True
     assert diagnostics["appeals_routing_fix"] is True
 
     html = render_local_workbench_html()
-    assert 'data-ui-version="1.85.0-branded-ui-asset-integration"' in html
+    assert 'data-ui-version="1.86.0-classic-desktop-focaf-workbench"' in html
     assert 'id="runtime-diagnostics"' in html
     assert "What court handles appeals?" in html
     assert "/api/runtime-diagnostics" in html

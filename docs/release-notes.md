@@ -1,5 +1,13 @@
+## v1.86.0 — Classic desktop FOCAF research workbench UI
 
-## v1.85.0 — FOCAF brand-kit UI integration
+- Reworked the local browser workbench into a classic Windows-style FOCAF Research Workbench shell matching the requested layout reference.
+- Added title bar, menu bar, hero band, control strip, dense two-column chat/sidebar workspace, bottom tabs, and status bar.
+- Preserved Enter-to-submit, appeals routing, runtime diagnostics, brand asset serving, source cards, transcript export, and reviewer handoff metadata.
+- Added v1.86 UI regression tests for the classic desktop shell markers and appeals/Enter wiring.
+- No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status claimed.
+
+
+## v1.86.0 — FOCAF classic desktop FOCAF workbench UI
 
 - Adds the FOCAF Maine Family Law LLM brand kit to the repo under `assets/brand/focaf_family_law_llm_brand_kit/`.
 - Serves local brand assets from `/brand-assets`.

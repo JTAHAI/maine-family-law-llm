@@ -4,19 +4,14 @@ from __future__ import annotations
 
 
 def render_local_workbench_html() -> str:
-    """Return a dependency-free HTML chat workbench.
-
-    The page intentionally uses the existing local `/ask`, `/retrieve`, and `/sources`
-    endpoints so non-technical testers can exercise the same source-grounded path as
-    the CLI without a JavaScript build step.
-    """
+    """Return a dependency-free HTML chat workbench."""
 
     return """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FOCAF Maine Family Law LLM — Local Chat Workbench</title>
+  <title>Maine Family Law LLM — FOCAF Research Workbench</title>
   <link rel="icon" href="/brand-assets/assets/favicon/favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="/brand-assets/assets/favicon/favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" href="/brand-assets/assets/favicon/apple-touch-icon.png" />
@@ -27,503 +22,420 @@ def render_local_workbench_html() -> str:
   <link rel="stylesheet" href="/brand-assets/css/focaf-family-law-llm-theme.css" />
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #f3f7fb;
-      --panel: #ffffff;
-      --panel-2: #eef5f9;
-      --text: #122033;
-      --muted: #536579;
-      --line: #d5e1eb;
-      --brand-navy: #102a43;
-      --brand-teal: #1c7c7d;
-      --brand-gold: #d7a02f;
-      --accent: #1c7c7d;
-      --accent-2: #0a7f6a;
-      --danger: #8a1f11;
-      --warn: #9a6a00;
-      --shadow: 0 18px 44px rgba(16, 42, 67, 0.14);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #08111d;
-        --panel: #111c29;
-        --panel-2: #152536;
-        --text: #edf6ff;
-        --muted: #9fb0c2;
-        --line: #2d4054;
-        --brand-navy: #0b1523;
-        --brand-teal: #46d1c9;
-        --brand-gold: #f4c76a;
-        --accent: #46d1c9;
-        --accent-2: #73e2a7;
-        --danger: #ff8a80;
-        --warn: #f4c76a;
-        --shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
-      }
+      --window-blue: #061a42;
+      --title-blue: #06176b;
+      --title-blue-2: #0c2e82;
+      --chrome: #d8dce2;
+      --chrome-hi: #f7f9fb;
+      --chrome-lo: #7f8998;
+      --panel: #061b31;
+      --panel-2: #0b2743;
+      --panel-3: #0d3357;
+      --ink: #f2fbff;
+      --muted: #c4d1dc;
+      --cyan: #23f1ee;
+      --cyan-2: #77fff5;
+      --green: #8ee042;
+      --gold: #ffd86b;
+      --danger: #ff8d85;
+      --line: #68a8d3;
+      --line-dim: rgba(104,168,211,.44);
+      --shadow: 0 18px 42px rgba(0,0,0,.42);
+      --font-ui: Tahoma, Verdana, "Segoe UI", Arial, sans-serif;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
       background:
-        radial-gradient(circle at top left, color-mix(in srgb, var(--brand-teal) 22%, transparent), transparent 35rem),
-        linear-gradient(180deg, color-mix(in srgb, var(--brand-navy) 10%, var(--bg)), var(--bg));
-      color: var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.5;
+        radial-gradient(circle at 18% 0%, rgba(35,241,238,.16), transparent 38rem),
+        radial-gradient(circle at 88% 18%, rgba(255,216,107,.12), transparent 30rem),
+        linear-gradient(180deg, #0a1630, #020813 74%);
+      font-family: var(--font-ui);
+      font-size: 15px;
+      line-height: 1.42;
     }
-    a { color: var(--accent); }
-    header {
-      padding: 1.1rem;
-      border-bottom: 1px solid var(--line);
-      background: color-mix(in srgb, var(--panel) 90%, transparent);
-      backdrop-filter: blur(10px);
-      position: sticky;
-      top: 0;
-      z-index: 10;
+    button, input, textarea, select { font-family: var(--font-ui); }
+    a { color: var(--cyan-2); }
+    .desktop-shell {
+      width: min(1260px, calc(100vw - 18px));
+      margin: 6px auto 10px;
+      border: 2px solid #081430;
+      background: var(--chrome);
+      box-shadow: 0 0 0 1px #c7d3e0 inset, var(--shadow);
     }
-    header .wrap, main, footer { max-width: 1240px; margin: 0 auto; }
-    .brand-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .brand-lockup { display: flex; gap: 0.85rem; align-items: center; }
-    .brand-mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
+    .window-titlebar {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      background: linear-gradient(90deg, #02115d, #15378e 58%, #001047);
+      border-bottom: 1px solid #030817;
+      color: #fff;
+      font-weight: 900;
+      letter-spacing: .01em;
+      text-shadow: 0 1px 1px #000;
+    }
+    .title-left { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+    .title-left img { width: 23px; height: 23px; border-radius: 4px; background: rgba(255,255,255,.08); }
+    .title-text { overflow: hidden; text-overflow: ellipsis; }
+    .window-controls { display: flex; gap: 4px; }
+    .window-control {
+      width: 26px;
+      height: 24px;
+      border: 2px solid #111;
+      background: linear-gradient(#fefefe, #bfc8d3);
+      color: #07131f;
       display: grid;
       place-items: center;
-      color: #fff;
-      background: linear-gradient(135deg, var(--brand-teal), var(--brand-navy) 60%, var(--brand-gold));
-      font-weight: 950;
-      letter-spacing: -0.06em;
-      box-shadow: var(--shadow);
-    }
-    h1 { margin: 0 0 0.1rem; font-size: clamp(1.45rem, 2.1vw, 2.1rem); letter-spacing: -0.03em; }
-    .subtitle { color: var(--muted); margin: 0; }
-    .brand-link { font-weight: 800; text-decoration: none; border: 1px solid var(--line); padding: 0.45rem 0.7rem; border-radius: 999px; background: var(--panel-2); }
-    main { padding: 1rem; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.38fr) minmax(320px, 0.62fr); }
-    @media (max-width: 920px) { main { grid-template-columns: 1fr; } }
-    .card {
-      background: color-mix(in srgb, var(--panel) 96%, transparent);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card h2 { margin: 0; font-size: 1.1rem; }
-    .card-header { padding: 1rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
-    .card-body { padding: 1rem; }
-    .warning {
-      border-left: 5px solid var(--brand-gold);
-      background: color-mix(in srgb, var(--brand-gold) 14%, transparent);
-      padding: 0.75rem 1rem;
-      border-radius: 14px;
-      margin-bottom: 1rem;
-    }
-    label { font-weight: 800; display: block; margin-bottom: 0.35rem; }
-    textarea, input, select {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--panel-2) 80%, transparent);
-      color: var(--text);
-      border-radius: 15px;
-      padding: 0.85rem;
-      font: inherit;
-    }
-    textarea { min-height: 132px; resize: vertical; }
-    button {
-      border: 0;
-      border-radius: 999px;
-      padding: 0.78rem 1rem;
-      font-weight: 850;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--brand-teal), color-mix(in srgb, var(--brand-teal) 70%, var(--brand-navy)));
-      color: white;
-    }
-    button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-    button.example { width: 100%; color: var(--text); background: color-mix(in srgb, var(--panel-2) 90%, transparent); }
-    button:disabled { opacity: 0.55; cursor: wait; }
-    .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
-    .input-grid { display: grid; grid-template-columns: 0.85fr 0.85fr 0.9fr 1.2fr; gap: 0.75rem; margin-bottom: 0.75rem; }
-    @media (max-width: 880px) { .input-grid { grid-template-columns: 1fr; } }
-    .hint { color: var(--muted); font-size: 0.88rem; margin: 0.35rem 0 0; }
-    .result-toolbar { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; margin-top: 1.1rem; flex-wrap: wrap; }
-    .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 0.25rem 0.55rem; font-size: 0.82rem; color: var(--muted); background: color-mix(in srgb, var(--panel-2) 65%, transparent); }
-    .badge.good { color: var(--accent-2); }
-    .badge.warn { color: var(--warn); }
-    .badge.bad { color: var(--danger); }
-    .examples, .library-list { display: grid; gap: 0.55rem; }
-    .answer, .transcript {
-      white-space: pre-wrap;
-      background: color-mix(in srgb, var(--panel-2) 82%, transparent);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 1rem;
-      min-height: 160px;
-    }
-    .transcript { min-height: 80px; max-height: 300px; overflow: auto; margin-bottom: 0.85rem; }
-    .message { border-radius: 16px; padding: 0.75rem; margin-bottom: 0.6rem; border: 1px solid var(--line); }
-    .message.user { background: color-mix(in srgb, var(--brand-teal) 12%, transparent); }
-    .message.assistant { background: color-mix(in srgb, var(--panel) 70%, transparent); }
-    .message strong { display: block; margin-bottom: 0.25rem; }
-    .pill { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--line); border-radius: 999px; padding: 0.3rem 0.6rem; font-size: 0.85rem; color: var(--muted); background: var(--panel-2); }
-    .source-card {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 0.85rem;
-      margin: 0.65rem 0;
-      background: color-mix(in srgb, var(--brand-teal) 7%, transparent);
-    }
-    .source-card strong { display: block; margin-bottom: 0.2rem; }
-    .source-card code { overflow-wrap: anywhere; color: var(--muted); }
-    .source-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin: 0.55rem 0; font-size: 0.88rem; }
-    .source-card button { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
-    .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
-    @media (max-width: 680px) { .mini-grid, .source-card-meta { grid-template-columns: 1fr; } }
-    .muted { color: var(--muted); }
-    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-    .status-ok { color: var(--accent-2); font-weight: 850; }
-    .status-bad { color: var(--danger); font-weight: 850; }
-    .status-warn { color: var(--warn); font-weight: 850; }
-    details { border: 1px solid var(--line); border-radius: 16px; padding: 0.75rem; background: color-mix(in srgb, var(--panel-2) 68%, transparent); }
-    details summary { cursor: pointer; font-weight: 850; }
-    footer { padding: 0 1rem 2rem; color: var(--muted); }
-
-    /* v1.85 FOCAF brand-kit integration layer. Kept inline so the local UI remains dependency-free even before static assets load. */
-    :root {
-      --bg: #07131F;
-      --panel: #10283A;
-      --panel-2: #153447;
-      --text: #EAF7F6;
-      --muted: #AFC6CB;
-      --line: #244B62;
-      --brand-navy: #07131F;
-      --brand-teal: #23D3C1;
-      --brand-gold: #F6C96D;
-      --accent: #8DECE2;
-      --accent-2: #3EA97C;
-      --shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 18px 52px rgba(0,0,0,.26);
-    }
-    body[data-brand-kit="focaf_family_law_llm_brand_kit"] {
-      background:
-        radial-gradient(circle at 12% 0%, rgba(35,211,193,.18), transparent 32rem),
-        radial-gradient(circle at 90% 8%, rgba(246,201,109,.12), transparent 30rem),
-        linear-gradient(180deg, #0C1D2B 0%, #07131F 62%, #050C14 100%);
-      min-height: 100vh;
-    }
-    body[data-brand-kit="focaf_family_law_llm_brand_kit"]::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: .42;
-      background-image:
-        linear-gradient(rgba(141,236,226,.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(141,236,226,.045) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: linear-gradient(180deg, rgba(0,0,0,.7), transparent 70%);
-    }
-    header {
-      background: linear-gradient(180deg, rgba(12,29,43,.92), rgba(7,19,31,.78));
-      border-bottom: 1px solid rgba(141,236,226,.18);
-    }
-    .brand-lockup { gap: 1rem; }
-    .brand-mark { display: none; }
-    .brand-logo-img {
-      width: 62px;
-      height: 62px;
-      border-radius: 20px;
-      box-shadow: 0 0 0 1px rgba(141,236,226,.18), 0 18px 42px rgba(35,211,193,.16);
-      background: rgba(35,211,193,.08);
-    }
-    .brand-eyebrow {
-      display: block;
-      color: #8DECE2;
-      font-size: .72rem;
       font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: .16em;
-      margin-bottom: .12rem;
+      line-height: 1;
+      box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 #7e8792 inset;
     }
-    .brand-wordmark {
-      display: block;
-      height: 28px;
-      max-width: min(440px, 78vw);
-      margin: .1rem 0 .25rem;
-      filter: drop-shadow(0 8px 20px rgba(0,0,0,.18));
+    .menubar {
+      height: 31px;
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      padding: 0 12px;
+      color: #05070b;
+      background: linear-gradient(#f8f8f8, #d9dde3);
+      border-bottom: 2px solid #8c96a3;
+      font-size: 16px;
     }
-    .brand-link {
-      border-color: rgba(35,211,193,.34);
-      color: #07131F;
-      background: linear-gradient(180deg, #23D3C1, #8DECE2);
-      box-shadow: 0 14px 34px rgba(35,211,193,.16);
+    .app-canvas {
+      background: #cfd5dd;
+      padding: 7px;
     }
-    .brand-hero {
-      grid-column: 1 / -1;
+    .hero-band {
+      min-height: 172px;
+      background:
+        linear-gradient(90deg, rgba(2,10,24,.96), rgba(5,31,55,.92) 48%, rgba(3,13,26,.94)),
+        radial-gradient(circle at 78% 30%, rgba(35,241,238,.18), transparent 22rem);
+      border: 2px solid #07111f;
+      box-shadow: 1px 1px 0 rgba(255,255,255,.32) inset, -1px -1px 0 rgba(0,0,0,.65) inset;
+      display: grid;
+      grid-template-columns: 170px 1fr 220px 250px;
+      align-items: center;
+      gap: 22px;
+      padding: 16px 22px;
       position: relative;
       overflow: hidden;
-      background:
-        linear-gradient(135deg, rgba(35,211,193,.18), rgba(16,40,58,.92) 42%, rgba(7,19,31,.96)),
-        url('/brand-assets/assets/social/focaf-family-law-llm-social-card.svg') right center / min(680px, 78%) no-repeat;
-      min-height: 210px;
     }
-    .brand-hero::after {
+    .hero-band::before {
       content: "";
       position: absolute;
       inset: 0;
-      background: linear-gradient(90deg, rgba(7,19,31,.94), rgba(7,19,31,.76) 44%, rgba(7,19,31,.2));
       pointer-events: none;
+      opacity: .38;
+      background-image:
+        linear-gradient(rgba(35,241,238,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(35,241,238,.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(90deg, rgba(0,0,0,.75), transparent 82%);
     }
-    .brand-hero > * { position: relative; z-index: 1; }
-    .hero-kicker {
-      color: #F6C96D;
+    .hero-band > * { position: relative; z-index: 1; }
+    .hero-icon-wrap {
+      width: 145px;
+      height: 145px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, #071b31, #010912);
+      border: 2px solid rgba(122,210,255,.38);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 36px rgba(0,0,0,.38), 0 0 0 1px rgba(255,255,255,.09) inset;
+    }
+    .hero-icon-wrap img { width: 112px; height: 112px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(35,241,238,.35)); }
+    .hero-title h1 { margin: 0; font-size: clamp(2.1rem, 4vw, 3.3rem); line-height: .96; letter-spacing: -.04em; }
+    .hero-title .tagline { margin: 3px 0 8px; color: var(--cyan); font-size: 1.26rem; font-weight: 900; letter-spacing: .025em; text-transform: uppercase; }
+    .hero-title p { margin: 0; color: #eef6ff; font-size: 1.1rem; }
+    .secure-pill {
+      justify-self: center;
+      align-self: center;
+      border: 1px solid rgba(255,255,255,.48);
+      background: linear-gradient(#082f4e, #031323);
+      color: var(--cyan);
+      border-radius: 8px;
+      padding: 10px 16px;
       font-weight: 900;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      font-size: .75rem;
-      margin: 0 0 .45rem;
+      box-shadow: 0 0 18px rgba(35,241,238,.12), 1px 1px 0 rgba(255,255,255,.18) inset;
+      white-space: nowrap;
     }
-    .hero-title {
-      max-width: 760px;
-      font-size: clamp(2rem, 4vw, 4.2rem);
-      line-height: .98;
-      letter-spacing: -.055em;
-      margin: 0;
+    .secure-pill .dot { display:inline-block; width: 17px; height: 17px; border-radius: 50%; margin-right: 9px; background: radial-gradient(circle at 35% 35%, #c8ff74, #3dbf34 68%, #1d641d); vertical-align: -3px; }
+    .review-text { color: #fff; font-size: .95rem; margin-top: 14px; text-align: center; }
+    .focaf-lockup { display: grid; grid-template-columns: 72px 1fr; gap: 13px; align-items: center; justify-self: end; }
+    .focaf-people { font-size: 56px; color: var(--cyan); line-height: 1; filter: drop-shadow(0 0 12px rgba(35,241,238,.26)); }
+    .focaf-lockup strong { display:block; font-size: 2rem; }
+    .focaf-lockup span { color: #e5f2f5; font-size: .98rem; }
+    .control-strip {
+      margin-top: 8px;
+      padding: 13px 20px;
+      background: linear-gradient(#f7f8fa, #d6dce5);
+      border: 2px solid #fefefe;
+      outline: 2px solid #8d98a6;
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.05fr auto;
+      gap: 18px;
+      align-items: end;
+      color: #07145a;
     }
-    .hero-copy { max-width: 720px; color: #D9ECEC; font-size: 1.02rem; margin: .8rem 0 1rem; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
-    .hero-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: .4rem;
-      border: 1px solid rgba(141,236,226,.26);
-      background: rgba(141,236,226,.08);
-      color: #EAF7F6;
-      border-radius: 999px;
-      padding: .45rem .7rem;
-      font-weight: 800;
-      font-size: .84rem;
+    label { display:block; font-weight: 900; color: #07145a; margin: 0 0 4px; }
+    select, input, textarea {
+      width: 100%;
+      border: 2px solid #9ca7b5;
+      border-radius: 5px;
+      background: linear-gradient(#ffffff, #e7ebf0);
+      color: #030b18;
+      padding: 8px 10px;
+      font-size: 15px;
+      box-shadow: 1px 1px 0 #fff inset, -1px -1px 0 #b6c0cb inset;
     }
-    .hero-pill.review { border-color: rgba(246,201,109,.42); color: #F6C96D; background: rgba(246,201,109,.1); }
-    .hero-pill.safe { border-color: rgba(62,169,124,.42); color: #AAE8CE; background: rgba(62,169,124,.1); }
-    .card {
-      border-color: rgba(141,236,226,.16);
-      background: linear-gradient(180deg, rgba(21,52,71,.94), rgba(16,40,58,.96));
-    }
-    .card-header { background: rgba(7,19,31,.22); }
-    .warning { border-color: rgba(246,201,109,.38); color: #F9E6B4; }
-    textarea, input, select {
-      background: rgba(7,19,31,.62);
-      border-color: rgba(141,236,226,.22);
-    }
+    select { height: 42px; }
+    textarea { resize: none; min-height: 48px; line-height: 1.35; }
     textarea:focus, input:focus, select:focus {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(35,211,193,.26), 0 0 0 6px rgba(7,19,31,.62);
-      border-color: rgba(35,211,193,.62);
+      outline: 2px solid var(--cyan);
+      outline-offset: 1px;
+      border-color: #0b7fa5;
     }
     button {
-      color: #041217;
-      background: linear-gradient(180deg, #23D3C1, #11A096);
-      box-shadow: 0 12px 30px rgba(35,211,193,.16);
+      border: 2px solid #00103b;
+      border-radius: 6px;
+      background: linear-gradient(#1c4ca9, #06166a 58%, #020c46);
+      color: white;
+      padding: 9px 15px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 1px 1px 0 rgba(255,255,255,.36) inset, -1px -1px 0 rgba(0,0,0,.45) inset, 0 5px 10px rgba(0,0,0,.22);
+      text-shadow: 0 1px 0 #000;
     }
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: .6; cursor: wait; }
     button.secondary, button.example {
-      color: #EAF7F6;
-      background: rgba(141,236,226,.07);
-      border-color: rgba(141,236,226,.22);
+      background: linear-gradient(#0d3157, #071d35);
+      border-color: #4d85a6;
+      color: #eef9ff;
+      text-align: left;
+      width: 100%;
+      box-shadow: 1px 1px 0 rgba(255,255,255,.16) inset, -1px -1px 0 rgba(0,0,0,.55) inset;
     }
-    button.example { text-align: left; border-radius: 18px; }
-    .answer, .transcript {
-      background: linear-gradient(180deg, rgba(12,29,43,.9), rgba(7,19,31,.82));
-      border-color: rgba(141,236,226,.18);
-    }
-    .source-card {
-      background: linear-gradient(180deg, rgba(35,211,193,.09), rgba(12,29,43,.88));
-      border-color: rgba(141,236,226,.2);
-    }
-    .runtime-card {
+    button.action-wide { min-width: 210px; height: 55px; display:flex; align-items:center; justify-content:center; gap:8px; font-size: 1.02rem; }
+    .workspace-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: .55rem;
-      margin: 1rem 0;
+      grid-template-columns: minmax(0, 1fr) 348px;
+      gap: 14px;
+      margin-top: 14px;
     }
-    @media (max-width: 920px) { .runtime-card { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .runtime-card { grid-template-columns: 1fr; } .brand-wordmark { display: none; } }
-    .runtime-stat {
-      border: 1px solid rgba(141,236,226,.16);
-      background: rgba(7,19,31,.38);
-      border-radius: 16px;
-      padding: .75rem;
+    .panel {
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      border: 2px solid #07111f;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 1px 1px 0 rgba(255,255,255,.25) inset, -1px -1px 0 rgba(0,0,0,.65) inset;
     }
-    .runtime-stat strong { display:block; color:#8DECE2; font-size:1.15rem; }
-    .runtime-stat span { color: var(--muted); font-size:.8rem; }
-    .brand-asset-proof {
-      display: inline-flex;
-      align-items: center;
-      gap: .45rem;
-      color: #8DECE2;
-      font-weight: 800;
+    .panel-title {
+      min-height: 38px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: linear-gradient(#0e3970, #061957);
+      border-bottom: 1px solid rgba(255,255,255,.16);
+      font-weight: 900;
+      color: #eef7ff;
+      text-shadow: 0 1px 0 #000;
     }
-
+    .panel-title .collapse { color:#cad6e8; font-size: 18px; }
+    .panel-body { padding: 14px; }
+    .chat-panel { min-height: 640px; display:flex; flex-direction: column; }
+    .chat-scroll {
+      flex: 1;
+      min-height: 410px;
+      max-height: 558px;
+      overflow: auto;
+      padding: 20px 24px;
+      background:
+        linear-gradient(90deg, rgba(8,24,45,.96), rgba(4,15,29,.92)),
+        radial-gradient(circle at 90% 15%, rgba(35,241,238,.10), transparent 20rem);
+      border-bottom: 2px solid rgba(255,255,255,.16);
+    }
+    .message, .answer, .transcript, .source-card, #handoff-panel, #source-inspector {
+      border: 1px solid var(--line-dim);
+      border-radius: 8px;
+      background: rgba(2,12,23,.58);
+      color: #f3fbff;
+    }
+    .message { display:grid; grid-template-columns: 70px 1fr auto; gap: 16px; padding: 14px 0; border-width: 0 0 1px; border-radius: 0; background: transparent; }
+    .message strong { color: var(--cyan); display:block; margin-bottom: 5px; }
+    .message.user strong { color: #fff; }
+    .message::before { content: "💬"; width: 52px; height: 52px; border-radius: 12px; border: 1px solid rgba(122,210,255,.45); display:grid; place-items:center; background: linear-gradient(#123b5f, #041326); font-size: 28px; box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset; }
+    .message.user::before { content: "👤"; background: transparent; border: 0; font-size: 42px; }
+    .message .time, .chat-time { color: #eef7ff; white-space: nowrap; }
+    .chat-seed { display:grid; grid-template-columns: 70px 1fr auto; gap:16px; padding: 6px 0 18px; border-bottom: 1px solid rgba(255,255,255,.28); }
+    .chat-seed-icon { width:58px; height:58px; border-radius:12px; border:1px solid rgba(122,210,255,.45); display:grid; place-items:center; background:linear-gradient(#123b5f,#041326); font-size:32px; }
+    .chat-seed strong { color: var(--cyan); display:block; margin-bottom: 7px; }
+    #transcript.transcript {
+      white-space: pre-wrap;
+      border: 0;
+      background: transparent;
+      min-height: 0;
+      max-height: none;
+      overflow: visible;
+      padding: 0;
+      color: #f6fbff;
+    }
+    #transcript.transcript:empty::after { content: "No messages yet."; color: var(--muted); }
+    .composer {
+      padding: 12px 16px 10px;
+      background: linear-gradient(#e4e8ef, #c3cbd6);
+      border-top: 1px solid #fff;
+      color: #06145b;
+    }
+    .composer-row { display:grid; grid-template-columns: 42px 1fr 110px; gap: 12px; align-items:center; }
+    .composer-icon { width: 37px; height:37px; border-radius:8px; display:grid; place-items:center; background:linear-gradient(#102d6e,#03124c); border:1px solid #04133f; color:#fff; box-shadow:1px 1px 0 #fff inset; }
+    #question { min-height: 48px; }
+    .composer-actions { display:grid; grid-template-columns: 130px 130px 165px 1fr; gap: 14px; margin-top:10px; align-items:center; }
+    .signal { justify-self: end; color: #126d2f; font-weight: 900; letter-spacing: 1px; }
+    .sidebar-stack { display:grid; gap: 12px; align-content: start; }
+    .side-panel { background: linear-gradient(#123866, #061b35); border: 2px solid #07111f; border-radius: 8px; overflow:hidden; box-shadow: 1px 1px 0 rgba(255,255,255,.25) inset, -1px -1px 0 rgba(0,0,0,.65) inset; }
+    .side-title { padding: 8px 12px; font-weight:900; background: linear-gradient(#0f3b75, #071957); border-bottom:1px solid rgba(255,255,255,.16); display:flex; justify-content:space-between; }
+    .side-body { padding: 11px 13px; background: rgba(3,14,29,.45); }
+    .status-strip { color:#06145b; background: linear-gradient(#fdfdfd,#dce2ea); padding: 10px; border-radius:7px; border:1px solid #9ba6b4; }
+    #health.pill, .pill, .badge { display:inline-flex; align-items:center; border-radius: 4px; border:1px solid #9ba6b4; background:linear-gradient(#fff,#e6eaf0); color:#06145b; padding: 5px 9px; font-weight: 800; }
+    .status-ok::before { content:"●"; color: #3dbf34; margin-right: 7px; }
+    .badges { display:flex; gap:5px; flex-wrap:wrap; }
+    .badge.good { color:#0f642d; }
+    .badge.warn { color:#7e5b00; }
+    .badge.bad { color:#8a1414; }
+    .examples, .library-list { display:grid; gap: 7px; }
+    .example { padding: 5px 8px; border: 0; box-shadow: none; color:#eef9ff; background: transparent; border-radius: 4px; }
+    .example::before { content:"💬  "; }
+    .example:hover { background: rgba(35,241,238,.11); }
+    details { border:0; padding:0; background:transparent; }
+    details summary { list-style: none; cursor:pointer; font-weight: 900; margin-bottom: 8px; color:#f4fbff; }
+    details summary::-webkit-details-marker { display:none; }
+    .mini-grid { display:grid; grid-template-columns: 1fr; gap: 9px; }
+    .muted, .hint { color: var(--muted); }
+    .hint { font-size:.86rem; margin: 8px 0 0; }
+    .source-card { padding: 10px; margin: 8px 0; }
+    .source-card strong { color: #fff; }
+    .source-card-meta { display:grid; grid-template-columns: 1fr; gap:4px; margin: 8px 0; font-size:.86rem; }
+    .bottom-tabs { display:grid; grid-template-columns: .9fr .9fr 1fr; gap: 0; margin-top: 14px; }
+    .tab-panel { border:2px solid #8d98a6; border-top:0; background: linear-gradient(#e7edf4,#c7d0dc); color:#06145b; min-height: 190px; }
+    .tab-head { display:inline-block; min-width: 215px; text-align:center; padding:8px 16px; background:linear-gradient(#f6f8fb,#c8d1db); border:2px solid #8d98a6; border-bottom:0; border-radius:8px 8px 0 0; font-weight:900; }
+    .tab-content { padding:12px; display:grid; gap:10px; }
+    .answer, #handoff-panel, #source-inspector { min-height: 125px; padding: 12px; white-space: pre-wrap; background: linear-gradient(#e7edf4,#d7dee8); color:#06145b; border-color:#9ca7b5; }
+    #handoff-panel ul, .answer ul { margin-top: 5px; }
+    .answer-card-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .answer-card { border:1px solid #9ca7b5; background:linear-gradient(#f5f8fb,#dfe6ef); border-radius:7px; padding:10px; color:#06145b; min-height:120px; }
+    .answer-card strong { display:block; color:#06145b; margin-bottom:5px; }
+    .footerbar {
+      height: 28px;
+      display:grid;
+      grid-template-columns: 220px 1fr auto auto;
+      gap: 16px;
+      align-items:center;
+      padding: 0 12px;
+      background: linear-gradient(#0b304f, #041625);
+      color:#eaf7ff;
+      border: 2px solid #07111f;
+      border-top:0;
+      font-size: .86rem;
+    }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .status-bad { color: var(--danger); font-weight:900; }
+    .status-warn { color: var(--gold); font-weight:900; }
+    .status-ok { font-weight:900; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    @media (max-width: 1020px) {
+      .hero-band { grid-template-columns: 120px 1fr; }
+      .secure-wrap, .focaf-lockup { display:none; }
+      .control-strip, .workspace-grid, .bottom-tabs { grid-template-columns: 1fr; }
+      .composer-actions { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 660px) {
+      .hero-band { grid-template-columns: 1fr; }
+      .hero-icon-wrap { display:none; }
+      .composer-row, .composer-actions { grid-template-columns: 1fr; }
+      .footerbar { grid-template-columns: 1fr; height:auto; padding: 8px; }
+      .menubar { gap: 12px; font-size:14px; }
+    }
   </style>
 </head>
-<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="v1.85">
-  <header id="focaf-brand-shell" data-ui-version="1.85.0-branded-ui-asset-integration" data-brand-assets="/brand-assets">
-    <div class="wrap brand-row">
-      <div class="brand-lockup">
-        <img class="brand-logo-img" src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg" alt="FOCAF Maine Family Law LLM mark" />
-        <div>
-          <span class="brand-eyebrow">For Our Children & Families</span>
-          <img class="brand-wordmark" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg" alt="FOCAF Maine Family Law LLM" />
-          <h1 class="sr-only">Maine Family Law LLM</h1>
-          <p class="subtitle">Local source-backed chat workbench for Maine family-law orientation. Enter submits. Review required. Not legal advice.</p>
-        </div>
+<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="v1.86">
+  <div class="desktop-shell classic-desktop-shell" id="focaf-brand-shell" data-ui-version="1.86.0-classic-desktop-focaf-workbench" data-brand-assets="/brand-assets">
+    <div class="window-titlebar">
+      <div class="title-left">
+        <img src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg" alt="FOCAF icon" />
+        <span class="title-text">Maine Family Law LLM — FOCAF Research Workbench</span>
       </div>
-      <a class="brand-link" href="https://focaf.jtforme.com" target="_blank" rel="noopener noreferrer">focaf.jtforme.com</a>
+      <div class="window-controls" aria-hidden="true">
+        <span class="window-control">–</span><span class="window-control">□</span><span class="window-control">×</span>
+      </div>
     </div>
-  </header>
-  <main>
-    <section class="card brand-hero" id="focaf-brand-hero" data-brand-kit-mounted="expected">
-      <div class="card-body">
-        <p class="hero-kicker">FOCAF Maine Family Law LLM · Local Workbench</p>
-        <h2 class="hero-title">Source-backed family-law orientation for Maine families and helpers.</h2>
-        <p class="hero-copy">Use role-based starters, answer styles, source cards, missing-information checklists, and reviewer handoff exports. This is legal information only; human review is required before anyone relies on it.</p>
-        <div class="hero-actions">
-          <span class="hero-pill safe">Local browser workbench</span>
-          <span class="hero-pill review">Review required</span>
-          <span class="hero-pill">Enter key submits</span>
-          <span class="hero-pill">Appeals routing fixed</span>
-          <span class="brand-asset-proof">Brand assets loaded from /brand-assets</span>
+    <nav class="menubar" aria-label="Workbench menu"><span>File</span><span>Edit</span><span>Profile</span><span>View</span><span>Tools</span><span>Help</span></nav>
+    <div class="app-canvas">
+      <section class="hero-band" id="focaf-brand-hero" data-brand-kit-mounted="expected">
+        <div class="hero-icon-wrap"><img src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg" alt="FOCAF Maine Family Law LLM mark" /></div>
+        <div class="hero-title">
+          <h1>Maine Family Law LLM</h1>
+          <div class="tagline">FOR OUR CHILDREN &amp; FAMILIES</div>
+          <p>Source-backed research workbench for FOCAF</p>
         </div>
-      </div>
-    </section>
-    <section class="card" aria-labelledby="chat-heading">
-      <div class="card-header">
-        <h2 id="chat-heading">Ask Maine Family Law</h2>
-        <span id="health" class="pill">checking local API...</span>
-      </div>
-      <div class="card-body">
-        <div class="warning">
-          This tool gives legal information from retrieved source snippets. It does not create an attorney-client relationship, and no answer is filing-ready.
-        </div>
-        <div id="runtime-diagnostics" class="warning" data-runtime-diagnostics="loading">Runtime diagnostics loading. Expected UI: v1.85 branded asset integration + appeals routing + Enter submit.</div>
-        <div class="runtime-card" aria-label="Local workbench status summary">
-          <div class="runtime-stat"><strong>v1.85</strong><span>visible UI pass</span></div>
-          <div class="runtime-stat"><strong>105+</strong><span>source-backed chat starters</span></div>
-          <div class="runtime-stat"><strong>5 roles</strong><span>parents, lawyers, caregivers, counselors, therapists</span></div>
-          <div class="runtime-stat"><strong>Assets</strong><span>FOCAF kit served locally</span></div>
-        </div>
-        <div class="input-grid">
-          <div>
-            <label for="audience">I am asking as a...</label>
-            <select id="audience">
-              <option value="parent">Parent</option>
-              <option value="lawyer">Lawyer / advocate</option>
-              <option value="caregiver">Caregiver / relative</option>
-              <option value="counselor">Counselor</option>
-              <option value="therapist">Therapist / clinician</option>
-            </select>
-          </div>
-          <div>
-            <label for="answer-style">Answer style</label>
-            <select id="answer-style">
-              <option value="plain_language">Plain-language answer</option>
-              <option value="checklist">Checklist</option>
-              <option value="source_first">Source-first summary</option>
-              <option value="intake">Intake triage</option>
-              <option value="professional_boundary">Professional-boundary note</option>
-              <option value="source_card_table">Source-card audit table</option>
-              <option value="questions_to_ask">Questions to ask lawyer/clerk</option>
-              <option value="missing_information">Missing-info checklist</option>
-            </select>
-          </div>
-          <div>
-            <label for="topic-filter">Topic filter</label>
-            <select id="topic-filter">
-              <option value="all">All topics</option>
-            </select>
-          </div>
-          <div>
-            <label for="matter-context">Optional context / facts to focus on</label>
-            <input id="matter-context" placeholder="Example: parental rights, domestic abuse concern, post-judgment motion" />
-          </div>
-        </div>
-        <label for="question">Question</label>
-        <textarea id="question" placeholder="Example: What are Maine's best-interest factors under 19-A M.R.S. § 1653?"></textarea>
-        <p class="hint">Press <strong>Enter</strong> to ask immediately. Press <strong>Shift+Enter</strong> for a new line. If Enter does not submit, reload with Ctrl+F5 and verify the 1.85 UI marker and runtime diagnostics panel.</p>
-        <div class="row" style="margin-top: 0.75rem;">
-          <button id="ask-button">Ask</button>
-          <button id="copy-button" class="secondary">Copy answer</button>
-          <button id="download-button" class="secondary">Download transcript</button>
-          <button id="download-json-button" class="secondary">Download JSON</button>
-          <button id="clear-button" class="secondary">Clear chat</button>
-          <button id="sources-button" class="secondary">Load source list</button>
-        </div>
-        <div class="result-toolbar">
-          <h2>Conversation</h2>
-          <div id="answer-badges" class="badges"><span class="badge">waiting</span></div>
-        </div>
-        <div id="transcript" class="transcript" aria-live="polite">No messages yet.</div>
-        <h2>Latest answer</h2>
-        <div id="answer" class="answer" aria-live="polite">Ask a question to test the local source-grounded workbench.</div>
-        <h2 style="margin-top: 1rem;">Missing info & reviewer handoff</h2>
-        <div id="handoff-panel" class="answer" aria-live="polite">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div>
-      </div>
-    </section>
+        <div class="secure-wrap"><div class="secure-pill"><span class="dot"></span>FOCAF Secure</div><div class="review-text">Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</div></div>
+        <div class="focaf-lockup"><div class="focaf-people">👥</div><div><strong>FOCAF</strong><span>Maine’s Child First<br/>Legal Community</span></div></div>
+      </section>
 
-    <aside class="card" aria-labelledby="sources-heading">
-      <div class="card-header">
-        <h2 id="sources-heading">Sources, shortcuts & question library</h2>
-      </div>
-      <div class="card-body">
-        <p class="muted">Try these starter prompts:</p>
-        <div class="examples">
-          <button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best-interest factors</button>
-          <button class="secondary example" data-example="What court handles appeals?">Appeals court routing</button>
-          <button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best-interest prep</button>
-          <button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary</button>
-          <button class="secondary example" data-example="What should I gather for child support?">Child support checklist</button>
-          <button class="secondary example" data-example="What if I need protection from abuse?">Safety/PFA routing</button>
-          <button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers</button>
-          <button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence</button>
-          <button class="secondary example" data-example="Should I write a court letter for a parent?">Counselor court letter</button>
-          <button class="secondary example" data-example="What should a counselor do if subpoenaed in a family case?">Counselor subpoena</button>
-          <button class="secondary example" data-example="What if one parent wants to move away with the child?">Move / relocation flag</button>
-          <button class="secondary example" data-example="How do I document missed exchanges?">Missed exchanges</button>
-          <button class="secondary example" data-example="What information do I need before asking a family law question?">Missing-info checklist</button>
-          <button class="secondary example" data-example="How do I export a reviewer handoff from this chat?">Reviewer handoff export</button>
-        </div>
-        <details style="margin-top: 1rem;" open>
-          <summary>Role-specific starter prompt packs</summary>
-          <p class="muted">Pick a prompt pack for the selected role. These packs are designed for everyday parents, lawyers/advocates, caregivers, counselors, and therapists.</p>
-          <label for="prompt-pack-select">Starter pack</label>
-          <select id="prompt-pack-select"><option value="auto">Best pack for selected role</option></select>
-          <div id="prompt-pack-list" class="library-list" style="margin-top: 0.7rem;">Loading starter prompt packs...</div>
-        </details>
-        <details style="margin-top: 1rem;" open>
-          <summary>Browse question library</summary>
-          <p class="muted">These are starter questions for parents, lawyers, caregivers, counselors, and therapists. Filter by audience, topic, or keywords.</p>
-          <div class="mini-grid">
-            <div>
-              <label for="library-search">Search starter questions</label>
-              <input id="library-search" placeholder="Example: evidence, served papers, therapist, child support" />
-            </div>
-            <div>
-              <label for="library-topic-search">Quick topic</label>
-              <input id="library-topic-search" placeholder="Example: safety_pfa, parental_rights, post_judgment" />
-            </div>
+      <section class="control-strip" aria-label="Search controls">
+        <div><label for="audience">Role</label><select id="audience"><option value="parent">👤 Parent</option><option value="lawyer">⚖️ Lawyer / advocate</option><option value="caregiver">🤝 Caregiver / relative</option><option value="counselor">💬 Counselor</option><option value="therapist">🧠 Therapist / clinician</option></select></div>
+        <div><label for="answer-style">Answer Style</label><select id="answer-style"><option value="plain_language">Plain language</option><option value="checklist">Checklist</option><option value="source_first">Source-first</option><option value="intake">Intake triage</option><option value="professional_boundary">Professional boundary</option><option value="source_card_table">Source-card table</option><option value="questions_to_ask">Questions to ask</option><option value="missing_information">Missing information</option></select></div>
+        <div><label for="topic-filter">Topic Filter</label><select id="topic-filter"><option value="all">All topics</option></select></div>
+        <div><label for="matter-context">Focus Context</label><input id="matter-context" placeholder="Parental rights, appeal, PFA, support…" /></div>
+        <button id="sources-button" class="action-wide">💬 Load Source List</button>
+      </section>
+
+      <div class="workspace-grid">
+        <section class="panel chat-panel" aria-labelledby="chat-heading">
+          <div class="panel-title"><span id="chat-heading">💬 Research Chat — Your FOCAF Assistant</span><span id="health" class="pill">checking local API...</span></div>
+          <div class="chat-scroll" aria-label="Research chat messages">
+            <div class="chat-seed"><div class="chat-seed-icon">💬</div><div><strong>FOCAF Assistant</strong><div>Hi. I’m your Maine family law research assistant.<br/>I pull from verified sources and provide citations so you can review and decide what fits your situation.<br/><br/>How can I help today?</div></div><div class="chat-time">Local</div></div>
+            <div id="transcript" class="transcript" aria-live="polite">No messages yet.</div>
           </div>
-          <div id="library-list" class="library-list" style="margin-top: 0.7rem;">Loading question library...</div>
-        </details>
-        <h2 style="margin-top: 1.25rem;">Retrieved source cards</h2>
-        <div id="source-cards" class="muted">No source cards yet.</div>
-        <h2 style="margin-top: 1.25rem;">Source inspector</h2>
-        <div id="source-inspector" class="muted">Select “Inspect source” on a source card to view full local metadata.</div>
+          <div class="composer">
+            <label class="sr-only" for="question">Question</label>
+            <div class="composer-row"><div class="composer-icon">💬</div><textarea id="question" placeholder="Type your question here..."></textarea><button id="ask-button">Send</button></div>
+            <div class="composer-actions"><button id="clear-button">🧹 Clear</button><button id="copy-button">📄 Copy</button><button id="download-button">💾 Save Transcript</button><div class="signal">▂▄▆█</div></div>
+            <div class="hint">Press <strong>Enter</strong> to submit. Use <strong>Shift+Enter</strong> for a new line.</div>
+            <button id="download-json-button" class="secondary" style="display:none">Download JSON</button>
+          </div>
+        </section>
+
+        <aside class="sidebar-stack" aria-label="FOCAF sidebar">
+          <section class="side-panel"><div class="side-title">💬 FOCAF Sidebar <span>▴</span></div><div class="side-body"><div class="status-strip"><strong>Status</strong><br/><span class="status-ok">Online · FOCAF Secure</span><br/><a href="https://focaf.jtforme.com" target="_blank" rel="noopener noreferrer">Edit Profile / FOCAF</a></div></div></section>
+          <section class="side-panel"><div class="side-title">📌 Prompt Shortcuts <span>▴</span></div><div class="side-body examples"><button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best interest factors</button><button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best interest prep</button><button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary</button><button class="secondary example" data-example="What should I gather for child support?">Child support checklist</button><button class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing</button><button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers</button><button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence</button><button class="secondary example" data-example="Should I write a court letter for a parent?">Counselor court letter</button></div></section>
+          <section class="side-panel"><div class="side-title">❔ Question Starters <span>▴</span></div><div class="side-body examples"><button class="secondary example" data-example="What is a parenting plan?">What is a parenting plan?</button><button class="secondary example" data-example="How is child support calculated?">How is child support calculated?</button><button class="secondary example" data-example="What is a GAL and their role?">What is a GAL and their role?</button><button class="secondary example" data-example="Can I move with my child?">Can I move with my child?</button><button class="secondary example" data-example="How do I file an appeal?">How do I file an appeal?</button><button class="secondary example" data-example="What court handles appeals?">What court handles appeals?</button></div></section>
+          <section class="side-panel"><div class="side-title">🗂️ Starter Packs <span>▴</span></div><div class="side-body"><label for="prompt-pack-select" style="color:#eef7ff">Starter pack</label><select id="prompt-pack-select"><option value="auto">Best pack for selected role</option></select><div id="prompt-pack-list" class="library-list" style="margin-top:9px">Loading starter prompt packs...</div></div></section>
+          <section class="side-panel"><div class="side-title">📚 Recent Sources <span>▴</span></div><div class="side-body"><div id="source-cards" class="muted">No source cards yet.</div></div></section>
+        </aside>
       </div>
-    </aside>
-  </main>
-  <footer>
-    <p><strong>UI v1.85 FOCAF brand-kit asset integration + beautiful local shell + appeals/runtime diagnostics.</strong> Useful local links: <a href="/docs">Swagger API docs</a> · <a href="/sources">Raw source manifest</a> · <a href="/api/question-library">Question library JSON</a> · <a href="/api/question-topics">Topic JSON</a> · <a href="/api/starter-prompt-packs">Starter packs JSON</a> · <a href="/api/missing-information-prompts">Missing-info JSON</a> · <a href="/api/health">Health</a></p>
-  </footer>
-  <!-- Compatibility marker for tests and older docs: fetch('/ask') -->
+
+      <section class="bottom-tabs" aria-label="Latest answer and source review">
+        <div><div class="tab-head">Latest Answer</div><div class="tab-panel"><div class="tab-content"><div id="answer-badges" class="badges"><span class="badge">waiting</span></div><div id="answer" class="answer" aria-live="polite">Ask a question to test the local source-grounded workbench.</div></div></div></div>
+        <div><div class="tab-head">Sources / Inspector</div><div class="tab-panel"><div class="tab-content"><div id="source-inspector" class="muted">Select “Inspect source” on a source card to view full local metadata.</div><button id="copy-sources-bottom" class="secondary" type="button">Copy Sources</button></div></div></div>
+        <div><div class="tab-head">Transcript / Handoff</div><div class="tab-panel"><div class="tab-content"><div id="handoff-panel" class="answer" aria-live="polite">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div id="runtime-diagnostics" class="status-strip" data-runtime-diagnostics="loading">Runtime diagnostics loading. Expected UI: v1.86 classic desktop FOCAF research workbench.</div></div></div></div>
+      </section>
+
+      <section class="side-panel" style="margin-top:14px" aria-label="Question library"><div class="side-title">🧭 Full Question Library <span>▴</span></div><div class="side-body"><div class="mini-grid"><div><label for="library-search" style="color:#eef7ff">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support" /></div><div><label for="library-topic-search" style="color:#eef7ff">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal" /></div></div><div id="library-list" class="library-list" style="margin-top:10px">Loading question library...</div></div></section>
+
+
+      <div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · UI v1.86 classic desktop FOCAF workbench · /api/question-topics · /api/missing-information-prompts · fetch('/ask') · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg</div>
+      <img class="sr-only" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg" alt="FOCAF horizontal logo compatibility asset" />
+      <div class="footerbar"><span>🔒 FOCAF Secure Connection</span><span>Local sources&nbsp;&nbsp;•&nbsp;&nbsp;Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span><span>© FOCAF 2026</span><strong>UI v1.86 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics.</strong></div>
+    </div>
+  </div>
   <script>
     const question = document.getElementById('question');
     const answer = document.getElementById('answer');
@@ -549,7 +461,7 @@ def render_local_workbench_html() -> str:
     const sourceInspector = document.getElementById('source-inspector');
     const handoffPanel = document.getElementById('handoff-panel');
     const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
-    window.__MFL_WORKBENCH_UI_VERSION = '1.85.0-branded-ui-asset-integration';
+    window.__MFL_WORKBENCH_UI_VERSION = '1.86.0-classic-desktop-focaf-workbench';
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
@@ -741,7 +653,7 @@ def render_local_workbench_html() -> str:
         runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics:</strong> ${escapeHtml(payload.version)} · ${escapeHtml(payload.ui_version)} · Enter submit: ${payload.enter_to_submit ? 'on' : 'off'} · Appeals routing fix: ${payload.appeals_routing_fix ? 'on' : 'off'} · Brand assets mounted: ${payload.brand_assets_mounted ? 'yes' : 'no'} · Branding: ${escapeHtml(payload.branding || 'unknown')}`;
       } catch (err) {
         runtimeDiagnostics.dataset.runtimeDiagnostics = 'failed';
-        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer is not v1.85, stop the old server and restart from the _git repo.`;
+        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer is not v1.86, stop the old server and restart from the _git repo.`;
       }
     }
 
@@ -944,7 +856,7 @@ def render_local_workbench_html() -> str:
     loadQuestionLibrary();
     loadPromptPacks();
     loadRuntimeDiagnostics();
-    // v1.85 marker: brand_kit_assets, beautiful_shell, appeals_routing_fix, runtime diagnostics, reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2
+    // v1.86 marker: classic_desktop_shell, brand_kit_assets, appeals_routing_fix, runtime diagnostics, reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2
   </script>
 </body>
 </html>

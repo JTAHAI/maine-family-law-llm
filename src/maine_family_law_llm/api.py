@@ -80,7 +80,7 @@ if FastAPI is not None:
         return {
             "status": "ok",
             "version": __version__,
-            "ui_version": "1.85.0-branded-ui-asset-integration",
+            "ui_version": "1.86.0-classic-desktop-focaf-workbench",
             "mode": "local-workbench",
             "enter_to_submit": True,
             "branding": "FOCAF brand kit assets served from /brand-assets",
