@@ -164,7 +164,7 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
             forbidden.append(rel.as_posix())
             continue
-        if path.is_file() and path.suffix.lower() == ".txt" and rel.as_posix() not in {"PASS_CHANGES.txt", "requirements.txt", "requirements-dev.txt"}:
+        if path.is_file() and path.suffix.lower() == ".txt" and rel.as_posix() != "PASS_CHANGES.txt":
             forbidden.append(rel.as_posix())
 
     missing_required = sorted(

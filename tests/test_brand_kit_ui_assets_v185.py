@@ -50,7 +50,7 @@ def test_v185_runtime_diagnostics_reports_brand_asset_mount() -> None:
     from maine_family_law_llm import api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "1.90.0"
+    assert payload["version"] == "1.88.0"
     assert payload["ui_version"] == "1.87.0-chat-library-routing-input-clear"
     assert payload["brand_assets_mounted"] is True
     assert payload["brand_kit"] == "assets/brand/focaf_family_law_llm_brand_kit"

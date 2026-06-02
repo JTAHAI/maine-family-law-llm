@@ -96,36 +96,6 @@ SAMPLE_QUESTIONS = [
     "A parent asked a school counselor what to say in family court. What should happen?",
     "Can a reunification therapist write a progress report for court?",
     "How is child support calculated in Maine?",
-    "How many days do I have to respond to divorce papers?",
-    "What if I cannot find the other parent to serve papers?",
-    "How do I serve family papers if the other parent is out of state?",
-    "How do I ask to continue a hearing because I wasn't served correctly?",
-    "What if eCourts says my family record is private or sealed?",
-    "What if I cannot afford the filing fee for a family case?",
-    "Do I file parentage or divorce forms if we were never married?",
-    "What if child support arrears are piling up?",
-    "How should I prepare for a protection from abuse hearing?",
-    "How do I check final order, findings, and record issues before a family appeal?",
-    "Should I file a motion for findings before appeal?",
-    "Can I ask the court to stay a family order while I appeal?",
-    "Can I appeal a temporary order before final judgment?",
-    "How do I review a magistrate order in a family matter?",
-    "Can a counselor sit with me at the hearing and tell me what to say?",
-    "Can a therapist release records to one parent but not the other?",
-    "What can I ask the court clerk in my family case?",
-    "How do I ask for an interpreter or ADA accommodation in family court?",
-    "I got a new order after court. What should I check first?",
-    "Can I file an emergency motion in a Maine parenting case?",
-    "What if a PFA order was violated?",
-    "Is child support handled by DHHS or the court?",
-    "What financial affidavit or income paperwork should I gather?",
-    "Do I need a transcript for a family appeal?",
-    "Is this a motion to reconsider or relief from judgment issue?",
-    "Build a contempt evidence checklist for a Maine family order.",
-    "What proof do I need to handle school or medical issues for a child I care for?",
-    "What if I disagree with GAL fees or the GAL report?",
-    "What should a counselor do after receiving a subpoena for family court?",
-    "Can a therapist do a custody evaluation if the court order asks?",
 ]
 
 
@@ -233,8 +203,8 @@ def main() -> int:
     for expected in ("parent", "lawyer", "caregiver", "counselor", "therapist"):
         if expected not in audiences:
             blockers.append(f"audience_missing:{expected}")
-    if len(library) < 152:
-        blockers.append("library_too_small_for_v190_real_world_routing_coverage")
+    if len(library) < 122:
+        blockers.append("library_too_small_for_v187_real_world_routing_coverage")
     topics = public_topics()
     topic_names = sorted(row["topic"] for row in topics)
     for expected_topic in (
@@ -249,10 +219,6 @@ def main() -> int:
         "local_workbench_use",
         "missing_information",
         "order_review",
-        "deadlines_service",
-        "service",
-        "records_access",
-        "parentage",
     ):
         if expected_topic not in topic_names:
             blockers.append(f"topic_missing:{expected_topic}")
@@ -273,7 +239,7 @@ def main() -> int:
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "schema_version": "chat_library_workbench_evidence_v6",
+        "schema_version": "chat_library_workbench_evidence_v4",
         "status": "pass" if not blockers else "blocked",
         "blockers": blockers,
         "library_count": len(library),

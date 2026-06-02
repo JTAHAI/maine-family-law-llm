@@ -1,18 +1,3 @@
-## v1.90.0 — Local command compatibility and deterministic chat hardening
-
-- Added `scripts/doctor_local_repo.py` compatibility wrapper for the underscore doctor command.
-- Kept pyproject extras as the canonical dependency install: `python -m pip install -e ".[dev,api]"`.
-- Expanded deterministic chat library to 152 unique items.
-- Added v1.90 routing for clerk/access, post-hearing order review, emergency/PFA violation, DHHS support, financial paperwork, appeal transcript/record, reconsideration/Rule 60, contempt evidence, caregiver authority, GAL concerns, counselor subpoena, and therapist evaluation boundaries.
-- Maintains review-required, source-backed, not-legal-advice output; does not claim attorney review, legal signoff, real-matter pilot, production GA, or filing-ready output.
-
-## v1.89.0 — Deterministic chat language coverage and enterprise LLM/chat plan
-
-- Expanded deterministic chat library to 138 items with more deadline, service, record-access, parentage, support, PFA, appellate, counselor, and therapist phrasings.
-- Added wrong-match routing regressions and source-backed offline fixture text for the new classes.
-- Added enterprise LLM/chat pass plan: 33 formal GA passes remain; 36 practical LLM/chat passes remain after this pass.
-- Outputs remain review_required, source-backed, not legal advice, and not filing-ready.
-
 ## v1.88.0 — Repo hygiene recovery and enterprise collection repair
 
 - Restored packaged `.gitignore` and required `.github` workflow/template files so `robocopy /MIR` no longer deletes required public repo metadata.

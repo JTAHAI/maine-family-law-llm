@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "1.90.0"
-description = "Standalone Maine family law legal AI with source-backed local chat workbench v1.90 operator-command compatibility and expanded deterministic chat routing coverage"
+version = "1.88.0"
+description = "Standalone Maine family law legal AI with source-backed local chat workbench v1.88 repo-hygiene recovery, packaged GitHub metadata, missing model stubs restored for enterprise test collection, and preserved v1.87 chat routing/input-clear behavior"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pypdf>=4.3"]
