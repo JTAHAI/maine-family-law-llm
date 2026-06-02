@@ -1,0 +1,100 @@
+{
+  "blockers": [],
+  "checks": [
+    {
+      "blockers": [],
+      "details": {
+        "failure_class": "none",
+        "forbidden_count": 0,
+        "returncode": 0,
+        "safe_to_push": true
+      },
+      "name": "local_doctor",
+      "status": "pass",
+      "summary": "local source tree hygiene is clean"
+    },
+    {
+      "blockers": [],
+      "details": {
+        "checked_files": 739,
+        "github_ci_present": true,
+        "only_one_txt_file": true,
+        "production_legal_ready": false,
+        "release_manifest_clean": true
+      },
+      "name": "public_repo_readiness",
+      "status": "pass",
+      "summary": "public source release checks pass"
+    },
+    {
+      "blockers": [],
+      "details": {
+        "expected_heading": "v1.93.0",
+        "package_version": "1.93.0",
+        "pyproject_version": "1.93.0"
+      },
+      "name": "version_consistency",
+      "status": "pass",
+      "summary": "package metadata, release notes, and pass log agree"
+    },
+    {
+      "blockers": [],
+      "details": {
+        "closed_passes": [],
+        "expected_blocked_until_external_evidence": true,
+        "launch_evidence_status": "blocked",
+        "open_passes": [
+          48,
+          49,
+          50,
+          51
+        ]
+      },
+      "name": "launch_evidence_fail_closed",
+      "status": "pass",
+      "summary": "Pass 48-51 evidence gate remains blocked until external pilot/release evidence is supplied"
+    },
+    {
+      "blockers": [],
+      "details": {
+        "no_op_commit_guard": "git diff --cached --quiet",
+        "report_output": "docs/external-evidence/public_source_pre_push_gate_v193.json",
+        "required_files": [
+          "scripts/git-safe-push.py",
+          "PUSH_SAFE.ps1",
+          "scripts/git-safe-push.ps1",
+          "scripts/git-safe-push.sh"
+        ]
+      },
+      "name": "git_safe_push_wrapper",
+      "status": "pass",
+      "summary": "safe push wrappers delegate to the no-op-safe Python gate"
+    },
+    {
+      "blockers": [],
+      "details": {
+        "missing_markers": [],
+        "required_markers": [
+          "doctor-local-repo.py",
+          "run-chat-library-evidence.py",
+          "run-public-source-preflight.py",
+          "test_chat_library_v187_input_clear_and_routing.py",
+          "test_pass48_51_launch_evidence_gates.py",
+          "test_public_source_pre_push_gate_v191.py",
+          "test_git_safe_push_v192.py",
+          "test_attorney_sandbox_review_kit_v193.py"
+        ]
+      },
+      "name": "ci_guardrails",
+      "status": "pass",
+      "summary": "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
+    }
+  ],
+  "generated_at": "2026-06-02T17:29:35.144952+00:00",
+  "interpretation": "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.",
+  "production_legal_ready": false,
+  "project_root": "D:\\dev\\maine-family-law-llm_git",
+  "safe_to_push": true,
+  "schema": "maine_family_law_llm.public_source_pre_push_gate.v2",
+  "status": "pass"
+}

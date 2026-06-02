@@ -1,3 +1,11 @@
+## v1.93.0 — Attorney sandbox review kit and Pass 48 pilot prep
+
+- Added a fail-closed attorney sandbox review-kit builder for Pass 48 that creates public/synthetic review queues, onboarding, feedback triage, dashboard, bar-status attestation, and reviewer-instruction templates outside the source repo.
+- Added `scripts/build-attorney-sandbox-review-kit.py` so a local operator can produce an attorney-review packet without copying private matter data into Git.
+- Wired v1.93 regression coverage into CI and the safe-push focused test list so the public push path checks the attorney-review-kit guardrails.
+- Updated pre-push report defaults to v1.93 output names while preserving the existing no-op-safe push wrapper.
+- No attorney review, Maine bar verification, real-matter pilot, GA shipment, production legal readiness, or filing-ready status is claimed.
+
 ## v1.92.0 — No-op-safe push wrapper and push gate regression
 
 - Added a Python-backed `scripts/git-safe-push.py` wrapper that runs clean-local-artifacts, local doctor, public-source preflight, focused regression tests, `git add -A`, and `git push` from one tested path.

@@ -227,6 +227,7 @@ def _safe_push_wrapper_check(project_root: Path) -> PrePushCheck:
         "No staged changes; skipping commit.",
         "PRE_PUSH_OUTPUT",
         "test_git_safe_push_v192.py",
+        "test_attorney_sandbox_review_kit_v193.py",
     )
     for marker in required_module_markers:
         if marker not in module_text:
@@ -251,7 +252,7 @@ def _safe_push_wrapper_check(project_root: Path) -> PrePushCheck:
         details={
             "required_files": list(required_files),
             "no_op_commit_guard": "git diff --cached --quiet",
-            "report_output": "docs/external-evidence/git_safe_push_v192.json",
+            "report_output": "docs/external-evidence/public_source_pre_push_gate_v193.json",
         },
         blockers=tuple(blockers),
     )
@@ -275,6 +276,7 @@ def _ci_guardrail_check(project_root: Path) -> PrePushCheck:
         "test_pass48_51_launch_evidence_gates.py",
         "test_public_source_pre_push_gate_v191.py",
         "test_git_safe_push_v192.py",
+        "test_attorney_sandbox_review_kit_v193.py",
     )
     missing = tuple(marker for marker in required_markers if marker not in text)
     return PrePushCheck(

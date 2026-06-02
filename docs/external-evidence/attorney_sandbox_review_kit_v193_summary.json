@@ -1,0 +1,24 @@
+{
+  "schema": "maine_family_law_llm.pass_summary.v1",
+  "version": "1.93.0",
+  "pass_scope": "Pass 48 attorney-only sandbox review-kit preparation",
+  "status": "engineering_closed_external_review_still_required",
+  "external_dependency": true,
+  "production_legal_ready": false,
+  "real_matter_allowed": false,
+  "attorney_review_claimed": false,
+  "ga_shipped_claimed": false,
+  "added": [
+    "legal.pilot.AttorneySandboxReviewKitBuilder",
+    "scripts/build-attorney-sandbox-review-kit.py",
+    "tests/test_attorney_sandbox_review_kit_v193.py",
+    "docs/pass48-attorney-sandbox-review-kit-v193.md"
+  ],
+  "regression_focus": [
+    "review queue uses bundled public/synthetic chat-library questions",
+    "all generated rows default to needs_attorney_review",
+    "real matter and private data are blocked by default",
+    "default attorney_sandbox_pilot_report.json does not close LaunchEvidenceGate"
+  ],
+  "honesty_rule": "This pass prepares external attorney sandbox review operations. Only completed external evidence can close Pass 48."
+}

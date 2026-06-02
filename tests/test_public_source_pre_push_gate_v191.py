@@ -38,7 +38,7 @@ def test_package_version_metadata_is_consistent_and_current() -> None:
     package_version = re.search(r'__version__\s*=\s*"([^"]+)"', init_py)
     assert pyproject_version is not None
     assert package_version is not None
-    assert pyproject_version.group(1) == package_version.group(1) == "1.92.0"
+    assert pyproject_version.group(1) == package_version.group(1) == "1.93.0"
     assert "v1.92.0" in release_notes
     assert "v1.92.0" in pass_changes
 

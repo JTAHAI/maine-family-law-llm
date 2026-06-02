@@ -13,12 +13,13 @@ FOCUSED_PUSH_TESTS = (
     "tests/test_git_safe_push_v192.py",
     "tests/test_pass48_51_launch_evidence_gates.py",
     "tests/test_pass48_51_launch_evidence_starter_kit.py",
+    "tests/test_attorney_sandbox_review_kit_v193.py",
     "tests/test_chat_library_v187_input_clear_and_routing.py",
     "tests/test_best_interest_chat_answer.py",
     "tests/test_public_repo_integrity.py",
 )
 
-PRE_PUSH_OUTPUT = "docs/external-evidence/public_source_pre_push_gate_v192.json"
+PRE_PUSH_OUTPUT = "docs/external-evidence/public_source_pre_push_gate_v193.json"
 
 
 @dataclass(frozen=True)

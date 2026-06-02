@@ -1,3 +1,8 @@
+from legal.pilot.attorney_review_kit import (
+    AttorneyReviewQuestion,
+    AttorneySandboxReviewKitBuilder,
+    write_attorney_sandbox_review_kit,
+)
 from legal.pilot.evidence_templates import (
     ExternalEvidenceTemplate,
     build_launch_evidence_templates,
@@ -18,6 +23,8 @@ from legal.pilot.launch_ops import (
 
 __all__ = [
     "AttorneyPilotParticipant",
+    "AttorneyReviewQuestion",
+    "AttorneySandboxReviewKitBuilder",
     "AttorneySandboxPilot",
     "CorrectionWorkflow",
     "LaunchReadinessAuditor",
@@ -30,6 +37,7 @@ __all__ = [
     "ExternalEvidenceTemplate",
     "build_launch_evidence_templates",
     "write_launch_evidence_starter_kit",
+    "write_attorney_sandbox_review_kit",
     "LaunchEvidenceArtifact",
     "LaunchEvidenceGate",
     "LaunchEvidenceReport",
