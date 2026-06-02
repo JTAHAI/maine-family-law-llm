@@ -112,6 +112,20 @@ SAMPLE_QUESTIONS = [
     "How do I review a magistrate order in a family matter?",
     "Can a counselor sit with me at the hearing and tell me what to say?",
     "Can a therapist release records to one parent but not the other?",
+    "What can I ask the court clerk in my family case?",
+    "How do I ask for an interpreter or ADA accommodation in family court?",
+    "I got a new order after court. What should I check first?",
+    "Can I file an emergency motion in a Maine parenting case?",
+    "What if a PFA order was violated?",
+    "Is child support handled by DHHS or the court?",
+    "What financial affidavit or income paperwork should I gather?",
+    "Do I need a transcript for a family appeal?",
+    "Is this a motion to reconsider or relief from judgment issue?",
+    "Build a contempt evidence checklist for a Maine family order.",
+    "What proof do I need to handle school or medical issues for a child I care for?",
+    "What if I disagree with GAL fees or the GAL report?",
+    "What should a counselor do after receiving a subpoena for family court?",
+    "Can a therapist do a custody evaluation if the court order asks?",
 ]
 
 
@@ -219,8 +233,8 @@ def main() -> int:
     for expected in ("parent", "lawyer", "caregiver", "counselor", "therapist"):
         if expected not in audiences:
             blockers.append(f"audience_missing:{expected}")
-    if len(library) < 138:
-        blockers.append("library_too_small_for_v187_real_world_routing_coverage")
+    if len(library) < 152:
+        blockers.append("library_too_small_for_v190_real_world_routing_coverage")
     topics = public_topics()
     topic_names = sorted(row["topic"] for row in topics)
     for expected_topic in (
@@ -259,7 +273,7 @@ def main() -> int:
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "schema_version": "chat_library_workbench_evidence_v5",
+        "schema_version": "chat_library_workbench_evidence_v6",
         "status": "pass" if not blockers else "blocked",
         "blockers": blockers,
         "library_count": len(library),

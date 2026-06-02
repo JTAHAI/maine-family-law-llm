@@ -1,3 +1,11 @@
+## v1.90.0 — Local command compatibility and deterministic chat hardening
+
+- Added `scripts/doctor_local_repo.py` compatibility wrapper for the underscore doctor command.
+- Kept pyproject extras as the canonical dependency install: `python -m pip install -e ".[dev,api]"`.
+- Expanded deterministic chat library to 152 unique items.
+- Added v1.90 routing for clerk/access, post-hearing order review, emergency/PFA violation, DHHS support, financial paperwork, appeal transcript/record, reconsideration/Rule 60, contempt evidence, caregiver authority, GAL concerns, counselor subpoena, and therapist evaluation boundaries.
+- Maintains review-required, source-backed, not-legal-advice output; does not claim attorney review, legal signoff, real-matter pilot, production GA, or filing-ready output.
+
 ## v1.89.0 — Deterministic chat language coverage and enterprise LLM/chat plan
 
 - Expanded deterministic chat library to 138 items with more deadline, service, record-access, parentage, support, PFA, appellate, counselor, and therapist phrasings.

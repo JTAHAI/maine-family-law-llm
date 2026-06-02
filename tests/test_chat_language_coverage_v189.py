@@ -80,6 +80,6 @@ def test_v189_runtime_diagnostics_reports_language_and_plan_flags() -> None:
     from maine_family_law_llm import api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "1.89.0"
+    assert payload["version"] == "1.90.0"
     assert payload["chat_library_language_v189"] is True
     assert payload["enterprise_llm_chat_plan_v189"] == "docs/enterprise-llm-chat-ga-plan-v189.md"

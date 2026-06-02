@@ -1556,7 +1556,7 @@ CHAT_LIBRARY: tuple[ChatLibraryItem, ...] = (
         ),
     ),
     _item(
-        "parent_mediation_prep",
+        "parent_mediation_settlement_prep",
         "parent",
         "court_process",
         "How should I prepare for mediation or settlement talks?",
@@ -2642,6 +2642,272 @@ CHAT_LIBRARY = CHAT_LIBRARY + (
 )
 
 
+
+# v1.90 adds operator-command compatibility plus broader real-world court
+# language routes for clerk boundaries, accessibility/forms, support paperwork,
+# PFA enforcement, appellate transcripts, contempt/reconsideration, GAL fees,
+# caregiver authority, and counselor/therapist subpoena/evaluation boundaries.
+CHAT_LIBRARY = CHAT_LIBRARY + (
+    _item(
+        "parent_clerk_vs_lawyer_boundary",
+        "parent",
+        "questions_to_ask",
+        "What can I ask the clerk, and what needs legal review?",
+        (
+            "What can I ask the court clerk in my family case?",
+            "Can the clerk tell me what to file in a divorce or custody case?",
+        ),
+        ("court clerk", "what to file", "legal advice", "forms", "logistics", "family case"),
+        "Court clerks can usually help with logistics like where forms are, filing methods, fees, copies, and hearing-location questions. They cannot choose your claims, tell you what to file, predict what a judge will do, or give legal strategy. The workbench should split clerk logistics from lawyer/reviewer questions.",
+        ("court forms", "family matter", "not legal advice", "Judicial Branch"),
+        (
+            "Ask the clerk logistics questions about forms, fees, copies, filing method, and hearing location.",
+            "Ask a qualified legal reviewer strategy questions about claims, deadlines, service, evidence, and requested relief.",
+            "Write down any deadline or court date separately and verify it with current official sources.",
+        ),
+    ),
+    _item(
+        "parent_interpreter_ada_accommodation_forms",
+        "parent",
+        "forms_rules",
+        "What if I need an interpreter, ADA accommodation, or help accessing court?",
+        (
+            "How do I ask for an interpreter or ADA accommodation in family court?",
+            "What if I need help accessing a Maine family court hearing?",
+        ),
+        ("interpreter", "ada", "accommodation", "language access", "disability", "accessing court"),
+        "Access questions should be routed to current Maine Judicial Branch forms, notices, and court logistics. The workbench can help identify the need, hearing date, court location, language/disability access issue, and current official forms or contact points, but it should not decide eligibility or legal strategy.",
+        ("court forms", "family matter", "Judicial Branch", "hearing"),
+        (
+            "Identify the court, docket, hearing date, and requested accommodation or language need.",
+            "Use current official court resources/forms instead of a saved old PDF.",
+            "Separate access logistics from legal claims or deadlines that need qualified review.",
+        ),
+    ),
+    _item(
+        "parent_after_hearing_order_next_steps",
+        "parent",
+        "order_review",
+        "What should I do after a hearing or new order?",
+        (
+            "What should I do after a family court hearing?",
+            "I got a new order after court. What should I check first?",
+        ),
+        ("after hearing", "new order", "got an order", "court order", "next steps", "hearing was over"),
+        "After a family-court hearing or new order, do not rely on memory alone. Get the written order if one exists, note the date entered, read the exact terms, list deadlines or tasks, and flag unclear language, appeal/preservation issues, service, support, safety, or form follow-up for review.",
+        ("family order", "family matter", "court forms", "appeals", "record"),
+        (
+            "Save the written order, hearing notice, and any docket entry or transcript request information.",
+            "Make a checklist of tasks, deadlines, exchanges, support, forms, and review questions.",
+            "Ask a qualified reviewer before ignoring, changing, appealing, or informally modifying the order.",
+        ),
+    ),
+    _item(
+        "parent_emergency_motion_boundary",
+        "parent",
+        "safety_pfa",
+        "What if I think emergency court action is needed?",
+        (
+            "Can I file an emergency motion in a Maine parenting case?",
+            "What if I need emergency court help about child safety?",
+        ),
+        ("emergency motion", "emergency court", "immediate danger", "ex parte", "urgent safety", "child safety"),
+        "Emergency or urgent safety questions need emergency resources first if anyone is in immediate danger. For court-related urgent requests, the workbench should organize safety facts, dates, existing orders, PFA overlap, notice/service issues, and official forms/rules for immediate qualified review; it should not draft or promise emergency relief from chat alone.",
+        ("protection from abuse", "immediate danger", "safety", "court forms", "family matter"),
+        (
+            "Use emergency services first if danger is immediate.",
+            "Create a short timeline of urgent safety facts, existing orders, and evidence.",
+            "Ask qualified legal help which emergency, PFA, or family-court process applies before filing.",
+        ),
+        safety_note="Emergency/safety routing required; chat output is not a safety plan or emergency filing.",
+    ),
+    _item(
+        "parent_pfa_violation_enforcement_boundary",
+        "parent",
+        "safety_pfa",
+        "What if a protection order may have been violated?",
+        (
+            "What if a PFA order was violated?",
+            "How do I document a possible protection from abuse violation?",
+        ),
+        ("pfa violation", "violated protection order", "protection order violated", "no contact violation", "pfa order violated"),
+        "A possible protection-order violation is a safety and enforcement issue. The workbench should not tell you to confront the other person or handle it informally. It should help identify the exact order language, incident dates, evidence, immediate danger, law-enforcement or court papers, and questions for qualified review.",
+        ("protection from abuse", "immediate danger", "safety", "family order"),
+        (
+            "Use emergency resources if there is immediate danger.",
+            "Quote the exact protection-order language and log each incident by date/time.",
+            "Preserve messages, reports, witnesses, and court/law-enforcement paperwork for review.",
+        ),
+        safety_note="Immediate danger requires emergency resources first.",
+    ),
+    _item(
+        "parent_support_dhhs_vs_court_order",
+        "parent",
+        "child_support",
+        "How do DHHS/support enforcement and court orders fit together?",
+        (
+            "Is child support handled by DHHS or the court?",
+            "What if DHHS support enforcement is involved in my family case?",
+        ),
+        ("dhhs support", "support enforcement", "dser", "court order", "child support agency", "withholding"),
+        "Child-support questions may involve court orders, current support forms/worksheets, payment records, employer withholding, and DHHS/support-enforcement information. The workbench should identify who issued the order, who is enforcing or collecting, and what records exist before anyone relies on an answer.",
+        ("child support", "support enforcement", "DHHS", "FM-050", "family order"),
+        (
+            "Collect the current support order, payment records, notices, and DHHS/support-enforcement letters.",
+            "Separate calculation, modification, enforcement, arrears, and collection questions.",
+            "Verify any support number or remedy with current official forms/process and qualified review.",
+        ),
+    ),
+    _item(
+        "parent_financial_affidavit_disclosure_prep",
+        "parent",
+        "child_support",
+        "What financial paperwork should I organize?",
+        (
+            "What financial affidavit or income paperwork should I gather?",
+            "What money documents matter in divorce, support, or parental rights?",
+        ),
+        ("financial affidavit", "income paperwork", "money documents", "paystubs", "tax returns", "support forms"),
+        "Financial paperwork should be organized by issue: child support, spousal support, property/debt, fees, and any requested modification or enforcement. The workbench can list records and source cards, but it should not calculate support, divide property, or make filing claims without current forms and legal review.",
+        ("child support", "court forms", "FM-050", "divorce", "family matter"),
+        (
+            "Gather pay records, tax documents, benefit information, childcare, insurance, debts, assets, and the existing order if any.",
+            "Identify which form or worksheet each document supports.",
+            "Do not rely on generated calculations until reviewed against current official forms and rules.",
+        ),
+    ),
+    _item(
+        "parent_appeal_transcript_record_check",
+        "parent",
+        "appeal_preservation",
+        "What transcript or record issues should I check before appeal?",
+        (
+            "Do I need a transcript for a family appeal?",
+            "What record should I gather before appealing a Maine family order?",
+        ),
+        ("transcript", "record on appeal", "appeal record", "audio recording", "record appendix", "family appeal"),
+        "Appeal questions should start with the exact order, finality, deadline risk, transcript/record needs, preserved objections, findings requests, and current appellate rules. The workbench should not draft a notice or appeal strategy from chat alone; it should make a record checklist for attorney review.",
+        ("appeals", "M.R. App. P.", "record", "Law Court", "Supreme Judicial Court"),
+        (
+            "Find the order, entry date, docket entries, hearing dates, and any transcript or audio information.",
+            "List each claimed error and where it appears in the record.",
+            "Ask appellate counsel/reviewer about deadline, finality, transcript, and preservation requirements.",
+        ),
+        safety_note="Appeal deadlines and record rules require prompt qualified review.",
+    ),
+    _item(
+        "lawyer_rule_60_reconsideration_relief_triage",
+        "lawyer",
+        "post_judgment",
+        "Is this reconsideration, findings, appeal, or relief from judgment?",
+        (
+            "Is this a motion to reconsider or relief from judgment issue?",
+            "How should I triage Rule 59, Rule 60, findings, and appeal questions in a family case?",
+        ),
+        ("motion to reconsider", "relief from judgment", "rule 60", "rule 59", "reconsideration", "post-order motion"),
+        "Post-order routing should not collapse reconsideration, findings, appeal, modification, enforcement, and relief-from-judgment into one bucket. The workbench should identify the order date/posture, requested relief, rule/finding issue, appeal impact, service/deadline risk, and source gaps for attorney review.",
+        ("M.R. Civ. P.", "family division", "findings", "appeals", "family order"),
+        (
+            "Create a routing table: order, date, requested relief, possible rule/procedure, deadline effect, and source card.",
+            "Separate errors in the order from changed facts after the order.",
+            "Block drafting until current rules, appeal impact, and service/deadline issues are checked.",
+        ),
+        safety_note="Deadline-sensitive post-order procedures require attorney review.",
+    ),
+    _item(
+        "lawyer_contempt_evidence_burden_checklist",
+        "lawyer",
+        "post_judgment",
+        "What should a contempt/enforcement evidence checklist include?",
+        (
+            "Build a contempt evidence checklist for a Maine family order.",
+            "How should I review proof before filing contempt?",
+        ),
+        ("contempt evidence", "filing contempt", "proof before contempt", "enforcement evidence", "violated order"),
+        "A contempt/enforcement review should start with the exact order language, notice/service, alleged violations, dates, ability to comply, evidence, requested remedy, and whether modification or safety relief is actually the better procedural route. The workbench should flag unsupported factual claims and wrong-motion risk.",
+        ("changing or enforcing", "family order", "motion process", "service", "court forms"),
+        (
+            "Quote each order term allegedly violated and list every incident by date.",
+            "Map each fact to evidence and identify adverse facts or compliance disputes.",
+            "Check service, remedy, support/safety overlap, and human review before filing.",
+        ),
+    ),
+    _item(
+        "caregiver_school_medical_authority_proof",
+        "caregiver",
+        "caregiver_role",
+        "What proof of authority may a caregiver need for school or medical issues?",
+        (
+            "What proof do I need to handle school or medical issues for a child I care for?",
+            "Can a caregiver make school or doctor decisions without a court order?",
+        ),
+        ("school or medical", "doctor decisions", "caregiver authority", "proof of authority", "school enrollment", "medical consent"),
+        "A caregiver should not assume authority from physical care alone. The workbench should organize existing orders, consents, guardianship/DHHS records, school/medical requests, parent positions, and urgent safety facts so a qualified reviewer can determine what process or documentation is required.",
+        ("family matter", "court forms", "parental rights", "records", "child"),
+        (
+            "Collect any court order, consent, guardianship, DHHS, school, or medical paperwork.",
+            "List who currently makes legal decisions and who objects or agrees.",
+            "Ask counsel/reviewer which authority, form, or court process applies before acting.",
+        ),
+    ),
+    _item(
+        "parent_gal_fees_scope_objection_triage",
+        "parent",
+        "GAL_issue",
+        "What if I disagree with GAL fees, scope, or a report?",
+        (
+            "What if I disagree with GAL fees or the GAL report?",
+            "How should I organize concerns about a guardian ad litem?",
+        ),
+        ("gal fees", "gal report", "guardian ad litem report", "gal scope", "object to gal", "gal concerns"),
+        "GAL concerns should be organized from the appointment order and schedule outward: role/scope, report deadlines, fees, records reviewed, factual disputes, best-interest issues, and any proper response/objection route. The workbench should not coach influence tactics or predict recommendations.",
+        ("guardian ad litem", "best interest", "family matter", "1653", "court forms"),
+        (
+            "Find the GAL appointment order, fee/order language, report deadline, and any court notices.",
+            "Separate factual errors, missing evidence, scope concerns, fee concerns, and legal objections.",
+            "Ask counsel/reviewer how and when concerns can be raised under current rules/orders.",
+        ),
+    ),
+    _item(
+        "counselor_subpoena_records_triage",
+        "counselor",
+        "professional_boundaries",
+        "What if a counselor receives a subpoena or record request?",
+        (
+            "What should a counselor do after receiving a subpoena for family court?",
+            "Can a counselor release records because a parent asked?",
+        ),
+        ("subpoena", "record request", "release records", "parent asked", "counselor records", "family court subpoena"),
+        "A subpoena or record request should be treated as a confidentiality, privilege, role, consent, and court-order issue. The workbench can create a triage checklist, but the counselor should follow agency policy, supervision, legal counsel, and applicable professional rules before producing or summarizing records.",
+        ("records", "family matter", "court", "not legal advice", "private"),
+        (
+            "Identify whether the request is a subpoena, court order, signed release, or informal parent request.",
+            "Do not produce confidential records until policy, consent, privilege, and legal review are complete.",
+            "Separate factual treatment information from custody/legal opinions.",
+        ),
+        safety_note="Confidentiality, privilege, and professional-rule review required.",
+    ),
+    _item(
+        "therapist_court_ordered_evaluation_boundary",
+        "therapist",
+        "professional_boundaries",
+        "What if the order asks for an evaluation or recommendation?",
+        (
+            "Can a therapist do a custody evaluation if the court order asks?",
+            "What if a family court order asks a therapist for recommendations?",
+        ),
+        ("custody evaluation", "court ordered evaluation", "recommendations", "therapist recommendation", "evaluate custody", "parenting recommendation"),
+        "Therapy, evaluation, GAL work, and custody recommendations are different roles. A therapist should not expand a treatment role into legal custody evaluation or contact decision-making unless the order, qualifications, consent, and professional rules clearly support that role. The workbench should flag role confusion and non-delegation risk.",
+        ("contact", "parental rights", "best interest", "court", "1653"),
+        (
+            "Quote the exact court-order/referral language and identify the assigned role.",
+            "Separate treatment observations from forensic evaluation or legal recommendations.",
+            "Use supervision/counsel or court clarification before providing court-facing recommendations.",
+        ),
+        safety_note="Professional-role and court-authority review required.",
+    ),
+)
+
 def get_chat_library() -> tuple[ChatLibraryItem, ...]:
     return CHAT_LIBRARY
 
@@ -2818,6 +3084,25 @@ PROMPT_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
             "lawyer_client_document_request_pack",
         ),
     },
+
+    {
+        "id": "v190_operator_and_review_triage",
+        "audience": "lawyer",
+        "title": "v1.90: local operator, records, support, and review triage",
+        "description": "New routes for clerk/access boundaries, post-hearing orders, emergency/PFA enforcement, support paperwork, transcripts, contempt, caregiver authority, GAL, counselor, and therapist boundaries.",
+        "item_ids": (
+            "parent_clerk_vs_lawyer_boundary",
+            "parent_interpreter_ada_accommodation_forms",
+            "parent_after_hearing_order_next_steps",
+            "parent_emergency_motion_boundary",
+            "parent_pfa_violation_enforcement_boundary",
+            "parent_support_dhhs_vs_court_order",
+            "parent_appeal_transcript_record_check",
+            "lawyer_contempt_evidence_burden_checklist",
+            "counselor_subpoena_records_triage",
+            "therapist_court_ordered_evaluation_boundary",
+        ),
+    },
     {
         "id": "appeals_service_deadline_triage",
         "audience": "lawyer",
@@ -2971,6 +3256,19 @@ def expand_query_for_library(question: str) -> str:
         hints.append("family matter court records parental rights not legal advice best interest")
     if any(term in text for term in ("lawyer call", "consultation", "source gap", "unsupported claims", "reunification sessions", "session planning")):
         hints.append("family matter court forms source official parental rights best interest contact 1653")
+
+    if any(term in text for term in ("court clerk", "interpreter", "ada", "accommodation", "language access")):
+        hints.append("court forms family matter Judicial Branch hearing not legal advice")
+    if any(term in text for term in ("after hearing", "new order", "got an order", "emergency motion", "ex parte", "urgent safety", "pfa violation", "protection order violated")):
+        hints.append("family order court forms protection from abuse safety appeals record")
+    if any(term in text for term in ("financial affidavit", "paystubs", "tax returns", "dhhs support", "dser", "support enforcement is involved")):
+        hints.append("child support support enforcement DHHS FM-050 court forms")
+    if any(term in text for term in ("transcript", "record on appeal", "rule 60", "reconsideration", "contempt evidence")):
+        hints.append("appeals record M.R. App. P. family division family order motion process")
+    if any(term in text for term in ("proof of authority", "school or medical", "gal fees", "guardian ad litem report")):
+        hints.append("family matter parental rights best interest court forms records 1653")
+    if any(term in text for term in ("family court subpoena", "counselor records", "custody evaluation", "therapist recommendation")):
+        hints.append("family matter court records parental rights not legal advice private records confidentiality")
     if not hints:
         return question
     return question + "\n\nRetrieval hints: " + " ".join(hints)
@@ -3044,6 +3342,8 @@ def _route_override(text: str) -> ChatLibraryItem | None:
         return _item_by_id("counselor_hearing_support_boundary") or _item_by_id("counselor_school_court_question_boundary")
     if has_any("release records to one parent", "parents disagree about a child's therapy records", "records request"):
         return _item_by_id("therapist_record_release_dispute_boundary") or _item_by_id("therapist_records_caution")
+    if has_any("gal fees", "gal scope", "disagree with gal", "gal concerns") or (has_any("gal report", "guardian ad litem report") and has_any("disagree", "fees", "scope", "object")):
+        return _item_by_id("parent_gal_fees_scope_objection_triage") or _item_by_id("parent_gal_role_report_questions")
     if has_any("what is a gal", "gal role", "gal report", "guardian ad litem"):
         return _item_by_id("parent_gal_role_report_questions") or _item_by_id("parent_gal_involved_questions")
     if has_any("appeal deadline", "deadline to appeal", "how long to appeal", "notice of appeal", "file an appeal"):
@@ -3064,6 +3364,8 @@ def _route_override(text: str) -> ChatLibraryItem | None:
         return _item_by_id("lawyer_uccjea_home_state_triage") or _item_by_id("parent_out_of_state_jurisdiction")
     if has_any("standard of review", "abuse of discretion", "clear error", "legal error", "record appendix"):
         return _item_by_id("lawyer_appellate_standard_record_triage")
+    if has_any("dhhs support enforcement", "dhhs support", "dser", "support enforcement is involved", "child support agency") or (has_any("dhhs") and has_any("child support", "support", "court order")):
+        return _item_by_id("parent_support_dhhs_vs_court_order") or _item_by_id("parent_child_support")
     if has_any("dhhs", "child protection", "caseworker", "child protective", "kinship"):
         return _item_by_id("parent_dhhs_child_protection_overlap")
     if has_any("grandparent visitation", "grandparent contact", "relative visitation", "see my grandchild"):
@@ -3074,6 +3376,35 @@ def _route_override(text: str) -> ChatLibraryItem | None:
         return _item_by_id("counselor_school_court_question_boundary")
     if has_any("reunification report", "progress report", "court-ordered contact report", "contact report"):
         return _item_by_id("therapist_reunification_report_boundary")
+
+    if has_any("court clerk", "clerk tell me what to file", "ask the clerk", "court clerk in my family case"):
+        return _item_by_id("parent_clerk_vs_lawyer_boundary") or _item_by_id("parent_court_clerk_questions")
+    if has_any("interpreter", "ada accommodation", "language access", "disability accommodation", "accessing a maine family court hearing"):
+        return _item_by_id("parent_interpreter_ada_accommodation_forms")
+    if has_any("after a family court hearing", "new order after court", "got a new order", "after hearing"):
+        return _item_by_id("parent_after_hearing_order_next_steps") or _item_by_id("parent_order_language_confusing")
+    if has_any("emergency motion", "emergency court help", "ex parte", "urgent safety", "child safety"):
+        return _item_by_id("parent_emergency_motion_boundary") or _item_by_id("safety_pfa_parent")
+    if has_any("pfa order was violated", "pfa violation", "violated protection order", "protection order violated", "no contact violation"):
+        return _item_by_id("parent_pfa_violation_enforcement_boundary") or _item_by_id("safety_pfa_parent")
+    if has_any("dhhs support enforcement", "dhhs support", "dser", "support enforcement is involved", "child support agency"):
+        return _item_by_id("parent_support_dhhs_vs_court_order") or _item_by_id("parent_child_support")
+    if has_any("financial affidavit", "income paperwork", "money documents", "paystubs", "tax returns"):
+        return _item_by_id("parent_financial_affidavit_disclosure_prep") or _item_by_id("parent_child_support")
+    if has_any("need a transcript for a family appeal", "record before appealing", "record on appeal", "appeal record", "record appendix", "audio recording"):
+        return _item_by_id("parent_appeal_transcript_record_check") or _item_by_id("lawyer_appellate_standard_record_triage")
+    if has_any("motion to reconsider", "relief from judgment", "rule 60", "rule 59", "reconsideration"):
+        return _item_by_id("lawyer_rule_60_reconsideration_relief_triage")
+    if has_any("contempt evidence", "filing contempt", "proof before contempt", "enforcement evidence checklist"):
+        return _item_by_id("lawyer_contempt_evidence_burden_checklist") or _item_by_id("lawyer_modify_enforce_contempt_router")
+    if has_any("school or medical issues for a child i care for", "doctor decisions without a court order", "proof of authority", "caregiver authority"):
+        return _item_by_id("caregiver_school_medical_authority_proof") or _item_by_id("caregiver_school_enrollment_authority")
+    if has_any("gal fees", "gal scope", "disagree with gal", "gal concerns", "guardian ad litem report"):
+        return _item_by_id("parent_gal_fees_scope_objection_triage") or _item_by_id("parent_gal_role_report_questions")
+    if has_any("counselor do after receiving a subpoena", "family court subpoena", "counselor release records", "counselor records"):
+        return _item_by_id("counselor_subpoena_records_triage") or _item_by_id("counselor_subpoena_or_order")
+    if has_any("custody evaluation", "court ordered evaluation", "therapist for recommendations", "therapist recommendation", "evaluate custody"):
+        return _item_by_id("therapist_court_ordered_evaluation_boundary") or _item_by_id("therapist_parent_pressure_boundary")
     return None
 
 
