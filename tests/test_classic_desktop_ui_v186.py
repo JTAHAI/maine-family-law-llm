@@ -21,7 +21,7 @@ def test_v186_workbench_matches_requested_classic_desktop_layout_markers() -> No
     assert 'Latest Answer' in html
     assert 'Transcript / Handoff' in html
     assert 'FOCAF Secure Connection' in html
-    assert 'UI v1.86 classic desktop FOCAF research workbench' in html
+    assert 'UI v1.87 classic desktop FOCAF research workbench' in html
 
 
 def test_v186_enter_submit_and_appeals_starter_remain_wired() -> None:
@@ -34,7 +34,7 @@ def test_v186_enter_submit_and_appeals_starter_remain_wired() -> None:
     assert "ask();" in html
     assert 'data-example="What court handles appeals?"' in html
     assert '/api/runtime-diagnostics' in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.86.0-classic-desktop-focaf-workbench'" in html
+    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.87.0-chat-library-routing-input-clear'" in html
 
 
 def test_v186_runtime_diagnostics_version() -> None:
@@ -44,8 +44,8 @@ def test_v186_runtime_diagnostics_version() -> None:
     from maine_family_law_llm import api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "1.86.0"
-    assert payload["ui_version"] == "1.86.0-classic-desktop-focaf-workbench"
+    assert payload["version"] == "1.87.0"
+    assert payload["ui_version"] == "1.87.0-chat-library-routing-input-clear"
     assert payload["enter_to_submit"] is True
     assert payload["appeals_routing_fix"] is True
     assert payload["brand_assets_mounted"] is True

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "1.86.0"
-description = "Standalone Maine family law legal AI with source-backed local chat workbench v1.86 classic desktop FOCAF research workbench UI matching the requested layout, appeals routing, runtime diagnostics, live Enter-submit, and FOCAF branding fix, hardened external authority gates, operator-source-backed release evidence, public-repo hygiene, Docker fixture packaging, and external-data boundaries"
+version = "1.87.0"
+description = "Standalone Maine family law legal AI with source-backed local chat workbench v1.87 classic desktop FOCAF research workbench UI matching the requested layout, expanded chat-library routing, Enter-submit input clearing, appeals routing, runtime diagnostics, and FOCAF branding fix, hardened external authority gates, operator-source-backed release evidence, public-repo hygiene, Docker fixture packaging, and external-data boundaries"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pypdf>=4.3"]

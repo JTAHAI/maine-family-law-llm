@@ -16,10 +16,10 @@ def test_live_ui_has_unambiguous_branding_and_enter_submit_marker() -> None:
     script = _script_from(html)
 
     assert 'id="focaf-brand-shell"' in html
-    assert 'data-ui-version="1.86.0-classic-desktop-focaf-workbench"' in html
+    assert 'data-ui-version="1.87.0-chat-library-routing-input-clear"' in html
     assert "focaf.jtforme.com" in html
-    assert "UI v1.86 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics" in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.86.0-classic-desktop-focaf-workbench'" in script
+    assert "UI v1.87 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics" in html
+    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.87.0-chat-library-routing-input-clear'" in script
     assert "question.addEventListener('keydown'" in script
     assert "event.key === 'Enter' && !event.shiftKey" in script
     assert "event.preventDefault();" in script

@@ -1,3 +1,13 @@
+
+## v1.87.0 — Chat library routing and Enter-submit input clearing
+
+- Fixed the local browser workbench so accepted Enter-submit/send actions clear the question box after adding the user message to the transcript.
+- Expanded the deterministic source-backed chat library from 105 to 122 items with more everyday Maine family-law phrasing.
+- Added conservative route overrides for court routing, appeals/deadlines, service, no-response/default, PFA-child contact, DHHS overlap, GAL, UCCJEA, forms, support calculation boundaries, caregiver/relative, counselor, and therapist questions.
+- Hardened matching to reduce wrong-topic answers from generic prompt words such as court, family, order, parent, and child.
+- Added v1.87 regression tests and refreshed chat-library workbench evidence.
+- No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status claimed.
+
 ## v1.66.0 - Pass 29 verifier production metric gate
 
 - Added a Pass 29 citation/quote verifier metric runner over external attorney-reviewed gold rows.

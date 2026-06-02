@@ -1,0 +1,13 @@
+{
+  "source_id": "sample-secondary-family-law-overview",
+  "title": "Sample secondary overview placeholder",
+  "url": "https://example.org/secondary-maine-family-law-overview",
+  "official": false,
+  "source_type": "secondary",
+  "retrieved_at": "2026-06-01T21:08:44+00:00",
+  "fixture_mode": true,
+  "effective_date": "not-authority",
+  "version_label": "secondary placeholder; never treat as official authority",
+  "citation_hint": "Secondary overview placeholder",
+  "source_priority": 100
+}

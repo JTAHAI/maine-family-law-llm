@@ -365,8 +365,8 @@ def render_local_workbench_html() -> str:
     }
   </style>
 </head>
-<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="v1.86">
-  <div class="desktop-shell classic-desktop-shell" id="focaf-brand-shell" data-ui-version="1.86.0-classic-desktop-focaf-workbench" data-brand-assets="/brand-assets">
+<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="v1.87">
+  <div class="desktop-shell classic-desktop-shell" id="focaf-brand-shell" data-ui-version="1.87.0-chat-library-routing-input-clear" data-brand-assets="/brand-assets">
     <div class="window-titlebar">
       <div class="title-left">
         <img src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg" alt="FOCAF icon" />
@@ -425,15 +425,15 @@ def render_local_workbench_html() -> str:
       <section class="bottom-tabs" aria-label="Latest answer and source review">
         <div><div class="tab-head">Latest Answer</div><div class="tab-panel"><div class="tab-content"><div id="answer-badges" class="badges"><span class="badge">waiting</span></div><div id="answer" class="answer" aria-live="polite">Ask a question to test the local source-grounded workbench.</div></div></div></div>
         <div><div class="tab-head">Sources / Inspector</div><div class="tab-panel"><div class="tab-content"><div id="source-inspector" class="muted">Select “Inspect source” on a source card to view full local metadata.</div><button id="copy-sources-bottom" class="secondary" type="button">Copy Sources</button></div></div></div>
-        <div><div class="tab-head">Transcript / Handoff</div><div class="tab-panel"><div class="tab-content"><div id="handoff-panel" class="answer" aria-live="polite">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div id="runtime-diagnostics" class="status-strip" data-runtime-diagnostics="loading">Runtime diagnostics loading. Expected UI: v1.86 classic desktop FOCAF research workbench.</div></div></div></div>
+        <div><div class="tab-head">Transcript / Handoff</div><div class="tab-panel"><div class="tab-content"><div id="handoff-panel" class="answer" aria-live="polite">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div id="runtime-diagnostics" class="status-strip" data-runtime-diagnostics="loading">Runtime diagnostics loading. Expected UI: v1.87 classic desktop FOCAF research workbench.</div></div></div></div>
       </section>
 
       <section class="side-panel" style="margin-top:14px" aria-label="Question library"><div class="side-title">🧭 Full Question Library <span>▴</span></div><div class="side-body"><div class="mini-grid"><div><label for="library-search" style="color:#eef7ff">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support" /></div><div><label for="library-topic-search" style="color:#eef7ff">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal" /></div></div><div id="library-list" class="library-list" style="margin-top:10px">Loading question library...</div></div></section>
 
 
-      <div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · UI v1.86 classic desktop FOCAF workbench · /api/question-topics · /api/missing-information-prompts · fetch('/ask') · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg</div>
+      <div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · UI v1.87 classic desktop FOCAF workbench · /api/question-topics · /api/missing-information-prompts · fetch('/ask') · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg</div>
       <img class="sr-only" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg" alt="FOCAF horizontal logo compatibility asset" />
-      <div class="footerbar"><span>🔒 FOCAF Secure Connection</span><span>Local sources&nbsp;&nbsp;•&nbsp;&nbsp;Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span><span>© FOCAF 2026</span><strong>UI v1.86 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics.</strong></div>
+      <div class="footerbar"><span>🔒 FOCAF Secure Connection</span><span>Local sources&nbsp;&nbsp;•&nbsp;&nbsp;Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span><span>© FOCAF 2026</span><strong>UI v1.87 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics.</strong></div>
     </div>
   </div>
   <script>
@@ -461,7 +461,7 @@ def render_local_workbench_html() -> str:
     const sourceInspector = document.getElementById('source-inspector');
     const handoffPanel = document.getElementById('handoff-panel');
     const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
-    window.__MFL_WORKBENCH_UI_VERSION = '1.86.0-classic-desktop-focaf-workbench';
+    window.__MFL_WORKBENCH_UI_VERSION = '1.87.0-chat-library-routing-input-clear';
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
@@ -614,6 +614,8 @@ def render_local_workbench_html() -> str:
       answer.textContent = 'Retrieving sources and composing a grounded answer...';
       sourceCards.textContent = '';
       addMessage('user', text);
+      question.value = '';
+      question.dataset.lastSubmitCleared = 'true';
       try {
         const context = [matterContext.value.trim(), `Audience: ${audience.value}`].filter(Boolean).join('\\n');
         const payload = await fetchJson('/ask', {
@@ -653,7 +655,7 @@ def render_local_workbench_html() -> str:
         runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics:</strong> ${escapeHtml(payload.version)} · ${escapeHtml(payload.ui_version)} · Enter submit: ${payload.enter_to_submit ? 'on' : 'off'} · Appeals routing fix: ${payload.appeals_routing_fix ? 'on' : 'off'} · Brand assets mounted: ${payload.brand_assets_mounted ? 'yes' : 'no'} · Branding: ${escapeHtml(payload.branding || 'unknown')}`;
       } catch (err) {
         runtimeDiagnostics.dataset.runtimeDiagnostics = 'failed';
-        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer is not v1.86, stop the old server and restart from the _git repo.`;
+        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer is not v1.87, stop the old server and restart from the _git repo.`;
       }
     }
 
@@ -856,7 +858,7 @@ def render_local_workbench_html() -> str:
     loadQuestionLibrary();
     loadPromptPacks();
     loadRuntimeDiagnostics();
-    // v1.86 marker: classic_desktop_shell, brand_kit_assets, appeals_routing_fix, runtime diagnostics, reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2
+    // v1.87 marker: classic_desktop_shell, brand_kit_assets, appeals_routing_fix, enter_submit_clears_input, expanded_chat_routing, reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2 1.86.0-classic-desktop-focaf-workbench
   </script>
 </body>
 </html>

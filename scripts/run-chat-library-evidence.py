@@ -80,6 +80,22 @@ SAMPLE_QUESTIONS = [
     "What if a court order about therapy is unclear?",
     "A parent asked me for a custody opinion letter. What should I do?",
     "How do I export a reviewer handoff from this chat?",
+    "Which court do I file a family case in?",
+    "How long do I have to appeal a Maine family order?",
+    "Can I serve papers by mail?",
+    "What if the other parent never answered?",
+    "Can a protection from abuse order affect parenting time?",
+    "What if DHHS is involved in my family case?",
+    "Can a grandparent ask for visitation in Maine?",
+    "Is this a guardianship or parental rights issue?",
+    "What is a GAL and their role?",
+    "How do I tell whether this is modification, enforcement, or contempt?",
+    "What UCCJEA facts should I gather first?",
+    "What appellate standard of review issues should I identify?",
+    "What family forms and required fields should I audit before filing?",
+    "A parent asked a school counselor what to say in family court. What should happen?",
+    "Can a reunification therapist write a progress report for court?",
+    "How is child support calculated in Maine?",
 ]
 
 
@@ -155,6 +171,7 @@ def main() -> int:
 
     required_html = {
         "enter_to_submit": "event.key === 'Enter' && !event.shiftKey" in html,
+        "enter_submit_clears_input": "question.value = '';" in html and "lastSubmitCleared" in html,
         "json_error_handling": "non-JSON response" in html and "fetchJson" in html,
         "question_library": "/api/question-library" in html,
         "topic_endpoint": "/api/question-topics" in html,
@@ -174,7 +191,7 @@ def main() -> int:
         "served_papers_starter": "Served papers" in html,
         "appeals_routing_starter": "What court handles appeals?" in html,
         "runtime_diagnostics_panel": "id=\"runtime-diagnostics\"" in html and "/api/runtime-diagnostics" in html,
-        "live_ui_version_marker": "1.86.0-classic-desktop-focaf-workbench" in html,
+        "live_ui_version_marker": "1.87.0-chat-library-routing-input-clear" in html,
         "visible_brand_shell": "id=\"focaf-brand-shell\"" in html and "FOCAF" in html,
         "enter_submit_hint_visible": "Press <strong>Enter</strong>" in html and "Shift+Enter" in html,
         "no_broken_js_newline_literals": "join('\n" not in html and "].join('\n" not in html,
@@ -186,8 +203,8 @@ def main() -> int:
     for expected in ("parent", "lawyer", "caregiver", "counselor", "therapist"):
         if expected not in audiences:
             blockers.append(f"audience_missing:{expected}")
-    if len(library) < 105:
-        blockers.append("library_too_small_for_v184_multi_audience_appeals_usability")
+    if len(library) < 122:
+        blockers.append("library_too_small_for_v187_real_world_routing_coverage")
     topics = public_topics()
     topic_names = sorted(row["topic"] for row in topics)
     for expected_topic in (

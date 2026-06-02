@@ -1,0 +1,10 @@
+{
+  "schema": "maine_family_law_llm.chat_library_v187_test_summary.v1",
+  "status": "pass",
+  "command": "PYTHONPATH=src pytest -q tests/test_chat_library_expansion_and_error_recovery.py tests/test_chat_question_library_and_workbench_ux.py tests/test_best_interest_chat_answer.py tests/test_local_chat_workbench_ui.py tests/test_cli_api_local_v1.py tests/test_chat_library_ui_hardening_v180.py tests/test_chat_prompt_packs_source_drilldown_v181.py tests/test_chat_missing_info_handoff_v182.py tests/test_local_workbench_live_ui_v183.py tests/test_appeals_routing_runtime_v184.py tests/test_brand_kit_ui_assets_v185.py tests/test_classic_desktop_ui_v186.py tests/test_chat_library_v187_input_clear_and_routing.py",
+  "result": "46 passed, 1 skipped",
+  "notes": [
+    "Focused local chat, UI, Enter-submit, appeals routing, brand asset, and v1.87 routing regression tests passed.",
+    "All outputs remain review_required and not legal advice."
+  ]
+}
