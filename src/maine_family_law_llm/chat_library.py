@@ -2337,6 +2337,308 @@ CHAT_LIBRARY = CHAT_LIBRARY + (
             "Ask a qualified reviewer whether deviations, arrears, or enforcement issues apply.",
         ),
     ),
+    _item(
+        "parent_response_deadline_risk",
+        "parent",
+        "deadlines_service",
+        "How should I handle a response deadline after being served?",
+        (
+            "How many days do I have to respond to divorce papers?",
+            "What deadline should I check after being served with family papers?",
+        ),
+        ("response deadline", "respond", "served", "summons", "deadline", "divorce papers"),
+        "Treat any response date, hearing date, or instruction in served family-court papers as a deadline-risk issue. The workbench should not calculate or promise a deadline from chat. It should help you identify the court, docket, case type, papers served, service date, scheduled events, and current official forms/rules that a qualified reviewer must check.",
+        ("response deadline", "served papers", "summons", "court forms", "family matter"),
+        (
+            "Write down the date and method of service, every response/hearing date, and the exact papers received.",
+            "Use current official court forms/rules before filing anything.",
+            "Ask qualified legal help to verify the deadline instead of relying on chat math.",
+        ),
+        safety_note="Deadline-risk question; verify with current official rules and qualified review.",
+    ),
+    _item(
+        "parent_service_problem_triage",
+        "parent",
+        "service",
+        "What if service of papers is a problem?",
+        (
+            "What if I cannot find the other parent to serve papers?",
+            "What do I do if service of family court papers did not work?",
+        ),
+        ("cannot find", "unable to serve", "service problem", "proof of service", "serve papers"),
+        "Service is a procedure issue that can affect whether the court can act. The workbench should not invent a service method. It should organize what was filed, who must be served, what attempts were made, whether proof of service exists, and which official rules/forms a reviewer must check.",
+        ("unable to serve", "service", "proof of service", "commencement", "court forms"),
+        (
+            "List each service attempt with date, method, address/location, and result.",
+            "Keep copies of summons, complaint/motion, return/proof of service, and any court notice.",
+            "Ask qualified review before using alternate service, publication, or any nonstandard method.",
+        ),
+        safety_note="Service defects can create deadline and jurisdiction risk.",
+    ),
+    _item(
+        "parent_out_of_state_service_triage",
+        "parent",
+        "service",
+        "What if the other party is out of state?",
+        (
+            "How do I serve family papers if the other parent is out of state?",
+            "What if service has to happen in another state?",
+        ),
+        ("out of state service", "another state", "serve out of state", "service in another state"),
+        "Out-of-state service should be routed to service and jurisdiction review. The workbench should help identify the other party's location, existing orders, pending cases, papers to be served, proof requirements, and whether UCCJEA or other jurisdiction issues must be reviewed before Maine procedure is assumed.",
+        ("out-of-state service", "service", "jurisdiction", "court forms", "family matter"),
+        (
+            "Record where the other party is and whether another court already has an order or case.",
+            "Separate service mechanics from jurisdiction/home-state questions.",
+            "Get legal review before assuming Maine can proceed or before using a particular service method.",
+        ),
+        safety_note="Out-of-state facts require jurisdiction and service review.",
+    ),
+    _item(
+        "parent_continue_service_defect_hearing",
+        "parent",
+        "court_process",
+        "What if a hearing is coming up but service was wrong or incomplete?",
+        (
+            "How do I ask to continue a hearing because I wasn't served correctly?",
+            "What if a court date is coming up and service is disputed?",
+        ),
+        ("continue", "continuance", "postpone", "wasn't served", "service defect", "hearing"),
+        "A request to continue or postpone a family-court event because of service problems should be treated as a procedure-and-deadline issue. The workbench can help identify the hearing notice, service record, attempted service, disputed facts, and official process sources, but it cannot decide whether the court will continue the event.",
+        ("continuance", "service defect", "hearing", "service", "court forms"),
+        (
+            "Find the hearing notice, summons, complaint/motion, return/proof of service, and docket information.",
+            "Write a short timeline of service attempts and when you learned about the hearing.",
+            "Ask qualified review what filing, notice, or courtroom request is appropriate.",
+        ),
+        safety_note="Court-date and service issues need prompt qualified review.",
+    ),
+    _item(
+        "parent_ecourts_record_access_boundary",
+        "parent",
+        "records_access",
+        "What if eCourts or a court record is private, sealed, or hard to access?",
+        (
+            "What if eCourts says my family record is private or sealed?",
+            "How do I handle court record access in a family case?",
+        ),
+        ("ecourts", "record access", "sealed", "private record", "odyssey", "court record"),
+        "Court-record access is a privacy and procedure issue. The workbench should not tell you to bypass a sealed, confidential, juvenile, or restricted record. It should help identify the docket, record type, party status, public-access rule/source, and what question should go to the clerk for logistics or to counsel for legal access strategy.",
+        ("electronic filing", "ecourts", "record access", "sealed", "private record"),
+        (
+            "Identify the docket number, record type, and whether the case involves minors, PFA, juvenile, adoption, or other confidentiality issues.",
+            "Ask the clerk about access logistics only; ask counsel/reviewer about legal access or sealing issues.",
+            "Do not upload sealed or confidential records into shared tools or public repos.",
+        ),
+        safety_note="Privacy/sealed-record caution.",
+    ),
+    _item(
+        "parent_fee_waiver_forms_boundary",
+        "parent",
+        "forms_rules",
+        "What if I cannot afford court fees?",
+        (
+            "What if I cannot afford the filing fee for a family case?",
+            "Is there a fee waiver form for Maine family court?",
+        ),
+        ("cannot afford", "filing fee", "fee waiver", "waiver form", "court fees"),
+        "If filing fees are a barrier, use the current Maine Judicial Branch forms and clerk logistics resources to identify the correct fee-waiver or fee-related forms. The workbench should not decide eligibility; it should help locate current forms, required financial information, and review-needed filing logistics.",
+        ("fee waiver", "filing fee", "forms", "court forms", "family matter"),
+        (
+            "Use the current official forms page and record the form name/version before relying on it.",
+            "Gather income, expenses, benefits, and household information requested by the official form.",
+            "Ask the clerk about logistics and qualified legal help about strategy or consequences.",
+        ),
+    ),
+    _item(
+        "parent_parentage_first_questions",
+        "parent",
+        "parentage",
+        "Is this parentage, divorce, or parental-rights paperwork?",
+        (
+            "Do I file parentage or divorce forms if we were never married?",
+            "Is this a parentage case or a parental rights case?",
+        ),
+        ("parentage", "never married", "unmarried", "birth certificate", "paternity", "divorce forms"),
+        "If the parents were never married, do not assume divorce forms are the right starting point. The workbench should first separate parentage, parental rights and responsibilities, child support, existing orders, and any safety issues, then point to current official forms and review before filing.",
+        ("parentage", "unmarried", "parental rights", "child support", "court forms"),
+        (
+            "Identify whether parentage is already established and whether any order exists.",
+            "Separate residence/contact, decision-making, and support questions.",
+            "Use current official forms and qualified review before filing.",
+        ),
+    ),
+    _item(
+        "parent_child_support_arrears_enforcement",
+        "parent",
+        "child_support",
+        "What if child support payments are missed or arrears are piling up?",
+        (
+            "What if child support arrears are piling up?",
+            "What should I do if child support payments are missed?",
+        ),
+        ("arrears", "missed support", "missed payments", "past due", "support enforcement"),
+        "Missed child-support payments should be routed to existing-order, payment-history, enforcement, and support-services review. The workbench should not tell a parent to self-help or withhold contact. It should organize the current order, payment records, DHHS/support-enforcement information if involved, and what process/source cards need review.",
+        ("arrears", "support enforcement", "child support", "family order", "DHHS"),
+        (
+            "Find the current support order and a payment history or ledger.",
+            "Identify whether DHHS/support enforcement is already involved.",
+            "Ask qualified review whether enforcement, contempt, modification, or administrative support services are relevant.",
+        ),
+    ),
+    _item(
+        "parent_pfa_hearing_prep_boundary",
+        "parent",
+        "safety_pfa",
+        "How should I prepare for a PFA hearing without guessing the legal strategy?",
+        (
+            "How should I prepare for a protection from abuse hearing?",
+            "What should I organize before a PFA hearing involving children?",
+        ),
+        ("pfa hearing", "protection from abuse hearing", "abuse hearing", "order for protection"),
+        "For a protection-from-abuse hearing, immediate safety comes first. For court preparation, organize dates, alleged conduct, child-safety impact, existing family orders, requested restrictions, and proof. The workbench should not coach testimony or predict outcomes; it should route to official PFA resources and qualified safety/legal review.",
+        ("pfa hearing", "protection from abuse", "immediate danger", "safety", "family orders"),
+        (
+            "Use emergency/safety resources first if anyone is in immediate danger.",
+            "Create a date-by-date safety timeline with evidence and child impact.",
+            "Keep PFA and family-case best-interest analysis separated for review.",
+        ),
+        safety_note="Emergency/safety routing required if anyone is in immediate danger.",
+    ),
+    _item(
+        "lawyer_appellate_finality_record_triage",
+        "lawyer",
+        "appeal_preservation",
+        "Is the family appeal final, preserved, and record-supported?",
+        (
+            "How do I check final order, findings, and record issues before a family appeal?",
+            "What should I audit before appealing a Maine family order?",
+        ),
+        ("final order", "appeal", "findings", "record", "transcript", "preservation"),
+        "Family-law appeal triage should start with finality, notice/deadline risk, preservation, findings, transcript/record completeness, standard of review, and the specific ruling being challenged. The workbench should flag record gaps and source freshness rather than asserting appellate viability.",
+        ("appeal final order", "findings", "transcript", "record", "appellate procedure"),
+        (
+            "Identify the judgment/order date, finality issue, and any post-judgment motions.",
+            "Map each claimed error to the record, transcript, finding, objection, and standard of review.",
+            "Verify current appellate rules and deadlines outside chat.",
+        ),
+        safety_note="Appellate deadlines and finality require qualified review.",
+    ),
+    _item(
+        "lawyer_motion_for_findings_preservation",
+        "lawyer",
+        "appeal_preservation",
+        "When should findings preservation be reviewed?",
+        (
+            "Should I file a motion for findings before appeal?",
+            "How do Rule 52 findings affect appeal preservation in a family case?",
+        ),
+        ("motion for findings", "rule 52", "findings", "preservation", "before appeal"),
+        "A missing-findings or insufficient-findings issue should be routed to preservation review. The workbench can help audit whether the order connects facts to rulings and best-interest factors, but it cannot decide motion timing or appellate strategy without current rules, the order, the docket, and attorney review.",
+        ("motion for findings", "Rule 52", "family division", "best interest", "1653"),
+        (
+            "Compare each contested ruling with the actual findings and source-backed record facts.",
+            "Identify whether a findings request, reconsideration issue, or appellate record issue is implicated.",
+            "Verify current rule text, deadlines, and preservation consequences with qualified counsel.",
+        ),
+        safety_note="Deadline/preservation risk; do not rely on chat for timing.",
+    ),
+    _item(
+        "lawyer_stay_pending_appeal_triage",
+        "lawyer",
+        "appeal_preservation",
+        "How should a stay pending appeal be triaged?",
+        (
+            "Can I ask the court to stay a family order while I appeal?",
+            "What should I check for a stay pending appeal in a family matter?",
+        ),
+        ("stay pending appeal", "stay order", "pause order", "while I appeal"),
+        "A stay pending appeal can affect children, support, safety, and enforcement, so it needs urgent source and posture review. The workbench should identify the order, requested stay terms, safety/support impact, trial-court/appellate posture, and current appellate rules before any draft is treated as usable.",
+        ("stay pending appeal", "appellate procedure", "family order", "safety", "support"),
+        (
+            "Quote the exact order language to be stayed and the requested temporary terms.",
+            "List child-safety, support, enforcement, and scheduling consequences.",
+            "Verify the proper court, rule, timing, and standard with qualified review.",
+        ),
+        safety_note="Urgent appellate/procedure review required.",
+    ),
+    _item(
+        "lawyer_interlocutory_nonfinal_appeal_triage",
+        "lawyer",
+        "appeal_preservation",
+        "Can a temporary or nonfinal family order be appealed?",
+        (
+            "Can I appeal a temporary order before final judgment?",
+            "Is an interim family order immediately appealable?",
+        ),
+        ("temporary order appeal", "interlocutory", "nonfinal", "interim order", "before final judgment"),
+        "A temporary, interim, or nonfinal family order should be routed to appellate finality and preservation review. The workbench should not assume the order is immediately appealable. It should identify finality, any exception or special rule, the harm claimed, the record, and deadlines for qualified legal review.",
+        ("interlocutory", "temporary order appeal", "finality", "appellate procedure", "record"),
+        (
+            "Identify whether the order is temporary, interim, post-judgment, or final.",
+            "Map the issue to finality, preservation, record, and possible stay questions.",
+            "Verify the current appellate rules before drafting or filing anything.",
+        ),
+        safety_note="Finality/deadline risk; attorney review required.",
+    ),
+    _item(
+        "lawyer_magistrate_order_objection_triage",
+        "lawyer",
+        "court_process",
+        "What if the order came from a family-law magistrate or similar officer?",
+        (
+            "How do I review a magistrate order in a family matter?",
+            "What should I check before objecting to a family magistrate decision?",
+        ),
+        ("magistrate", "objection", "recommended order", "family law magistrate", "review officer"),
+        "If a family-law decision came from a magistrate or similar officer, the first task is to identify exactly what document was issued, whether it is final or recommended, the objection/review path, deadlines, and the source authority controlling review. The workbench should not assume the procedure from generic civil practice.",
+        ("magistrate", "objection", "family division", "deadline", "court rules"),
+        (
+            "Identify the title of the decision, issuing officer, date, and notice language.",
+            "Check whether the document is a recommendation, interim order, final order, or judgment.",
+            "Verify current rule text and deadlines with qualified review.",
+        ),
+        safety_note="Deadline/procedure risk.",
+    ),
+    _item(
+        "counselor_hearing_support_boundary",
+        "counselor",
+        "professional_boundaries",
+        "Can a counselor support someone at court without giving legal advice?",
+        (
+            "Can a counselor sit with me at the hearing and tell me what to say?",
+            "Can a counselor help a client answer questions in family court?",
+        ),
+        ("sit with me", "hearing support", "tell me what to say", "answer questions", "counselor"),
+        "A counselor can provide emotional support only within role, court, confidentiality, and professional limits. Telling a person what to say, how to answer legal questions, what to file, or how to win crosses into legal-strategy territory and should be referred to counsel or court-approved resources.",
+        ("not legal advice", "court", "family matter", "records", "court forms"),
+        (
+            "Separate emotional support from legal strategy or testimony coaching.",
+            "Ask the court/clerk about attendance logistics only, not legal strategy.",
+            "Use counsel/supervision for subpoenas, testimony, records, or role conflicts.",
+        ),
+        safety_note="Professional-boundary/legal-advice caution.",
+    ),
+    _item(
+        "therapist_record_release_dispute_boundary",
+        "therapist",
+        "professional_boundaries",
+        "What if parents disagree about therapy-record release?",
+        (
+            "Can a therapist release records to one parent but not the other?",
+            "What if separated parents disagree about a child's therapy records?",
+        ),
+        ("release records", "one parent", "therapy records", "disagree", "separated parents", "records request"),
+        "Therapy-record release in a court-involved family case can raise consent, legal-custody authority, privilege/confidentiality, subpoenas, protective orders, and professional-rule issues. The workbench should not decide disclosure. It should route the user to role, order, consent, and legal/professional review.",
+        ("records", "court order", "private", "family matter", "confidentiality"),
+        (
+            "Identify who is requesting records, what order/consent/release exists, and whose records are involved.",
+            "Keep clinical notes in approved systems; do not paste them into public/shared tools.",
+            "Ask counsel/supervision before releasing, withholding, summarizing, or filing records.",
+        ),
+        safety_note="Confidentiality/privilege/professional-rule review required.",
+    ),
+
 )
 
 
@@ -2516,6 +2818,22 @@ PROMPT_PACK_DEFINITIONS: tuple[dict[str, Any], ...] = (
             "lawyer_client_document_request_pack",
         ),
     },
+    {
+        "id": "appeals_service_deadline_triage",
+        "audience": "lawyer",
+        "title": "Appeals/service/deadline triage",
+        "description": "High-risk chat routes for deadlines, service defects, appellate finality, stays, findings preservation, and record access.",
+        "item_ids": (
+            "parent_response_deadline_risk",
+            "parent_service_problem_triage",
+            "parent_continue_service_defect_hearing",
+            "parent_ecourts_record_access_boundary",
+            "lawyer_appellate_finality_record_triage",
+            "lawyer_motion_for_findings_preservation",
+            "lawyer_stay_pending_appeal_triage",
+            "lawyer_interlocutory_nonfinal_appeal_triage",
+        ),
+    },
 )
 
 
@@ -2586,7 +2904,19 @@ def expand_query_for_library(question: str) -> str:
     if any(term in text for term in ("form", "forms", "packet", "stale")):
         hints.append("court forms family forms version FM-050")
     if any(term in text for term in ("served", "papers", "summons", "deadline", "respond")):
-        hints.append("family matter court forms commencement divorce service")
+        hints.append("family matter court forms commencement divorce service response deadline served papers")
+    if any(term in text for term in ("unable to serve", "cannot find", "service problem", "proof of service", "out of state service", "service in another state", "serve out of state")):
+        hints.append("service proof of service unable to serve out-of-state service jurisdiction court forms commencement")
+    if any(term in text for term in ("continuance", "continue a hearing", "postpone hearing", "service defect", "wasn't served", "was not served")):
+        hints.append("continuance service defect hearing service court forms family matter")
+    if any(term in text for term in ("ecourts", "odyssey", "record access", "sealed", "private record", "public access")):
+        hints.append("electronic filing eCourts record access sealed private record court records")
+    if any(term in text for term in ("fee waiver", "filing fee", "court fees", "cannot afford", "can't afford")):
+        hints.append("fee waiver filing fee court forms family matter")
+    if any(term in text for term in ("parentage", "paternity", "birth certificate", "divorce forms if we were never married")):
+        hints.append("parentage unmarried parental rights child support court forms")
+    if any(term in text for term in ("arrears", "missed support", "past due support", "payment history")):
+        hints.append("arrears support enforcement child support family order DHHS")
     if any(term in text for term in ("mediation", "conference", "hearing", "prepare", "bring", "temporary order", "interim")):
         hints.append("family matter mediation court review best interest 1653 court forms")
     if any(term in text for term in ("evidence", "proof", "records", "messages", "timeline", "texts", "email", "app")):
@@ -2621,10 +2951,10 @@ def expand_query_for_library(question: str) -> str:
         hints.append("best interest parental rights family matter 1653 court forms")
     if any(term in text for term in ("school records", "medical records", "information sharing", "doctor", "teacher")):
         hints.append("best interest records parental rights family matter 1653")
-    if any(term in text for term in ("opposition", "objection", "oppose", "appeal", "appeals", "appeals court", "law court", "supreme judicial court", "preservation", "transcript", "record")):
-        hints.append("Maine appeals Supreme Judicial Court Law Court appellate procedure record notice of appeal family matter")
-    if any(term in text for term in ("mandated reporting", "testify", "testimony", "witness", "what to file", "which motion", "legal opinion", "custody opinion", "collateral")):
-        hints.append("family matter court records parental rights not legal advice court forms")
+    if any(term in text for term in ("opposition", "objection", "oppose", "appeal", "appeals", "appeals court", "law court", "supreme judicial court", "preservation", "transcript", "record", "final order", "stay pending", "interlocutory", "nonfinal", "temporary order before final judgment", "motion for findings", "magistrate")):
+        hints.append("Maine appeals Supreme Judicial Court Law Court appellate procedure record notice of appeal family matter finality stay pending appeal motion for findings magistrate objection")
+    if any(term in text for term in ("mandated reporting", "testify", "testimony", "witness", "what to file", "which motion", "legal opinion", "custody opinion", "collateral", "tell me what to say", "hearing support", "release records", "records request")):
+        hints.append("family matter court records parental rights not legal advice court forms private records confidentiality")
     if any(term in text for term in ("download", "transcript", "share", "export", "reviewer handoff", "json export")):
         hints.append("source court forms family matter not legal advice official")
     if any(term in text for term in ("missing information", "missing documents", "missing facts", "what information", "before asking", "case management", "first court", "mediation")):
@@ -2682,6 +3012,38 @@ def _route_override(text: str) -> ChatLibraryItem | None:
     def has_any(*terms: str) -> bool:
         return any(term in text for term in terms)
 
+    if has_any("response deadline", "deadline to respond", "days do i have to respond", "how many days do i have to respond", "respond to divorce papers"):
+        return _item_by_id("parent_response_deadline_risk") or _item_by_id("parent_served_papers")
+    if has_any("cannot find the other parent to serve", "can't find the other parent to serve", "unable to serve", "service did not work", "service problem"):
+        return _item_by_id("parent_service_problem_triage") or _item_by_id("parent_service_of_process_basics")
+    if has_any("out of state service", "serve out of state", "service in another state", "serve family papers if the other parent is out of state"):
+        return _item_by_id("parent_out_of_state_service_triage") or _item_by_id("lawyer_jurisdiction_scope_warning")
+    if has_any("continue a hearing because i wasn't served", "continue a hearing because i was not served", "service is disputed", "service defect"):
+        return _item_by_id("parent_continue_service_defect_hearing") or _item_by_id("parent_service_problem_triage")
+    if has_any("ecourts", "odyssey", "record access", "private or sealed", "private record", "sealed record"):
+        return _item_by_id("parent_ecourts_record_access_boundary")
+    if has_any("filing fee", "fee waiver", "cannot afford", "can't afford", "court fees"):
+        return _item_by_id("parent_fee_waiver_forms_boundary") or _item_by_id("parent_court_fee_waiver_questions")
+    if has_any("parentage", "paternity", "birth certificate") or (has_any("never married", "unmarried") and has_any("divorce forms", "parentage", "parental rights forms")):
+        return _item_by_id("parent_parentage_first_questions") or _item_by_id("parent_unmarried_parent_prr")
+    if has_any("support arrears", "arrears", "missed support", "child support payments are missed", "past due support"):
+        return _item_by_id("parent_child_support_arrears_enforcement") or _item_by_id("parent_child_support_missed_payments")
+    if has_any("protection from abuse hearing", "pfa hearing", "order for protection hearing", "before a pfa hearing"):
+        return _item_by_id("parent_pfa_hearing_prep_boundary") or _item_by_id("safety_pfa_parent")
+    if has_any("motion for findings", "rule 52 findings affect appeal", "findings before appeal"):
+        return _item_by_id("lawyer_motion_for_findings_preservation") or _item_by_id("lawyer_rule_52_findings")
+    if has_any("stay pending appeal", "stay a family order while i appeal", "pause order while i appeal"):
+        return _item_by_id("lawyer_stay_pending_appeal_triage")
+    if has_any("temporary order before final judgment", "interim family order immediately appealable", "interlocutory", "nonfinal"):
+        return _item_by_id("lawyer_interlocutory_nonfinal_appeal_triage") or _item_by_id("lawyer_appellate_standard_record_triage")
+    if has_any("magistrate order", "family magistrate", "objecting to a family magistrate", "recommended order"):
+        return _item_by_id("lawyer_magistrate_order_objection_triage")
+    if has_any("final order", "appealing a maine family order", "record issues before a family appeal") and has_any("appeal", "appealing", "record", "findings", "transcript"):
+        return _item_by_id("lawyer_appellate_finality_record_triage") or _item_by_id("lawyer_appellate_standard_record_triage")
+    if has_any("sit with me at the hearing", "tell me what to say", "help a client answer questions in family court"):
+        return _item_by_id("counselor_hearing_support_boundary") or _item_by_id("counselor_school_court_question_boundary")
+    if has_any("release records to one parent", "parents disagree about a child's therapy records", "records request"):
+        return _item_by_id("therapist_record_release_dispute_boundary") or _item_by_id("therapist_records_caution")
     if has_any("what is a gal", "gal role", "gal report", "guardian ad litem"):
         return _item_by_id("parent_gal_role_report_questions") or _item_by_id("parent_gal_involved_questions")
     if has_any("appeal deadline", "deadline to appeal", "how long to appeal", "notice of appeal", "file an appeal"):

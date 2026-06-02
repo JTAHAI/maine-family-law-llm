@@ -1,3 +1,18 @@
+## v1.89.0 — Deterministic chat language coverage and enterprise LLM/chat plan
+
+- Expanded deterministic chat library to 138 items with more deadline, service, record-access, parentage, support, PFA, appellate, counselor, and therapist phrasings.
+- Added wrong-match routing regressions and source-backed offline fixture text for the new classes.
+- Added enterprise LLM/chat pass plan: 33 formal GA passes remain; 36 practical LLM/chat passes remain after this pass.
+- Outputs remain review_required, source-backed, not legal advice, and not filing-ready.
+
+## v1.88.0 — Repo hygiene recovery and enterprise collection repair
+
+- Restored packaged `.gitignore` and required `.github` workflow/template files so `robocopy /MIR` no longer deletes required public repo metadata.
+- Added missing `legal.documents.models`, `legal.retrieval.models`, `legal.matter.models`, and `legal.answering.models` dataclass stubs used by existing enterprise/test modules.
+- Preserved v1.87 chat-library routing and Enter-submit input-clearing behavior.
+- Added recovery guidance to remove previously committed `.mfl_work`, `.pytest_cache`, `__pycache__`, and `*.pyc` contamination from the Git index and working tree.
+- Kept outputs source-backed, review-required, and not filing-ready.
+
 
 ## v1.87.0 — Chat library routing and Enter-submit input clearing
 

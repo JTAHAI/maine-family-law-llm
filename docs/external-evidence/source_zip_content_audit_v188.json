@@ -1,0 +1,11 @@
+{
+  "schema": "maine_family_law_llm.source_zip_audit.v2",
+  "version": "1.88.0",
+  "generated_at": "2026-06-02T02:48:16.080575+00:00",
+  "zip_path": "/mnt/data/ME_FM_LLM_v1.88.0_repo_hygiene_collection_recovery_20260601.zip",
+  "file_count": 711,
+  "forbidden_entries": [],
+  "required_public_repo_files_present": true,
+  "missing_required_public_repo_files": [],
+  "safe_to_package": true
+}

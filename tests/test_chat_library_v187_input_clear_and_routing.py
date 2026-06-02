@@ -20,7 +20,7 @@ def test_v187_runtime_diagnostics_reports_input_clear_and_routing_flags() -> Non
     from maine_family_law_llm import api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "1.87.0"
+    assert payload["version"] == "1.89.0"
     assert payload["ui_version"] == "1.87.0-chat-library-routing-input-clear"
     assert payload["enter_to_submit"] is True
     assert payload["enter_submit_clears_input"] is True

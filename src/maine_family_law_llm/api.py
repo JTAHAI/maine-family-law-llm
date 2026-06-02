@@ -88,6 +88,8 @@ if FastAPI is not None:
             "brand_assets_mounted": _brand_assets_dir().is_dir(),
             "appeals_routing_fix": True,
             "chat_library_routing_v187": True,
+            "chat_library_language_v189": True,
+            "enterprise_llm_chat_plan_v189": "docs/enterprise-llm-chat-ga-plan-v189.md",
             "brand_kit": "assets/brand/focaf_family_law_llm_brand_kit",
             "appeals_test_question": "What court handles appeals?",
             "workbench_url": "/",

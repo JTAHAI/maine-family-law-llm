@@ -1,0 +1,22 @@
+name: Bug report
+description: Report a reproducible issue in the Maine Family Law LLM workbench
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / logs
+      description: Paste non-private logs only. Do not include client or matter data.

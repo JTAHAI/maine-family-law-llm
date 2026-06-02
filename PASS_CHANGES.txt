@@ -1,3 +1,11 @@
+## v1.88.0 — Repo hygiene recovery and enterprise collection repair
+
+- Restored packaged `.gitignore` and required `.github` workflow/template files so `robocopy /MIR` no longer deletes required public repo metadata.
+- Added missing `legal.documents.models`, `legal.retrieval.models`, `legal.matter.models`, and `legal.answering.models` dataclass stubs used by existing enterprise/test modules.
+- Preserved v1.87 chat-library routing and Enter-submit input-clearing behavior.
+- Added recovery guidance to remove previously committed `.mfl_work`, `.pytest_cache`, `__pycache__`, and `*.pyc` contamination from the Git index and working tree.
+- Kept outputs source-backed, review-required, and not filing-ready.
+
 
 ## v1.87.0 — Chat library routing and Enter-submit input clearing
 
@@ -853,3 +861,14 @@ v1.84.0 — appeals routing and runtime diagnostics hardening (2026-06-01)
 - Preserved Enter-to-submit, appeals routing, runtime diagnostics, brand asset serving, source cards, transcript export, and reviewer handoff metadata.
 - Added v1.86 UI regression tests for the classic desktop shell markers and appeals/Enter wiring.
 - No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status claimed.
+
+## v1.89.0 — deterministic chat language coverage and enterprise LLM/chat plan
+
+- Expanded deterministic chat library from 122 to 138 items.
+- Added source-backed language coverage for response/deadline risk, service defects, out-of-state service, continuance/service disputes, eCourts/record access, fee-waiver/forms, parentage routing, child-support arrears, PFA hearing prep, appellate finality/record review, Rule 52 findings preservation, stay pending appeal, interlocutory/nonfinal order appeal, magistrate/order objection triage, counselor hearing-support boundaries, and therapist record-release disputes.
+- Added conservative wrong-match routing overrides for each new high-risk phrasing class.
+- Expanded offline fixture source text so new deterministic answers still require source cards and disclaimers.
+- Added a new appeals/service/deadline starter prompt pack.
+- Added v1.89 regression tests for library count, prompt pack coverage, wrong-match routing, grounded answers, and runtime diagnostics flags.
+- Added docs/enterprise-llm-chat-ga-plan-v189.md and configs/maine_enterprise_llm_chat_pass_plan.json. The plan reports 33 formal enterprise GA passes remaining and 36 practical LLM/chat passes remaining after v1.89.
+- No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status is claimed.

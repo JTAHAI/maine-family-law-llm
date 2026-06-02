@@ -1,0 +1,8 @@
+{
+  "schema": "maine_family_law_llm.test_summary.v1",
+  "version": "1.88.0",
+  "generated_at": "2026-06-02T02:47:35.107119+00:00",
+  "status": "pass",
+  "summary_line": "..................                                                       [100%]",
+  "scope": "targeted repo-hygiene recovery, enterprise collection model stubs, matter/document/retrieval/answering, and local chat/UI regression suite"
+}
