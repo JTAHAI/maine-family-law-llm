@@ -171,6 +171,10 @@ def main() -> int:
         "source_inspector": "data-inspect-source" in html and "id=\"source-inspector\"" in html,
         "source_rich_export": "Latest source cards:" in html and "Latest payload metadata:" in html,
         "served_papers_starter": "Served papers" in html,
+        "live_ui_version_marker": "1.83.0-live-enter-submit-branding-fix" in html,
+        "visible_brand_shell": "id=\"focaf-brand-shell\"" in html and "FOCAF" in html,
+        "enter_submit_hint_visible": "Enter submits" in html and "Shift+Enter" in html,
+        "no_broken_js_newline_literals": "join('\n" not in html and "].join('\n" not in html,
     }
     blockers.extend([f"ui_missing:{key}" for key, value in required_html.items() if not value])
 
@@ -215,7 +219,7 @@ def main() -> int:
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "schema_version": "chat_library_workbench_evidence_v3",
+        "schema_version": "chat_library_workbench_evidence_v4",
         "status": "pass" if not blockers else "blocked",
         "blockers": blockers,
         "library_count": len(library),

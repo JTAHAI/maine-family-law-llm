@@ -43,7 +43,7 @@ http://127.0.0.1:8000/
 
 Usability notes:
 
-- Press **Enter** to ask.
+- Press **Enter** to ask. The v1.83 browser UI includes an explicit live marker in the footer and a script-syntax regression check for this behavior.
 - Press **Shift+Enter** for a new line.
 - Use the audience selector to browse parent, lawyer, caregiver, counselor, and therapist starter prompts.
 - Use **Download transcript** to save a local text transcript.
@@ -71,7 +71,7 @@ Then open:
 http://127.0.0.1:8000/
 ```
 
-The page lets you type a Maine family-law question, press **Ask**, and see the source-backed answer plus source cards. It runs locally and uses the bundled offline fixture sources unless you separately build an external official authority store.
+The page lets you type a Maine family-law question, press **Enter** or **Ask**, and see the source-backed answer plus source cards. If a browser still shows the old unbranded page, use Ctrl+F5 and verify the footer says `UI v1.83 live Enter/branding fix`. It runs locally and uses the bundled offline fixture sources unless you separately build an external official authority store.
 
 Stop the local server:
 

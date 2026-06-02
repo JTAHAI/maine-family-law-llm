@@ -116,3 +116,11 @@ The source repository still does not package external legal corpora, parsed auth
 - Added reviewer handoff UI panel and JSON transcript export metadata.
 - Added v1.82 focused regression tests and refreshed chat evidence.
 - No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status is claimed.
+
+
+## v1.83.0 - Live browser Enter-submit and FOCAF branding fix
+
+- Fixes live local chat workbench JavaScript parsing so the Enter key handler attaches.
+- Adds visible FOCAF/live UI version markers for browser cache verification.
+- Restores required `.github` public repo files and `.gitignore` to prevent doctor failures after ZIP overlay.
+- Adds v1.83 regression coverage and evidence output.

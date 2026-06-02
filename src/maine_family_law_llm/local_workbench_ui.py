@@ -181,13 +181,13 @@ def render_local_workbench_html() -> str:
   </style>
 </head>
 <body>
-  <header>
+  <header id="focaf-brand-shell" data-ui-version="1.83.0-live-enter-submit-branding-fix">
     <div class="wrap brand-row">
       <div class="brand-lockup">
         <div class="brand-mark" aria-hidden="true">F</div>
         <div>
           <h1>Maine Family Law LLM</h1>
-          <p class="subtitle">Local source-backed chat workbench for FOCAF. Runs on your machine. Review required. Not legal advice.</p>
+          <p class="subtitle">Local source-backed chat workbench for FOCAF. Runs on your machine. Enter submits. Review required. Not legal advice.</p>
         </div>
       </div>
       <a class="brand-link" href="https://focaf.jtforme.com" target="_blank" rel="noopener noreferrer">focaf.jtforme.com</a>
@@ -240,7 +240,7 @@ def render_local_workbench_html() -> str:
         </div>
         <label for="question">Question</label>
         <textarea id="question" placeholder="Example: What are Maine's best-interest factors under 19-A M.R.S. § 1653?"></textarea>
-        <p class="hint">Press <strong>Enter</strong> to ask. Press <strong>Shift+Enter</strong> for a new line.</p>
+        <p class="hint">Press <strong>Enter</strong> to ask immediately. Press <strong>Shift+Enter</strong> for a new line. If Enter does not submit, reload with Ctrl+F5 and verify the 1.83 UI marker in the footer.</p>
         <div class="row" style="margin-top: 0.75rem;">
           <button id="ask-button">Ask</button>
           <button id="copy-button" class="secondary">Copy answer</button>
@@ -312,7 +312,7 @@ def render_local_workbench_html() -> str:
     </aside>
   </main>
   <footer>
-    <p>Useful local links: <a href="/docs">Swagger API docs</a> · <a href="/sources">Raw source manifest</a> · <a href="/api/question-library">Question library JSON</a> · <a href="/api/question-topics">Topic JSON</a> · <a href="/api/starter-prompt-packs">Starter packs JSON</a> · <a href="/api/missing-information-prompts">Missing-info JSON</a> · <a href="/api/health">Health</a></p>
+    <p><strong>UI v1.83 live Enter/branding fix.</strong> Useful local links: <a href="/docs">Swagger API docs</a> · <a href="/sources">Raw source manifest</a> · <a href="/api/question-library">Question library JSON</a> · <a href="/api/question-topics">Topic JSON</a> · <a href="/api/starter-prompt-packs">Starter packs JSON</a> · <a href="/api/missing-information-prompts">Missing-info JSON</a> · <a href="/api/health">Health</a></p>
   </footer>
   <!-- Compatibility marker for tests and older docs: fetch('/ask') -->
   <script>
@@ -339,6 +339,7 @@ def render_local_workbench_html() -> str:
     const promptPackList = document.getElementById('prompt-pack-list');
     const sourceInspector = document.getElementById('source-inspector');
     const handoffPanel = document.getElementById('handoff-panel');
+    window.__MFL_WORKBENCH_UI_VERSION = '1.83.0-live-enter-submit-branding-fix';
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
@@ -492,7 +493,7 @@ def render_local_workbench_html() -> str:
       sourceCards.textContent = '';
       addMessage('user', text);
       try {
-        const context = [matterContext.value.trim(), `Audience: ${audience.value}`].filter(Boolean).join('\n');
+        const context = [matterContext.value.trim(), `Audience: ${audience.value}`].filter(Boolean).join('\\n');
         const payload = await fetchJson('/ask', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -630,18 +631,14 @@ def render_local_workbench_html() -> str:
         'Maine Family Law LLM local transcript',
         'Review required. Not legal advice.',
         '',
-        messages.map((msg) => `[${msg.at}] ${msg.role.toUpperCase()}
-${msg.text}`).join('
-
-'),
+        messages.map((msg) => `[${msg.at}] ${msg.role.toUpperCase()}\\n${msg.text}`).join('\\n\\n'),
         '',
         'Latest payload metadata:',
         JSON.stringify(lastPayload || {}, null, 2),
         '',
         'Latest source cards:',
         JSON.stringify(lastSources || [], null, 2)
-      ].join('
-');
+      ].join('\\n');
       const blob = new Blob([content || answer.textContent || 'No transcript yet.'], {type: 'text/plain'});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

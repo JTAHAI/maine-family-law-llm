@@ -1,32 +1,29 @@
-﻿name: Bug report
-description: Report a reproducible bug
-title: "[Bug]: "
-labels: ["bug"]
+name: Bug report
+about: Report a source-code or local-test problem
+labels: [bug]
 body:
-  - type: textarea
-    id: summary
+  - type: markdown
     attributes:
-      label: Summary
-      description: What happened?
+      value: |
+        Do not paste confidential matter facts, sealed records, private client data, credentials, or downloaded legal corpora.
+  - type: input
+    id: version
+    attributes:
+      label: Repo version or ZIP name
     validations:
       required: true
   - type: textarea
-    id: steps
+    id: problem
     attributes:
-      label: Steps to reproduce
-      description: Include commands, input, and observed output.
+      label: Problem
+      description: Describe what failed and what command you ran.
     validations:
       required: true
   - type: textarea
-    id: expected
+    id: logs
     attributes:
-      label: Expected behavior
-    validations:
-      required: false
-  - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: OS, Python version, repo commit, and local data-root details if relevant.
+      label: Safe logs
+      description: Paste sanitized output only. Remove names, docket numbers, addresses, secrets, and private facts.
+      render: shell
     validations:
       required: false

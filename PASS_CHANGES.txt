@@ -808,3 +808,12 @@ v1.82.0_chat_missing_info_reviewer_handoff
 - Added missing_information answer style, missing-info endpoint, role-specific follow-up metadata, and reviewer handoff export support.
 - Added reviewer handoff prompt pack and UI handoff panel.
 - Added v1.82 focused regression tests and refreshed chat-library evidence. No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status is claimed.
+
+
+## v1.83.0 - Live browser Enter-submit and FOCAF branding fix
+
+- Fixed the inline local workbench JavaScript newline escaping bug that prevented the browser script from parsing and blocked Enter-to-submit handlers.
+- Added explicit FOCAF/live UI markers (`focaf-brand-shell`, `1.83.0-live-enter-submit-branding-fix`, footer marker) so testers can confirm the served page is current.
+- Added v1.83 regression tests for the real browser UI symptoms: Enter handler present, branding shell present, and no broken JS newline literals.
+- Restored required public repo files (`.github/*`, `.gitignore`) into the source ZIP so doctor checks pass after overlay.
+- Added v1.83 chat-library evidence output with live UI checks while preserving review-required, source-backed, not-legal-advice guardrails.
