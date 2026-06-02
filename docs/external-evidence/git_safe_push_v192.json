@@ -1,0 +1,158 @@
+{
+  "blockers": [],
+  "branch": "main",
+  "commit_created": true,
+  "dry_run": false,
+  "generated_at": "2026-06-02T17:29:40.817983+00:00",
+  "interpretation": "This wrapper verifies source hygiene before pushing public source code. It does not claim legal GA readiness, attorney review, pilot completion, or filing-ready output.",
+  "message": "Apply v1.93 attorney sandbox review kit pass",
+  "no_changes_to_commit": false,
+  "production_legal_ready": false,
+  "project_root": "D:\\dev\\maine-family-law-llm_git",
+  "push_attempted": true,
+  "safe_to_push": true,
+  "schema": "maine_family_law_llm.git_safe_push.v1",
+  "skip_tests": false,
+  "status": "pass",
+  "steps": [
+    {
+      "command": [
+        "C:\\Python314\\python.exe",
+        "scripts/clean-local-artifacts.py",
+        "--repo-root",
+        ".",
+        "--include-venv",
+        "--json"
+      ],
+      "name": "clean_local_artifacts",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": "ource_update_engine.cpython-314.pyc\",\n    \"legal/release/__pycache__\",\n    \"legal/release/__pycache__/__init__.cpython-314.pyc\",\n    \"legal/release/__pycache__/attribution.cpython-314.pyc\",\n    \"legal/release/__pycache__/ga_release.cpython-314.pyc\",\n    \"legal/release/__pycache__/git_safe_push.cpython-314.pyc\",\n    \"legal/release/__pycache__/post_ga_review.cpython-314.pyc\",\n    \"legal/release/__pycache__/public_repo_readiness.cpython-314.pyc\",\n    \"legal/release/__pycache__/release_manifest.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__\",\n    \"legal/retrieval/__pycache__/__init__.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/authority_graph.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/authority_ranker.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/embedding_adapter.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/hybrid_search.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/index_builder.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/lexical_search.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/models.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/query_expansion.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/reranker.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/retrieval_pipeline.cpython-314.pyc\",\n    \"legal/retrieval/__pycache__/semantic_search.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__\",\n    \"legal/verifiers/__pycache__/__init__.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/authority_status_verifier.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/citation_parser.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/citation_resolver.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/claim_support_verifier.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/quote_span_verifier.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/source_cards.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/staleness_jurisdiction.cpython-314.pyc\",\n    \"legal/verifiers/__pycache__/verification_pipeline.cpython-314.pyc\"\n  ]\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Python314\\python.exe",
+        "scripts/doctor-local-repo.py",
+        "--repo-root",
+        ".",
+        "--json"
+      ],
+      "name": "local_doctor",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"schema\": \"maine_family_law_llm.local_doctor.v2\",\n  \"status\": \"pass\",\n  \"safe_to_push\": true,\n  \"failure_class\": \"none\",\n  \"strict_by_default\": true,\n  \"venv_allowed\": false,\n  \"forbidden_paths\": [],\n  \"required_public_repo_files\": [\n    \".github/ISSUE_TEMPLATE/bug_report.yml\",\n    \".github/ISSUE_TEMPLATE/config.yml\",\n    \".github/PULL_REQUEST_TEMPLATE.md\",\n    \".github/workflows/ci.yml\",\n    \".gitignore\"\n  ],\n  \"recovery_hint\": \"\"\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Python314\\python.exe",
+        "scripts/run-public-source-preflight.py",
+        "--repo-root",
+        ".",
+        "--require-ready",
+        "--output",
+        "docs/external-evidence/public_source_pre_push_gate_v193.json"
+      ],
+      "name": "public_source_preflight",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": "  50,\n          51\n        ]\n      },\n      \"name\": \"launch_evidence_fail_closed\",\n      \"status\": \"pass\",\n      \"summary\": \"Pass 48-51 evidence gate remains blocked until external pilot/release evidence is supplied\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"no_op_commit_guard\": \"git diff --cached --quiet\",\n        \"report_output\": \"docs/external-evidence/public_source_pre_push_gate_v193.json\",\n        \"required_files\": [\n          \"scripts/git-safe-push.py\",\n          \"PUSH_SAFE.ps1\",\n          \"scripts/git-safe-push.ps1\",\n          \"scripts/git-safe-push.sh\"\n        ]\n      },\n      \"name\": \"git_safe_push_wrapper\",\n      \"status\": \"pass\",\n      \"summary\": \"safe push wrappers delegate to the no-op-safe Python gate\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"missing_markers\": [],\n        \"required_markers\": [\n          \"doctor-local-repo.py\",\n          \"run-chat-library-evidence.py\",\n          \"run-public-source-preflight.py\",\n          \"test_chat_library_v187_input_clear_and_routing.py\",\n          \"test_pass48_51_launch_evidence_gates.py\",\n          \"test_public_source_pre_push_gate_v191.py\",\n          \"test_git_safe_push_v192.py\",\n          \"test_attorney_sandbox_review_kit_v193.py\"\n        ]\n      },\n      \"name\": \"ci_guardrails\",\n      \"status\": \"pass\",\n      \"summary\": \"CI includes source hygiene, chat/UI, launch-gate, and pre-push checks\"\n    }\n  ],\n  \"generated_at\": \"2026-06-02T17:29:35.144952+00:00\",\n  \"interpretation\": \"Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.\",\n  \"production_legal_ready\": false,\n  \"project_root\": \"D:\\\\dev\\\\maine-family-law-llm_git\",\n  \"safe_to_push\": true,\n  \"schema\": \"maine_family_law_llm.public_source_pre_push_gate.v2\",\n  \"status\": \"pass\"\n}\n"
+    },
+    {
+      "command": [
+        "C:\\Python314\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_public_source_pre_push_gate_v191.py",
+        "tests/test_git_safe_push_v192.py",
+        "tests/test_pass48_51_launch_evidence_gates.py",
+        "tests/test_pass48_51_launch_evidence_starter_kit.py",
+        "tests/test_attorney_sandbox_review_kit_v193.py",
+        "tests/test_chat_library_v187_input_clear_and_routing.py",
+        "tests/test_best_interest_chat_answer.py",
+        "tests/test_public_repo_integrity.py",
+        "-q"
+      ],
+      "name": "focused_tests",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": ".................................                                        [100%]\n"
+    },
+    {
+      "command": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "name": "git_status_before_stage",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": " M .github/workflows/ci.yml\n M PASS_CHANGES.txt\n M docs/release-notes.md\n M legal/pilot/__init__.py\n M legal/release/git_safe_push.py\n M legal/release/pre_push_gate.py\n M pyproject.toml\n M scripts/run-public-source-preflight.py\n M src/maine_family_law_llm/__init__.py\n M tests/test_chat_library_v187_input_clear_and_routing.py\n M tests/test_public_source_pre_push_gate_v191.py\n?? docs/external-evidence/attorney_sandbox_review_kit_v193_summary.json\n?? docs/external-evidence/public_source_pre_push_gate_v193.json\n?? docs/external-evidence/source_zip_content_audit_v193.json\n?? docs/pass48-attorney-sandbox-review-kit-v193.md\n?? legal/pilot/attorney_review_kit.py\n?? scripts/build-attorney-sandbox-review-kit.py\n?? tests/test_attorney_sandbox_review_kit_v193.py\n"
+    },
+    {
+      "command": [
+        "git",
+        "add",
+        "-A"
+      ],
+      "name": "git_add_all",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--quiet"
+      ],
+      "name": "git_diff_cached_quiet",
+      "returncode": 1,
+      "skipped": false,
+      "status": "fail",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    },
+    {
+      "command": [
+        "git",
+        "commit",
+        "-m",
+        "Apply v1.93 attorney sandbox review kit pass"
+      ],
+      "name": "git_commit",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "",
+      "stdout_tail": "[main 29ed52a] Apply v1.93 attorney sandbox review kit pass\n 18 files changed, 633 insertions(+), 7 deletions(-)\n create mode 100644 docs/external-evidence/attorney_sandbox_review_kit_v193_summary.json\n create mode 100644 docs/external-evidence/public_source_pre_push_gate_v193.json\n create mode 100644 docs/external-evidence/source_zip_content_audit_v193.json\n create mode 100644 docs/pass48-attorney-sandbox-review-kit-v193.md\n create mode 100644 legal/pilot/attorney_review_kit.py\n create mode 100644 scripts/build-attorney-sandbox-review-kit.py\n create mode 100644 tests/test_attorney_sandbox_review_kit_v193.py\n"
+    },
+    {
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "main"
+      ],
+      "name": "git_push",
+      "returncode": 0,
+      "skipped": false,
+      "status": "pass",
+      "stderr_tail": "To https://github.com/JTAHAI/maine-family-law-llm.git\n   14fd0d9..29ed52a  main -> main\n",
+      "stdout_tail": "branch 'main' set up to track 'origin/main'.\n"
+    }
+  ]
+}
