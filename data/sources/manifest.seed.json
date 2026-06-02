@@ -105,6 +105,36 @@
     "notes": "Safety routing resource; emergency prompts should use emergency language."
   },
   {
+    "id": "maine-judicial-branch-appeals",
+    "title": "Appeals: Maine Judicial Branch",
+    "source_type": "court_process",
+    "jurisdiction": "Maine",
+    "official": true,
+    "url": "https://www.courts.maine.gov/help/appeals.html",
+    "effective_date": "official-page-version-varies",
+    "retrieved_at": "2026-06-01T00:00:00Z",
+    "version_label": "seed placeholder; verify current Maine Judicial Branch appeals page before use",
+    "citation_hint": "Maine Judicial Branch, Appeals",
+    "license_or_terms_note": "Official Maine Judicial Branch public information; verify terms on source site.",
+    "source_priority": 18,
+    "notes": "Representative appeals help page for appellate court routing and basic appeal orientation."
+  },
+  {
+    "id": "maine-rules-appellate",
+    "title": "Maine Rules of Appellate Procedure",
+    "source_type": "appellate_rule",
+    "jurisdiction": "Maine",
+    "official": true,
+    "url": "https://www.courts.maine.gov/rules/text/mr_app_p_plus_2024-11-01.pdf",
+    "effective_date": "2024-11-01",
+    "retrieved_at": "2026-06-01T00:00:00Z",
+    "version_label": "Maine Rules of Appellate Procedure PDF dated November 1, 2024; verify current rules before use",
+    "citation_hint": "M.R. App. P.",
+    "license_or_terms_note": "Official Maine Judicial Branch rules source; verify terms on source site.",
+    "source_priority": 17,
+    "notes": "Representative appellate rules entry for notices of appeal, deadlines, and record issues."
+  },
+  {
     "id": "sample-secondary-family-law-overview",
     "title": "Sample secondary overview placeholder",
     "source_type": "secondary",

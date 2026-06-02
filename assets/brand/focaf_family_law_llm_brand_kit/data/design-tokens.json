@@ -1,0 +1,36 @@
+{
+  "fontFamily": {
+    "sans": "Atkinson Hyperlegible, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    "serif": "Charter, Georgia, Cambria, Times New Roman, serif",
+    "mono": "Cascadia Code, SFMono-Regular, ui-monospace, Consolas, Liberation Mono, monospace"
+  },
+  "radius": {
+    "xs": "0.375rem",
+    "sm": "0.625rem",
+    "md": "0.875rem",
+    "lg": "1.125rem",
+    "xl": "1.5rem",
+    "pill": "999px"
+  },
+  "shadow": {
+    "soft": "0 14px 40px rgba(0, 0, 0, .28)",
+    "panel": "0 1px 0 rgba(255,255,255,.06) inset, 0 18px 52px rgba(0,0,0,.26)",
+    "tealGlow": "0 0 0 1px rgba(35,211,193,.35), 0 0 28px rgba(35,211,193,.13)"
+  },
+  "spacing": {
+    "1": "0.25rem",
+    "2": "0.5rem",
+    "3": "0.75rem",
+    "4": "1rem",
+    "5": "1.25rem",
+    "6": "1.5rem",
+    "8": "2rem",
+    "10": "2.5rem",
+    "12": "3rem"
+  },
+  "layout": {
+    "maxWidth": "1180px",
+    "contentWidth": "780px",
+    "sidebarWidth": "320px"
+  }
+}

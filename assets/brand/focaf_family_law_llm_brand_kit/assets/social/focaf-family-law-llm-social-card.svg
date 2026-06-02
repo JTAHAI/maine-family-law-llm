@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+<title id="title">Maine Family Law LLM social card</title>
+<desc id="desc">For Our Children and Families branded social preview for the Maine Family Law LLM.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#10283A"/><stop offset=".52" stop-color="#07131F"/><stop offset="1" stop-color="#0C1D2B"/></linearGradient>
+  <radialGradient id="glow" cx="30%" cy="20%" r="80%"><stop offset="0" stop-color="#23D3C1" stop-opacity=".25"/><stop offset="1" stop-color="#23D3C1" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<rect width="1200" height="630" fill="url(#glow)"/>
+<circle cx="1020" cy="115" r="170" fill="#285A7A" opacity=".18"/>
+<circle cx="1040" cy="505" r="210" fill="#23D3C1" opacity=".08"/>
+<g transform="translate(78 78)">
+  <rect x="0" y="0" width="132" height="132" rx="36" fill="#07131F" stroke="#244B62" stroke-width="4"/>
+  <path d="M67 20l-20 30h16l-14 25h19l-10 23 38-45H76l17-28H75l12-5z" fill="#23D3C1"/>
+  <circle cx="53" cy="92" r="10" fill="#FFF9EC"/>
+  <circle cx="76" cy="94" r="8" fill="#FFF9EC"/>
+  <path d="M30 116c5-18 18-28 37-28s32 10 37 28" fill="none" stroke="#8DECE2" stroke-width="7" stroke-linecap="round"/>
+</g>
+<text x="78" y="270" fill="#EAF7F6" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="76" font-weight="800" letter-spacing="-1.8">Maine Family Law LLM</text>
+<text x="82" y="332" fill="#8DECE2" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="32" font-weight="700" letter-spacing="1.3">FOR OUR CHILDREN &amp; FAMILIES</text>
+<text x="82" y="407" fill="#DCEDEA" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="31">Local source-backed research assistant for Maine family-law research.</text>
+<text x="82" y="454" fill="#AFC6CB" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="26">Review required • Not legal advice • No private case intake</text>
+<g transform="translate(82 515)">
+  <rect width="230" height="52" rx="26" fill="#10283A" stroke="#244B62"/>
+  <circle cx="30" cy="26" r="8" fill="#23D3C1"/>
+  <text x="52" y="34" fill="#8DECE2" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="22" font-weight="700">local AI online</text>
+  <rect x="254" width="250" height="52" rx="26" fill="#10283A" stroke="#244B62"/>
+  <text x="284" y="34" fill="#F6C96D" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="22" font-weight="700">reviewer handoff</text>
+</g>
+</svg>

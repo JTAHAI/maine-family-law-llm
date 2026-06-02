@@ -805,6 +805,37 @@ CHAT_LIBRARY: tuple[ChatLibraryItem, ...] = (
         ),
     ),
     _item(
+        "parent_appeals_court_routing",
+        "parent",
+        "appeal_preservation",
+        "What court handles Maine family-law appeals?",
+        (
+            "What court handles appeals?",
+            "Which court hears an appeal from a Maine family order?",
+            "Where does a Maine family court appeal go?",
+        ),
+        (
+            "court handles appeals",
+            "what court handles appeals",
+            "appeals court",
+            "appeal court",
+            "appeals",
+            "appeal",
+            "law court",
+            "supreme judicial court",
+            "district court appeal",
+        ),
+        "For a Maine family-law order, do not use a parenting-schedule answer. Appeals are a separate court/posture issue. The Maine Judicial Branch appeals source says most District Court appeals are filed directly to the Supreme Judicial Court; small-claims and eviction appeals are different and go to Superior Court. The Supreme Judicial Court is Maine's highest court and court of final appeal, often called the Law Court when deciding appeals. A family-law appeal also requires checking the current Maine Rules of Appellate Procedure, the order's finality, deadlines, record/transcript issues, preservation, and whether a motion for findings or other post-order step is needed.",
+        ("appeals", "Supreme Judicial Court", "Law Court", "M.R. App. P.", "appellate"),
+        (
+            "Identify the court that issued the order: District Court, Superior Court, or another tribunal.",
+            "Confirm whether the order is final or otherwise appealable before assuming an appeal route.",
+            "Check the current Maine Rules of Appellate Procedure and any notice-of-appeal deadline with a qualified reviewer.",
+            "Gather the order, docket entries, requested findings, transcript/record status, and preserved objections.",
+        ),
+        safety_note="Appeal deadlines and preservation issues are time-sensitive; use qualified legal review.",
+    ),
+    _item(
         "lawyer_appeal_record_findings",
         "lawyer",
         "appeal_preservation",
@@ -2272,8 +2303,8 @@ def expand_query_for_library(question: str) -> str:
         hints.append("best interest parental rights family matter 1653 court forms")
     if any(term in text for term in ("school records", "medical records", "information sharing", "doctor", "teacher")):
         hints.append("best interest records parental rights family matter 1653")
-    if any(term in text for term in ("opposition", "objection", "oppose", "appeal", "preservation", "transcript", "record")):
-        hints.append("family matter rule findings best interest court forms record")
+    if any(term in text for term in ("opposition", "objection", "oppose", "appeal", "appeals", "appeals court", "law court", "supreme judicial court", "preservation", "transcript", "record")):
+        hints.append("Maine appeals Supreme Judicial Court Law Court appellate procedure record notice of appeal family matter")
     if any(term in text for term in ("mandated reporting", "testify", "testimony", "witness", "what to file", "which motion", "legal opinion", "custody opinion", "collateral")):
         hints.append("family matter court records parental rights not legal advice court forms")
     if any(term in text for term in ("download", "transcript", "share", "export", "reviewer handoff", "json export")):

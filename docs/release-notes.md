@@ -1,3 +1,12 @@
+
+## v1.85.0 — FOCAF brand-kit UI integration
+
+- Adds the FOCAF Maine Family Law LLM brand kit to the repo under `assets/brand/focaf_family_law_llm_brand_kit/`.
+- Serves local brand assets from `/brand-assets`.
+- Updates the local browser workbench with favicon, FOCAF logo assets, brand CSS, a hero shell, runtime status cards, and brand asset diagnostics.
+- Preserves Enter-to-submit, runtime diagnostics, and appeals routing regression coverage.
+- Outputs remain source-backed, review-required, legal-information-only, and not filing-ready.
+
 ## v1.57.0 — Derived authority quarantine continuation hardening
 
 - Second-wave derived authority ingestion now quarantines isolated failed follow-up targets and continues through later batches instead of blocking the entire authority data-product run after partial success.
@@ -124,3 +133,10 @@ The source repository still does not package external legal corpora, parsed auth
 - Adds visible FOCAF/live UI version markers for browser cache verification.
 - Restores required `.github` public repo files and `.gitignore` to prevent doctor failures after ZIP overlay.
 - Adds v1.83 regression coverage and evidence output.
+
+## v1.84.0 — Appeals routing and runtime diagnostics
+
+- Fixed deterministic chat-library routing for `What court handles appeals?` so the answer no longer returns a parenting/contact schedule response.
+- Added source-backed appeals fixtures and source cards for Maine Judicial Branch appeals and Maine Rules of Appellate Procedure.
+- Added `/api/runtime-diagnostics` and visible UI diagnostics so stale local servers/builds are obvious.
+- Added v1.84 regression tests and refreshed chat-library evidence.

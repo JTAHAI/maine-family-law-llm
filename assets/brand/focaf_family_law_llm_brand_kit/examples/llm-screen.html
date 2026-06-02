@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FOCaF Maine Family Law LLM Branding Preview</title>
+  <link rel="icon" href="../assets/favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/focaf-family-law-llm-theme.css" />
+</head>
+<body>
+  <main class="focaf-shell">
+    <header class="focaf-app-header">
+      <div class="focaf-brand">
+        <img class="focaf-brand__mark" src="../assets/logo/focaf-family-law-llm-mark.svg" alt="For Our Children & Families" />
+        <div>
+          <span class="focaf-brand__eyebrow">For Our Children & Families</span>
+          <h1 class="focaf-brand__title">Maine Family Law LLM</h1>
+          <p class="focaf-brand__sub">Local source-backed research workbench. Review required. Not legal advice.</p>
+        </div>
+      </div>
+      <span class="focaf-status">local AI online</span>
+    </header>
+
+    <section class="focaf-grid">
+      <div class="focaf-card">
+        <div class="focaf-card__inner" style="display:grid;gap:1rem;">
+          <h2 class="focaf-card__title">Ask Maine Family Law</h2>
+          <div class="focaf-legal-notice">
+            This tool provides Maine family-law research from retrieved source snippets. It does not create an attorney-client relationship, does not replace review by a qualified professional, and does not accept private case intake.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;">
+            <label><span class="focaf-form-label">I am asking as a...</span><select class="focaf-select"><option>Parent</option><option>Helper</option><option>Reviewer</option></select></label>
+            <label><span class="focaf-form-label">Answer style</span><select class="focaf-select"><option>Checklist</option><option>Plain explanation</option><option>Reviewer handoff</option></select></label>
+            <label><span class="focaf-form-label">Topic filter</span><select class="focaf-select"><option>Parent-child contact</option><option>Best interest factors</option><option>Child support</option></select></label>
+          </div>
+          <label><span class="focaf-form-label">Question</span><textarea class="focaf-textarea" placeholder="What should a parent/contact schedule include?"></textarea></label>
+          <div style="display:flex;gap:.55rem;flex-wrap:wrap;">
+            <button class="focaf-button">Ask</button>
+            <button class="focaf-button focaf-button--secondary">Copy answer</button>
+            <button class="focaf-button focaf-button--secondary">Download transcript</button>
+            <button class="focaf-button focaf-button--ghost">Clear chat</button>
+          </div>
+          <section class="focaf-answer">
+            <div class="focaf-answer__meta">
+              <span class="focaf-status focaf-status--safe">source grounded</span>
+              <span class="focaf-status focaf-status--review">review required</span>
+            </div>
+            <h3>Checklist: what a parent/contact schedule should cover</h3>
+            <p>A useful parenting/contact schedule should be specific enough that both parents know regular time, exchanges, holidays, transportation, communication, and safety restrictions if any. The legal analysis still ties back to parental rights and responsibilities and the child’s best interest.</p>
+            <ul>
+              <li>Regular weekly schedule and exchange location.</li>
+              <li>Holiday and school-break schedule.</li>
+              <li>Transportation responsibilities and backup plan.</li>
+              <li>Communication method and emergency exceptions.</li>
+            </ul>
+          </section>
+          <section class="focaf-handoff">
+            <h3>Reviewer handoff summary</h3>
+            <p>Review required. Verify source status, missing facts, jurisdiction, and whether this remains within research-only boundaries.</p>
+          </section>
+        </div>
+      </div>
+
+      <aside class="focaf-card">
+        <div class="focaf-card__inner" style="display:grid;gap:.85rem;">
+          <h2 class="focaf-card__title">Sources, shortcuts & question library</h2>
+          <a class="focaf-question-chip" href="#">Best-interest factors</a>
+          <a class="focaf-question-chip" href="#">Parent contact schedule</a>
+          <a class="focaf-question-chip" href="#">Child support checklist</a>
+          <a class="focaf-question-chip" href="#">Organize evidence</a>
+          <article class="focaf-source-card">
+            <span class="focaf-source-card__type">official source</span>
+            <h3 class="focaf-source-card__title">Maine Revised Statutes Title 19-A</h3>
+            <p class="focaf-source-card__excerpt">Source snippets should be clearly excerpted, dated where possible, and inspectable before reliance.</p>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;"><button class="focaf-button focaf-button--secondary">Copy source card</button><button class="focaf-button focaf-button--ghost">Inspect source</button></div>
+          </article>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

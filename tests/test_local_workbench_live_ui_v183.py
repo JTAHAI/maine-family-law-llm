@@ -9,17 +9,17 @@ def _script_from(html: str) -> str:
     return match.group("script")
 
 
-def test_v183_live_ui_has_unambiguous_branding_and_enter_submit_marker() -> None:
+def test_live_ui_has_unambiguous_branding_and_enter_submit_marker() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
     html = render_local_workbench_html()
     script = _script_from(html)
 
     assert 'id="focaf-brand-shell"' in html
-    assert 'data-ui-version="1.83.0-live-enter-submit-branding-fix"' in html
+    assert 'data-ui-version="1.85.0-branded-ui-asset-integration"' in html
     assert "focaf.jtforme.com" in html
-    assert "UI v1.83 live Enter/branding fix" in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.83.0-live-enter-submit-branding-fix'" in script
+    assert "UI v1.85 FOCAF brand-kit asset integration + beautiful local shell + appeals/runtime diagnostics" in html
+    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.85.0-branded-ui-asset-integration'" in script
     assert "question.addEventListener('keydown'" in script
     assert "event.key === 'Enter' && !event.shiftKey" in script
     assert "event.preventDefault();" in script

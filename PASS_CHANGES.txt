@@ -817,3 +817,21 @@ v1.82.0_chat_missing_info_reviewer_handoff
 - Added v1.83 regression tests for the real browser UI symptoms: Enter handler present, branding shell present, and no broken JS newline literals.
 - Restored required public repo files (`.github/*`, `.gitignore`) into the source ZIP so doctor checks pass after overlay.
 - Added v1.83 chat-library evidence output with live UI checks while preserving review-required, source-backed, not-legal-advice guardrails.
+
+v1.84.0 — appeals routing and runtime diagnostics hardening (2026-06-01)
+- Added source-backed appeals court routing fixture and manifest entries for Maine Judicial Branch appeals and Maine Rules of Appellate Procedure.
+- Added deterministic answer for “What court handles appeals?” so it no longer overmatches the parenting/contact schedule library item.
+- Added v1.84 runtime diagnostics endpoint and visible workbench panel showing version, UI marker, Enter-submit status, FOCAF branding, and appeals-routing fix status.
+- Updated local workbench visible marker to UI v1.84 and added an appeals starter prompt.
+- Added regression tests for appeals routing, runtime diagnostics, and live UI markers.
+- Refreshed chat-library evidence to v184 with 105 library items and an appeals-routing sample.
+- All outputs remain review_required, source-backed, and not legal advice or filing-ready.
+
+## v1.85.0 — FOCAF brand-kit UI integration
+- Added the uploaded FOCAF Maine Family Law LLM brand kit under assets/brand/focaf_family_law_llm_brand_kit.
+- Mounted local static brand assets at /brand-assets in the FastAPI workbench.
+- Wired favicon, manifest, theme CSS, design tokens, logo mark, horizontal logo, and social-card artwork into the served UI.
+- Reworked the top-level local workbench into a visibly branded hero shell with runtime status cards.
+- Added /api/runtime-diagnostics brand asset mount reporting.
+- Added regression tests for brand asset presence, served static assets, visible UI markers, and Enter-to-submit continuity.
+- No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status claimed.

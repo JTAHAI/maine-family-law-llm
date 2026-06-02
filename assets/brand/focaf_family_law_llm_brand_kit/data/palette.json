@@ -1,0 +1,67 @@
+{
+  "brand": "For Our Children & Families / Maine Family Law LLM",
+  "version": "1.0",
+  "generated": "2026-06-02",
+  "colors": {
+    "ink_navy": {
+      "hex": "#07131F",
+      "usage": "Primary app background; highest contrast base."
+    },
+    "deep_ocean": {
+      "hex": "#0C1D2B",
+      "usage": "Header and page shell."
+    },
+    "harbor_panel": {
+      "hex": "#10283A",
+      "usage": "Primary cards/panels on dark UI."
+    },
+    "harbor_panel_2": {
+      "hex": "#153447",
+      "usage": "Raised cards, answer panels, source cards."
+    },
+    "blue_spruce": {
+      "hex": "#285A7A",
+      "usage": "Maine public-service blue; borders, secondary buttons, section headers."
+    },
+    "river_teal": {
+      "hex": "#23D3C1",
+      "usage": "Primary action color, local model status, active states."
+    },
+    "sea_glass": {
+      "hex": "#8DECE2",
+      "usage": "Highlights, glows, small icons, focus rings."
+    },
+    "warm_paper": {
+      "hex": "#F6F1E7",
+      "usage": "Light-mode page background and printable materials."
+    },
+    "soft_cream": {
+      "hex": "#FFF9EC",
+      "usage": "Notices and human-readable legal disclaimers in light mode."
+    },
+    "review_gold": {
+      "hex": "#F6C96D",
+      "usage": "Reviewer required, uncertainty, source-check prompts."
+    },
+    "safety_coral": {
+      "hex": "#FF8A7A",
+      "usage": "Safety flags and warnings only; do not overuse."
+    },
+    "pine_green": {
+      "hex": "#3EA97C",
+      "usage": "Support-first / stability cues."
+    },
+    "text_primary_dark": {
+      "hex": "#EAF7F6",
+      "usage": "Text on dark backgrounds."
+    },
+    "text_secondary_dark": {
+      "hex": "#AFC6CB",
+      "usage": "Muted text on dark backgrounds."
+    },
+    "border_dark": {
+      "hex": "#244B62",
+      "usage": "Card and input borders."
+    }
+  }
+}

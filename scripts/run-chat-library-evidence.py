@@ -23,6 +23,7 @@ from maine_family_law_llm.local_workbench_ui import render_local_workbench_html 
 
 SAMPLE_QUESTIONS = [
     "What are Maine's best-interest factors under 19-A M.R.S. § 1653?",
+    "What court handles appeals?",
     "How do I use the best-interest factors in my parenting case?",
     "Can a therapist decide whether visits happen?",
     "What should I gather for child support?",
@@ -171,9 +172,11 @@ def main() -> int:
         "source_inspector": "data-inspect-source" in html and "id=\"source-inspector\"" in html,
         "source_rich_export": "Latest source cards:" in html and "Latest payload metadata:" in html,
         "served_papers_starter": "Served papers" in html,
-        "live_ui_version_marker": "1.83.0-live-enter-submit-branding-fix" in html,
+        "appeals_routing_starter": "What court handles appeals?" in html,
+        "runtime_diagnostics_panel": "id=\"runtime-diagnostics\"" in html and "/api/runtime-diagnostics" in html,
+        "live_ui_version_marker": "1.85.0-branded-ui-asset-integration" in html,
         "visible_brand_shell": "id=\"focaf-brand-shell\"" in html and "FOCAF" in html,
-        "enter_submit_hint_visible": "Enter submits" in html and "Shift+Enter" in html,
+        "enter_submit_hint_visible": "Press <strong>Enter</strong>" in html and "Shift+Enter" in html,
         "no_broken_js_newline_literals": "join('\n" not in html and "].join('\n" not in html,
     }
     blockers.extend([f"ui_missing:{key}" for key, value in required_html.items() if not value])
@@ -183,8 +186,8 @@ def main() -> int:
     for expected in ("parent", "lawyer", "caregiver", "counselor", "therapist"):
         if expected not in audiences:
             blockers.append(f"audience_missing:{expected}")
-    if len(library) < 104:
-        blockers.append("library_too_small_for_v182_multi_audience_usability")
+    if len(library) < 105:
+        blockers.append("library_too_small_for_v184_multi_audience_appeals_usability")
     topics = public_topics()
     topic_names = sorted(row["topic"] for row in topics)
     for expected_topic in (

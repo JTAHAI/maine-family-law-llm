@@ -58,6 +58,11 @@ python scripts/run-chat-library-evidence.py --require-ready
 
 ## For non-technical local testing
 
+### FOCAF branded local workbench
+
+The local browser workbench now includes the FOCAF Maine Family Law LLM brand kit as repo assets under `assets/brand/focaf_family_law_llm_brand_kit/`. When `START_LOCAL_CHAT.ps1` runs, the FastAPI app serves those files from `/brand-assets`, including the logo mark, horizontal lockup, favicon, theme CSS, design tokens, and social-card artwork. The page footer should show `UI v1.85 FOCAF brand-kit asset integration` after a fresh restart and hard refresh.
+
+
 Run one command and use the browser chat screen:
 
 ```powershell

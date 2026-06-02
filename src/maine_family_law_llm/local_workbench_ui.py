@@ -16,7 +16,15 @@ def render_local_workbench_html() -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Maine Family Law LLM — FOCAF Local Chat Workbench</title>
+  <title>FOCAF Maine Family Law LLM — Local Chat Workbench</title>
+  <link rel="icon" href="/brand-assets/assets/favicon/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/brand-assets/assets/favicon/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/brand-assets/assets/favicon/apple-touch-icon.png" />
+  <link rel="manifest" href="/brand-assets/assets/favicon/site.webmanifest" />
+  <meta name="theme-color" content="#07131F" />
+  <meta name="brand-kit" content="focaf_family_law_llm_brand_kit" />
+  <link rel="stylesheet" href="/brand-assets/css/tokens.css" />
+  <link rel="stylesheet" href="/brand-assets/css/focaf-family-law-llm-theme.css" />
   <style>
     :root {
       color-scheme: light dark;
@@ -172,28 +180,221 @@ def render_local_workbench_html() -> str:
     .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
     @media (max-width: 680px) { .mini-grid, .source-card-meta { grid-template-columns: 1fr; } }
     .muted { color: var(--muted); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     .status-ok { color: var(--accent-2); font-weight: 850; }
     .status-bad { color: var(--danger); font-weight: 850; }
     .status-warn { color: var(--warn); font-weight: 850; }
     details { border: 1px solid var(--line); border-radius: 16px; padding: 0.75rem; background: color-mix(in srgb, var(--panel-2) 68%, transparent); }
     details summary { cursor: pointer; font-weight: 850; }
     footer { padding: 0 1rem 2rem; color: var(--muted); }
+
+    /* v1.85 FOCAF brand-kit integration layer. Kept inline so the local UI remains dependency-free even before static assets load. */
+    :root {
+      --bg: #07131F;
+      --panel: #10283A;
+      --panel-2: #153447;
+      --text: #EAF7F6;
+      --muted: #AFC6CB;
+      --line: #244B62;
+      --brand-navy: #07131F;
+      --brand-teal: #23D3C1;
+      --brand-gold: #F6C96D;
+      --accent: #8DECE2;
+      --accent-2: #3EA97C;
+      --shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 18px 52px rgba(0,0,0,.26);
+    }
+    body[data-brand-kit="focaf_family_law_llm_brand_kit"] {
+      background:
+        radial-gradient(circle at 12% 0%, rgba(35,211,193,.18), transparent 32rem),
+        radial-gradient(circle at 90% 8%, rgba(246,201,109,.12), transparent 30rem),
+        linear-gradient(180deg, #0C1D2B 0%, #07131F 62%, #050C14 100%);
+      min-height: 100vh;
+    }
+    body[data-brand-kit="focaf_family_law_llm_brand_kit"]::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .42;
+      background-image:
+        linear-gradient(rgba(141,236,226,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(141,236,226,.045) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,.7), transparent 70%);
+    }
+    header {
+      background: linear-gradient(180deg, rgba(12,29,43,.92), rgba(7,19,31,.78));
+      border-bottom: 1px solid rgba(141,236,226,.18);
+    }
+    .brand-lockup { gap: 1rem; }
+    .brand-mark { display: none; }
+    .brand-logo-img {
+      width: 62px;
+      height: 62px;
+      border-radius: 20px;
+      box-shadow: 0 0 0 1px rgba(141,236,226,.18), 0 18px 42px rgba(35,211,193,.16);
+      background: rgba(35,211,193,.08);
+    }
+    .brand-eyebrow {
+      display: block;
+      color: #8DECE2;
+      font-size: .72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .16em;
+      margin-bottom: .12rem;
+    }
+    .brand-wordmark {
+      display: block;
+      height: 28px;
+      max-width: min(440px, 78vw);
+      margin: .1rem 0 .25rem;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,.18));
+    }
+    .brand-link {
+      border-color: rgba(35,211,193,.34);
+      color: #07131F;
+      background: linear-gradient(180deg, #23D3C1, #8DECE2);
+      box-shadow: 0 14px 34px rgba(35,211,193,.16);
+    }
+    .brand-hero {
+      grid-column: 1 / -1;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(35,211,193,.18), rgba(16,40,58,.92) 42%, rgba(7,19,31,.96)),
+        url('/brand-assets/assets/social/focaf-family-law-llm-social-card.svg') right center / min(680px, 78%) no-repeat;
+      min-height: 210px;
+    }
+    .brand-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(7,19,31,.94), rgba(7,19,31,.76) 44%, rgba(7,19,31,.2));
+      pointer-events: none;
+    }
+    .brand-hero > * { position: relative; z-index: 1; }
+    .hero-kicker {
+      color: #F6C96D;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: .75rem;
+      margin: 0 0 .45rem;
+    }
+    .hero-title {
+      max-width: 760px;
+      font-size: clamp(2rem, 4vw, 4.2rem);
+      line-height: .98;
+      letter-spacing: -.055em;
+      margin: 0;
+    }
+    .hero-copy { max-width: 720px; color: #D9ECEC; font-size: 1.02rem; margin: .8rem 0 1rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      border: 1px solid rgba(141,236,226,.26);
+      background: rgba(141,236,226,.08);
+      color: #EAF7F6;
+      border-radius: 999px;
+      padding: .45rem .7rem;
+      font-weight: 800;
+      font-size: .84rem;
+    }
+    .hero-pill.review { border-color: rgba(246,201,109,.42); color: #F6C96D; background: rgba(246,201,109,.1); }
+    .hero-pill.safe { border-color: rgba(62,169,124,.42); color: #AAE8CE; background: rgba(62,169,124,.1); }
+    .card {
+      border-color: rgba(141,236,226,.16);
+      background: linear-gradient(180deg, rgba(21,52,71,.94), rgba(16,40,58,.96));
+    }
+    .card-header { background: rgba(7,19,31,.22); }
+    .warning { border-color: rgba(246,201,109,.38); color: #F9E6B4; }
+    textarea, input, select {
+      background: rgba(7,19,31,.62);
+      border-color: rgba(141,236,226,.22);
+    }
+    textarea:focus, input:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(35,211,193,.26), 0 0 0 6px rgba(7,19,31,.62);
+      border-color: rgba(35,211,193,.62);
+    }
+    button {
+      color: #041217;
+      background: linear-gradient(180deg, #23D3C1, #11A096);
+      box-shadow: 0 12px 30px rgba(35,211,193,.16);
+    }
+    button.secondary, button.example {
+      color: #EAF7F6;
+      background: rgba(141,236,226,.07);
+      border-color: rgba(141,236,226,.22);
+    }
+    button.example { text-align: left; border-radius: 18px; }
+    .answer, .transcript {
+      background: linear-gradient(180deg, rgba(12,29,43,.9), rgba(7,19,31,.82));
+      border-color: rgba(141,236,226,.18);
+    }
+    .source-card {
+      background: linear-gradient(180deg, rgba(35,211,193,.09), rgba(12,29,43,.88));
+      border-color: rgba(141,236,226,.2);
+    }
+    .runtime-card {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .55rem;
+      margin: 1rem 0;
+    }
+    @media (max-width: 920px) { .runtime-card { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 560px) { .runtime-card { grid-template-columns: 1fr; } .brand-wordmark { display: none; } }
+    .runtime-stat {
+      border: 1px solid rgba(141,236,226,.16);
+      background: rgba(7,19,31,.38);
+      border-radius: 16px;
+      padding: .75rem;
+    }
+    .runtime-stat strong { display:block; color:#8DECE2; font-size:1.15rem; }
+    .runtime-stat span { color: var(--muted); font-size:.8rem; }
+    .brand-asset-proof {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      color: #8DECE2;
+      font-weight: 800;
+    }
+
   </style>
 </head>
-<body>
-  <header id="focaf-brand-shell" data-ui-version="1.83.0-live-enter-submit-branding-fix">
+<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="v1.85">
+  <header id="focaf-brand-shell" data-ui-version="1.85.0-branded-ui-asset-integration" data-brand-assets="/brand-assets">
     <div class="wrap brand-row">
       <div class="brand-lockup">
-        <div class="brand-mark" aria-hidden="true">F</div>
+        <img class="brand-logo-img" src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg" alt="FOCAF Maine Family Law LLM mark" />
         <div>
-          <h1>Maine Family Law LLM</h1>
-          <p class="subtitle">Local source-backed chat workbench for FOCAF. Runs on your machine. Enter submits. Review required. Not legal advice.</p>
+          <span class="brand-eyebrow">For Our Children & Families</span>
+          <img class="brand-wordmark" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg" alt="FOCAF Maine Family Law LLM" />
+          <h1 class="sr-only">Maine Family Law LLM</h1>
+          <p class="subtitle">Local source-backed chat workbench for Maine family-law orientation. Enter submits. Review required. Not legal advice.</p>
         </div>
       </div>
       <a class="brand-link" href="https://focaf.jtforme.com" target="_blank" rel="noopener noreferrer">focaf.jtforme.com</a>
     </div>
   </header>
   <main>
+    <section class="card brand-hero" id="focaf-brand-hero" data-brand-kit-mounted="expected">
+      <div class="card-body">
+        <p class="hero-kicker">FOCAF Maine Family Law LLM · Local Workbench</p>
+        <h2 class="hero-title">Source-backed family-law orientation for Maine families and helpers.</h2>
+        <p class="hero-copy">Use role-based starters, answer styles, source cards, missing-information checklists, and reviewer handoff exports. This is legal information only; human review is required before anyone relies on it.</p>
+        <div class="hero-actions">
+          <span class="hero-pill safe">Local browser workbench</span>
+          <span class="hero-pill review">Review required</span>
+          <span class="hero-pill">Enter key submits</span>
+          <span class="hero-pill">Appeals routing fixed</span>
+          <span class="brand-asset-proof">Brand assets loaded from /brand-assets</span>
+        </div>
+      </div>
+    </section>
     <section class="card" aria-labelledby="chat-heading">
       <div class="card-header">
         <h2 id="chat-heading">Ask Maine Family Law</h2>
@@ -202,6 +403,13 @@ def render_local_workbench_html() -> str:
       <div class="card-body">
         <div class="warning">
           This tool gives legal information from retrieved source snippets. It does not create an attorney-client relationship, and no answer is filing-ready.
+        </div>
+        <div id="runtime-diagnostics" class="warning" data-runtime-diagnostics="loading">Runtime diagnostics loading. Expected UI: v1.85 branded asset integration + appeals routing + Enter submit.</div>
+        <div class="runtime-card" aria-label="Local workbench status summary">
+          <div class="runtime-stat"><strong>v1.85</strong><span>visible UI pass</span></div>
+          <div class="runtime-stat"><strong>105+</strong><span>source-backed chat starters</span></div>
+          <div class="runtime-stat"><strong>5 roles</strong><span>parents, lawyers, caregivers, counselors, therapists</span></div>
+          <div class="runtime-stat"><strong>Assets</strong><span>FOCAF kit served locally</span></div>
         </div>
         <div class="input-grid">
           <div>
@@ -240,7 +448,7 @@ def render_local_workbench_html() -> str:
         </div>
         <label for="question">Question</label>
         <textarea id="question" placeholder="Example: What are Maine's best-interest factors under 19-A M.R.S. § 1653?"></textarea>
-        <p class="hint">Press <strong>Enter</strong> to ask immediately. Press <strong>Shift+Enter</strong> for a new line. If Enter does not submit, reload with Ctrl+F5 and verify the 1.83 UI marker in the footer.</p>
+        <p class="hint">Press <strong>Enter</strong> to ask immediately. Press <strong>Shift+Enter</strong> for a new line. If Enter does not submit, reload with Ctrl+F5 and verify the 1.85 UI marker and runtime diagnostics panel.</p>
         <div class="row" style="margin-top: 0.75rem;">
           <button id="ask-button">Ask</button>
           <button id="copy-button" class="secondary">Copy answer</button>
@@ -269,6 +477,7 @@ def render_local_workbench_html() -> str:
         <p class="muted">Try these starter prompts:</p>
         <div class="examples">
           <button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best-interest factors</button>
+          <button class="secondary example" data-example="What court handles appeals?">Appeals court routing</button>
           <button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best-interest prep</button>
           <button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary</button>
           <button class="secondary example" data-example="What should I gather for child support?">Child support checklist</button>
@@ -312,7 +521,7 @@ def render_local_workbench_html() -> str:
     </aside>
   </main>
   <footer>
-    <p><strong>UI v1.83 live Enter/branding fix.</strong> Useful local links: <a href="/docs">Swagger API docs</a> · <a href="/sources">Raw source manifest</a> · <a href="/api/question-library">Question library JSON</a> · <a href="/api/question-topics">Topic JSON</a> · <a href="/api/starter-prompt-packs">Starter packs JSON</a> · <a href="/api/missing-information-prompts">Missing-info JSON</a> · <a href="/api/health">Health</a></p>
+    <p><strong>UI v1.85 FOCAF brand-kit asset integration + beautiful local shell + appeals/runtime diagnostics.</strong> Useful local links: <a href="/docs">Swagger API docs</a> · <a href="/sources">Raw source manifest</a> · <a href="/api/question-library">Question library JSON</a> · <a href="/api/question-topics">Topic JSON</a> · <a href="/api/starter-prompt-packs">Starter packs JSON</a> · <a href="/api/missing-information-prompts">Missing-info JSON</a> · <a href="/api/health">Health</a></p>
   </footer>
   <!-- Compatibility marker for tests and older docs: fetch('/ask') -->
   <script>
@@ -339,7 +548,8 @@ def render_local_workbench_html() -> str:
     const promptPackList = document.getElementById('prompt-pack-list');
     const sourceInspector = document.getElementById('source-inspector');
     const handoffPanel = document.getElementById('handoff-panel');
-    window.__MFL_WORKBENCH_UI_VERSION = '1.83.0-live-enter-submit-branding-fix';
+    const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
+    window.__MFL_WORKBENCH_UI_VERSION = '1.85.0-branded-ui-asset-integration';
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
@@ -520,6 +730,18 @@ def render_local_workbench_html() -> str:
       } finally {
         sending = false;
         askButton.disabled = false;
+      }
+    }
+
+
+    async function loadRuntimeDiagnostics() {
+      try {
+        const payload = await fetchJson('/api/runtime-diagnostics');
+        runtimeDiagnostics.dataset.runtimeDiagnostics = 'loaded';
+        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics:</strong> ${escapeHtml(payload.version)} · ${escapeHtml(payload.ui_version)} · Enter submit: ${payload.enter_to_submit ? 'on' : 'off'} · Appeals routing fix: ${payload.appeals_routing_fix ? 'on' : 'off'} · Brand assets mounted: ${payload.brand_assets_mounted ? 'yes' : 'no'} · Branding: ${escapeHtml(payload.branding || 'unknown')}`;
+      } catch (err) {
+        runtimeDiagnostics.dataset.runtimeDiagnostics = 'failed';
+        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer is not v1.85, stop the old server and restart from the _git repo.`;
       }
     }
 
@@ -721,7 +943,8 @@ def render_local_workbench_html() -> str:
     });
     loadQuestionLibrary();
     loadPromptPacks();
-    // v1.82 marker: reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2
+    loadRuntimeDiagnostics();
+    // v1.85 marker: brand_kit_assets, beautiful_shell, appeals_routing_fix, runtime diagnostics, reviewer_handoff, missing_information prompts, local_chat_transcript_v3; compatibility marker local_chat_transcript_v2
   </script>
 </body>
 </html>

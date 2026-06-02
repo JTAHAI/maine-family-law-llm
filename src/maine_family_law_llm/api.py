@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .answer import compose_answer
 from .chat_library import expand_query_for_library, public_library, public_missing_information_prompts, public_prompt_packs, public_topics
 from .local_workbench_ui import render_local_workbench_html
@@ -15,12 +17,14 @@ from .workbench import retrieve_fixture_sources
 try:
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
 except Exception:  # pragma: no cover - lets CLI import without API extras
     FastAPI = None  # type: ignore[assignment]
     HTTPException = Exception  # type: ignore[assignment]
     HTMLResponse = None  # type: ignore[assignment]
     JSONResponse = None  # type: ignore[assignment]
+    StaticFiles = None  # type: ignore[assignment]
     Request = object  # type: ignore[assignment]
 
     class BaseModel:  # type: ignore[no-redef]
@@ -48,15 +52,46 @@ if FastAPI is None:  # pragma: no cover
 else:
     app = FastAPI(
         title="Maine Family Law LLM Local Workbench",
-        version="1.82.0",
+        version=__version__,
         description="Local legal-information workbench. No legal advice, no cloud deploy, source receipts required.",
     )
 
 
 if FastAPI is not None:
 
+
+
+    def _repo_root() -> Path:
+        return Path(__file__).resolve().parents[2]
+
+
+    def _brand_assets_dir() -> Path:
+        return _repo_root() / "assets" / "brand" / "focaf_family_law_llm_brand_kit"
+
+
+    if StaticFiles is not None and _brand_assets_dir().is_dir():
+        app.mount("/brand-assets", StaticFiles(directory=str(_brand_assets_dir())), name="brand-assets")
+
     def _health_payload() -> dict[str, str]:
-        return {"status": "ok", "mode": "local-workbench"}
+        return {"status": "ok", "mode": "local-workbench", "version": __version__}
+
+
+    def _runtime_diagnostics_payload() -> dict[str, Any]:
+        return {
+            "status": "ok",
+            "version": __version__,
+            "ui_version": "1.85.0-branded-ui-asset-integration",
+            "mode": "local-workbench",
+            "enter_to_submit": True,
+            "branding": "FOCAF brand kit assets served from /brand-assets",
+            "brand_assets_mounted": _brand_assets_dir().is_dir(),
+            "appeals_routing_fix": True,
+            "brand_kit": "assets/brand/focaf_family_law_llm_brand_kit",
+            "appeals_test_question": "What court handles appeals?",
+            "workbench_url": "/",
+            "review_required": True,
+            "not_legal_advice": True,
+        }
 
 
     @app.exception_handler(Exception)
@@ -97,7 +132,11 @@ if FastAPI is not None:
 
     @app.get("/api/version")
     def api_version() -> dict[str, str]:
-        return {"version": "1.82.0", "api_mode": "local-workbench", "workbench_url": "/"}
+        return {"version": __version__, "api_mode": "local-workbench", "workbench_url": "/"}
+
+    @app.get("/api/runtime-diagnostics")
+    def runtime_diagnostics() -> dict[str, Any]:
+        return _runtime_diagnostics_payload()
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:

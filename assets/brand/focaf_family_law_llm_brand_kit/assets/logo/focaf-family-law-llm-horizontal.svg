@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+<title id="title">FOCaF Maine Family Law LLM horizontal logo</title>
+<desc id="desc">Logo lockup for Maine Family Law LLM with For Our Children and Families branding.</desc>
+<defs>
+  <linearGradient id="bg" x1="30" y1="30" x2="330" y2="330" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#173B4D"/><stop offset=".52" stop-color="#0C1D2B"/><stop offset="1" stop-color="#07131F"/></linearGradient>
+  <linearGradient id="teal" x1="58" y1="50" x2="292" y2="318" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8DECE2"/><stop offset=".56" stop-color="#23D3C1"/><stop offset="1" stop-color="#3EA97C"/></linearGradient>
+</defs>
+<rect width="1280" height="360" rx="42" fill="#07131F"/>
+<g transform="translate(44 44)">
+  <rect x="0" y="0" width="272" height="272" rx="72" fill="url(#bg)"/>
+  <path d="M67 167c29 23 51 34 69 34s40-11 69-34" fill="none" stroke="#8DECE2" stroke-width="12" stroke-linecap="round" opacity=".8"/>
+  <path d="M71 94h97c15 0 27 12 27 27v47c0 15-12 27-27 27H92l-27 22 7-28c-13-5-22-17-22-32v-36c0-15 10-27 21-27z" fill="#10283A" stroke="#244B62" stroke-width="5"/>
+  <path d="M94 116h82M94 139h61M94 162h74" stroke="#AFC6CB" stroke-width="7" stroke-linecap="round" opacity=".85"/>
+  <path d="M164 52l-25 39h20l-18 33h25l-12 28 42-50h-23l21-35h-22l15-15z" fill="url(#teal)"/>
+  <circle cx="119" cy="186" r="18" fill="#FFF9EC"/>
+  <circle cx="155" cy="189" r="14" fill="#FFF9EC" opacity=".95"/>
+  <path d="M81 233c8-27 27-42 55-42s48 15 56 42" fill="none" stroke="url(#teal)" stroke-width="13" stroke-linecap="round"/>
+</g>
+<text x="360" y="138" fill="#EAF7F6" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="58" font-weight="780" letter-spacing="-1.2">Maine Family Law LLM</text>
+<text x="362" y="188" fill="#8DECE2" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="26" font-weight="680" letter-spacing=".8">FOR OUR CHILDREN &amp; FAMILIES</text>
+<text x="362" y="238" fill="#AFC6CB" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="24">Local source-backed research assistant • Review required • Not legal advice</text>
+<rect x="360" y="274" width="220" height="40" rx="20" fill="#10283A" stroke="#244B62"/>
+<circle cx="386" cy="294" r="7" fill="#23D3C1"/>
+<text x="402" y="302" fill="#8DECE2" font-family="Atkinson Hyperlegible, Inter, Segoe UI, sans-serif" font-size="18" font-weight="700">local-first branded</text>
+</svg>

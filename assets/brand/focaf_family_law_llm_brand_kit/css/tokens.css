@@ -1,0 +1,41 @@
+:root {
+  color-scheme: dark light;
+  --focaf-ink: #07131F;
+  --focaf-deep: #0C1D2B;
+  --focaf-panel: #10283A;
+  --focaf-panel-2: #153447;
+  --focaf-blue-spruce: #285A7A;
+  --focaf-river-teal: #23D3C1;
+  --focaf-sea-glass: #8DECE2;
+  --focaf-paper: #F6F1E7;
+  --focaf-cream: #FFF9EC;
+  --focaf-review-gold: #F6C96D;
+  --focaf-safety-coral: #FF8A7A;
+  --focaf-pine: #3EA97C;
+  --focaf-text: #EAF7F6;
+  --focaf-muted: #AFC6CB;
+  --focaf-border: #244B62;
+  --focaf-focus: 0 0 0 3px rgba(35, 211, 193, .34), 0 0 0 6px rgba(7, 19, 31, .8);
+  --focaf-radius-sm: .625rem;
+  --focaf-radius-md: .875rem;
+  --focaf-radius-lg: 1.125rem;
+  --focaf-radius-xl: 1.5rem;
+  --focaf-radius-pill: 999px;
+  --focaf-shadow-panel: 0 1px 0 rgba(255,255,255,.06) inset, 0 18px 52px rgba(0,0,0,.26);
+  --focaf-shadow-soft: 0 14px 40px rgba(0, 0, 0, .28);
+  --focaf-font-sans: Atkinson Hyperlegible, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --focaf-font-serif: Charter, Georgia, Cambria, "Times New Roman", serif;
+  --focaf-font-mono: "Cascadia Code", SFMono-Regular, ui-monospace, Consolas, "Liberation Mono", monospace;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --focaf-ink: #F6F1E7;
+  --focaf-deep: #FFF9EC;
+  --focaf-panel: #FFFFFF;
+  --focaf-panel-2: #F2FAF9;
+  --focaf-text: #0C1D2B;
+  --focaf-muted: #4D6673;
+  --focaf-border: #BAD2D1;
+  --focaf-shadow-panel: 0 1px 0 rgba(255,255,255,.88) inset, 0 18px 52px rgba(16,40,58,.12);
+}

@@ -1,0 +1,28 @@
+{
+  "version": "1.85.0",
+  "pass": "FOCAF brand-kit UI integration",
+  "status": "pass",
+  "changes": [
+    "Added FOCAF Maine Family Law LLM brand kit under assets/brand/focaf_family_law_llm_brand_kit",
+    "Mounted brand assets at /brand-assets in the local FastAPI workbench",
+    "Wired favicon, manifest, token CSS, theme CSS, logo mark, horizontal lockup, and social-card artwork into the served UI",
+    "Added visible branded hero shell and runtime status cards",
+    "Updated runtime diagnostics to report brand asset mount state",
+    "Preserved Enter-to-submit and appeals routing regression coverage",
+    "Added v1.85 brand asset/UI/static-serving tests"
+  ],
+  "validation": {
+    "focused_tests": "40 passed, 1 skipped",
+    "chat_evidence": "pass",
+    "doctor_local_repo": "pass",
+    "library_count": 105,
+    "brand_asset_files": 29
+  },
+  "claims": {
+    "attorney_review": false,
+    "legal_signoff": false,
+    "real_matter_pilot": false,
+    "production_ga": false,
+    "filing_ready": false
+  }
+}

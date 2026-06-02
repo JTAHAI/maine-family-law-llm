@@ -90,7 +90,7 @@ def test_v182_api_exposes_missing_information_endpoint() -> None:
     pytest.importorskip("fastapi")
     from maine_family_law_llm.api import api_version, missing_information_prompts
 
-    assert api_version()["version"] == "1.82.0"
+    assert api_version()["version"] >= "1.82.0"
     payload = missing_information_prompts()
     assert isinstance(payload, list)
     assert any(row["item_id"] == "parent_missing_documents_before_asking" for row in payload)
