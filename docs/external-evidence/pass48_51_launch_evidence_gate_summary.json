@@ -1,11 +1,26 @@
 {
-  "schema_version": "pass48_51_launch_evidence_gate_summary_v1",
-  "status": "gate_prepared",
   "attorney_reviewed": false,
-  "fabricates_pilot_or_signoff": false,
-  "passes_prepared": [48, 49, 50, 51],
-  "completion_claim": "external_evidence_gate_prepared_only",
   "closure_effect": "no_true_ga_decrement_without_external_pilot_release_signoff_files",
+  "completion_claim": "external_evidence_gate_prepared_only",
+  "docs": "docs/pass48-51-launch-evidence-gates.md",
+  "fabricates_pilot_or_signoff": false,
+  "passes_prepared": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "placeholder_pass_json_allowed": false,
+  "required_structured_fields": [
+    "external source marker",
+    "signature fields",
+    "pilot counts and control booleans",
+    "release artifact hashes",
+    "security/legal/product/ops signoffs",
+    "GA control booleans"
+  ],
+  "schema_version": "pass48_51_launch_evidence_gate_summary_v2",
   "script": "scripts/run-pass48-51-launch-evidence-gates.py",
-  "docs": "docs/pass48-51-launch-evidence-gates.md"
+  "starter_kit_script": "scripts/build-pass48-51-launch-evidence-starter-kit.py",
+  "status": "strict_gate_prepared"
 }

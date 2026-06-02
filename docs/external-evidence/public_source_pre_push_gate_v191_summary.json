@@ -1,0 +1,29 @@
+{
+  "changes": [
+    "Added fail-closed public-source pre-push gate aggregating local doctor, public repo readiness, version consistency, CI guardrails, and expected blocked Pass 48-51 launch evidence.",
+    "Added root and scripts safe-push wrappers for cleanup, doctor, preflight, focused tests, commit, and push.",
+    "Updated stale package metadata to v1.91.0 and added regression coverage for metadata drift.",
+    "Updated CI to run preflight and strict Pass 48-51 launch evidence gates."
+  ],
+  "commands_passed": [
+    "PYTHONPATH=.:src PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_public_source_pre_push_gate_v191.py -q",
+    "PYTHONPATH=.:src PYTHONDONTWRITEBYTECODE=1 python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_v191.json",
+    "PYTHONPATH=.:src PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_public_source_pre_push_gate_v191.py tests/test_pass48_51_launch_evidence_gates.py tests/test_pass48_51_launch_evidence_starter_kit.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_best_interest_chat_answer.py tests/test_public_repo_integrity.py -q",
+    "PYTHONPATH=.:src PYTHONDONTWRITEBYTECODE=1 python scripts/run-chat-library-evidence.py --require-ready --output docs/external-evidence/chat_library_workbench_evidence_v191.json"
+  ],
+  "focused_test_count": 26,
+  "ga_shipment_claimed": false,
+  "generated_at": "2026-06-02T13:33:14.984990+00:00",
+  "legal_readiness_claimed": false,
+  "pass": "public_source_pre_push_gate_and_push_wrappers",
+  "remaining_passes": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "remaining_true_ga_passes": 4,
+  "schema": "maine_family_law_llm.v191_summary.v1",
+  "status": "pass_focused_source_push_evidence",
+  "version": "1.91.0"
+}

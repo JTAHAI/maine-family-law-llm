@@ -13,6 +13,8 @@ class RetrievalDocument:
     title: str
     text: str
     citation: str | None = None
+    chunk_id: str | None = None
+    parent_document_id: str | None = None
     source_class: str = "unknown_source"
     jurisdiction: str = "maine"
     authority_status: str = "stale_unknown"
@@ -100,6 +102,8 @@ def coerce_document(document: SearchDocumentInput) -> RetrievalDocument:
     data = dict(document)
     source_id = str(data.get("source_id") or data.get("id") or data.get("document_id") or "unknown-source")
     document_id = str(data.get("document_id") or source_id)
+    chunk_id = data.get("chunk_id") or f"{document_id}:chunk:0"
+    parent_document_id = data.get("parent_document_id") or document_id
     issue_labels = data.get("issue_labels") or ()
     procedural_postures = data.get("procedural_postures") or data.get("posture_labels") or ()
     if isinstance(issue_labels, list):
@@ -112,6 +116,8 @@ def coerce_document(document: SearchDocumentInput) -> RetrievalDocument:
         title=str(data.get("title") or document_id),
         text=str(data.get("text") or data.get("text_span") or ""),
         citation=data.get("citation"),
+        chunk_id=str(chunk_id),
+        parent_document_id=str(parent_document_id),
         source_class=str(data.get("source_class") or "unknown_source"),
         jurisdiction=str(data.get("jurisdiction") or "maine"),
         authority_status=str(data.get("authority_status") or "stale_unknown"),

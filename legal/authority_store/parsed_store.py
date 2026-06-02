@@ -336,7 +336,7 @@ class ParsedAuthorityStoreBuilder:
                         "form_id": form_id,
                         "form_id_source": form_id_source,
                         "version_date": form.version_date,
-                        "required_fields": form.required_fields,
+                        "required_fields": list(getattr(form, "required_fields", []) or []),
                         "stale_form_risk": form.stale_form_risk,
                         "text": clean_text,
                     }
@@ -386,7 +386,7 @@ class ParsedAuthorityStoreBuilder:
                         "citation_source": citation_source,
                         "decision_date": opinion.decision_date,
                         "docket_number": opinion.docket_number,
-                        "court": opinion.court,
+                        "court": getattr(opinion, "court", None) or "Maine Supreme Judicial Court",
                         "href": opinion.href,
                         "text": clean_text,
                     }
@@ -522,7 +522,7 @@ class ParsedAuthorityStoreBuilder:
                         "form_id": form_id,
                         "form_id_source": form_id_source,
                         "version_date": form.version_date,
-                        "required_fields": form.required_fields,
+                        "required_fields": list(getattr(form, "required_fields", []) or []),
                         "stale_form_risk": form.stale_form_risk,
                         "text": clean_text,
                     }
@@ -537,7 +537,7 @@ class ParsedAuthorityStoreBuilder:
                         "citation": opinion.citation,
                         "decision_date": opinion.decision_date,
                         "docket_number": opinion.docket_number,
-                        "court": opinion.court,
+                        "court": getattr(opinion, "court", None) or "Maine Supreme Judicial Court",
                         "href": opinion.href,
                     }
                     for opinion in opinions

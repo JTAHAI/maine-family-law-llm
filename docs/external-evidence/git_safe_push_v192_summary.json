@@ -1,0 +1,34 @@
+{
+  "commands_run": [
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:src python -m pytest tests/test_public_source_pre_push_gate_v191.py tests/test_git_safe_push_v192.py -q",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:src python -m pytest tests/test_public_source_pre_push_gate_v191.py tests/test_git_safe_push_v192.py tests/test_pass48_51_launch_evidence_gates.py tests/test_pass48_51_launch_evidence_starter_kit.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_best_interest_chat_answer.py tests/test_public_repo_integrity.py -q",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:src python -m pytest tests/test_appeals_routing_runtime_v184.py tests/test_brand_kit_ui_assets_v185.py tests/test_classic_desktop_ui_v186.py tests/test_public_source_pre_push_gate_v191.py tests/test_git_safe_push_v192.py tests/test_pass48_51_launch_evidence_gates.py tests/test_pass48_51_launch_evidence_starter_kit.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_best_interest_chat_answer.py tests/test_public_repo_integrity.py -q",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:src python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_v192.json",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:src python scripts/doctor-local-repo.py --repo-root . --json"
+  ],
+  "legal_readiness_boundary": "No attorney review, legal signoff, limited real-matter pilot, release-candidate signoff, GA shipment, or filing-ready status claimed.",
+  "production_legal_ready": false,
+  "remaining_true_ga_passes": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "schema": "maine_family_law_llm.external_evidence_summary.v1",
+  "status": "pass",
+  "summary": [
+    "Added tested Python-backed git-safe-push wrapper with no-op commit handling.",
+    "Updated PowerShell and Bash push wrappers to delegate to the Python gate.",
+    "Extended public-source pre-push with git_safe_push_wrapper guardrail.",
+    "Added v1.92 regression tests for no-op commits, dry-run handling, wrapper delegation, and CI markers."
+  ],
+  "test_results": {
+    "expanded_runtime_ui_and_push_tests": "38 passed",
+    "focused_push_tests": "29 passed",
+    "full_pytest_note": "Full repository pytest was attempted but exceeded the local tool timeout before completing; the surfaced stale version assertions were fixed and the targeted/expanded gates above pass.",
+    "local_doctor": "pass",
+    "public_source_preflight": "pass",
+    "v192_unit_tests": "8 passed"
+  },
+  "version": "1.92.0"
+}

@@ -1,3 +1,28 @@
+## v1.92.0 — No-op-safe push wrapper and push gate regression
+
+- Added a Python-backed `scripts/git-safe-push.py` wrapper that runs clean-local-artifacts, local doctor, public-source preflight, focused regression tests, `git add -A`, and `git push` from one tested path.
+- Hardened `PUSH_SAFE.ps1`, `scripts/git-safe-push.ps1`, and `scripts/git-safe-push.sh` to delegate to the Python wrapper instead of duplicating raw commit/push logic.
+- Made the push path no-op safe: after staging it checks `git diff --cached --quiet` and skips `git commit` when there are no staged changes, then still pushes the requested branch.
+- Added dry-run/report output support and v1.92 regression tests for no-op commits, dry-run staged changes, wrapper delegation, and CI guardrails.
+- Extended the public-source pre-push gate with a `git_safe_push_wrapper` check. No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status is claimed.
+
+
+## v1.91.0 — Public-source pre-push gate and push wrappers
+
+- Added a fail-closed public-source pre-push gate that aggregates local doctor hygiene, public repo readiness, version consistency, CI guardrail coverage, and the expected blocked Pass 48-51 external launch-evidence state.
+- Added `scripts/run-public-source-preflight.py`, root `PUSH_SAFE.ps1`, `scripts/git-safe-push.ps1`, and `scripts/git-safe-push.sh` so a local push runs cleanup, doctor, preflight, focused tests, commit, and push in one command.
+- Updated package metadata from the stale v1.89 value to v1.91.0 and added regression coverage so pyproject/package version drift is caught.
+- Updated GitHub CI to run the public-source pre-push gate plus the strict Pass 48-51 launch-evidence tests.
+- No attorney review, legal signoff, real-matter pilot, release-candidate approval, GA shipment, private data packaging, or filing-ready status is claimed.
+
+## v1.89.0 — Pass 19-25 authority/retrieval hardening and Pass 28 evidence repair
+
+- Fixed parsed Law Court opinion-index rows so official opinion references no longer fail when the index parser emits `OpinionReference` without a `court` field.
+- Extended `RetrievalDocument` with `chunk_id` and `parent_document_id` so Pass 23 retrieval indexes, vector rows, parent-child chunk rows, and hybrid document reloads use the same schema.
+- Hardened direct form parsing so official form PDFs/text snapshots can fall back to stable URL-derived identifiers without failing on absent `required_fields`.
+- Re-ran focused Pass 19-28, parsed-authority, retrieval-index, and repo-hygiene tests.
+- Preserves external-data boundaries: official snapshots, parsed stores, embedding stores, and gold eval packs remain outside the source repo.
+
 ## v1.88.0 — Repo hygiene recovery and enterprise collection repair
 
 - Restored packaged `.gitignore` and required `.github` workflow/template files so `robocopy /MIR` no longer deletes required public repo metadata.
@@ -861,3 +886,12 @@ v1.84.0 — appeals routing and runtime diagnostics hardening (2026-06-01)
 - Preserved Enter-to-submit, appeals routing, runtime diagnostics, brand asset serving, source cards, transcript export, and reviewer handoff metadata.
 - Added v1.86 UI regression tests for the classic desktop shell markers and appeals/Enter wiring.
 - No attorney review, legal signoff, real-matter pilot, production GA, or filing-ready status claimed.
+
+## v1.90.0 — Strict launch evidence gates and starter kit
+
+- Hardened the Pass 48-51 external launch gate so placeholder JSON files with only `status: pass` no longer close launch or GA passes.
+- Added structured validation for attorney sandbox evidence, limited real-matter pilot evidence, GA release-candidate signoff, and GA shipment signoff.
+- Added a fail-closed external evidence starter-kit generator for Passes 48-51 with blocked-by-default JSON templates and README instructions.
+- Updated launch-evidence documentation and sample external-evidence summary to explain required fields and data boundaries.
+- Added regression tests for missing evidence, placeholder pass files, structured external evidence, rejected/non-JSON artifacts, and starter-kit behavior.
+- No attorney review, legal signoff, real-matter pilot completion, release-candidate approval, GA shipment, private data packaging, or filing-ready status is claimed.

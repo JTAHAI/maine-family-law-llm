@@ -1,3 +1,8 @@
+from legal.pilot.evidence_templates import (
+    ExternalEvidenceTemplate,
+    build_launch_evidence_templates,
+    write_launch_evidence_starter_kit,
+)
 from legal.pilot.launch_ops import (
     AttorneyPilotParticipant,
     AttorneySandboxPilot,
@@ -22,6 +27,9 @@ __all__ = [
     "PilotStage",
     "PrivacyConsentRecord",
     "RealMatterPilotMatter",
+    "ExternalEvidenceTemplate",
+    "build_launch_evidence_templates",
+    "write_launch_evidence_starter_kit",
     "LaunchEvidenceArtifact",
     "LaunchEvidenceGate",
     "LaunchEvidenceReport",

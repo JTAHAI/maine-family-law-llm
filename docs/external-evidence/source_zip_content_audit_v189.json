@@ -1,0 +1,10 @@
+{
+  "blockers": [],
+  "missing_required_paths": [],
+  "prohibited_entry_count": 0,
+  "required_count": 10,
+  "safe_to_package": true,
+  "schema": "maine_family_law_llm.source_zip_content_audit.v1",
+  "status": "pass",
+  "zip_path": "/mnt/data/ME_FM_LLM_v1.89.0_pass19_28_authority_retrieval_repair_20260602.zip"
+}

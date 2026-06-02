@@ -15,9 +15,21 @@ jobs:
         run: python -m pip install -e ".[api,dev]"
       - name: Local doctor
         run: python scripts/doctor-local-repo.py --repo-root . --json
+      - name: Public source pre-push gate
+        run: python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_ci.json
       - name: Quality checks marker
         run: python scripts/run-quality-checks.py --help
       - name: Chat library evidence
         run: python scripts/run-chat-library-evidence.py --require-ready --output docs/external-evidence/chat_library_workbench_evidence_ci.json
       - name: Targeted tests
-        run: python -m pytest -q tests/test_answering_pipeline_guardrails.py tests/test_canonical_document_model.py tests/test_retrieval_stack_pass5.py tests/test_matter_ingestion_pass9.py tests/test_chat_library_v187_input_clear_and_routing.py
+        run: >-
+          python -m pytest -q
+          tests/test_answering_pipeline_guardrails.py
+          tests/test_canonical_document_model.py
+          tests/test_retrieval_stack_pass5.py
+          tests/test_matter_ingestion_pass9.py
+          tests/test_chat_library_v187_input_clear_and_routing.py
+          tests/test_pass48_51_launch_evidence_gates.py
+          tests/test_pass48_51_launch_evidence_starter_kit.py
+          tests/test_public_source_pre_push_gate_v191.py
+          tests/test_git_safe_push_v192.py
