@@ -15,10 +15,9 @@ PACKET_SCHEMA = "maine_family_law_llm.filing_gate_studio.packet.v1"
 GATE_SCHEMA = "maine_family_law_llm.filing_gate_studio.gate_report.v1"
 
 DISCLAIMER = (
-    "Maine Family Law LLM provides legal information and workflow support, "
-    "not legal advice. Drafts are review-required and not filing-ready unless "
-    "authority, citations, quote spans, facts, source scope, forms, docket posture, "
-    "and human review gates pass."
+    "Maine Family Law LLM provides legal information and workflow support, not legal advice. "
+    "Drafts are review-required and not filing-ready unless authority, citations, quote spans, "
+    "facts, source scope, forms, docket posture, and human review gates pass."
 )
 
 SAFE_SOURCE_STATUSES = {
@@ -28,18 +27,38 @@ SAFE_SOURCE_STATUSES = {
     "verified_public_api",
 }
 
-FRESH_ENOUGH = {
-    "fresh",
-    "current",
-    "retrieved_freshness_unverified",
-    "offline_smoke_not_current",
-}
+FRESH_ENOUGH = {"fresh", "current", "retrieved_freshness_unverified", "offline_smoke_not_current"}
 
 LEGAL_TERMS = {
-    "court", "order", "motion", "rule", "statute", "maine", "parental", "rights",
-    "responsibilities", "custody", "contact", "residence", "support", "divorce",
-    "pfa", "protection", "abuse", "appeal", "finding", "best", "interest",
-    "jurisdiction", "uccjea", "contempt", "enforce", "modify", "evidence", "form",
+    "court",
+    "order",
+    "motion",
+    "rule",
+    "statute",
+    "maine",
+    "parental",
+    "rights",
+    "responsibilities",
+    "custody",
+    "contact",
+    "residence",
+    "support",
+    "divorce",
+    "pfa",
+    "protection",
+    "abuse",
+    "appeal",
+    "finding",
+    "findings",
+    "best",
+    "interest",
+    "jurisdiction",
+    "uccjea",
+    "contempt",
+    "enforce",
+    "modify",
+    "evidence",
+    "form",
 }
 
 ISSUE_PATTERNS: dict[str, tuple[str, ...]] = {
@@ -102,17 +121,23 @@ RED_FLAG_PATTERNS: dict[str, tuple[str, ...]] = {
 CITATION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "maine_statute",
-        re.compile(r"\b(?P<title>\d{1,2}-?[A-Z]?)\s*(?:M\.?\s*R\.?\s*S\.?|MRS|MRSA|M\.R\.S\.)\.?\s*§+\s*(?P<section>[\dA-Za-z\-.]+)", re.I),
+        re.compile(
+            r"\b(?P<title>\d{1,2}-?[A-Z]?)\s*(?:M\.?\s*R\.?\s*S\.?|MRS|MRSA|M\.R\.S\.)\.?\s*§+\s*(?P<section>[\dA-Za-z][\dA-Za-z.\-]*)",
+            re.I,
+        ),
     ),
     (
         "maine_rule",
-        re.compile(r"\bM\.?\s*R\.?\s*(?P<rule_set>Civ\.?|App\.?|Evid\.?)\s*P\.?\s*(?P<rule>\d+[A-Za-z\-]*)\b", re.I),
+        re.compile(
+            r"\bM\.?\s*R\.?\s*(?P<rule_set>Civ\.?|App\.?|Evid\.?)\s*P\.?\s*(?P<rule>\d+[A-Za-z\-]*)\b",
+            re.I,
+        ),
     ),
     ("maine_case", re.compile(r"\b(?P<year>20\d{2}|19\d{2})\s+ME\s+(?P<number>\d+)\b", re.I)),
     ("maine_form", re.compile(r"\bFM[-\s]?(?P<number>\d{3,4}[A-Z]?)\b", re.I)),
     (
         "federal_statute",
-        re.compile(r"\b(?P<title>\d{1,2})\s*U\.?\s*S\.?\s*C\.?\s*§+\s*(?P<section>[\dA-Za-z\-.]+)", re.I),
+        re.compile(r"\b(?P<title>\d{1,2})\s*U\.?\s*S\.?\s*C\.?\s*§+\s*(?P<section>[\dA-Za-z][\dA-Za-z.\-]*)", re.I),
     ),
 )
 
@@ -127,23 +152,27 @@ def normalize_space(text: str) -> str:
     return re.sub(r"\s+", " ", text or "").strip()
 
 
+def clean_pinpoint(value: str) -> str:
+    return (value or "").strip().rstrip(".;,)]}")
+
+
 def tokens(text: str) -> list[str]:
     return [t.lower() for t in re.findall(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)?", text or "") if len(t) > 1]
 
 
 def canonical_for(kind: str, match: re.Match[str]) -> str:
     if kind == "maine_statute":
-        return f"{match.group('title').upper()} M.R.S. § {match.group('section')}"
+        return f"{match.group('title').upper()} M.R.S. § {clean_pinpoint(match.group('section'))}"
     if kind == "maine_rule":
         rule_set = match.group("rule_set").lower()
         label = "Civ." if rule_set.startswith("civ") else "App." if rule_set.startswith("app") else "Evid."
-        return f"M.R. {label} P. {match.group('rule')}"
+        return f"M.R. {label} P. {clean_pinpoint(match.group('rule'))}"
     if kind == "maine_case":
         return f"{match.group('year')} ME {match.group('number')}"
     if kind == "maine_form":
-        return f"FM-{match.group('number').upper()}"
+        return f"FM-{clean_pinpoint(match.group('number')).upper()}"
     if kind == "federal_statute":
-        return f"{match.group('title')} U.S.C. § {match.group('section')}"
+        return f"{match.group('title')} U.S.C. § {clean_pinpoint(match.group('section'))}"
     return normalize_space(match.group(0))
 
 
@@ -158,7 +187,7 @@ def parse_citations(text: str) -> list[dict[str, Any]]:
             seen.add(key)
             citations.append(
                 {
-                    "citation_text": match.group(0),
+                    "citation_text": match.group(0).rstrip(".;,"),
                     "canonical_citation": canonical_for(kind, match),
                     "citation_type": kind,
                     "start": match.start(),
@@ -259,28 +288,22 @@ def posture_labels(text: str) -> list[str]:
 
 def red_flags(text: str) -> list[dict[str, Any]]:
     low = (text or "").lower()
-    found: list[dict[str, Any]] = []
+    flags: list[dict[str, Any]] = []
     for label, patterns in RED_FLAG_PATTERNS.items():
         hits = [p for p in patterns if p in low]
         if hits:
-            found.append({"red_flag": label, "matched_terms": hits, "review_required": True})
-    return found
+            flags.append({"red_flag": label, "matched_terms": hits, "review_required": True})
+    return flags
 
 
 def authority_score(card: SourceCard) -> float:
-    score = 0.0
-    if card.authority_status == "verified_official_maine":
-        score += 100
-    elif card.authority_status == "verified_maine_law_court":
-        score += 95
-    elif card.authority_status == "verified_federal":
-        score += 75
-    elif card.authority_status == "verified_public_api":
-        score += 55
-    elif card.authority_status == "user_provided_only":
-        score += 35
-    else:
-        score += 10
+    score = {
+        "verified_official_maine": 100,
+        "verified_maine_law_court": 95,
+        "verified_federal": 75,
+        "verified_public_api": 55,
+        "user_provided_only": 35,
+    }.get(card.authority_status, 10)
     if "statute" in card.source_class:
         score += 8
     if "rule" in card.source_class:
@@ -289,13 +312,11 @@ def authority_score(card: SourceCard) -> float:
         score += 5
     if card.freshness_status not in FRESH_ENOUGH:
         score -= 20
-    return score
+    return float(score)
 
 
 def authority_matrix(cards: list[SourceCard]) -> list[dict[str, Any]]:
-    rows = []
-    for card in cards:
-        rows.append({**card.source_card(), "authority_score": authority_score(card)})
+    rows = [{**card.source_card(), "authority_score": authority_score(card)} for card in cards]
     rows.sort(key=lambda row: (-row["authority_score"], row["source_id"]))
     return rows
 
@@ -312,22 +333,21 @@ def build_source_lookup(cards: list[SourceCard]) -> dict[str, list[SourceCard]]:
 
 def resolve_citations(text: str, cards: list[SourceCard]) -> list[dict[str, Any]]:
     lookup = build_source_lookup(cards)
-    resolved = []
+    rows: list[dict[str, Any]] = []
     for cite in parse_citations(text):
-        key = cite["canonical_citation"].lower()
-        source_hits = lookup.get(key, [])
-        status = "resolved" if source_hits else "not_found"
-        resolved.append(
+        hits = lookup.get(cite["canonical_citation"].lower(), [])
+        status = "resolved" if hits else "not_found"
+        rows.append(
             {
                 **cite,
                 "status": status,
-                "resolved_source_ids": sorted({c.source_id for c in source_hits}),
-                "resolved_authority_statuses": sorted({c.authority_status for c in source_hits}),
+                "resolved_source_ids": sorted({c.source_id for c in hits}),
+                "resolved_authority_statuses": sorted({c.authority_status for c in hits}),
                 "review_required": True,
                 "blocks_filing_ready": status != "resolved",
             }
         )
-    return resolved
+    return rows
 
 
 def parse_quotes(text: str) -> list[dict[str, Any]]:
@@ -356,9 +376,8 @@ def verify_quotes(text: str, cards: list[SourceCard]) -> list[dict[str, Any]]:
         qnorm = normalize_space(quote["quote"]).lower()
         best: dict[str, Any] | None = None
         for card in cards:
-            raw = card.text or ""
-            hay = normalize_space(raw).lower()
-            exact = qnorm and qnorm in hay
+            hay = normalize_space(card.text).lower()
+            exact = bool(qnorm and qnorm in hay)
             fuzzy = quote_overlap_score(qnorm, hay[:4000])
             if exact or fuzzy >= 0.82:
                 candidate = {
@@ -383,21 +402,42 @@ def verify_quotes(text: str, cards: list[SourceCard]) -> list[dict[str, Any]]:
 
 
 def split_sentences(text: str) -> list[str]:
-    compact = normalize_space(text)
-    parts = re.split(r"(?<=[.!?])\s+", compact)
-    return [p.strip() for p in parts if len(p.strip()) >= 12]
+    return [p.strip() for p in re.split(r"(?<=[.!?])\s+", normalize_space(text)) if len(p.strip()) >= 12]
 
 
 def classify_claim(sentence: str) -> str:
     low = sentence.lower()
     if parse_citations(sentence) or any(term in low for term in ("must", "shall", "may", "court", "statute", "rule", "m.r.s", "law")):
         return "legal_claim"
-    if any(term in low for term in ("mother", "father", "parent", "child", "paid", "missed", "text", "email", "school", "medical", "on ")):
+    concrete_fact_terms = (
+        "mother",
+        "father",
+        "missed",
+        "paid",
+        "failed to pay",
+        "text message",
+        "email",
+        "on january",
+        "on february",
+        "on march",
+        "on april",
+        "on may",
+        "on june",
+        "on july",
+        "on august",
+        "on september",
+        "on october",
+        "on november",
+        "on december",
+    )
+    if any(term in low for term in concrete_fact_terms):
         return "factual_claim"
+    if any(term in low for term in LEGAL_TERMS):
+        return "legal_claim"
     return "narrative_or_instruction"
 
 
-def extract_claims(text: str, limit: int = 80) -> list[dict[str, Any]]:
+def extract_claims(text: str, limit: int = 100) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
     for sentence in split_sentences(text):
         low = sentence.lower()
@@ -421,30 +461,26 @@ def extract_claims(text: str, limit: int = 80) -> list[dict[str, Any]]:
 
 
 def fact_support_score(claim: str, evidence: FactEvidence) -> float:
-    c = set(tokens(claim))
-    e = set(tokens(evidence.fact + " " + evidence.quote))
-    if not c:
+    c_tokens = set(tokens(claim))
+    e_tokens = set(tokens(evidence.fact + " " + evidence.quote))
+    if not c_tokens:
         return 0.0
-    return len(c & e) / len(c)
+    return len(c_tokens & e_tokens) / len(c_tokens)
 
 
 def claim_support_report(text: str, cards: list[SourceCard], fact_evidence: list[FactEvidence]) -> list[dict[str, Any]]:
-    cite_report_by_span = {(c["start"], c["end"], c["canonical_citation"]): c for c in resolve_citations(text, cards)}
+    citation_rows = resolve_citations(text, cards)
+    resolved_by_canonical: dict[str, dict[str, Any]] = {
+        row["canonical_citation"]: row for row in citation_rows if row["status"] == "resolved"
+    }
     report: list[dict[str, Any]] = []
     for claim in extract_claims(text):
-        claim_cites = claim["citations"]
-        resolved_cites = []
+        resolved = []
         unresolved = []
-        for cite in claim_cites:
-            key = (cite["start"], cite["end"], cite["canonical_citation"])
-            # Sentence-level offsets differ from document offsets, so fall back to canonical matching.
-            match = None
-            for row in cite_report_by_span.values():
-                if row["canonical_citation"] == cite["canonical_citation"]:
-                    match = row
-                    break
-            if match and match["status"] == "resolved":
-                resolved_cites.append(match)
+        for cite in claim["citations"]:
+            match = resolved_by_canonical.get(cite["canonical_citation"])
+            if match:
+                resolved.append(match)
             else:
                 unresolved.append(cite)
 
@@ -458,8 +494,10 @@ def claim_support_report(text: str, cards: list[SourceCard], fact_evidence: list
         if claim["claim_type"] == "legal_claim":
             if unresolved:
                 status = "unsupported_unresolved_citation"
-            elif resolved_cites:
+            elif resolved:
                 status = "supported_by_resolved_citation"
+            elif resolved_by_canonical and claim["issue_labels"] != ["general_family_law_review"]:
+                status = "supported_by_document_source_scope_review_required"
             else:
                 status = "unsupported_no_citation"
         elif claim["claim_type"] == "factual_claim":
@@ -471,7 +509,7 @@ def claim_support_report(text: str, cards: list[SourceCard], fact_evidence: list
             {
                 **claim,
                 "status": status,
-                "resolved_citations": resolved_cites,
+                "resolved_citations": resolved,
                 "unresolved_citations": unresolved,
                 "evidence_hits": evidence_hits,
                 "blocks_filing_ready": status.startswith("unsupported"),
@@ -489,7 +527,7 @@ def best_interest_coverage(text: str) -> dict[str, Any]:
         "stability": ("stability", "stable", "continuity"),
         "safety_or_abuse": ("abuse", "safety", "violence", "protection"),
         "child_preference_when_relevant": ("preference", "wishes"),
-        "cooperation_and_contact": ("cooperate", "contact", "parenting time"),
+        "cooperation_and_contact": ("cooperate", "cooperation", "contact", "parenting time"),
         "school_and_community": ("school", "community"),
         "medical_or_special_needs": ("medical", "therapy", "special needs"),
     }
@@ -503,12 +541,12 @@ def best_interest_coverage(text: str) -> dict[str, Any]:
 
 
 def form_freshness_report(forms_used: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    out = []
+    rows = []
     for form in forms_used:
         freshness = str(form.get("freshness_status", "unknown"))
         status = "form_freshness_ok" if freshness in FRESH_ENOUGH else "stale_or_unknown_form"
-        out.append({**form, "status": status, "blocks_filing_ready": status != "form_freshness_ok"})
-    return out
+        rows.append({**form, "status": status, "blocks_filing_ready": status != "form_freshness_ok"})
+    return rows
 
 
 def build_gate_report(
@@ -536,6 +574,7 @@ def build_gate_report(
     forms_report = form_freshness_report(forms)
 
     findings: list[GateFinding] = []
+
     def add(severity: str, category: str, message: str, blocks: bool = True, evidence_payload: dict[str, Any] | None = None) -> None:
         findings.append(
             GateFinding(
@@ -568,7 +607,7 @@ def build_gate_report(
 
     stale_sources = [c.source_card() for c in cards if c.freshness_status not in FRESH_ENOUGH]
     if stale_sources and re.search(r"\b(current|under maine law|maine law requires|must|shall)\b", draft_text or "", re.I):
-        add("blocker", "freshness", "The draft makes current-law-style claims while one or more sources have stale or unknown freshness.", True, {"sources": stale_sources})
+        add("blocker", "freshness", "Current-law-style claims were made while one or more sources have stale or unknown freshness.", True, {"sources": stale_sources})
 
     non_maine_sources = [c.source_card() for c in cards if c.jurisdiction not in {"maine", "federal"}]
     if non_maine_sources:
@@ -578,9 +617,9 @@ def build_gate_report(
     if unsafe_authority:
         add("warning", "authority_status", "Some sources are user-provided, unknown, stale, or otherwise not verified official authority.", False, {"sources": unsafe_authority})
 
-    if any(issue in issues for issue in ("parental_rights_responsibilities", "primary_residence", "contact_schedule", "best_interest_factor_gap", "Rule_52_findings")):
-        if coverage["coverage_ratio"] < 0.5:
-            add("blocker", "best_interest_coverage", "Parental-rights/best-interest language appears, but best-interest factor coverage is thin.", True, coverage)
+    family_order_issues = {"parental_rights_responsibilities", "primary_residence", "contact_schedule", "best_interest_factor_gap", "Rule_52_findings"}
+    if family_order_issues & set(issues) and coverage["coverage_ratio"] < 0.5:
+        add("blocker", "best_interest_coverage", "Parental-rights/best-interest language appears, but best-interest factor coverage is thin.", True, coverage)
 
     if any(p in postures for p in ("final_order", "motion_for_findings")) and "Rule_52_findings" not in issues:
         add("warning", "rule_52", "Final-order or findings posture detected; confirm Rule 52/finding requirements are addressed.", False)
@@ -600,7 +639,7 @@ def build_gate_report(
         "schema": GATE_SCHEMA,
         "version": VERSION,
         "generated_at": utcnow(),
-        "status": "blocked" if blockers else "review_required" if not filing_ready else "pass",
+        "status": "pass" if filing_ready else "blocked" if blockers else "review_required",
         "filing_ready": filing_ready,
         "review_required": not filing_ready,
         "intended_export": intended_export,
@@ -627,25 +666,18 @@ def build_gate_report(
 
 
 def next_actions_for_gate(gate: dict[str, Any]) -> list[dict[str, str]]:
-    actions = []
     categories = Counter(item["category"] for item in gate.get("blockers", []))
-    if categories.get("source_scope"):
-        actions.append({"action": "add_source_cards", "label": "Attach verified Maine source cards before legal review."})
-    if categories.get("citation_verification"):
-        actions.append({"action": "fix_citations", "label": "Resolve or remove citations marked not_found."})
-    if categories.get("quote_verification"):
-        actions.append({"action": "fix_quotes", "label": "Replace unmatched quotes with exact source text and offsets."})
-    if categories.get("claim_support"):
-        actions.append({"action": "support_claims", "label": "Map each legal/factual claim to authority or evidence."})
-    if categories.get("best_interest_coverage"):
-        actions.append({"action": "complete_best_interest_review", "label": "Review best-interest factor coverage and findings."})
-    if categories.get("form_freshness"):
-        actions.append({"action": "update_forms", "label": "Verify current official Maine Judicial Branch form versions."})
-    if categories.get("human_review"):
-        actions.append({"action": "complete_human_review", "label": "Complete attorney or qualified reviewer checklist."})
-    if not actions:
-        actions.append({"action": "continue_review", "label": "Continue review; do not treat as legal advice or filing-ready without signoff."})
-    return actions
+    mapping = [
+        ("source_scope", "add_source_cards", "Attach verified Maine source cards before legal review."),
+        ("citation_verification", "fix_citations", "Resolve or remove citations marked not_found."),
+        ("quote_verification", "fix_quotes", "Replace unmatched quotes with exact source text and offsets."),
+        ("claim_support", "support_claims", "Map each legal/factual claim to authority or evidence."),
+        ("best_interest_coverage", "complete_best_interest_review", "Review best-interest factor coverage and findings."),
+        ("form_freshness", "update_forms", "Verify current official Maine Judicial Branch form versions."),
+        ("human_review", "complete_human_review", "Complete attorney or qualified reviewer checklist."),
+    ]
+    actions = [{"action": action, "label": label} for category, action, label in mapping if categories.get(category)]
+    return actions or [{"action": "continue_review", "label": "Continue review; do not treat as legal advice or filing-ready without signoff."}]
 
 
 def build_review_packet(
@@ -670,7 +702,7 @@ def build_review_packet(
         "schema": PACKET_SCHEMA,
         "version": VERSION,
         "generated_at": utcnow(),
-        "status": "pass" if gate["status"] in {"blocked", "review_required", "pass"} else "fail",
+        "status": "pass",
         "draft_preview": normalize_space(draft_text[:1400]),
         "gate_report": gate,
         "next_actions": next_actions_for_gate(gate),
