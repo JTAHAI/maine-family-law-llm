@@ -38,9 +38,9 @@ def test_package_version_metadata_is_consistent_and_current() -> None:
     package_version = re.search(r'__version__\s*=\s*"([^"]+)"', init_py)
     assert pyproject_version is not None
     assert package_version is not None
-    assert pyproject_version.group(1) == package_version.group(1) == "2.05.0"
-    assert "v2.05.0" in release_notes
-    assert "v2.05.0" in pass_changes
+    assert pyproject_version.group(1) == package_version.group(1) == "2.06.0"
+    assert "v2.06.0" in release_notes
+    assert "v2.06.0" in pass_changes
 
 
 def test_public_source_preflight_cli_writes_report(tmp_path: Path) -> None:
@@ -90,6 +90,7 @@ def test_safe_push_wrappers_delegate_to_no_op_safe_python_gate() -> None:
     assert "--quiet" in python_module
     assert "No staged changes; skipping commit." in python_module
     assert "test_git_safe_push_v192.py" in python_module
+    assert "test_enterprise_release_control_v206.py" in python_module
 
 
 def test_ci_runs_pre_push_and_launch_guardrails() -> None:
@@ -100,3 +101,4 @@ def test_ci_runs_pre_push_and_launch_guardrails() -> None:
     assert "test_pass48_51_launch_evidence_gates.py" in ci
     assert "test_public_source_pre_push_gate_v191.py" in ci
     assert "test_git_safe_push_v192.py" in ci
+    assert "test_enterprise_release_control_v206.py" in ci

@@ -44,7 +44,7 @@ def test_v186_runtime_diagnostics_version() -> None:
     from maine_family_law_llm import api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "2.05.0"
+    assert payload["version"] == "2.06.0"
     assert payload["ui_version"] == "1.87.0-chat-library-routing-input-clear"
     assert payload["enter_to_submit"] is True
     assert payload["appeals_routing_fix"] is True

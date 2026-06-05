@@ -1,0 +1,299 @@
+{
+  "claims": {
+    "attorney_review_completed": false,
+    "filing_ready": false,
+    "ga_shipment_completed": false,
+    "legal_advice": false,
+    "limited_real_matter_pilot_completed": false,
+    "private_data_packaged": false,
+    "release_candidate_signed": false
+  },
+  "closed_launch_passes": [],
+  "disclaimer": "Enterprise release control is a fail-closed operator workflow. It does not create attorney review, legal signoff, pilot evidence, production deployment, or GA shipment evidence. The release is enterprise_ready only when the external Pass 48-51 launch evidence gate passes with real signed artifacts.",
+  "enterprise_control_areas": [
+    {
+      "control_id": "official_authority",
+      "label": "Official Maine authority",
+      "release_requirement": "Live official-source manifests, parsed authority, retrieval indexes, and freshness reports must live outside the source repo."
+    },
+    {
+      "control_id": "legal_quality",
+      "label": "Legal quality gates",
+      "release_requirement": "Citation, quote-span, claim-support, staleness, jurisdiction, and form-freshness metrics must pass from accepted external evidence."
+    },
+    {
+      "control_id": "attorney_review",
+      "label": "Attorney review",
+      "release_requirement": "Attorney sandbox and limited pilot reports must be signed externally with reviewer, consent, and incident fields."
+    },
+    {
+      "control_id": "matter_privacy",
+      "label": "Matter privacy",
+      "release_requirement": "Private matter data must stay outside the repo, outside shared-model training by default, and inside isolated encrypted stores."
+    },
+    {
+      "control_id": "security_governance",
+      "label": "Security and governance",
+      "release_requirement": "Security, governance, incident, audit, rollback, and maintenance evidence must be approved before RC signoff."
+    },
+    {
+      "control_id": "deployment_ops",
+      "label": "Deployment and operations",
+      "release_requirement": "A clean deployment, source ZIP, external data manifests, runbooks, rollback package, and owner signoff must exist."
+    }
+  ],
+  "enterprise_ready": false,
+  "export_metadata": {
+    "deterministic_offline": true,
+    "evidence_outputs": [
+      "docs/external-evidence/enterprise_release_control_v206_packet.json",
+      "docs/external-evidence/enterprise_release_control_v206_audit.json",
+      "docs/external-evidence/enterprise_release_control_v206.html",
+      "docs/external-evidence/enterprise_release_control_v206_test_summary.json"
+    ],
+    "external_evidence_required": true,
+    "private_matter_data_included": false,
+    "source_repo_release_evidence_only": true
+  },
+  "external_evidence_checklist": [
+    {
+      "default_status": "blocked",
+      "description": "Attorney-only sandbox pilot report signed by a Maine attorney reviewer or pilot owner.",
+      "filename": "attorney_sandbox_pilot_report.json",
+      "must_be_external": true,
+      "pass": 48,
+      "private_data_allowed": false,
+      "required_keys": [
+        "attorney_reviewer_count",
+        "bar_status_verified",
+        "critical_open_count",
+        "feedback_queue_reviewed",
+        "notes",
+        "real_matter_allowed",
+        "signed_at",
+        "signed_by",
+        "source",
+        "status",
+        "training_complete"
+      ],
+      "root": "pilot"
+    },
+    {
+      "default_status": "blocked",
+      "description": "Limited real-matter pilot report with explicit consent, isolation, review, and incident controls.",
+      "filename": "limited_real_matter_pilot_report.json",
+      "must_be_external": true,
+      "pass": 49,
+      "private_data_allowed": false,
+      "required_keys": [
+        "all_matters_have_explicit_consent",
+        "attorney_signoff_complete",
+        "daily_review_complete",
+        "data_leakage_count",
+        "encrypted_storage_verified",
+        "human_review_completed",
+        "matter_count",
+        "notes",
+        "open_incident_count",
+        "signed_at",
+        "signed_by",
+        "source",
+        "status",
+        "tenant_isolation_verified",
+        "training_use_allowed",
+        "unsupported_export_attempt_count"
+      ],
+      "root": "pilot"
+    },
+    {
+      "default_status": "blocked",
+      "description": "GA release-candidate signoff inventory with security, legal, product, and ops approvals.",
+      "filename": "ga_release_candidate_signoff.json",
+      "must_be_external": true,
+      "pass": 50,
+      "private_data_allowed": false,
+      "required_keys": [
+        "artifact_inventory_hash",
+        "notes",
+        "open_p0_p1_count",
+        "release_candidate_frozen",
+        "signed_at",
+        "signed_by",
+        "signoffs",
+        "source",
+        "status"
+      ],
+      "required_signoff_roles": [
+        "security",
+        "legal",
+        "product",
+        "ops"
+      ],
+      "root": "release"
+    },
+    {
+      "default_status": "blocked",
+      "description": "Final GA shipment signoff asserting all required GA controls are true.",
+      "filename": "ga_shipment_signoff.json",
+      "must_be_external": true,
+      "pass": 51,
+      "private_data_allowed": false,
+      "required_controls": [
+        "attorney_reviewed_evals_present",
+        "audit_trails_present",
+        "pilot_evidence_present",
+        "private_matter_data_protected",
+        "release_metrics_pass",
+        "rollback_and_maintenance_operations_present",
+        "runs_from_clean_deployment",
+        "security_controls_present",
+        "unsupported_filing_ready_output_blocked",
+        "uses_real_official_maine_authority"
+      ],
+      "required_keys": [
+        "controls",
+        "ga_shipped",
+        "notes",
+        "release_candidate_status",
+        "shipment_manifest_hash",
+        "signed_at",
+        "signed_by",
+        "source",
+        "status"
+      ],
+      "root": "release"
+    }
+  ],
+  "forbidden_release_claims": [
+    "production_legal_ready_without_external_evidence",
+    "attorney_review_completed_without_signed_pilot_report",
+    "real_matter_pilot_completed_without_consent_and_isolation_evidence",
+    "ga_release_candidate_signed_without_security_legal_product_ops_approval",
+    "ga_shipped_without_external_shipment_manifest_and_all_controls",
+    "filing_ready_without_source_citation_quote_fact_form_posture_and_human_review_gates"
+  ],
+  "ga_shipped": false,
+  "generated_at": "2026-06-05T00:00:00Z",
+  "launch_gate_report": {
+    "artifacts": [
+      {
+        "name": "attorney_sandbox_pilot_report",
+        "pass": 48,
+        "path": ".missing_external_launch_evidence\\pilot\\attorney_sandbox_pilot_report.json",
+        "payload_keys": [],
+        "present": false,
+        "required_statuses": [
+          "pass"
+        ],
+        "sha256": "",
+        "status_value": ""
+      },
+      {
+        "name": "limited_real_matter_pilot_report",
+        "pass": 49,
+        "path": ".missing_external_launch_evidence\\pilot\\limited_real_matter_pilot_report.json",
+        "payload_keys": [],
+        "present": false,
+        "required_statuses": [
+          "pass"
+        ],
+        "sha256": "",
+        "status_value": ""
+      },
+      {
+        "name": "ga_release_candidate_signoff",
+        "pass": 50,
+        "path": ".missing_external_launch_evidence\\release\\ga_release_candidate_signoff.json",
+        "payload_keys": [],
+        "present": false,
+        "required_statuses": [
+          "pass",
+          "signed"
+        ],
+        "sha256": "",
+        "status_value": ""
+      },
+      {
+        "name": "ga_shipment_signoff",
+        "pass": 51,
+        "path": ".missing_external_launch_evidence\\release\\ga_shipment_signoff.json",
+        "payload_keys": [],
+        "present": false,
+        "required_statuses": [
+          "pass",
+          "signed"
+        ],
+        "sha256": "",
+        "status_value": ""
+      }
+    ],
+    "blockers": [
+      "pass48_missing_artifact:attorney_sandbox_pilot_report.json",
+      "pass49_missing_artifact:limited_real_matter_pilot_report.json",
+      "pass50_missing_artifact:ga_release_candidate_signoff.json",
+      "pass51_missing_artifact:ga_shipment_signoff.json"
+    ],
+    "closed_passes": [],
+    "generated_at": "2026-06-05T00:00:00Z",
+    "open_passes": [
+      48,
+      49,
+      50,
+      51
+    ],
+    "readiness": "pass48_51_launch_evidence_blocked",
+    "status": "blocked"
+  },
+  "legal_safety_defaults": {
+    "filing_ready_by_default": false,
+    "generator_self_certifies_legal_correctness": false,
+    "official_registry_outweighs_model_memory": true,
+    "private_matter_training_by_default": false,
+    "review_required_by_default": true
+  },
+  "operator_action_plan": [
+    {
+      "action": "Run an attorney-only sandbox with public/synthetic prompts, verify reviewer bar status, complete onboarding, review the feedback queue, and sign the external attorney_sandbox_pilot_report.json.",
+      "step": "pass48_attorney_sandbox"
+    },
+    {
+      "action": "Run a limited real-matter pilot only with explicit consent, tenant isolation, encryption, daily review, attorney signoff, zero leakage, and zero unsupported filing-ready exports.",
+      "step": "pass49_limited_real_matter_pilot"
+    },
+    {
+      "action": "Freeze a release-candidate artifact inventory and collect security, legal, product, and ops approvals with zero open P0/P1 blockers.",
+      "step": "pass50_release_candidate"
+    },
+    {
+      "action": "Ship only after the RC passed, clean deployment and external manifests exist, all GA controls are true, and ga_shipment_signoff.json is signed.",
+      "step": "pass51_ga_shipment"
+    },
+    {
+      "action": "Run scripts/run-pass48-51-launch-evidence-gates.py against the external pilot and release roots with --require-ready.",
+      "step": "run_fail_closed_gate"
+    },
+    {
+      "action": "Do not commit private matter data, source corpora, parsed authority stores, retrieval indexes, eval stores, model weights, runtime DBs, or .env files.",
+      "step": "preserve_repo_boundary"
+    }
+  ],
+  "pilot_root": ".missing_external_launch_evidence/pilot",
+  "production_legal_ready": false,
+  "release_blockers": [
+    "enterprise_release_blocked_until_pass48_51_external_evidence_passes",
+    "pass48_missing_artifact:attorney_sandbox_pilot_report.json",
+    "pass49_missing_artifact:limited_real_matter_pilot_report.json",
+    "pass50_missing_artifact:ga_release_candidate_signoff.json",
+    "pass51_missing_artifact:ga_shipment_signoff.json"
+  ],
+  "release_root": ".missing_external_launch_evidence/release",
+  "remaining_passes": [
+    48,
+    49,
+    50,
+    51
+  ],
+  "schema": "maine_family_law_llm.enterprise_release_control.packet.v1",
+  "status": "blocked_external_launch_evidence_required",
+  "version": "2.06.0"
+}

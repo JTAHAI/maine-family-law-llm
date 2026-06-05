@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "2.05.0"
-description = "Standalone Maine family-law legal-information workbench with source-backed local chat, Family Justice Workbench packets, strict launch-evidence gates, and fail-closed public-source pre-push checks"
+version = "2.06.0"
+description = "Standalone Maine family-law legal-information workbench with source-backed local chat, Family Justice Workbench packets, enterprise release controls, strict launch-evidence gates, and fail-closed public-source pre-push checks"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pypdf>=4.3"]

@@ -74,6 +74,24 @@ docs/external-evidence/family_justice_workbench_v205.html
 
 The local API also exposes `POST /api/family-justice-workbench`. Outputs remain legal-information-only, review_required, and not filing_ready. See `docs/family-justice-workbench-v205.md`.
 
+## Enterprise release control v2.06
+
+The v2.06 Enterprise Release Control Center audits the remaining Pass 48-51 production launch gates and shows why enterprise readiness, production legal readiness, and GA shipment remain blocked until real external attorney sandbox, limited pilot, release-candidate, and shipment evidence pass.
+
+Generate the local release-control evidence:
+
+```powershell
+python scripts/build-enterprise-release-control-evidence.py --require-ready
+```
+
+Open:
+
+```text
+docs/external-evidence/enterprise_release_control_v206.html
+```
+
+See `docs/enterprise-release-control-v206.md`.
+
 ## For non-technical local testing
 
 ### FOCAF branded local workbench

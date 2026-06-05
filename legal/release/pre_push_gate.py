@@ -227,6 +227,7 @@ def _safe_push_wrapper_check(project_root: Path) -> PrePushCheck:
         "No staged changes; skipping commit.",
         "PRE_PUSH_OUTPUT",
         "test_git_safe_push_v192.py",
+        "test_enterprise_release_control_v206.py",
         "test_attorney_sandbox_review_kit_v193.py",
     )
     for marker in required_module_markers:
@@ -274,6 +275,7 @@ def _ci_guardrail_check(project_root: Path) -> PrePushCheck:
         "run-public-source-preflight.py",
         "test_chat_library_v187_input_clear_and_routing.py",
         "test_pass48_51_launch_evidence_gates.py",
+        "test_enterprise_release_control_v206.py",
         "test_public_source_pre_push_gate_v191.py",
         "test_git_safe_push_v192.py",
         "test_attorney_sandbox_review_kit_v193.py",

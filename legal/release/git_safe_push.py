@@ -13,6 +13,7 @@ FOCUSED_PUSH_TESTS = (
     "tests/test_git_safe_push_v192.py",
     "tests/test_pass48_51_launch_evidence_gates.py",
     "tests/test_pass48_51_launch_evidence_starter_kit.py",
+    "tests/test_enterprise_release_control_v206.py",
     "tests/test_attorney_sandbox_review_kit_v193.py",
     "tests/test_chat_library_v187_input_clear_and_routing.py",
     "tests/test_best_interest_chat_answer.py",

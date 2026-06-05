@@ -1,0 +1,17 @@
+{
+  "checks": {
+    "filing_ready_false_by_default": true,
+    "html_expected_markers": true,
+    "human_review_gate_preserved": true,
+    "launch_gate_blocks_missing_evidence": true,
+    "no_enterprise_ready_claim_without_external_evidence": true,
+    "no_ga_shipment_claim_without_external_evidence": true,
+    "pass48_51_open_by_default": true,
+    "templates_forbid_private_data": true,
+    "templates_require_external_roots": true
+  },
+  "generated_at": "2026-06-05T00:00:00Z",
+  "schema": "maine_family_law_llm.enterprise_release_control.test_summary.v1",
+  "status": "pass",
+  "version": "2.06.0"
+}

@@ -27,7 +27,7 @@ def test_v184_runtime_diagnostics_endpoint_and_html_markers() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
     diagnostics = api.runtime_diagnostics()
-    assert diagnostics["version"] == "2.05.0"
+    assert diagnostics["version"] == "2.06.0"
     assert diagnostics["ui_version"] == "1.87.0-chat-library-routing-input-clear"
     assert diagnostics["enter_to_submit"] is True
     assert diagnostics["appeals_routing_fix"] is True

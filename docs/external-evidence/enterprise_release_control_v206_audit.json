@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "default_fail_closed": true,
+    "external_evidence_checklist_complete": true,
+    "forbidden_claims_listed": true,
+    "html_markers_present": true,
+    "legal_safety_defaults_preserved": true,
+    "no_private_data_packaged": true,
+    "packet_schema_present": true,
+    "production_legal_ready_false_by_default": true,
+    "remaining_launch_passes_visible": true
+  },
+  "ga_shipped": false,
+  "generated_at": "2026-06-05T00:00:00Z",
+  "production_legal_ready": false,
+  "schema": "maine_family_law_llm.enterprise_release_control.audit.v1",
+  "status": "pass",
+  "version": "2.06.0"
+}
