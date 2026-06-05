@@ -1,3 +1,11 @@
+## v2.05.0 — Family Justice Workbench polish
+
+- Added `legal/product/family_justice_workbench_v205.py`, a deterministic Family Justice Workbench packet builder for parent, caregiver, lawyer, counselor, therapist, and reviewer pathways.
+- Added source-card-first packets with issue labels, posture routing, safety/urgency routing, missing-information checklists, next-best-action planning, red flags, authority matrix previews, filing-gate blocker explanations, and reviewer handoff exports.
+- Added `scripts/build-family-justice-workbench-evidence.py` and deterministic evidence outputs for packet JSON, audit JSON, HTML demo, and test summary under `docs/external-evidence/`.
+- Exposed `/api/family-justice-workbench` in the local API without changing existing chat endpoints.
+- Added focused v2.05 regression tests and a local clean ZIP helper script. Outputs remain legal-information-only, review_required by default, not filing_ready, and not current-law certified without official-source verification and human review.
+
 ## v1.93.0 — Attorney sandbox review kit and Pass 48 pilot prep
 
 - Added a fail-closed attorney sandbox review-kit builder for Pass 48 that creates public/synthetic review queues, onboarding, feedback triage, dashboard, bar-status attestation, and reviewer-instruction templates outside the source repo.

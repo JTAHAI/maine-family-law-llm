@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "appeal_not_generic_parenting": true,
+    "filing_ready_false_without_hard_gates": true,
+    "html_expected_ui_markers": true,
+    "json_schema_stable": true,
+    "no_current_law_certainty_without_freshness": true,
+    "no_private_runtime_artifacts": true,
+    "pfa_safety_routes_to_emergency_caveat": true,
+    "professional_boundary_no_legal_strategy": true,
+    "review_required_by_default": true,
+    "rule_52_best_interest_flags": true,
+    "source_cards_exist_for_legal_answers": true,
+    "therapist_non_delegation_red_flag": true
+  },
+  "generated_at": "2026-06-05T00:00:00Z",
+  "packet_count": 6,
+  "schema": "maine_family_law_llm.family_justice_workbench.test_summary.v1",
+  "status": "pass",
+  "version": "2.05.0"
+}

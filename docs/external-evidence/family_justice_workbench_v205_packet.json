@@ -1,0 +1,1945 @@
+{
+  "claims": {
+    "current_law_certified": false,
+    "filing_ready": false,
+    "legal_advice": false,
+    "private_data_packaged": false,
+    "production_ga": false
+  },
+  "generated_at": "2026-06-05T00:00:00Z",
+  "packets": [
+    {
+      "answer_preview": "Use this as a review-required checklist for: I was served with Maine family court papers and there is a hearing date. What should I do first?. Start with 2 source card(s), then answer only what those cards and verified facts can support. Co",
+      "audience": "parent",
+      "audience_label": "Parent",
+      "authority_matrix_preview": [
+        {
+          "authority": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "served_with_family_court_papers",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "served_with_family_court_papers",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 6,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "served_with_family_court_papers"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "served_with_family_court_papers",
+          "question": "Exact documents served, including summons, complaint, motions, notices, and attachments."
+        },
+        {
+          "category": "served_with_family_court_papers",
+          "question": "Date, time, and method of service."
+        },
+        {
+          "category": "served_with_family_court_papers",
+          "question": "Any hearing date, response deadline, or temporary order already entered."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Make a dated inventory of every document received.",
+          "priority": "4",
+          "reason": "Served with family court papers"
+        },
+        {
+          "label": "Confirm response and hearing dates from official court paperwork.",
+          "priority": "5",
+          "reason": "Served with family court papers"
+        },
+        {
+          "label": "Ask a lawyer or court help resource to review deadline risk before filing anything.",
+          "priority": "6",
+          "reason": "Served with family court papers"
+        }
+      ],
+      "plain_language_answer": "Use this as a review-required checklist for: I was served with Maine family court papers and there is a hearing date. What should I do first?. Start with 2 source card(s), then answer only what those cards and verified facts can support. Confirm posture, missing facts, and blocker explanations before drafting.",
+      "posture": "initial_complaint",
+      "posture_label": "Initial complaint or first filing",
+      "question": "I was served with Maine family court papers and there is a hearing date. What should I do first?",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Service, response, hearing, and appeal deadlines require official-rule verification.",
+          "flag_id": "deadline_risk",
+          "label": "Deadline risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "The method and date of service can affect next steps and deadlines.",
+          "flag_id": "service_or_notice_issue",
+          "label": "Service or notice issue",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "medium"
+        }
+      ],
+      "requested_output_style": "checklist",
+      "reviewer_handoff": {
+        "audience": "parent",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_family_division_process",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_forms",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Deadline risk: Service, response, hearing, and appeal deadlines require official-rule verification.",
+          "Service or notice issue: The method and date of service can affect next steps and deadlines."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "served_with_family_court_papers"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "Exact documents served, including summons, complaint, motions, notices, and attachments.",
+          "Date, time, and method of service.",
+          "Any hearing date, response deadline, or temporary order already entered."
+        ],
+        "posture": "initial_complaint",
+        "question": "I was served with Maine family court papers and there is a hearing date. What should I do first?",
+        "red_flags": [
+          "Deadline risk",
+          "Service or notice issue"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "plain-language intake, safety routing, source cards, next steps",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "official_court_process",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "served_with_family_court_papers",
+          "registry_note": "Resolve against the official Maine Judicial Branch source registry before use.",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Maine Judicial Branch family case process starter card"
+        },
+        {
+          "authority_type": "official_form_registry",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "served_with_family_court_papers",
+          "registry_note": "Check form revision, packet membership, and required fields before drafting.",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Official Maine family forms starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "",
+        "high_severity_flags": [
+          "deadline_risk"
+        ],
+        "safety_routing": false,
+        "urgency": "urgent_review"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "red_flag",
+          "message": "Deadline risk: Service, response, hearing, and appeal deadlines require official-rule verification."
+        },
+        {
+          "category": "red_flag",
+          "message": "Service or notice issue: The method and date of service can affect next steps and deadlines."
+        }
+      ]
+    },
+    {
+      "answer_preview": "If anyone is in immediate danger, contact 911 or local emergency services. The workbench is not an emergency service. After immediate safety is handled, Start with 3 source card(s), then answer only what those cards and verified facts can s",
+      "audience": "parent",
+      "audience_label": "Parent",
+      "authority_matrix_preview": [
+        {
+          "authority": "19-A M.R.S. protection-from-abuse provisions and official PFA forms",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "protection_from_abuse_safety",
+          "source_id": "starter_me_pfa_safety",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "protection_from_abuse_safety",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "protection_from_abuse_safety",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 6,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "protection_from_abuse_safety"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "protection_from_abuse_safety",
+          "question": "Whether anyone is in immediate danger or needs emergency help."
+        },
+        {
+          "category": "protection_from_abuse_safety",
+          "question": "Whether a PFA case, family case, or criminal/bail condition already exists."
+        },
+        {
+          "category": "protection_from_abuse_safety",
+          "question": "Any existing orders affecting contact, exchange locations, residence, or communication."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "If there is immediate danger, contact 911 or local emergency services.",
+          "priority": "0",
+          "reason": "Safety routing outranks ordinary family-law workflow."
+        },
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Use official court and safety resources before relying on any drafted language.",
+          "priority": "6",
+          "reason": "Protection from abuse or safety concern"
+        },
+        {
+          "label": "Separate emergency safety facts from longer-term parenting or divorce questions.",
+          "priority": "7",
+          "reason": "Protection from abuse or safety concern"
+        }
+      ],
+      "plain_language_answer": "If anyone is in immediate danger, contact 911 or local emergency services. The workbench is not an emergency service. After immediate safety is handled, Start with 3 source card(s), then answer only what those cards and verified facts can support. Separate PFA/safety facts from parenting, divorce, support, or post-judgment workflow. Do not treat this packet as filing-ready.",
+      "posture": "temporary_order",
+      "posture_label": "Temporary order or interim relief",
+      "question": "I need protection from abuse and I am worried about safety during exchanges.",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Safety routing comes before ordinary family-law workflow.",
+          "flag_id": "immediate_safety_risk",
+          "label": "Immediate safety risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Protective orders and parenting orders must be reviewed together against official sources.",
+          "flag_id": "pfa_family_overlap",
+          "label": "PFA and family-case overlap",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        }
+      ],
+      "requested_output_style": "plain_language",
+      "reviewer_handoff": {
+        "audience": "parent",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_pfa_safety",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_division_process",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_forms",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Immediate safety risk: Safety routing comes before ordinary family-law workflow.",
+          "PFA and family-case overlap: Protective orders and parenting orders must be reviewed together against official sources."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "protection_from_abuse_safety"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "Whether anyone is in immediate danger or needs emergency help.",
+          "Whether a PFA case, family case, or criminal/bail condition already exists.",
+          "Any existing orders affecting contact, exchange locations, residence, or communication."
+        ],
+        "posture": "temporary_order",
+        "question": "I need protection from abuse and I am worried about safety during exchanges.",
+        "red_flags": [
+          "Immediate safety risk",
+          "PFA and family-case overlap"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "plain-language intake, safety routing, source cards, next steps",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "statute_and_form_registry_safety",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "19-A M.R.S. protection-from-abuse provisions and official PFA forms",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "protection_from_abuse_safety",
+          "registry_note": "Use official court and safety resources; do not rely on model memory.",
+          "source_id": "starter_me_pfa_safety",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Protection from abuse and safety routing starter card"
+        },
+        {
+          "authority_type": "official_court_process",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "protection_from_abuse_safety",
+          "registry_note": "Resolve against the official Maine Judicial Branch source registry before use.",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Maine Judicial Branch family case process starter card"
+        },
+        {
+          "authority_type": "official_form_registry",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "protection_from_abuse_safety",
+          "registry_note": "Check form revision, packet membership, and required fields before drafting.",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Official Maine family forms starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "If anyone is in immediate danger, contact 911 or local emergency services. The workbench is not an emergency service.",
+        "high_severity_flags": [
+          "immediate_safety_risk",
+          "pfa_family_overlap"
+        ],
+        "safety_routing": true,
+        "urgency": "safety_priority"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "red_flag",
+          "message": "Immediate safety risk: Safety routing comes before ordinary family-law workflow."
+        },
+        {
+          "category": "red_flag",
+          "message": "PFA and family-case overlap: Protective orders and parenting orders must be reviewed together against official sources."
+        }
+      ]
+    },
+    {
+      "answer_preview": "Reviewer handoff: verify posture, source freshness, authority, citations, quote spans, facts, forms, and red flags before any legal conclusion. Key issue(s): Rule 52 findings gap, Best-interest factor gap, Therapist, GAL, non-delegation, or",
+      "audience": "reviewer",
+      "audience_label": "Reviewer",
+      "authority_matrix_preview": [
+        {
+          "authority": "M.R. Civ. P. 52",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "rule_52_findings_gap",
+          "source_id": "starter_me_rule_52_findings",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "19-A M.R.S. section 1653",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "rule_52_findings_gap",
+          "source_id": "starter_me_19a_1653_best_interest",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine parental-rights orders, contact restrictions, and findings review",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "therapist_gal_non_delegation_contact",
+          "source_id": "starter_me_non_delegation_contact",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "therapist_gal_non_delegation_contact",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 8,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "rule_52_findings_gap",
+        "best_interest_factor_gap",
+        "therapist_gal_non_delegation_contact"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "rule_52_findings_gap",
+          "question": "The exact order text and whether findings were requested."
+        },
+        {
+          "category": "rule_52_findings_gap",
+          "question": "Which disputed issues lack findings."
+        },
+        {
+          "category": "rule_52_findings_gap",
+          "question": "Relevant transcript, exhibits, proposed findings, and docket entries."
+        },
+        {
+          "category": "best_interest_factor_gap",
+          "question": "Which best-interest factors are disputed or material."
+        },
+        {
+          "category": "best_interest_factor_gap",
+          "question": "Evidence supporting each factor and any contrary evidence."
+        },
+        {
+          "category": "best_interest_factor_gap",
+          "question": "Whether the order explains the reasoning for residence, contact, and decision-making."
+        },
+        {
+          "category": "therapist_gal_non_delegation_contact",
+          "question": "Exact order language about therapy, GAL role, exchanges, supervision, and contact."
+        },
+        {
+          "category": "therapist_gal_non_delegation_contact",
+          "question": "Who controls the decision and what standards or findings support that control."
+        },
+        {
+          "category": "therapist_gal_non_delegation_contact",
+          "question": "Treatment-record privacy and consent/subpoena status."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Build a findings matrix by disputed issue.",
+          "priority": "4",
+          "reason": "Rule 52 findings gap"
+        },
+        {
+          "label": "Verify preservation and timing with official rules and human review.",
+          "priority": "5",
+          "reason": "Rule 52 findings gap"
+        },
+        {
+          "label": "Do not label a findings argument filing-ready without record review.",
+          "priority": "6",
+          "reason": "Rule 52 findings gap"
+        },
+        {
+          "label": "Create a factor-by-factor evidence table.",
+          "priority": "7",
+          "reason": "Best-interest factor gap"
+        },
+        {
+          "label": "Separate facts from argument and source each claim.",
+          "priority": "8",
+          "reason": "Best-interest factor gap"
+        },
+        {
+          "label": "Ask a reviewer to check whether omitted factors are material.",
+          "priority": "9",
+          "reason": "Best-interest factor gap"
+        },
+        {
+          "label": "Quote the contact restriction language exactly in the reviewer handoff.",
+          "priority": "10",
+          "reason": "Therapist, GAL, non-delegation, or contact restriction"
+        },
+        {
+          "label": "Flag any therapist, counselor, GAL, or third-party veto over contact.",
+          "priority": "11",
+          "reason": "Therapist, GAL, non-delegation, or contact restriction"
+        },
+        {
+          "label": "Keep therapists and counselors out of legal-strategy recommendations.",
+          "priority": "12",
+          "reason": "Therapist, GAL, non-delegation, or contact restriction"
+        }
+      ],
+      "plain_language_answer": "Reviewer handoff: verify posture, source freshness, authority, citations, quote spans, facts, forms, and red flags before any legal conclusion. Key issue(s): Rule 52 findings gap, Best-interest factor gap, Therapist, GAL, non-delegation, or contact restriction. Filing is blocked by 4 red flag(s) and default hard gates.",
+      "posture": "final_order",
+      "posture_label": "Final order or judgment",
+      "question": "Review this final parenting order: no Rule 52 findings, best-interest factors are thin, and the therapist decides when visits happen.",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Thin or absent findings can affect review, preservation, and proposed-order workflows.",
+          "flag_id": "missing_rule_52_findings",
+          "label": "Missing Rule 52 findings",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Material best-interest factors need evidence and source-backed analysis.",
+          "flag_id": "best_interest_gap",
+          "label": "Best-interest factor gap",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "A third party controlling contact may require findings, scope, and legal review.",
+          "flag_id": "third_party_contact_delegation",
+          "label": "Therapist/GAL/non-delegation contact red flag",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Restrictions on parent-child contact need careful findings and authority review.",
+          "flag_id": "contact_restriction_without_findings",
+          "label": "Contact restriction without sourced findings",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        }
+      ],
+      "requested_output_style": "reviewer_handoff",
+      "reviewer_handoff": {
+        "audience": "reviewer",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_rule_52_findings",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_19a_1653_best_interest",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_non_delegation_contact",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_records_privacy",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Missing Rule 52 findings: Thin or absent findings can affect review, preservation, and proposed-order workflows.",
+          "Best-interest factor gap: Material best-interest factors need evidence and source-backed analysis.",
+          "Therapist/GAL/non-delegation contact red flag: A third party controlling contact may require findings, scope, and legal review.",
+          "Contact restriction without sourced findings: Restrictions on parent-child contact need careful findings and authority review."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "rule_52_findings_gap",
+          "best_interest_factor_gap",
+          "therapist_gal_non_delegation_contact"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "The exact order text and whether findings were requested.",
+          "Which disputed issues lack findings.",
+          "Relevant transcript, exhibits, proposed findings, and docket entries.",
+          "Which best-interest factors are disputed or material.",
+          "Evidence supporting each factor and any contrary evidence.",
+          "Whether the order explains the reasoning for residence, contact, and decision-making.",
+          "Exact order language about therapy, GAL role, exchanges, supervision, and contact."
+        ],
+        "posture": "final_order",
+        "question": "Review this final parenting order: no Rule 52 findings, best-interest factors are thin, and the therapist decides when visits happen.",
+        "red_flags": [
+          "Missing Rule 52 findings",
+          "Best-interest factor gap",
+          "Therapist/GAL/non-delegation contact red flag",
+          "Contact restriction without sourced findings"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "source freshness, citation, quote, fact, and filing-gate audit",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "court_rule",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "M.R. Civ. P. 52",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "rule_52_findings_gap",
+          "registry_note": "Verify rule text, preservation requirements, and order-specific findings.",
+          "source_id": "starter_me_rule_52_findings",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Rule 52 findings review starter card"
+        },
+        {
+          "authority_type": "statute",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "19-A M.R.S. section 1653",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "rule_52_findings_gap",
+          "registry_note": "Verify the official statute text and effective version before relying on it.",
+          "source_id": "starter_me_19a_1653_best_interest",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Parental rights and best-interest review starter card"
+        },
+        {
+          "authority_type": "issue_review_checklist",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine parental-rights orders, contact restrictions, and findings review",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "therapist_gal_non_delegation_contact",
+          "registry_note": "Verify any order language that lets a therapist, GAL, or third party control contact.",
+          "source_id": "starter_me_non_delegation_contact",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Third-party contact restriction and non-delegation starter card"
+        },
+        {
+          "authority_type": "privacy_and_evidence_boundary",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "therapist_gal_non_delegation_contact",
+          "registry_note": "Do not upload private records into the repo; verify confidentiality before sharing.",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "School, medical, therapy, and confidential records starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "",
+        "high_severity_flags": [
+          "missing_rule_52_findings",
+          "best_interest_gap",
+          "third_party_contact_delegation",
+          "contact_restriction_without_findings"
+        ],
+        "safety_routing": false,
+        "urgency": "urgent_review"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "red_flag",
+          "message": "Missing Rule 52 findings: Thin or absent findings can affect review, preservation, and proposed-order workflows."
+        },
+        {
+          "category": "red_flag",
+          "message": "Best-interest factor gap: Material best-interest factors need evidence and source-backed analysis."
+        },
+        {
+          "category": "red_flag",
+          "message": "Therapist/GAL/non-delegation contact red flag: A third party controlling contact may require findings, scope, and legal review."
+        },
+        {
+          "category": "red_flag",
+          "message": "Contact restriction without sourced findings: Restrictions on parent-child contact need careful findings and authority review."
+        }
+      ]
+    },
+    {
+      "answer_preview": "Source-card-first answer for: How long do I have to appeal a Maine family order and what transcript or record facts matter?. Each legal point must tie to an official-source card, freshness status, citation, quote span, and fact support.",
+      "audience": "lawyer",
+      "audience_label": "Lawyer",
+      "authority_matrix_preview": [
+        {
+          "authority": "Maine Rules of Appellate Procedure and Law Court resources",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "appeal_deadline_preservation_transcript",
+          "source_id": "starter_me_appellate_rules",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "M.R. Civ. P. 52",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "appeal_deadline_preservation_transcript",
+          "source_id": "starter_me_rule_52_findings",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 6,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "appeal_deadline_preservation_transcript"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "appeal_deadline_preservation_transcript",
+          "question": "Date the judgment or order was entered on the docket."
+        },
+        {
+          "category": "appeal_deadline_preservation_transcript",
+          "question": "Whether any post-judgment motion, findings motion, or reconsideration motion was filed."
+        },
+        {
+          "category": "appeal_deadline_preservation_transcript",
+          "question": "Whether a transcript or record materials are needed and available."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify appeal deadlines against the official appellate rules immediately.",
+          "priority": "4",
+          "reason": "Appeal deadline, preservation, and transcript"
+        },
+        {
+          "label": "Create a preservation checklist with findings, objections, exhibits, and transcript status.",
+          "priority": "5",
+          "reason": "Appeal deadline, preservation, and transcript"
+        },
+        {
+          "label": "Ask an appellate reviewer to inspect the record before relying on a strategy.",
+          "priority": "6",
+          "reason": "Appeal deadline, preservation, and transcript"
+        }
+      ],
+      "plain_language_answer": "Source-card-first answer for: How long do I have to appeal a Maine family order and what transcript or record facts matter?. Each legal point must tie to an official-source card, freshness status, citation, quote span, and fact support.",
+      "posture": "appeal",
+      "posture_label": "Appeal or preservation review",
+      "question": "How long do I have to appeal a Maine family order and what transcript or record facts matter?",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Appeal timing must be checked against the official appellate rules and docket entry date.",
+          "flag_id": "appeal_deadline_risk",
+          "label": "Appeal deadline risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "A review packet cannot assess an appeal without record and transcript status.",
+          "flag_id": "missing_transcript_or_record",
+          "label": "Missing transcript or incomplete record",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        }
+      ],
+      "requested_output_style": "source_card_table",
+      "reviewer_handoff": {
+        "audience": "lawyer",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_appellate_rules",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_rule_52_findings",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Appeal deadline risk: Appeal timing must be checked against the official appellate rules and docket entry date.",
+          "Missing transcript or incomplete record: A review packet cannot assess an appeal without record and transcript status."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "appeal_deadline_preservation_transcript"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "Date the judgment or order was entered on the docket.",
+          "Whether any post-judgment motion, findings motion, or reconsideration motion was filed.",
+          "Whether a transcript or record materials are needed and available."
+        ],
+        "posture": "appeal",
+        "question": "How long do I have to appeal a Maine family order and what transcript or record facts matter?",
+        "red_flags": [
+          "Appeal deadline risk",
+          "Missing transcript or incomplete record"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "authority matrix, claim checklist, blocker review, export packet",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "court_rule_and_court_resource",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Rules of Appellate Procedure and Law Court resources",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "appeal_deadline_preservation_transcript",
+          "registry_note": "Deadlines and record requirements must be checked against official rules.",
+          "source_id": "starter_me_appellate_rules",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Appeal, deadline, record, and transcript starter card"
+        },
+        {
+          "authority_type": "court_rule",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "M.R. Civ. P. 52",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "appeal_deadline_preservation_transcript",
+          "registry_note": "Verify rule text, preservation requirements, and order-specific findings.",
+          "source_id": "starter_me_rule_52_findings",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Rule 52 findings review starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "",
+        "high_severity_flags": [
+          "appeal_deadline_risk",
+          "missing_transcript_or_record"
+        ],
+        "safety_routing": false,
+        "urgency": "urgent_review"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "red_flag",
+          "message": "Appeal deadline risk: Appeal timing must be checked against the official appellate rules and docket entry date."
+        },
+        {
+          "category": "red_flag",
+          "message": "Missing transcript or incomplete record: A review packet cannot assess an appeal without record and transcript status."
+        }
+      ]
+    },
+    {
+      "answer_preview": "This is a professional-boundary answer, not legal strategy. Stay in your treatment or support role, avoid telling anyone what to file or what relief to request, protect private records, and refer legal-rights and filing-choice questions to ",
+      "audience": "therapist",
+      "audience_label": "Therapist",
+      "authority_matrix_preview": [
+        {
+          "authority": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "school_medical_records_privacy",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine court self-help and court-clerk role resources",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "school_medical_records_privacy",
+          "source_id": "starter_me_clerk_and_legal_advice_boundary",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "court_clerk_lawyer_boundary",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 8,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "school_medical_records_privacy",
+        "court_clerk_lawyer_boundary"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default.",
+        "Professional-boundary mode does not give legal strategy, choose filings, or advise a party what to ask the court to do."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "posture",
+          "question": "What is the procedural posture: new case, temporary order, final order, post-judgment, appeal, or remand?"
+        },
+        {
+          "category": "school_medical_records_privacy",
+          "question": "What record type is involved and who created it."
+        },
+        {
+          "category": "school_medical_records_privacy",
+          "question": "Whether there is consent, subpoena, court order, or privilege claim."
+        },
+        {
+          "category": "school_medical_records_privacy",
+          "question": "Whether the record includes minors, health information, sealed material, or social security numbers."
+        },
+        {
+          "category": "court_clerk_lawyer_boundary",
+          "question": "The user's role and whether they are asking for process information or legal strategy."
+        },
+        {
+          "category": "court_clerk_lawyer_boundary",
+          "question": "The exact procedural step or form question."
+        },
+        {
+          "category": "court_clerk_lawyer_boundary",
+          "question": "Whether a lawyer already represents any party."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "Stay within professional role boundaries and do not choose filings or legal strategy.",
+          "priority": "0",
+          "reason": "Counselor and therapist outputs must be professional-boundary guidance, not legal advice."
+        },
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Do not paste private records into the repo or public tools.",
+          "priority": "4",
+          "reason": "School, medical, or records privacy"
+        },
+        {
+          "label": "Verify confidentiality, privilege, and disclosure rules before sharing.",
+          "priority": "5",
+          "reason": "School, medical, or records privacy"
+        },
+        {
+          "label": "Prepare a records log for reviewer inspection instead of raw private content.",
+          "priority": "6",
+          "reason": "School, medical, or records privacy"
+        },
+        {
+          "label": "Provide neutral process and source-check information only.",
+          "priority": "7",
+          "reason": "Court clerk, lawyer, and professional boundary"
+        },
+        {
+          "label": "Refer legal strategy, filing choices, and rights analysis to a lawyer.",
+          "priority": "8",
+          "reason": "Court clerk, lawyer, and professional boundary"
+        },
+        {
+          "label": "Document what information was given and what was deferred.",
+          "priority": "9",
+          "reason": "Court clerk, lawyer, and professional boundary"
+        }
+      ],
+      "plain_language_answer": "This is a professional-boundary answer, not legal strategy. Stay in your treatment or support role, avoid telling anyone what to file or what relief to request, protect private records, and refer legal-rights and filing-choice questions to a lawyer. Start with 3 source card(s), then answer only what those cards and verified facts can support. Key issue(s): School, medical, or records privacy, Court clerk, lawyer, and professional boundary.",
+      "posture": "unknown",
+      "posture_label": "Posture unknown",
+      "question": "A parent asked me as a therapist what to file and whether I can share session notes in family court.",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "School, medical, therapy, sealed, and minor-child records need privacy review.",
+          "flag_id": "records_privacy_risk",
+          "label": "Records privacy risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Private matter documents must not enter the source repo or public evidence outputs.",
+          "flag_id": "private_records_risk",
+          "label": "Private records handling risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Non-lawyer roles should avoid legal strategy, filing choices, and rights advice.",
+          "flag_id": "unauthorized_practice_boundary",
+          "label": "Professional role boundary",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "medium"
+        }
+      ],
+      "requested_output_style": "professional_boundary",
+      "reviewer_handoff": {
+        "audience": "therapist",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_records_privacy",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_clerk_and_legal_advice_boundary",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_division_process",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Procedural posture is unknown.",
+          "Records privacy risk: School, medical, therapy, sealed, and minor-child records need privacy review.",
+          "Private records handling risk: Private matter documents must not enter the source repo or public evidence outputs.",
+          "Professional role boundary: Non-lawyer roles should avoid legal strategy, filing choices, and rights advice."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "school_medical_records_privacy",
+          "court_clerk_lawyer_boundary"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "What is the procedural posture: new case, temporary order, final order, post-judgment, appeal, or remand?",
+          "What record type is involved and who created it.",
+          "Whether there is consent, subpoena, court order, or privilege claim.",
+          "Whether the record includes minors, health information, sealed material, or social security numbers.",
+          "The user's role and whether they are asking for process information or legal strategy.",
+          "The exact procedural step or form question.",
+          "Whether a lawyer already represents any party."
+        ],
+        "posture": "unknown",
+        "question": "A parent asked me as a therapist what to file and whether I can share session notes in family court.",
+        "red_flags": [
+          "Records privacy risk",
+          "Private records handling risk",
+          "Professional role boundary"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "professional boundary, treatment-record privacy, no legal strategy",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "privacy_and_evidence_boundary",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "school_medical_records_privacy",
+          "registry_note": "Do not upload private records into the repo; verify confidentiality before sharing.",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "School, medical, therapy, and confidential records starter card"
+        },
+        {
+          "authority_type": "official_court_public_guidance",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine court self-help and court-clerk role resources",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "school_medical_records_privacy",
+          "registry_note": "Clerks can provide process information, not legal advice or strategy.",
+          "source_id": "starter_me_clerk_and_legal_advice_boundary",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Court clerk, lawyer, and legal-advice boundary starter card"
+        },
+        {
+          "authority_type": "official_court_process",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "court_clerk_lawyer_boundary",
+          "registry_note": "Resolve against the official Maine Judicial Branch source registry before use.",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Maine Judicial Branch family case process starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "",
+        "high_severity_flags": [
+          "records_privacy_risk",
+          "private_records_risk"
+        ],
+        "safety_routing": false,
+        "urgency": "urgent_review"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "posture",
+          "message": "Procedural posture is unknown."
+        },
+        {
+          "category": "red_flag",
+          "message": "Records privacy risk: School, medical, therapy, sealed, and minor-child records need privacy review."
+        },
+        {
+          "category": "red_flag",
+          "message": "Private records handling risk: Private matter documents must not enter the source repo or public evidence outputs."
+        },
+        {
+          "category": "red_flag",
+          "message": "Professional role boundary: Non-lawyer roles should avoid legal strategy, filing choices, and rights advice."
+        }
+      ]
+    },
+    {
+      "answer_preview": "The safest next answer is a missing-information checklist before legal analysis. Posture is Posture unknown. Collect the first 5 missing items, then verify the source cards. Key issue(s): Parental rights and responsibilities, Caregiver, gua",
+      "audience": "caregiver",
+      "audience_label": "Caregiver",
+      "authority_matrix_preview": [
+        {
+          "authority": "19-A M.R.S. section 1653",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "parental_rights_responsibilities",
+          "source_id": "starter_me_19a_1653_best_interest",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "parental_rights_responsibilities",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "parental_rights_responsibilities",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine Probate Court guardianship resources and 19-A M.R.S. family provisions",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "caregiver_guardianship_grandparent",
+          "source_id": "starter_me_caregiver_guardianship",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        },
+        {
+          "authority": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "issue": "caregiver_guardianship_grandparent",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "verification_task": "Resolve source, confirm effective text/form version, and attach citation/quote support."
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "current_law_certified": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "export_metadata": {
+        "default_export": "review_packet",
+        "deterministic_offline": true,
+        "evidence_outputs": [
+          "docs/external-evidence/family_justice_workbench_v205_packet.json",
+          "docs/external-evidence/family_justice_workbench_v205_audit.json",
+          "docs/external-evidence/family_justice_workbench_v205.html",
+          "docs/external-evidence/family_justice_workbench_v205_test_summary.json"
+        ],
+        "export_schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+        "export_version": "2.05.0",
+        "filing_ready": false,
+        "private_matter_data_included": false,
+        "review_required": true,
+        "source_freshness_claim": "none_without_official_registry_verification"
+      },
+      "facts_context_used": false,
+      "filing_readiness_status": {
+        "blocked_by_default": true,
+        "blocker_count": 8,
+        "can_export_for_filing": false,
+        "filing_ready": false,
+        "hard_gates_passed": false,
+        "review_required": true,
+        "status": "review_required_not_filing_ready"
+      },
+      "generated_at": "2026-06-05T00:00:00Z",
+      "issue_labels": [
+        "parental_rights_responsibilities",
+        "caregiver_guardianship_grandparent"
+      ],
+      "legal_caveats": [
+        "Maine Family Law LLM provides legal information and review workflow support, not legal advice. It does not create an attorney-client relationship. Outputs remain review_required and not filing_ready unless official-source, citation, quote-span, fact-support, form-freshness, posture, jurisdiction, and human-review gates all pass.",
+        "Official Maine authority and verified source-registry data outrank model memory, summaries, mirrors, and snippets.",
+        "No current-law certainty is claimed because starter source cards still require official freshness verification.",
+        "Private uploaded matter data must stay outside the source repo and should not train shared models by default."
+      ],
+      "missing_information": [
+        {
+          "category": "baseline",
+          "question": "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand."
+        },
+        {
+          "category": "baseline",
+          "question": "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices."
+        },
+        {
+          "category": "baseline",
+          "question": "Existing orders, official forms, source cards, and documents already available for human review."
+        },
+        {
+          "category": "posture",
+          "question": "What is the procedural posture: new case, temporary order, final order, post-judgment, appeal, or remand?"
+        },
+        {
+          "category": "parental_rights_responsibilities",
+          "question": "Current order status and whether any temporary or final order exists."
+        },
+        {
+          "category": "parental_rights_responsibilities",
+          "question": "Child age, schedule, school, medical needs, safety facts, and each parent's role."
+        },
+        {
+          "category": "parental_rights_responsibilities",
+          "question": "Evidence for each material best-interest factor."
+        },
+        {
+          "category": "caregiver_guardianship_grandparent",
+          "question": "Relationship to the child and whether parents consent or object."
+        },
+        {
+          "category": "caregiver_guardianship_grandparent",
+          "question": "Existing family, probate, PFA, or child-protection orders."
+        },
+        {
+          "category": "caregiver_guardianship_grandparent",
+          "question": "School, medical, and day-to-day authority documents."
+        }
+      ],
+      "next_best_actions": [
+        {
+          "label": "Keep private matter files outside the repo and summarize sensitive facts instead of copying raw records.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Verify every source card against the official Maine registry before relying on a legal claim.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Prepare a reviewer packet with facts, documents, citations, quote spans, and unresolved blockers.",
+          "priority": "1",
+          "reason": "Baseline source-first safety and review workflow."
+        },
+        {
+          "label": "Map each requested parenting term to facts and evidence.",
+          "priority": "4",
+          "reason": "Parental rights and responsibilities"
+        },
+        {
+          "label": "Build a best-interest factor checklist before drafting.",
+          "priority": "5",
+          "reason": "Parental rights and responsibilities"
+        },
+        {
+          "label": "Flag contact restrictions or third-party control language for reviewer attention.",
+          "priority": "6",
+          "reason": "Parental rights and responsibilities"
+        },
+        {
+          "label": "Identify whether the question belongs in family court, probate, or another process.",
+          "priority": "7",
+          "reason": "Caregiver, guardianship, or grandparent question"
+        },
+        {
+          "label": "Collect existing orders and consent documents before drafting.",
+          "priority": "8",
+          "reason": "Caregiver, guardianship, or grandparent question"
+        },
+        {
+          "label": "Ask a lawyer to check caregiver authority and records access.",
+          "priority": "9",
+          "reason": "Caregiver, guardianship, or grandparent question"
+        }
+      ],
+      "plain_language_answer": "The safest next answer is a missing-information checklist before legal analysis. Posture is Posture unknown. Collect the first 5 missing items, then verify the source cards. Key issue(s): Parental rights and responsibilities, Caregiver, guardianship, or grandparent question.",
+      "posture": "unknown",
+      "posture_label": "Posture unknown",
+      "question": "I am a caregiver and need school and medical record access. Is this guardianship, grandparent visitation, or parental rights?",
+      "red_flags": [
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Material best-interest factors need evidence and source-backed analysis.",
+          "flag_id": "best_interest_gap",
+          "label": "Best-interest factor gap",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "Caregiver questions may belong in family court, probate, or another process.",
+          "flag_id": "wrong_forum_risk",
+          "label": "Wrong forum risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "medium"
+        },
+        {
+          "blocks_filing_ready": true,
+          "explanation": "School, medical, therapy, sealed, and minor-child records need privacy review.",
+          "flag_id": "records_privacy_risk",
+          "label": "Records privacy risk",
+          "reviewer_note": "Explain this blocker in the reviewer handoff before any filing decision.",
+          "severity": "high"
+        }
+      ],
+      "requested_output_style": "missing_information",
+      "reviewer_handoff": {
+        "audience": "caregiver",
+        "authority_checklist": [
+          {
+            "source_id": "starter_me_19a_1653_best_interest",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_division_process",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_family_forms",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_caregiver_guardianship",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          },
+          {
+            "source_id": "starter_me_records_privacy",
+            "task": "Verify official source, effective text/form version, citation, and quote support."
+          }
+        ],
+        "claim_checklist": [
+          "Separate legal claims from factual claims.",
+          "Attach evidence or mark unsupported for every material fact.",
+          "Verify quote spans against source text before quoting.",
+          "Check jurisdiction, service, deadlines, and procedural posture."
+        ],
+        "filing_gate_blockers": [
+          "Human legal review has not certified this output.",
+          "Source cards are starter cards and must be resolved against official Maine sources.",
+          "Citation existence, quote-span, and claim-support verification have not passed.",
+          "Official forms, required fields, service, deadline, and posture checks have not passed.",
+          "Procedural posture is unknown.",
+          "Best-interest factor gap: Material best-interest factors need evidence and source-backed analysis.",
+          "Wrong forum risk: Caregiver questions may belong in family court, probate, or another process.",
+          "Records privacy risk: School, medical, therapy, sealed, and minor-child records need privacy review."
+        ],
+        "handoff_type": "family_justice_workbench_review_packet",
+        "human_review_required": true,
+        "issue_labels": [
+          "parental_rights_responsibilities",
+          "caregiver_guardianship_grandparent"
+        ],
+        "missing_documents": [
+          "County/court, docket number if any, and whether the matter is new, temporary, final, post-judgment, appeal, or remand.",
+          "All known dates: service, orders, hearings, deadlines, moves, payments, incidents, and notices.",
+          "Existing orders, official forms, source cards, and documents already available for human review.",
+          "What is the procedural posture: new case, temporary order, final order, post-judgment, appeal, or remand?",
+          "Current order status and whether any temporary or final order exists.",
+          "Child age, schedule, school, medical needs, safety facts, and each parent's role.",
+          "Evidence for each material best-interest factor.",
+          "Relationship to the child and whether parents consent or object.",
+          "Existing family, probate, PFA, or child-protection orders.",
+          "School, medical, and day-to-day authority documents."
+        ],
+        "posture": "unknown",
+        "question": "I am a caregiver and need school and medical record access. Is this guardianship, grandparent visitation, or parental rights?",
+        "red_flags": [
+          "Best-interest factor gap",
+          "Wrong forum risk",
+          "Records privacy risk"
+        ],
+        "reviewer_mode": "authority_first_fail_closed"
+      },
+      "role_specific_pathway": "caregiver authority questions, records boundaries, lawyer handoff",
+      "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+      "source_cards": [
+        {
+          "authority_type": "statute",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "19-A M.R.S. section 1653",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "parental_rights_responsibilities",
+          "registry_note": "Verify the official statute text and effective version before relying on it.",
+          "source_id": "starter_me_19a_1653_best_interest",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Parental rights and best-interest review starter card"
+        },
+        {
+          "authority_type": "official_court_process",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch family division and family matters pages",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "parental_rights_responsibilities",
+          "registry_note": "Resolve against the official Maine Judicial Branch source registry before use.",
+          "source_id": "starter_me_family_division_process",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Maine Judicial Branch family case process starter card"
+        },
+        {
+          "authority_type": "official_form_registry",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Judicial Branch official family forms",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "parental_rights_responsibilities",
+          "registry_note": "Check form revision, packet membership, and required fields before drafting.",
+          "source_id": "starter_me_family_forms",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Official Maine family forms starter card"
+        },
+        {
+          "authority_type": "court_process_and_statute",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine Probate Court guardianship resources and 19-A M.R.S. family provisions",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "caregiver_guardianship_grandparent",
+          "registry_note": "Distinguish parental rights, probate guardianship, and grandparent visitation before advice.",
+          "source_id": "starter_me_caregiver_guardianship",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "Caregiver, guardianship, and grandparent question starter card"
+        },
+        {
+          "authority_type": "privacy_and_evidence_boundary",
+          "can_support_current_law_claim": false,
+          "canonical_citation": "Maine court confidentiality rules, evidence rules, and applicable privacy law",
+          "freshness_status": "must_verify_current_official_source",
+          "jurisdiction": "Maine",
+          "matched_issue": "caregiver_guardianship_grandparent",
+          "registry_note": "Do not upload private records into the repo; verify confidentiality before sharing.",
+          "source_id": "starter_me_records_privacy",
+          "source_status": "starter_card_requires_official_verification",
+          "title": "School, medical, therapy, and confidential records starter card"
+        }
+      ],
+      "urgency_safety_routing": {
+        "emergency_caveat": "",
+        "high_severity_flags": [
+          "best_interest_gap",
+          "records_privacy_risk"
+        ],
+        "safety_routing": false,
+        "urgency": "urgent_review"
+      },
+      "version": "2.05.0",
+      "why_not_filing_ready": [
+        {
+          "category": "human_review",
+          "message": "Human legal review has not certified this output."
+        },
+        {
+          "category": "source_freshness",
+          "message": "Source cards are starter cards and must be resolved against official Maine sources."
+        },
+        {
+          "category": "citation_quote_fact_support",
+          "message": "Citation existence, quote-span, and claim-support verification have not passed."
+        },
+        {
+          "category": "forms_and_procedure",
+          "message": "Official forms, required fields, service, deadline, and posture checks have not passed."
+        },
+        {
+          "category": "posture",
+          "message": "Procedural posture is unknown."
+        },
+        {
+          "category": "red_flag",
+          "message": "Best-interest factor gap: Material best-interest factors need evidence and source-backed analysis."
+        },
+        {
+          "category": "red_flag",
+          "message": "Wrong forum risk: Caregiver questions may belong in family court, probate, or another process."
+        },
+        {
+          "category": "red_flag",
+          "message": "Records privacy risk: School, medical, therapy, sealed, and minor-child records need privacy review."
+        }
+      ]
+    }
+  ],
+  "schema": "maine_family_law_llm.family_justice_workbench.packet.v1",
+  "version": "2.05.0"
+}

@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from legal.product.family_justice_workbench_v205 import build_workbench_packet
+
 from . import __version__
 from .answer import compose_answer
 from .chat_library import expand_query_for_library, public_library, public_missing_information_prompts, public_prompt_packs, public_topics
@@ -45,6 +47,14 @@ class AskRequest(BaseModel):
 class DraftRequest(BaseModel):
     request: str
     mode: str = "checklist"
+
+
+class FamilyJusticeWorkbenchRequest(BaseModel):
+    question: str
+    audience: str = "parent"
+    posture: str = "unknown"
+    facts_context: str = ""
+    requested_output_style: str = "plain_language"
 
 
 if FastAPI is None:  # pragma: no cover
@@ -159,6 +169,16 @@ if FastAPI is not None:
     @app.get("/api/missing-information-prompts")
     def missing_information_prompts() -> list[dict[str, Any]]:
         return public_missing_information_prompts()
+
+    @app.post("/api/family-justice-workbench")
+    def family_justice_workbench(payload: FamilyJusticeWorkbenchRequest) -> dict[str, Any]:
+        return build_workbench_packet(
+            payload.question,
+            audience=payload.audience,
+            posture=payload.posture,
+            facts_context=payload.facts_context,
+            requested_output_style=payload.requested_output_style,
+        )
 
     @app.post("/retrieve")
     def retrieve(payload: QueryRequest) -> dict[str, Any]:

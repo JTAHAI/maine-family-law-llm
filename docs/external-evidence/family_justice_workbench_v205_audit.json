@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "appeal_route_present": true,
+    "filing_ready_blocked": true,
+    "html_markers_present": true,
+    "no_current_law_certainty": true,
+    "packet_schema_present": true,
+    "professional_boundary_present": true,
+    "review_required_default": true,
+    "safety_routes_present": true,
+    "source_cards_present": true
+  },
+  "claims": {
+    "current_law_certified": false,
+    "filing_ready": false,
+    "legal_advice": false,
+    "private_data_packaged": false
+  },
+  "generated_at": "2026-06-05T00:00:00Z",
+  "schema": "maine_family_law_llm.family_justice_workbench.audit.v1",
+  "status": "pass",
+  "version": "2.05.0"
+}

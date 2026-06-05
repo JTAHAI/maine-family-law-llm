@@ -56,6 +56,24 @@ Evidence check:
 python scripts/run-chat-library-evidence.py --require-ready
 ```
 
+## Family Justice Workbench v2.05
+
+The v2.05 Family Justice Workbench adds a deterministic packet builder for parent, caregiver, lawyer, counselor, therapist, and reviewer pathways. It returns source cards, issue labels, posture routing, safety routing, missing-information checklists, next-best actions, red flags, filing-gate blocker explanations, authority matrix preview, and reviewer handoff metadata.
+
+Generate the local evidence/demo page:
+
+```powershell
+python scripts/build-family-justice-workbench-evidence.py --require-ready
+```
+
+Open:
+
+```text
+docs/external-evidence/family_justice_workbench_v205.html
+```
+
+The local API also exposes `POST /api/family-justice-workbench`. Outputs remain legal-information-only, review_required, and not filing_ready. See `docs/family-justice-workbench-v205.md`.
+
 ## For non-technical local testing
 
 ### FOCAF branded local workbench

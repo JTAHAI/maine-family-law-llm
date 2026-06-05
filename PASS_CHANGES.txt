@@ -1,3 +1,10 @@
+## v2.05.0 — Family Justice Workbench polish
+
+- Added a deterministic Family Justice Workbench v2.05 engine with role-specific pathways, source cards, red flags, missing-information checklists, next-best-action planning, authority matrix preview, filing-gate blockers, and reviewer handoff export metadata.
+- Added a local HTML evidence/demo page plus packet, audit, and test-summary evidence generation under `docs/external-evidence/`.
+- Added a local API endpoint at `/api/family-justice-workbench` and focused regression tests for safety routing, professional-boundary behavior, appeal routing, Rule 52/best-interest gaps, non-delegation/contact restrictions, and source/freshness gate behavior.
+- Bumped package metadata to `2.05.0`. Outputs remain legal-information-only, review_required, not filing_ready, not current-law certified, and blocked until official-source verification and human review gates pass.
+
 ## v1.93.0 — Attorney sandbox review kit and Pass 48 pilot prep
 
 - Added a fail-closed attorney sandbox review-kit builder for Pass 48 that creates public/synthetic review queues, onboarding, feedback triage, dashboard, bar-status attestation, and reviewer-instruction templates outside the source repo.

@@ -402,7 +402,21 @@ def verify_quotes(text: str, cards: list[SourceCard]) -> list[dict[str, Any]]:
 
 
 def split_sentences(text: str) -> list[str]:
-    return [p.strip() for p in re.split(r"(?<=[.!?])\s+", normalize_space(text)) if len(p.strip()) >= 12]
+    normalized = normalize_space(text)
+    protected = normalized
+    for pattern in (
+        r"M\.R\.S\.",
+        r"M\.R\. Civ\. P\.",
+        r"M\.R\. App\. P\.",
+        r"M\.R\. Evid\. P\.",
+        r"U\.S\.C\.",
+    ):
+        protected = re.sub(pattern, lambda match: match.group(0).replace(".", "<DOT>"), protected, flags=re.I)
+    return [
+        p.replace("<DOT>", ".").strip()
+        for p in re.split(r"(?<=[.!?])\s+", protected)
+        if len(p.replace("<DOT>", ".").strip()) >= 12
+    ]
 
 
 def classify_claim(sentence: str) -> str:
