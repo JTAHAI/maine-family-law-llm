@@ -102,9 +102,9 @@ def _write_pass26_external_requirements(path: Path) -> None:
 def test_default_ga_pass_evidence_audit_accepts_completed_repo_evidence_passes() -> None:
     report = GAPassEvidenceAuditor(project_root=ROOT).run().as_dict()
     assert report["status"] == "pass"
-    assert report["true_ga_completed_claimed"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
-    assert report["true_ga_remaining"] == 18
-    assert report["audited_completed_passes"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
+    assert report["true_ga_completed_claimed"] == list(range(19, 48))
+    assert report["true_ga_remaining"] == 4
+    assert report["audited_completed_passes"] == list(range(19, 48))
 
 
 def test_completed_true_ga_pass_without_real_external_evidence_is_blocked(tmp_path: Path) -> None:
@@ -349,8 +349,8 @@ def test_ga_pass_evidence_script_outputs_json() -> None:
     assert completed.returncode == 0, completed.stderr
     payload = json.loads(completed.stdout)
     assert payload["status"] == "pass"
-    assert payload["true_ga_remaining"] == 18
-    assert payload["audited_completed_passes"] == [19, 20, 21, 22, 23, 24, 25, 26, 39, 40, 41, 42, 43, 44, 45]
+    assert payload["true_ga_remaining"] == 4
+    assert payload["audited_completed_passes"] == list(range(19, 48))
 
 
 def test_completed_pass50_rejects_signed_report_with_blocked_status(tmp_path: Path) -> None:
@@ -406,4 +406,4 @@ def test_completed_pass26_accepts_source_safe_queue_operations_summary() -> None
     report = GAPassEvidenceAuditor(project_root=ROOT).run().as_dict()
     assert report["status"] == "pass"
     assert 26 in report["audited_completed_passes"]
-    assert report["true_ga_remaining"] == 18
+    assert report["true_ga_remaining"] == 4

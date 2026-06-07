@@ -46,14 +46,14 @@ def test_tracker_blocks_when_completed_list_and_row_status_disagree(tmp_path: Pa
 def test_tracker_blocks_when_row_is_complete_but_completion_list_not_updated(tmp_path: Path) -> None:
     payload = _tracker_payload()
     for row in payload["passes"]:
-        if row["pass"] == 46:
+        if row["pass"] == 48:
             row["status"] = "complete"
     tracker_path = tmp_path / "tracker.json"
     _write_tracker(tracker_path, payload)
 
     report = _report_for(tracker_path)
     assert report["status"] == "blocked"
-    assert 46 in report["completed_passes"]
+    assert 48 in report["completed_passes"]
     assert any("completed_passes_status_mismatch" in warning for warning in report["warnings"])
 
 

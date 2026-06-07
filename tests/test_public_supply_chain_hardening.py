@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from legal.ops import SupplyChainAuditor
@@ -40,3 +41,18 @@ def test_public_readiness_requires_attribution_kit_and_still_passes() -> None:
     assert report.status == "pass"
     assert report.public_source_ready is True
     assert report.production_legal_ready is False
+
+
+def test_public_readiness_ignores_workbench_cache(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[1]
+    cache_dir = root / ".mfl_work" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    (cache_dir / "fixture.metadata.json").write_text('{"token": "not-a-secret-cache"}', encoding="utf-8")
+
+    try:
+        report = PublicRepoReadinessAuditor(project_root=root).audit()
+    finally:
+        shutil.rmtree(root / ".mfl_work", ignore_errors=True)
+
+    assert report.status == "pass"
+    assert not any(".mfl_work" in finding.path for finding in report.findings)

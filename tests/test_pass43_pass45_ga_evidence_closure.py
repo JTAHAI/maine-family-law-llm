@@ -38,12 +38,13 @@ def test_pass43_pass45_split_reports_are_generated_and_counted(tmp_path):
 def test_ga_tracker_now_counts_pass43_44_45_as_complete():
     report = GAPassTracker(project_root=ROOT).report().as_dict()
     assert {43, 44, 45}.issubset(set(report["completed_passes"]))
-    assert report["true_ga_completed"] == 7
-    assert report["true_ga_remaining"] == 26
-    assert report["next_true_ga_pass"] == 19
+    assert report["true_ga_completed"] == 29
+    assert report["true_ga_remaining"] == 4
+    assert report["next_true_ga_pass"] == 48
 
 
 def test_ga_evidence_audit_accepts_repo_pass43_44_45_reports():
     report = GAPassEvidenceAuditor(project_root=ROOT).run().as_dict()
     assert report["status"] == "pass", report
     assert {39, 40, 41, 42, 43, 44, 45}.issubset(set(report["audited_completed_passes"]))
+    assert report["true_ga_remaining"] == 4

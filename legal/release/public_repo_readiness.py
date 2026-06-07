@@ -85,6 +85,7 @@ class PublicRepoReadinessAuditor:
             ".ruff_cache",
             ".venv",
             "venv",
+            ".mfl_work",
             "__pycache__",
             "node_modules",
             "dist",

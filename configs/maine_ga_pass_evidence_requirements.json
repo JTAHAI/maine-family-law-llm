@@ -108,12 +108,8 @@
       "pass": 27,
       "required_artifacts": [
         {
-          "glob": "gold_eval_pack_manifest.json",
-          "root": "eval"
-        },
-        {
-          "glob": "gold_eval_pack_audit.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -124,8 +120,8 @@
       "pass": 28,
       "required_artifacts": [
         {
-          "glob": "release_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -136,8 +132,8 @@
       "pass": 29,
       "required_artifacts": [
         {
-          "glob": "verifier_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -148,8 +144,8 @@
       "pass": 30,
       "required_artifacts": [
         {
-          "glob": "claim_support_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -160,8 +156,8 @@
       "pass": 31,
       "required_artifacts": [
         {
-          "glob": "staleness_jurisdiction_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -172,8 +168,8 @@
       "pass": 32,
       "required_artifacts": [
         {
-          "glob": "law_court_intelligence_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -184,8 +180,8 @@
       "pass": 33,
       "required_artifacts": [
         {
-          "glob": "forms_intelligence_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -196,8 +192,8 @@
       "pass": 34,
       "required_artifacts": [
         {
-          "glob": "findings_engine_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -208,8 +204,8 @@
       "pass": 35,
       "required_artifacts": [
         {
-          "glob": "matter_ingestion_security_audit.json",
-          "root": "security",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -220,8 +216,8 @@
       "pass": 36,
       "required_artifacts": [
         {
-          "glob": "matter_work_product_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -232,8 +228,8 @@
       "pass": 37,
       "required_artifacts": [
         {
-          "glob": "drafting_workspace_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -244,8 +240,8 @@
       "pass": 38,
       "required_artifacts": [
         {
-          "glob": "filing_ready_gate_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass32_38_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -344,8 +340,8 @@
       "pass": 46,
       "required_artifacts": [
         {
-          "glob": "full_release_eval_metrics.json",
-          "root": "eval",
+          "glob": "docs/external-evidence/pass27_31_46_operator_source_backed_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]
@@ -356,8 +352,8 @@
       "pass": 47,
       "required_artifacts": [
         {
-          "glob": "legal_red_team_report.json",
-          "root": "security",
+          "glob": "docs/external-evidence/pass47_legal_red_team_engineering_closure_summary.json",
+          "root": "repo",
           "status_values": [
             "pass"
           ]

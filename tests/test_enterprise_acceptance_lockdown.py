@@ -47,14 +47,25 @@ def test_release_lockfile_excludes_runtime_external_artifacts(tmp_path: Path) ->
     shutil.copytree(ROOT, repo, ignore=shutil.ignore_patterns(".pytest_cache", "__pycache__"))
     (repo / "runtime").mkdir()
     (repo / "runtime" / "private.db").write_text("runtime database", encoding="utf-8")
+    (repo / ".mfl_work" / "cache").mkdir(parents=True, exist_ok=True)
+    (repo / ".mfl_work" / "cache" / "fixture.metadata.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
     (repo / "official_authority_store").mkdir()
     (repo / "official_authority_store" / "source_manifest.json").write_text("[]", encoding="utf-8")
+    (repo / "docs" / "sample-evidence" / "source_release_lock.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
 
     lock = ReleaseLockfileBuilder(repo).build()
     paths = {item["path"] for item in lock.artifacts}
 
     assert "runtime/private.db" not in paths
+    assert ".mfl_work/cache/fixture.metadata.json" not in paths
     assert "official_authority_store/source_manifest.json" not in paths
+    assert "docs/sample-evidence/source_release_lock.json" not in paths
     assert "PASS_CHANGES.txt" in paths
 
 

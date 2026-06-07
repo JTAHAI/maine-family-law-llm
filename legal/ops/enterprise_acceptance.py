@@ -102,6 +102,7 @@ class EnterpriseAcceptanceAuditor:
             ".ruff_cache",
             ".venv",
             "venv",
+            ".mfl_work",
             "__pycache__",
             "node_modules",
             "dist",
@@ -280,6 +281,7 @@ class ReleaseLockfileBuilder:
         ".pytest_cache",
         ".ruff_cache",
         ".venv",
+        ".mfl_work",
         "__pycache__",
         "node_modules",
         "dist",
@@ -314,7 +316,7 @@ class ReleaseLockfileBuilder:
                 continue
             rel = path.relative_to(self.project_root)
             rel_posix = rel.as_posix()
-            if rel_posix in self.excluded_files:
+            if rel_posix in self.excluded_files or path.name in self.excluded_files:
                 continue
             if any(part in self.excluded_parts for part in rel.parts):
                 continue

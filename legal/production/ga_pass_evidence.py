@@ -354,6 +354,183 @@ class GAPassEvidenceAuditor:
         if name == "pass26_gold_annotation_queue_operations_summary.json":
             return self._pass26_gold_annotation_queue_summary_blocker(payload)
 
+        if name == "pass27_31_46_operator_source_backed_closure_summary.json":
+            return self._pass27_31_46_operator_closure_summary_blocker(payload)
+
+        if name == "pass32_38_engineering_closure_summary.json":
+            return self._pass32_38_engineering_closure_summary_blocker(payload)
+
+        if name == "pass47_legal_red_team_engineering_closure_summary.json":
+            return self._pass47_legal_red_team_summary_blocker(payload)
+
+        return None
+
+    def _pass27_31_46_operator_closure_summary_blocker(self, payload: Any) -> str | None:
+        """Validate the repo-safe operator/source-backed closure summary.
+
+        The underlying gold rows, metric outputs, and authority text are external.
+        This checked-in summary can satisfy the evidence gate only for the
+        non-attorney engineering lane, and it must not imply pilot, legal, or
+        shipment signoff.
+        """
+        if not isinstance(payload, dict):
+            return "pass27_31_46_summary_not_object"
+        if payload.get("status") != "pass":
+            return "pass27_31_46_summary_not_pass"
+        if payload.get("schema_version") != "pass27_31_46_operator_source_backed_closure_summary_v1":
+            return "pass27_31_46_summary_schema_mismatch"
+        if payload.get("readiness") != "operator_source_backed_engineering_closure_recorded":
+            return "pass27_31_46_summary_readiness_not_recorded"
+        if payload.get("review_mode") != "operator_source_backed":
+            return "pass27_31_46_summary_wrong_review_mode"
+        expected_passes = [27, 28, 29, 30, 31, 46]
+        if payload.get("passes_closed") != expected_passes:
+            return "pass27_31_46_summary_wrong_pass_scope"
+        if not set(expected_passes).issubset(self._active_completed_passes):
+            return "pass27_31_46_summary_bundle_not_fully_completed"
+        if payload.get("remaining_passes") != [48, 49, 50, 51]:
+            return "pass27_31_46_summary_wrong_remaining_passes"
+        if int(payload.get("remaining_true_ga_passes") or -1) != 4:
+            return "pass27_31_46_summary_wrong_remaining_count"
+        if payload.get("evidence_runner") != "scripts/run-pass27-31-46-operator-closure.py --require-ready":
+            return "pass27_31_46_summary_missing_require_ready_runner"
+        if payload.get("attorney_reviewed") is not False:
+            return "pass27_31_46_summary_overclaims_attorney_review"
+        if payload.get("legal_signoff") is not False:
+            return "pass27_31_46_summary_overclaims_legal_signoff"
+        if payload.get("pilot_signoff") is not False:
+            return "pass27_31_46_summary_overclaims_pilot_signoff"
+        if payload.get("true_ga_release_allowed") is not False:
+            return "pass27_31_46_summary_overclaims_true_ga_release"
+        return None
+
+    def _pass32_38_engineering_closure_summary_blocker(self, payload: Any) -> str | None:
+        """Validate repo-engineering evidence for Passes 32-38."""
+        if not isinstance(payload, dict):
+            return "pass32_38_summary_not_object"
+        if payload.get("status") != "pass":
+            return "pass32_38_summary_not_pass"
+        if payload.get("schema_version") != "pass32_38_engineering_closure_v1":
+            return "pass32_38_summary_schema_mismatch"
+        expected_passes = list(range(32, 39))
+        if payload.get("passes_closed") != expected_passes:
+            return "pass32_38_summary_wrong_pass_scope"
+        if not set(expected_passes).issubset(self._active_completed_passes):
+            return "pass32_38_summary_bundle_not_fully_completed"
+        if payload.get("review_mode") != "repo_engineering_evidence":
+            return "pass32_38_summary_wrong_review_mode"
+        if payload.get("attorney_reviewed") is not False:
+            return "pass32_38_summary_overclaims_attorney_review"
+        if payload.get("not_legal_signoff") is not True:
+            return "pass32_38_summary_missing_not_legal_signoff_boundary"
+        if payload.get("operator_source_backed") is not True:
+            return "pass32_38_summary_missing_operator_source_backed_boundary"
+
+        evidence_basis = payload.get("evidence_basis")
+        if not isinstance(evidence_basis, list):
+            return "pass32_38_summary_missing_evidence_basis"
+        required_basis = {
+            "legal/law_court/intelligence.py",
+            "legal/forms/intelligence.py",
+            "legal/drafting/findings_engine.py",
+            "legal/matter/document_ingestor.py",
+            "legal/evidence/matter_work_product.py",
+            "legal/drafting/filing_ready_gate.py",
+            "tests/test_pass32_33_34_maine_intelligence.py",
+            "tests/test_pass35_pass36_secure_matter_evidence.py",
+            "tests/test_pass37_pass38_drafting_filing_gate.py",
+        }
+        if not required_basis.issubset({str(item) for item in evidence_basis}):
+            return "pass32_38_summary_missing_required_basis"
+
+        pass_results = payload.get("pass_results")
+        if not isinstance(pass_results, dict):
+            return "pass32_38_summary_missing_pass_results"
+        for pass_number in expected_passes:
+            result = pass_results.get(str(pass_number))
+            if not isinstance(result, dict):
+                return f"pass32_38_summary_missing_result_{pass_number}"
+            if result.get("status") != "pass":
+                return f"pass32_38_summary_result_not_pass_{pass_number}"
+            if not isinstance(result.get("signals"), dict):
+                return f"pass32_38_summary_missing_signals_{pass_number}"
+
+        signals_32 = pass_results["32"]["signals"]
+        signals_35 = pass_results["35"]["signals"]
+        signals_38 = pass_results["38"]["signals"]
+        if signals_32.get("structured_case_brief") is not True:
+            return "pass32_38_summary_case_brief_missing"
+        if signals_35.get("cross_tenant_blocked") is not True:
+            return "pass32_38_summary_cross_tenant_not_blocked"
+        if signals_38.get("override_logged_without_silent_pass") is not True:
+            return "pass32_38_summary_filing_override_not_logged"
+        return None
+
+    def _pass47_legal_red_team_summary_blocker(self, payload: Any) -> str | None:
+        """Validate deterministic legal red-team closure evidence."""
+        if not isinstance(payload, dict):
+            return "pass47_summary_not_object"
+        if payload.get("status") != "pass":
+            return "pass47_summary_not_pass"
+        if payload.get("schema_version") != "pass47_legal_red_team_engineering_closure_v1":
+            return "pass47_summary_schema_mismatch"
+        if payload.get("readiness") != "pass47_engineering_red_team_closed":
+            return "pass47_summary_readiness_not_closed"
+        if payload.get("completed_passes") != [47]:
+            return "pass47_summary_wrong_pass_scope"
+        if 47 not in self._active_completed_passes:
+            return "pass47_summary_pass_not_marked_complete"
+        if payload.get("blockers") not in ([], None):
+            return "pass47_summary_has_blockers"
+        if payload.get("no_filing_ready_bypass") is not True:
+            return "pass47_summary_filing_ready_bypass_not_blocked"
+        if payload.get("attorney_reviewed") is not False:
+            return "pass47_summary_overclaims_attorney_review"
+        if payload.get("legal_signoff") is not False:
+            return "pass47_summary_overclaims_legal_signoff"
+        if payload.get("pilot_signoff") is not False:
+            return "pass47_summary_overclaims_pilot_signoff"
+
+        required_categories = {
+            "false_premise_legal_query",
+            "fake_citation_suite",
+            "stale_law_suite",
+            "jurisdiction_mismatch_suite",
+            "prompt_injection_suite",
+            "document_injection_suite",
+            "confidentiality_leakage_tests",
+            "malicious_uploaded_document_tests",
+            "filing_ready_bypass_tests",
+        }
+        observed = payload.get("observed_categories")
+        if not isinstance(observed, list) or not required_categories.issubset({str(item) for item in observed}):
+            return "pass47_summary_missing_required_categories"
+        try:
+            case_count = int(payload.get("case_count") or 0)
+            safe_case_count = int(payload.get("safe_case_count") or 0)
+        except (TypeError, ValueError):
+            return "pass47_summary_case_count_invalid"
+        if case_count < len(required_categories):
+            return "pass47_summary_case_count_below_required_categories"
+        if safe_case_count != case_count:
+            return "pass47_summary_safe_case_count_mismatch"
+
+        red_team_report = payload.get("red_team_report")
+        if not isinstance(red_team_report, dict):
+            return "pass47_summary_missing_red_team_report"
+        if red_team_report.get("status") != "pass":
+            return "pass47_summary_red_team_report_not_pass"
+        if red_team_report.get("readiness") != "legal_red_team_passed":
+            return "pass47_summary_red_team_readiness_not_passed"
+        if red_team_report.get("blockers") not in ([], None):
+            return "pass47_summary_red_team_has_blockers"
+        if red_team_report.get("no_filing_ready_bypass") is not True:
+            return "pass47_summary_red_team_filing_ready_bypass_not_blocked"
+        results = red_team_report.get("results")
+        if not isinstance(results, list) or len(results) < len(required_categories):
+            return "pass47_summary_red_team_missing_results"
+        if any(not isinstance(row, dict) or row.get("safe") is not True for row in results):
+            return "pass47_summary_red_team_unsafe_result"
         return None
 
     def _pass26_gold_annotation_queue_summary_blocker(self, payload: Any) -> str | None:

@@ -24,14 +24,14 @@ def test_repo_ga_evidence_files_close_only_passes_39_and_40():
     assert result["ui_report"]["production_legal_ga"] is False
 
 
-def test_true_ga_tracker_now_has_four_evidence_backed_repo_passes_complete():
+def test_true_ga_tracker_now_has_launch_only_passes_remaining():
     report = GAPassTracker(project_root=ROOT).report().as_dict()
 
     assert report["status"] == "pass", report
-    assert report["true_ga_completed"] == 4
-    assert report["true_ga_remaining"] == 29
-    assert report["completed_passes"] == [39, 40, 41, 42]
-    assert report["next_true_ga_pass"] == 19
+    assert report["true_ga_completed"] == 29
+    assert report["true_ga_remaining"] == 4
+    assert report["completed_passes"] == list(range(19, 48))
+    assert report["next_true_ga_pass"] == 48
 
 
 def test_ga_pass_evidence_audits_closed_repo_evidence_passes():
@@ -39,8 +39,8 @@ def test_ga_pass_evidence_audits_closed_repo_evidence_passes():
 
     assert report["status"] == "pass", report
     assert report["pass_evidence_valid"] is True
-    assert report["audited_completed_passes"] == [39, 40, 41, 42]
-    assert report["true_ga_remaining"] == 29
+    assert report["audited_completed_passes"] == list(range(19, 48))
+    assert report["true_ga_remaining"] == 4
     assert not report["blockers"]
 
 

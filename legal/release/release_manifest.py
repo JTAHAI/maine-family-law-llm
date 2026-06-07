@@ -10,6 +10,7 @@ PACKAGING_EXCLUDE_DIRS = {
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".mfl_work",
     "__pycache__",
     "dist",
     "node_modules",

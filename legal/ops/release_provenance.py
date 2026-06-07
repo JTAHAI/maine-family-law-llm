@@ -52,6 +52,7 @@ class ReleaseProvenanceBuilder:
         ".pytest_cache",
         ".ruff_cache",
         ".venv",
+        ".mfl_work",
         "__pycache__",
         "node_modules",
         "dist",
