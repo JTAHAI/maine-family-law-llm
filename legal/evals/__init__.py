@@ -27,7 +27,9 @@ from legal.evals.release_measurements import (
     required_external_metric_names,
 )
 from legal.evals.conversation_eval import ConversationEvalCase, ConversationEvalReport, ConversationEvalRunner
+from legal.evals.conversation_quality_metrics import ConversationQualityRegressionReport, ConversationQualityRegressionRunner
 from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalReport, RetrievalSmokeEvalRunner
+from legal.evals.user_journey_eval import UserJourneyCase, UserJourneyEvalReport, UserJourneyEvalRunner
 
 __all__ = [
     "build_passing_fixture_metrics",
@@ -37,6 +39,8 @@ __all__ = [
     "ConversationEvalCase",
     "ConversationEvalReport",
     "ConversationEvalRunner",
+    "ConversationQualityRegressionReport",
+    "ConversationQualityRegressionRunner",
     "VerifierMetricReport",
     "StalenessJurisdictionMetricReport",
     "StalenessJurisdictionMetricRunner",
@@ -62,4 +66,7 @@ __all__ = [
     "RetrievalEvalCase",
     "RetrievalSmokeEvalReport",
     "RetrievalSmokeEvalRunner",
+    "UserJourneyCase",
+    "UserJourneyEvalReport",
+    "UserJourneyEvalRunner",
 ]

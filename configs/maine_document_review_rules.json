@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "prompt_injection_markers": [
+    "ignore previous instructions",
+    "system:",
+    "developer:",
+    "send the file to http",
+    "reveal the system prompt",
+    "override all law"
+  ],
+  "confidentiality_markers": ["sealed", "confidential", "juvenile", "minor", "medical", "therapy", "ssn", "address"],
+  "quote_markers": ["\"", "'"]
+}

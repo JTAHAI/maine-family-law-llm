@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Internal product-polish conversation passes that prepare reviewer outreach without reducing the true GA pass count.",
+  "passes": [
+    {"pass": "47I", "title": "Conversation state machine and session continuity"},
+    {"pass": "47J", "title": "End-to-end guided workflow router"},
+    {"pass": "47K", "title": "Conversational answer quality v2"},
+    {"pass": "47L", "title": "Drafting conversation v2"},
+    {"pass": "47M", "title": "Document-review conversation v2"},
+    {"pass": "47N", "title": "Human review queue and reviewer-facing workflow"},
+    {"pass": "47O", "title": "Outreach-readiness materials without sending outreach"},
+    {"pass": "47P", "title": "Reviewer demo scenarios and golden user journeys"},
+    {"pass": "47Q", "title": "UI/workbench polish adapters"},
+    {"pass": "47R", "title": "Expanded eval regression suite"},
+    {"pass": "47S", "title": "Documentation refresh and public-facing repo polish"},
+    {"pass": "47T", "title": "Final polish, cleanup, repository hygiene, and commit readiness"}
+  ],
+  "required_summary_artifact": "docs/external-evidence/pass47i_47t_product_polish_summary.json",
+  "true_ga_boundary": {
+    "does_not_reduce_true_ga_count": true,
+    "remaining_true_ga_passes": [48, 49, 50, 51],
+    "emails_sent": false,
+    "outreach_complete": false,
+    "attorney_reviewed": false,
+    "production_legal_ready": false
+  }
+}

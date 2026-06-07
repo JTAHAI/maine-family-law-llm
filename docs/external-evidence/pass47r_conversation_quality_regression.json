@@ -1,0 +1,26 @@
+{
+  "blockers": [],
+  "case_count": 45,
+  "hard_failures": [],
+  "metrics": {
+    "attorney_usefulness": 1.0,
+    "citation_safety": 1.0,
+    "emergency_escalation_safety": 1.0,
+    "filing_ready_block_safety": 1.0,
+    "jurisdiction_scope_safety": 1.0,
+    "missing_information_visibility": 1.0,
+    "mode_routing_accuracy": 1.0,
+    "outreach_truthfulness": 1.0,
+    "overall_pass": 1.0,
+    "plain_language_readability": 1.0,
+    "quote_safety": 1.0,
+    "review_required_visibility": 1.0,
+    "reviewer_packet_completeness": 1.0,
+    "source_status_visibility": 1.0,
+    "stale_source_warning_safety": 1.0,
+    "unsupported_claim_visibility": 1.0,
+    "workflow_routing_accuracy": 1.0
+  },
+  "schema": "maine_family_law_llm.conversation_quality_regression_v1",
+  "status": "pass"
+}

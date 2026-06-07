@@ -147,6 +147,13 @@ def load_json_artifact(path: Path) -> dict:
         return {"status": "fail", "error": str(exc), "path": str(path)}
 
 
+def load_json_stdout(result: dict) -> dict:
+    try:
+        return json.loads(result.get("stdout") or "{}")
+    except Exception as exc:  # pragma: no cover - defensive subprocess stdout
+        return {"status": "fail", "error": str(exc), "command": result.get("command")}
+
+
 
 
 def build_offline_manifest_fixture(data_root: Path) -> Path:
@@ -726,6 +733,37 @@ def main() -> int:
     conversation_pilot_readiness = load_json_artifact(
         EXTERNAL_EVIDENCE_DIR / "pass47a_47h_conversation_pilot_readiness_summary.json"
     )
+    user_journey_result = run_command(
+        [sys.executable, "scripts/run-user-journey-evals.py"],
+        timeout=180,
+    )
+    user_journey_eval = load_json_artifact(
+        EXTERNAL_EVIDENCE_DIR / "pass47p_user_journey_eval_report.json"
+    )
+    conversation_quality_result = run_command(
+        [sys.executable, "scripts/run-conversation-quality-regression.py"],
+        timeout=180,
+    )
+    conversation_quality_regression = load_json_artifact(
+        EXTERNAL_EVIDENCE_DIR / "pass47r_conversation_quality_regression.json"
+    )
+    product_polish_result = run_command(
+        [sys.executable, "scripts/run-conversation-product-polish-evidence.py"],
+        timeout=300,
+    )
+    product_polish_readiness = load_json_artifact(
+        EXTERNAL_EVIDENCE_DIR / "pass47i_47t_product_polish_summary.json"
+    )
+    outreach_truthfulness_result = run_command(
+        [sys.executable, "scripts/check-outreach-truthfulness.py"],
+        timeout=60,
+    )
+    outreach_truthfulness = load_json_stdout(outreach_truthfulness_result)
+    doc_unsafe_claims_result = run_command(
+        [sys.executable, "scripts/check-doc-unsafe-claims.py"],
+        timeout=60,
+    )
+    doc_unsafe_claims = load_json_stdout(doc_unsafe_claims_result)
     orchestrator_result = EvaluationOrchestrator(ROOT).run_all()
     pass22_25_smoke = run_pass22_25_offline_smoke()
     pass26_28_smoke = run_pass26_28_offline_smoke()
@@ -862,6 +900,16 @@ def main() -> int:
             "conversation_eval_command": conversation_eval_result,
             "conversation_pilot_readiness": conversation_pilot_readiness,
             "conversation_pilot_readiness_command": conversation_pilot_result,
+            "user_journey_eval": user_journey_eval,
+            "user_journey_eval_command": user_journey_result,
+            "conversation_quality_regression": conversation_quality_regression,
+            "conversation_quality_regression_command": conversation_quality_result,
+            "product_polish_readiness": product_polish_readiness,
+            "product_polish_readiness_command": product_polish_result,
+            "outreach_truthfulness": outreach_truthfulness,
+            "outreach_truthfulness_command": outreach_truthfulness_result,
+            "doc_unsafe_claims": doc_unsafe_claims,
+            "doc_unsafe_claims_command": doc_unsafe_claims_result,
             "orchestrator": orchestrator_result,
             "pass22_25_offline_authority_retrieval_smoke": pass22_25_smoke,
             "pass26_28_offline_gold_eval_release_metrics_smoke": pass26_28_smoke,
@@ -900,6 +948,15 @@ def main() -> int:
         if pytest_result["returncode"] == 0
         and conversation_eval.get("status") == "pass"
         and conversation_pilot_readiness.get("status") == "pass"
+        and user_journey_eval.get("status") == "pass"
+        and conversation_quality_regression.get("status") == "pass"
+        and product_polish_readiness.get("status") == "pass"
+        and product_polish_readiness.get("production_legal_ready") is False
+        and outreach_truthfulness.get("status") == "pass"
+        and outreach_truthfulness.get("emails_sent") is False
+        and outreach_truthfulness.get("attorney_reviewed") is False
+        and doc_unsafe_claims.get("status") == "pass"
+        and doc_unsafe_claims.get("production_legal_ready") is False
         and orchestrator_result["status"] == "pass"
         and pass22_25_smoke["status"] == "pass"
         and pass26_28_smoke["status"] == "pass"
@@ -932,7 +989,10 @@ def main() -> int:
         and pass50_51_evidence.get("status") == "pass"
         and maine_intelligence_evidence.get("status") == "pass"
         else "fail",
-        "completed_passes": [43, 44, 45, 46, 47, 48, 49, 50, 51],
+        "implemented_foundation_passes": [43, 44, 45, 46, 47, 48, 49, 50, 51],
+        "true_ga_completed_passes": [43, 44, 45, 46, 47],
+        "true_ga_remaining_passes": [48, 49, 50, 51],
+        "does_not_mark_passes_48_51_complete": True,
         "post_ga_hardening_passes": [
             "public_repo_readiness",
             "enterprise_preflight",

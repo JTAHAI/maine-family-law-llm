@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "ordered_sections": [
+    "direct_answer_or_status",
+    "source_status",
+    "maine_authority_support",
+    "missing_or_unverified",
+    "red_flags",
+    "plain_language_meaning",
+    "what_this_does_not_mean",
+    "review_and_filing_status",
+    "next_steps"
+  ],
+  "blocked_phrases": [
+    "you will win",
+    "guaranteed",
+    "definitely",
+    "file this as-is",
+    "no attorney review needed"
+  ],
+  "current_law_requires_source_verified": true
+}

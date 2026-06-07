@@ -38,6 +38,16 @@ ME_FM_LLM_venv/
 .local_server.pid
 .env
 .env.*
+*.log
+*.tmp
+*.bak
+screenshots/
+local-screenshots/
+docs/outreach/sent/
+docs/outreach/private/
+docs/outreach/*live*.csv
+docs/outreach/*real*.csv
+docs/outreach/*sent*.eml
 
 # OS/editor
 .DS_Store

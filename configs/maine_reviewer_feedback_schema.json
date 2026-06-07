@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "required_fields": [
+    "reviewer_role",
+    "attorney_licensed_in_maine",
+    "supervised_by_attorney_faculty",
+    "reviewed_sources",
+    "reviewed_citations",
+    "reviewed_plain_language",
+    "legal_accuracy_rating",
+    "citation_accuracy_rating",
+    "usability_rating",
+    "safety_concern_rating",
+    "blocking_issue",
+    "comments",
+    "recommended_eval_case",
+    "may_count_for_attorney_review",
+    "evidence_file_path"
+  ],
+  "rating_min": 1,
+  "rating_max": 5,
+  "may_count_for_attorney_review_requires": [
+    "attorney_licensed_in_maine",
+    "reviewed_sources",
+    "reviewed_citations",
+    "evidence_file_path"
+  ]
+}

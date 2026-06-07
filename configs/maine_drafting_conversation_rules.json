@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "supported_draft_types": {
+    "motion_to_modify": ["existing_orders", "changed_circumstances", "requested_relief"],
+    "motion_to_enforce": ["existing_orders", "violation_facts", "requested_relief"],
+    "motion_for_contempt": ["existing_orders", "violation_facts", "willfulness_facts", "requested_relief"],
+    "affidavit": ["facts", "declarant"],
+    "proposed_order": ["requested_relief", "supporting_authority"],
+    "proposed_findings": ["facts", "evidence_map"],
+    "client_letter": ["client_question", "reviewed_sources"],
+    "attorney_research_memo": ["issue", "source_cards"],
+    "plain_language_client_explainer": ["question", "source_cards"],
+    "authority_matrix_request": ["issue", "source_cards"],
+    "appellate_issue_spotting_memo": ["order_text", "deadline_details", "record_status"]
+  },
+  "bypass_phrases": ["make it filing ready anyway", "file this as-is", "no attorney review needed"],
+  "review_required_default": true
+}

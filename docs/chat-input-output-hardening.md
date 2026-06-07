@@ -1,6 +1,6 @@
 # Chat input/output hardening
 
-Passes 47A-47H add the internal conversation layer that prepares the Maine family-law system for attorney sandbox outreach without claiming true GA or external legal review.
+Passes 47A-47H add the internal conversation layer that prepares the Maine family-law system for attorney sandbox outreach without claiming true GA or external legal review. Passes 47I-47T add product-polish, workflow, reviewer, outreach-template, demo-journey, regression, and repo-hygiene layers on the same boundary.
 
 ## What changed
 
@@ -13,6 +13,10 @@ Passes 47A-47H add the internal conversation layer that prepares the Maine famil
 - Internal pilot-readiness evidence artifacts:
   - `docs/external-evidence/pass47e_conversation_eval_report.json`
   - `docs/external-evidence/pass47a_47h_conversation_pilot_readiness_summary.json`
+- Internal product-polish evidence artifacts:
+  - `docs/external-evidence/pass47p_user_journey_eval_report.json`
+  - `docs/external-evidence/pass47r_conversation_quality_regression.json`
+  - `docs/external-evidence/pass47i_47t_product_polish_summary.json`
 
 ## What these passes improve
 
@@ -31,3 +35,4 @@ These are internal engineering and product-readiness passes only.
 - They do not constitute legal, security, product, or ops signoff.
 - They do not reduce the true GA remaining count.
 - They prepare the product for future attorney sandbox outreach.
+- They keep outreach emails unsent and attorney review unclaimed.

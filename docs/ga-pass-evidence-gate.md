@@ -4,6 +4,8 @@ The formal GA roadmap count must not drop just because repo scaffolding, fixture
 
 Internal conversation pilot-readiness Passes 47A-47H are audited separately. They live in `configs/maine_internal_conversation_passes.json` and emit `docs/external-evidence/pass47a_47h_conversation_pilot_readiness_summary.json`, but they do not reduce the true GA count and they cannot satisfy Passes 48-51.
 
+Internal product-polish Passes 47I-47T are also audited separately. They live in `configs/maine_internal_product_polish_passes.json` and emit `docs/external-evidence/pass47i_47t_product_polish_summary.json`, but they do not reduce the true GA count, send outreach, create attorney-review evidence, or satisfy Passes 48-51.
+
 Normal public-repo state is expected to pass with zero completed true-GA passes:
 
 ```powershell
@@ -27,3 +29,5 @@ The conversation pilot-readiness summary is intentionally boundary-heavy:
 - `does_not_reduce_true_ga_count` must remain `true`
 - `attorney_reviewed`, `legal_signoff`, `security_signoff`, `product_signoff`, `ops_signoff`, `pilot_signoff`, `ga_release_candidate_complete`, and `ga_shipped` must remain `false` unless real external evidence exists
 - Passes 48-51 stay open until external attorney sandbox, real-matter pilot, release-candidate, and shipment evidence are attached
+
+The product-polish summary must likewise keep `emails_sent`, `outreach_complete`, `attorney_reviewed`, `ga_shipped`, and `production_legal_ready` false unless real external evidence exists and the existing gates verify it.

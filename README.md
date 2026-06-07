@@ -198,9 +198,13 @@ Source metadata lives in `data/sources/manifest.seed.json`. The seed manifest is
 
 ## Current status
 
-**Post-GA reality review foundation added:** all numbered pass source controls through Pass 51 are present, and the repo now includes a post-GA review/build-path audit that explicitly separates source-code foundation completion from real production GA readiness.
+This repository is ready for local testing and reviewer-outreach preparation. It is not true legal GA, not legal advice, and not filing-ready.
 
-This repository is still only the source release package. External live Maine authority snapshots, parsed authority builds, retrieval indexes, attorney-reviewed gold eval packs, production matter stores, model weights, runtime databases, pilot evidence, security evidence, and owner signoff evidence are referenced by manifests and must remain outside the source ZIP. Fixture artifact references and fixture signoffs are not production evidence.
+Internal conversation, workflow, reviewer-packet, outreach-template, and demo-journey foundations are present. External live Maine authority snapshots, parsed authority builds, retrieval indexes, attorney-reviewed gold eval packs, production matter stores, model weights, runtime databases, real pilot evidence, security evidence, and owner signoff evidence must remain outside the source ZIP unless a source-safe redacted summary is intentionally accepted by the gates.
+
+Passes 48-51 remain open unless the existing evidence gates verify real external attorney sandbox, limited real-matter pilot, release-candidate, and shipment evidence.
+
+Internal product-polish Passes 47I-47T add session continuity, guided workflow routing, drafting/document-review conversations, reviewer packets, unsent outreach templates, demo user journeys, UI/service adapters, conversation quality regression, doc-safety checks, and repo cleanup checks. They are internal preparation only and do not reduce the true GA count.
 
 
 ## Enterprise hardening / local resource collection
@@ -225,7 +229,34 @@ The resource catalog lives at `configs/maine_enterprise_resource_catalog.json` a
 
 ## Remaining numbered passes
 
-All numbered implementation passes through **Pass 51 — GA shipped** now have source-code controls/scaffolding in this repo. The post-GA review audit reports that real production GA remains blocked until live official Maine authority, attorney-reviewed eval evidence, measured release metrics, pilot evidence, security/governance evidence, and signed security/legal/product/ops approvals are supplied to the release gates.
+The source-code foundations are broad, but real production GA remains blocked until live official Maine authority, attorney-reviewed eval evidence, measured release metrics, pilot evidence, security/governance evidence, and signed security/legal/product/ops approvals are supplied to the release gates. Passes 48-51 remain the open true-GA gates.
+
+## How reviewers can help
+
+Reviewers can check whether workflows are understandable, source and uncertainty status stay visible, citations and quote spans are handled honestly, and filing-ready blockers cannot be bypassed.
+
+## What evidence would count
+
+Real evidence would include actual attorney sandbox feedback, signed reviewer artifacts, real pilot reports, measured release metrics, and accountable legal/security/product/ops signoffs.
+
+## What evidence does not count
+
+Templates, sample evidence, generated fixture reports, unsent emails, demo journeys, and internal pass summaries do not count as attorney review or pilot evidence.
+
+## Running local checks
+
+```powershell
+python -m pytest
+python scripts\run-quality-checks.py
+python scripts\run-conversation-evals.py
+python scripts\run-conversation-pilot-readiness-evidence.py
+python scripts\run-user-journey-evals.py
+python scripts\run-conversation-quality-regression.py
+python scripts\run-conversation-product-polish-evidence.py
+python scripts\check-outreach-truthfulness.py
+python scripts\check-doc-unsafe-claims.py
+python scripts\doctor-local-repo.py --repo-root D:\dev\maine-family-law-llm_git --json
+```
 
 
 ## Post-GA repo review / build path

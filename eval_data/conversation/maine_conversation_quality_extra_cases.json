@@ -1,0 +1,10 @@
+[
+  {"case_id": "quality_unknown_start", "audience": "unknown", "task_type": "query", "input_text": "I do not know where to start with family court."},
+  {"case_id": "quality_attorney_authority_matrix", "audience": "attorney", "task_type": "research", "input_text": "Build an authority matrix for parental rights and contact."},
+  {"case_id": "quality_paralegal_timeline", "audience": "paralegal", "task_type": "timeline", "input_text": "Build a timeline from school records and messages."},
+  {"case_id": "quality_advocate_safety", "audience": "advocate", "task_type": "query", "input_text": "The client is unsafe and has confidential address concerns."},
+  {"case_id": "quality_quote_missing", "audience": "attorney", "task_type": "quote_verification", "input_text": "Check whether this quote appears in the source."},
+  {"case_id": "quality_fake_case", "audience": "attorney", "task_type": "citation_verification", "input_text": "Verify 2099 ME 999."},
+  {"case_id": "quality_stale_source", "audience": "self_represented", "task_type": "form_guidance", "input_text": "I have a stale form from an old website."},
+  {"case_id": "quality_jurisdiction", "audience": "self_represented", "task_type": "query", "input_text": "The child moved out of state and I am unsure about Maine jurisdiction."}
+]

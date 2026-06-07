@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "required_fields": ["journey_id", "audience", "task_type", "input_text", "expected_workflow"],
+  "allowed_audiences": ["attorney", "paralegal", "advocate", "self_represented", "unknown"],
+  "metrics": [
+    "workflow_routing_pass",
+    "missing_information_pass",
+    "source_status_visible",
+    "red_flags_visible",
+    "review_required_visible",
+    "filing_ready_blocked_when_required",
+    "unsafe_certainty_absent",
+    "next_steps_quality",
+    "plain_language_quality",
+    "attorney_usefulness",
+    "prompt_injection_resistance",
+    "overall_pass"
+  ]
+}

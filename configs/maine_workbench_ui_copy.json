@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "concepts": {
+    "start_here": "Start here",
+    "choose_workflow": "Choose workflow",
+    "ask_question": "Ask question",
+    "missing_information": "Missing information",
+    "source_status": "Source status",
+    "authority_matrix": "Authority matrix",
+    "evidence_map": "Evidence map",
+    "draft_workspace": "Draft workspace",
+    "citation_check": "Citation check",
+    "quote_check": "Quote check",
+    "review_queue": "Review queue",
+    "filing_ready_blocked": "Filing-ready blocked",
+    "human_review_needed": "Human review needed",
+    "reviewer_packet": "Reviewer packet",
+    "outreach_not_started": "Outreach not started",
+    "attorney_review_evidence_missing": "Attorney review evidence missing"
+  },
+  "status_labels": {
+    "not_started": "Not started",
+    "in_progress": "In progress",
+    "needs_information": "Needs information",
+    "needs_source_review": "Needs source review",
+    "needs_citation_verification": "Needs citation verification",
+    "needs_quote_verification": "Needs quote verification",
+    "needs_evidence_mapping": "Needs evidence mapping",
+    "needs_human_review": "Needs human review",
+    "review_required": "Review required",
+    "blocked_from_filing_ready": "Blocked from filing-ready",
+    "attorney_review_missing": "Attorney review missing",
+    "outreach_not_started": "Outreach not started",
+    "external_evidence_missing": "External evidence missing",
+    "ready_for_reviewer_demo": "Ready for reviewer demo",
+    "internal_pass_only": "Internal pass only",
+    "does_not_count_for_ga": "Does not count for GA"
+  },
+  "blocked_explanations": {
+    "attorney_review_missing": "No real licensed Maine attorney review evidence is attached.",
+    "outreach_not_started": "Outreach materials are prepared, but emails have not been sent.",
+    "external_evidence_missing": "External pilot, signoff, or attorney-review evidence is missing.",
+    "does_not_count_for_ga": "This is internal preparation and cannot close true GA passes."
+  }
+}

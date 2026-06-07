@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "allowed_fact_labels": [
+    "user_stated",
+    "source_supported",
+    "evidence_supported",
+    "unverified",
+    "contradicted",
+    "unknown"
+  ],
+  "states": [
+    "new_session",
+    "role_identification",
+    "task_identification",
+    "jurisdiction_check",
+    "matter_context_check",
+    "intake_in_progress",
+    "missing_information_followup",
+    "source_retrieval_needed",
+    "source_review_needed",
+    "answer_ready_review_required",
+    "draft_requested",
+    "draft_blocked_missing_facts",
+    "draft_ready_review_required",
+    "citation_verification_needed",
+    "quote_verification_needed",
+    "evidence_mapping_needed",
+    "filing_ready_check_requested",
+    "filing_ready_blocked",
+    "human_review_needed",
+    "emergency_or_safety_escalation",
+    "out_of_scope",
+    "complete_but_review_required"
+  ],
+  "sensitive_terms": [
+    "ssn",
+    "social security",
+    "date of birth",
+    "dob",
+    "address",
+    "medical",
+    "therapy",
+    "juvenile",
+    "sealed",
+    "minor"
+  ],
+  "filing_ready_never_upgrades_from_state": true,
+  "review_required_default": true
+}

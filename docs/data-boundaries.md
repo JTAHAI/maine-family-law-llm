@@ -69,3 +69,8 @@ The source repository release package must not include:
 - local environment files or secrets
 
 `legal.release.ReleaseManifest` and `scripts/package-release.sh` enforce this at package time.
+## Current source repo boundary
+
+The source repository must not contain private matter data, runtime databases, vector stores, OCR caches, raw corpora, model weights, or real outreach correspondence. Reviewer and outreach documents in this repo are templates and policies only. They do not count as attorney review, pilot evidence, or signoff evidence.
+
+External evidence for true GA remains outside the source tree unless a source-safe redacted summary is intentionally added and accepted by the existing evidence gates.
