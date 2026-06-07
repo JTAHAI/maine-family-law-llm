@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "max_average_words_per_sentence": 22,
+  "max_long_sentences": 3,
+  "prefer_checklists_for_next_steps": true,
+  "required_sections_when_explaining_limitations": [
+    "What this means",
+    "What this does not mean"
+  ],
+  "avoid_terms": [
+    "obviously",
+    "clearly you should",
+    "guaranteed",
+    "definitely",
+    "simple fix"
+  ]
+}

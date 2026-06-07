@@ -26,6 +26,7 @@ from legal.evals.release_measurements import (
     ReleaseMetricMeasurementTemplateBuilder,
     required_external_metric_names,
 )
+from legal.evals.conversation_eval import ConversationEvalCase, ConversationEvalReport, ConversationEvalRunner
 from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalReport, RetrievalSmokeEvalRunner
 
 __all__ = [
@@ -33,6 +34,9 @@ __all__ = [
     "CitationQuoteVerifierMetricRunner",
     "ClaimSupportMetricReport",
     "ClaimSupportMetricRunner",
+    "ConversationEvalCase",
+    "ConversationEvalReport",
+    "ConversationEvalRunner",
     "VerifierMetricReport",
     "StalenessJurisdictionMetricReport",
     "StalenessJurisdictionMetricRunner",

@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "views": {
+    "dashboard": {
+      "title": "Matter Dashboard",
+      "subtitle": "See matter status, review state, source status, and what still needs verification."
+    },
+    "ask": {
+      "title": "Ask Maine Family Law",
+      "subtitle": "Ask a Maine family-law question and get a source-aware, review-required response."
+    },
+    "upload": {
+      "title": "Upload Documents",
+      "subtitle": "Upload documents for review, evidence mapping, and timeline support."
+    },
+    "source_library": {
+      "title": "Source Library",
+      "subtitle": "Inspect source cards, freshness status, and jurisdiction scope."
+    },
+    "authority_matrix": {
+      "title": "Authority Matrix",
+      "subtitle": "See which authorities support, limit, or fail to support each claim."
+    },
+    "timeline": {
+      "title": "Timeline",
+      "subtitle": "Build a dated timeline with review-required confidence markers."
+    },
+    "evidence_map": {
+      "title": "Evidence Map",
+      "subtitle": "Connect facts to evidence and flag missing records."
+    },
+    "draft_workspace": {
+      "title": "Draft Workspace",
+      "subtitle": "Keep drafts review-required until citations, quotes, facts, and forms are checked."
+    },
+    "citation_report": {
+      "title": "Citation Report",
+      "subtitle": "Review citation status, source status, and unresolved citations."
+    },
+    "quote_report": {
+      "title": "Quote Report",
+      "subtitle": "Review quote span verification and unresolved source text."
+    },
+    "filing_ready": {
+      "title": "Filing-Readiness Gate",
+      "subtitle": "See every blocker before anything looks filing-ready."
+    },
+    "human_review_queue": {
+      "title": "Human Review Queue",
+      "subtitle": "Track review-required items waiting for human legal review."
+    },
+    "settings_data_policy": {
+      "title": "Settings / Data Policy",
+      "subtitle": "Review data boundaries, privacy warnings, and source policy."
+    },
+    "admin_eval_dashboard": {
+      "title": "Admin / Eval Dashboard",
+      "subtitle": "Inspect eval status, red-team evidence, and internal pilot-readiness passes."
+    }
+  },
+  "empty_states": {
+    "no_matter_selected": "Choose a matter to see review status, blockers, and next steps.",
+    "no_documents_uploaded": "Upload a document to start review, evidence mapping, or timeline work.",
+    "no_sources_retrieved": "No sources have been retrieved yet. Ask a question or add source cards to continue.",
+    "no_verified_citations": "No citations are verified yet. Run citation verification before relying on a citation.",
+    "no_quote_spans_verified": "No quote spans are verified yet. Run quote verification before relying on quoted text.",
+    "no_evidence_mapped": "No evidence has been mapped yet. Add facts and supporting records to continue.",
+    "draft_blocked_from_filing_ready": "This draft stays blocked until source, citation, quote, fact, form, posture, and human review checks pass.",
+    "source_freshness_unknown": "Source freshness is unknown. Current-law language must stay limited until freshness is verified.",
+    "attorney_review_not_complete": "Attorney or qualified human review is not complete yet.",
+    "external_pilot_signoff_missing": "External pilot and signoff evidence is still missing. Internal passes do not replace those gates."
+  },
+  "blocked_states": {
+    "unsupported_claim": "This claim does not have enough verified source support yet.",
+    "citation_not_found": "A citation could not be found in the current source set.",
+    "citation_unverified": "A citation has not been verified yet against a source card.",
+    "quote_span_not_found": "The quoted language was not verified in a source span.",
+    "source_unknown_freshness": "Source freshness is unknown, so current-law language stays limited.",
+    "source_stale": "A source appears stale and must be re-verified before relying on it.",
+    "jurisdiction_mismatch": "The available sources do not clearly match the needed jurisdiction.",
+    "review_required": "Human review is still required before relying on this output.",
+    "human_review_missing": "Required human review has not been completed.",
+    "attorney_pilot_evidence_missing": "Attorney sandbox pilot evidence is not present yet.",
+    "external_signoff_missing": "External legal, product, security, or ops signoff is not present yet.",
+    "blocked_from_filing_ready": "The filing-ready gate has not passed."
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "default_mode": "self_represented_plain_language",
+  "default_audience": "unknown",
+  "task_type_defaults": {
+    "query": "self_represented_plain_language",
+    "research": "attorney_research",
+    "draft": "attorney_drafting",
+    "review": "document_review",
+    "citation_verification": "citation_verification",
+    "quote_verification": "quote_verification",
+    "evidence_map": "evidence_mapping",
+    "timeline": "evidence_mapping",
+    "filing_ready_check": "filing_readiness_review",
+    "form_guidance": "form_guidance",
+    "appellate_issue_spotting": "appellate_issue_spotting",
+    "admin_audit": "admin_audit"
+  },
+  "audience_defaults": {
+    "attorney": "attorney_research",
+    "paralegal": "paralegal_review",
+    "advocate": "form_guidance",
+    "self_represented": "self_represented_plain_language",
+    "admin": "admin_audit",
+    "unknown": "self_represented_plain_language"
+  },
+  "task_overrides": {
+    "attorney": {
+      "draft": "attorney_drafting",
+      "review": "document_review",
+      "citation_verification": "citation_verification",
+      "quote_verification": "quote_verification",
+      "evidence_map": "evidence_mapping",
+      "timeline": "evidence_mapping",
+      "filing_ready_check": "filing_readiness_review",
+      "appellate_issue_spotting": "appellate_issue_spotting"
+    },
+    "paralegal": {
+      "draft": "paralegal_review",
+      "review": "paralegal_review",
+      "filing_ready_check": "filing_readiness_review"
+    },
+    "advocate": {
+      "query": "form_guidance",
+      "research": "form_guidance",
+      "review": "document_review"
+    },
+    "self_represented": {
+      "draft": "self_represented_plain_language",
+      "review": "document_review",
+      "research": "self_represented_plain_language",
+      "form_guidance": "form_guidance"
+    },
+    "unknown": {
+      "query": "self_represented_plain_language",
+      "research": "self_represented_plain_language",
+      "draft": "self_represented_plain_language",
+      "review": "document_review"
+    }
+  },
+  "issue_mode_overrides": {
+    "appeal": "appellate_issue_spotting",
+    "rule_52_findings": "appellate_issue_spotting"
+  },
+  "modes": [
+    {
+      "mode": "attorney_research",
+      "audiences": ["attorney"],
+      "description": "Concise, source-forward, work-product-oriented research.",
+      "renderer": "attorney_research_memo",
+      "tone_tags": ["concise", "source_forward", "work_product_oriented"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "attorney_drafting",
+      "audiences": ["attorney"],
+      "description": "Drafting support with visible blockers and source verification requirements.",
+      "renderer": "draft_review",
+      "tone_tags": ["concise", "source_forward", "drafting_workflow"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "paralegal_review",
+      "audiences": ["paralegal"],
+      "description": "Checklist review, missing items, and escalation to attorney review.",
+      "renderer": "document_review",
+      "tone_tags": ["checklist", "escalation", "missing_items"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "self_represented_plain_language",
+      "audiences": ["self_represented", "unknown"],
+      "description": "Plain-language, calm, nonjudgmental guidance without implying representation.",
+      "renderer": "plain_language_answer",
+      "tone_tags": ["plain_language", "calm", "nonjudgmental"],
+      "review_required_default": true,
+      "plain_language": true
+    },
+    {
+      "mode": "form_guidance",
+      "audiences": ["self_represented", "advocate", "paralegal", "unknown"],
+      "description": "Procedural explanation of likely forms without unsupported legal conclusions.",
+      "renderer": "intake_followup",
+      "tone_tags": ["procedural", "form_oriented", "non_advice"],
+      "review_required_default": true,
+      "plain_language": true
+    },
+    {
+      "mode": "document_review",
+      "audiences": ["attorney", "paralegal", "advocate", "self_represented", "unknown"],
+      "description": "Document and text review with missing sections, warnings, and blockers.",
+      "renderer": "document_review",
+      "tone_tags": ["review", "blockers_visible", "source_status_visible"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "appellate_issue_spotting",
+      "audiences": ["attorney", "paralegal"],
+      "description": "Preservation, Rule 52, standard of review, record, transcript, and remand risk spotting.",
+      "renderer": "appellate_issue_spotting_report",
+      "tone_tags": ["appellate", "preservation", "record_focused"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "evidence_mapping",
+      "audiences": ["attorney", "paralegal", "advocate", "self_represented"],
+      "description": "Separate facts, evidence, sources, confidence, and missing records.",
+      "renderer": "evidence_map",
+      "tone_tags": ["fact_evidence_separation", "confidence", "missing_records"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "citation_verification",
+      "audiences": ["attorney", "paralegal", "admin"],
+      "description": "Resolve and verify citations against source status and authority scope.",
+      "renderer": "citation_report",
+      "tone_tags": ["verification", "citation_safety", "source_forward"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "quote_verification",
+      "audiences": ["attorney", "paralegal", "admin"],
+      "description": "Verify quote spans without inventing missing text.",
+      "renderer": "quote_report",
+      "tone_tags": ["verification", "quote_span", "no_invention"],
+      "review_required_default": true,
+      "plain_language": false
+    },
+    {
+      "mode": "filing_readiness_review",
+      "audiences": ["attorney", "paralegal", "self_represented", "unknown"],
+      "description": "Explain every blocker and never call a document ready unless the filing gate passes.",
+      "renderer": "why_not_filing_ready_report",
+      "tone_tags": ["blockers", "gate_review", "no_false_ready"],
+      "review_required_default": true,
+      "plain_language": true
+    },
+    {
+      "mode": "admin_audit",
+      "audiences": ["admin"],
+      "description": "Operational audit mode for status, gates, and evidence review.",
+      "renderer": "quick_answer",
+      "tone_tags": ["audit", "status", "operational"],
+      "review_required_default": false,
+      "plain_language": false
+    }
+  ]
+}

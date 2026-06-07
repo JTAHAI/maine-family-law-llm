@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 SAMPLE_EVIDENCE_DIR = ROOT / "docs" / "sample-evidence"
+EXTERNAL_EVIDENCE_DIR = ROOT / "docs" / "external-evidence"
 
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
 from legal.evals import (
@@ -137,6 +138,13 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def load_json_artifact(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # pragma: no cover - defensive artifact path
+        return {"status": "fail", "error": str(exc), "path": str(path)}
 
 
 
@@ -702,7 +710,22 @@ def run_pass50_51_offline_smoke() -> dict:
 
 def main() -> int:
     SAMPLE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    EXTERNAL_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     pytest_result = run_pytest_batches()
+    conversation_eval_result = run_command(
+        [sys.executable, "scripts/run-conversation-evals.py"],
+        timeout=180,
+    )
+    conversation_eval = load_json_artifact(
+        EXTERNAL_EVIDENCE_DIR / "pass47e_conversation_eval_report.json"
+    )
+    conversation_pilot_result = run_command(
+        [sys.executable, "scripts/run-conversation-pilot-readiness-evidence.py"],
+        timeout=300,
+    )
+    conversation_pilot_readiness = load_json_artifact(
+        EXTERNAL_EVIDENCE_DIR / "pass47a_47h_conversation_pilot_readiness_summary.json"
+    )
     orchestrator_result = EvaluationOrchestrator(ROOT).run_all()
     pass22_25_smoke = run_pass22_25_offline_smoke()
     pass26_28_smoke = run_pass26_28_offline_smoke()
@@ -835,6 +858,10 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "checks": {
             "pytest": pytest_result,
+            "conversation_eval": conversation_eval,
+            "conversation_eval_command": conversation_eval_result,
+            "conversation_pilot_readiness": conversation_pilot_readiness,
+            "conversation_pilot_readiness_command": conversation_pilot_result,
             "orchestrator": orchestrator_result,
             "pass22_25_offline_authority_retrieval_smoke": pass22_25_smoke,
             "pass26_28_offline_gold_eval_release_metrics_smoke": pass26_28_smoke,
@@ -871,6 +898,8 @@ def main() -> int:
         },
         "status": "pass"
         if pytest_result["returncode"] == 0
+        and conversation_eval.get("status") == "pass"
+        and conversation_pilot_readiness.get("status") == "pass"
         and orchestrator_result["status"] == "pass"
         and pass22_25_smoke["status"] == "pass"
         and pass26_28_smoke["status"] == "pass"

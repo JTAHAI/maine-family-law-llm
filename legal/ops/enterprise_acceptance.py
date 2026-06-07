@@ -398,14 +398,33 @@ def run_command(command: list[str], cwd: Path) -> dict[str, Any]:
 
 def run_final_local_acceptance(project_root: str | Path = ".") -> dict[str, Any]:
     root = Path(project_root).resolve()
+    sample_evidence_dir = root / "docs" / "sample-evidence"
+    sample_evidence_dir.mkdir(parents=True, exist_ok=True)
+    external_evidence_dir = root / "docs" / "external-evidence"
+    external_evidence_dir.mkdir(parents=True, exist_ok=True)
     pytest_result = run_command([sys.executable, "-m", "pytest", "-q"], root)
     quality_result = run_command([sys.executable, "scripts/run-quality-checks.py"], root)
-    lock_report = ReleaseLockfileBuilder(root).write(root / "source_release_lock.json")
-    lock_audit = ReleaseLockfileBuilder(root).audit(root / "source_release_lock.json")
-    acceptance = EnterpriseAcceptanceAuditor(root).write(root / "enterprise_acceptance_evidence.json")
+    from legal.conversation.internal_passes import ConversationPilotReadinessAuditor
+    from legal.evals.conversation_eval import ConversationEvalRunner
+
+    conversation_eval = ConversationEvalRunner(project_root=root).run(
+        output_path=external_evidence_dir / "pass47e_conversation_eval_report.json"
+    ).as_dict()
+    conversation_pilot_readiness = ConversationPilotReadinessAuditor(root).write(
+        external_evidence_dir / "pass47a_47h_conversation_pilot_readiness_summary.json",
+        run_tests=False,
+    ).as_dict()
+    lock_path = sample_evidence_dir / "source_release_lock.json"
+    lock_report = ReleaseLockfileBuilder(root).write(lock_path)
+    lock_audit = ReleaseLockfileBuilder(root).audit(lock_path)
+    acceptance = EnterpriseAcceptanceAuditor(root).write(
+        sample_evidence_dir / "enterprise_acceptance_evidence.json"
+    )
     status = "pass" if (
         pytest_result["returncode"] == 0
         and quality_result["returncode"] == 0
+        and conversation_eval.get("status") == "pass"
+        and conversation_pilot_readiness.get("status") == "pass"
         and lock_report.status == "pass"
         and lock_audit.status == "pass"
         and acceptance.status == "pass"
@@ -415,6 +434,8 @@ def run_final_local_acceptance(project_root: str | Path = ".") -> dict[str, Any]
         "generated_at": _utc_now(),
         "pytest": pytest_result,
         "quality_checks": quality_result,
+        "conversation_eval": conversation_eval,
+        "conversation_pilot_readiness": conversation_pilot_readiness,
         "release_lock": lock_report.as_dict(),
         "release_lock_audit": lock_audit.as_dict(),
         "enterprise_acceptance": acceptance.as_dict(),

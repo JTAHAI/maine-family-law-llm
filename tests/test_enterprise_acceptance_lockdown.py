@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from legal.ops import EnterpriseAcceptanceAuditor, ReleaseLockfileBuilder
+from legal.ops.enterprise_acceptance import run_final_local_acceptance
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -82,3 +83,79 @@ def test_github_public_hygiene_files_are_present() -> None:
     ]
     for rel in required:
         assert (ROOT / rel).is_file(), rel
+
+
+def test_final_local_acceptance_writes_generated_artifacts_under_docs_sample_evidence(
+    monkeypatch, tmp_path: Path
+) -> None:
+    calls: dict[str, Path] = {}
+
+    class _DummyLock:
+        status = "pass"
+
+        def as_dict(self) -> dict[str, str]:
+            return {"status": "pass"}
+
+    class _DummyAudit(_DummyLock):
+        pass
+
+    class _DummyAcceptance(_DummyLock):
+        production_legal_ready = False
+
+    class _DummyConversation:
+        def as_dict(self) -> dict[str, object]:
+            return {"status": "pass"}
+
+    def _record_lock_write(self, path):
+        calls["lock_write"] = Path(path)
+        return _DummyLock()
+
+    def _record_lock_audit(self, path):
+        calls["lock_audit"] = Path(path)
+        return _DummyAudit()
+
+    def _init_acceptance(self, project_root=".") -> None:
+        self.project_root = Path(project_root).resolve()
+        self.policy_path = self.project_root / "configs" / "maine_enterprise_acceptance_policy.json"
+        self.policy = {}
+
+    def _record_acceptance_write(self, path):
+        calls["acceptance_write"] = Path(path)
+        return _DummyAcceptance()
+
+    monkeypatch.setattr(
+        "legal.ops.enterprise_acceptance.run_command",
+        lambda command, cwd: {"command": " ".join(command), "returncode": 0, "stdout": "", "stderr": ""},
+    )
+    monkeypatch.setattr(
+        "legal.ops.enterprise_acceptance.ReleaseLockfileBuilder.write",
+        _record_lock_write,
+    )
+    monkeypatch.setattr(
+        "legal.ops.enterprise_acceptance.ReleaseLockfileBuilder.audit",
+        _record_lock_audit,
+    )
+    monkeypatch.setattr(
+        "legal.ops.enterprise_acceptance.EnterpriseAcceptanceAuditor.__init__",
+        _init_acceptance,
+    )
+    monkeypatch.setattr(
+        "legal.ops.enterprise_acceptance.EnterpriseAcceptanceAuditor.write",
+        _record_acceptance_write,
+    )
+    monkeypatch.setattr(
+        "legal.evals.conversation_eval.ConversationEvalRunner.run",
+        lambda self, output_path=None: _DummyConversation(),
+    )
+    monkeypatch.setattr(
+        "legal.conversation.internal_passes.ConversationPilotReadinessAuditor.write",
+        lambda self, output_path, run_tests=False: _DummyConversation(),
+    )
+
+    report = run_final_local_acceptance(tmp_path)
+    sample_dir = tmp_path / "docs" / "sample-evidence"
+
+    assert report["status"] == "pass"
+    assert calls["lock_write"] == sample_dir / "source_release_lock.json"
+    assert calls["lock_audit"] == sample_dir / "source_release_lock.json"
+    assert calls["acceptance_write"] == sample_dir / "enterprise_acceptance_evidence.json"

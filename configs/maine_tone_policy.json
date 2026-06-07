@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "review_required_phrase": "Review required before relying on this output.",
+  "insufficient_source_phrase": "There is not enough verified Maine source support yet for a stronger conclusion.",
+  "filing_ready_blocked_phrase": "This remains blocked from filing-ready use until source, citation, quote, fact, form, posture, and human review gates pass.",
+  "jurisdiction_messages": {
+    "maine_only": "This response is limited to Maine family-law sources and process.",
+    "not_maine": "This question appears outside Maine-only scope. A Maine-only answer would be incomplete.",
+    "federal_overlap": "This question may involve Maine family law plus federal overlap that needs separate verification.",
+    "jurisdiction_unknown": "Jurisdiction is not clear enough yet to make a source-grounded Maine-only conclusion."
+  },
+  "freshness_messages": {
+    "source_verified": "Verified source status is available for the sources used here.",
+    "source_unknown_freshness": "Current-law language cannot be claimed because source freshness is unknown.",
+    "source_stale": "Current-law language cannot be claimed because one or more sources appear stale.",
+    "citation_unverified": "The cited source has not been verified yet.",
+    "quote_span_not_found": "The quoted language has not been verified against a source span yet."
+  },
+  "escalation_triggers": [
+    {
+      "trigger": "emergency",
+      "keywords": ["emergency", "unsafe", "danger", "911", "weapon", "stalking"],
+      "message": "Emergency or safety risk detected. Use official emergency or safety help first."
+    },
+    {
+      "trigger": "deadline",
+      "keywords": ["deadline", "today", "tomorrow", "appeal due", "served"],
+      "message": "Deadline risk detected. Verify dates and seek timely review before relying on this output."
+    },
+    {
+      "trigger": "sealed_record",
+      "keywords": ["sealed", "confidential", "juvenile", "protected record"],
+      "message": "Confidentiality or sealed-record risk detected. Do not over-share details without reviewing the record boundary."
+    },
+    {
+      "trigger": "jurisdiction",
+      "keywords": ["other state", "moved", "uccjea", "federal"],
+      "message": "Jurisdiction risk detected. Verify Maine scope before moving forward."
+    }
+  ],
+  "blocked_phrases": [
+    {
+      "pattern": "guaranteed outcome",
+      "category": "overconfidence",
+      "replacement": "possible outcome subject to verified sources, facts, and review"
+    },
+    {
+      "pattern": "you will win",
+      "category": "overconfidence",
+      "replacement": "the outcome cannot be predicted from this review-required output"
+    },
+    {
+      "pattern": "i am your lawyer",
+      "category": "attorney_client_relationship",
+      "replacement": "this tool is not your lawyer and does not create an attorney-client relationship"
+    },
+    {
+      "pattern": "as your attorney",
+      "category": "attorney_client_relationship",
+      "replacement": "as a review-required legal-information tool"
+    },
+    {
+      "pattern": "filing ready",
+      "category": "filing_ready_claim",
+      "replacement": "blocked from filing-ready use until the filing gate passes"
+    },
+    {
+      "pattern": "current maine law says",
+      "category": "freshness_claim",
+      "replacement": "verified current Maine law must be confirmed before saying more"
+    }
+  ]
+}

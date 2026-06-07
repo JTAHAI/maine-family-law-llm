@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "required_renderers": [
+    "quick_answer",
+    "plain_language_answer",
+    "attorney_research_memo",
+    "authority_matrix",
+    "document_review",
+    "draft_review",
+    "citation_report",
+    "quote_report",
+    "evidence_map",
+    "timeline",
+    "why_not_filing_ready_report",
+    "client_explainer",
+    "appellate_issue_spotting_report",
+    "intake_followup"
+  ],
+  "templates": {
+    "quick_answer": {
+      "title": "Quick Answer",
+      "sections": ["short_answer", "source_status", "next_steps", "blockers"]
+    },
+    "plain_language_answer": {
+      "title": "Plain-Language Answer",
+      "sections": ["short_answer", "plain_language_explanation", "what_this_means", "what_this_does_not_mean", "next_steps", "blockers"]
+    },
+    "attorney_research_memo": {
+      "title": "Attorney Research Memo",
+      "sections": ["issue", "source_status", "analysis", "attorney_notes", "missing_information", "next_steps", "blockers"]
+    },
+    "authority_matrix": {
+      "title": "Authority Matrix",
+      "sections": ["source_cards", "citations", "claim_support_status", "blockers"]
+    },
+    "document_review": {
+      "title": "Document Review",
+      "sections": ["short_answer", "warnings", "red_flags", "missing_information", "next_steps", "blockers"]
+    },
+    "draft_review": {
+      "title": "Draft Review",
+      "sections": ["short_answer", "attorney_notes", "claim_support_status", "filing_ready_status", "blockers"]
+    },
+    "citation_report": {
+      "title": "Citation Report",
+      "sections": ["citations", "source_cards", "claim_support_status", "blockers"]
+    },
+    "quote_report": {
+      "title": "Quote Report",
+      "sections": ["citations", "quote_verification_status", "source_cards", "blockers"]
+    },
+    "evidence_map": {
+      "title": "Evidence Map",
+      "sections": ["issue", "missing_information", "next_steps", "blockers"]
+    },
+    "timeline": {
+      "title": "Timeline",
+      "sections": ["procedural_posture", "warnings", "next_steps", "blockers"]
+    },
+    "why_not_filing_ready_report": {
+      "title": "Why This Is Not Filing Ready",
+      "sections": ["filing_ready_status", "filing_ready_blockers", "missing_information", "next_steps"]
+    },
+    "client_explainer": {
+      "title": "Client Explainer",
+      "sections": ["plain_language_explanation", "what_this_means", "what_this_does_not_mean", "next_steps", "blockers"]
+    },
+    "appellate_issue_spotting_report": {
+      "title": "Appellate Issue Spotting Report",
+      "sections": ["issue", "procedural_posture", "red_flags", "attorney_notes", "blockers"]
+    },
+    "intake_followup": {
+      "title": "Intake Follow-Up",
+      "sections": ["missing_information", "next_steps", "warnings", "blockers"]
+    }
+  }
+}

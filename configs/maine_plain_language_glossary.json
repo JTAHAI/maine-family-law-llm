@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "entries": {
+    "parental rights and responsibilities": "the court's decisions about who makes major decisions for a child and where the child lives",
+    "primary residence": "the place where a child lives most of the time",
+    "contact schedule": "the planned times a child spends with a parent or other person",
+    "child support": "money a parent may be ordered to pay to help support a child",
+    "parentage": "the legal relationship between a child and a parent",
+    "motion to modify": "a request asking the court to change an existing order",
+    "motion to enforce": "a request asking the court to require compliance with an order",
+    "contempt": "a claim that someone willfully disobeyed a court order",
+    "protection from abuse": "a court process that can provide safety-related orders",
+    "guardian ad litem": "a person appointed to help the court with information about a child's interests",
+    "rule 52 findings": "written findings that explain the facts and reasoning behind a court decision",
+    "best interest factors": "the factors Maine courts review when deciding what arrangement serves a child's best interests",
+    "service": "the formal delivery of court papers to another person",
+    "jurisdiction": "the court's legal power to decide a case",
+    "affidavit": "a written statement signed under oath",
+    "proposed order": "a draft order someone asks the judge to sign",
+    "filing-ready": "ready to file only after all required checks and human review are complete",
+    "review required": "a person still needs to review this before relying on it",
+    "source verified": "the source has been checked and identified with enough detail to rely on it more safely",
+    "unsupported claim": "a statement that does not yet have enough verified source support"
+  }
+}

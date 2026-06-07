@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "rules": [
+    {
+      "rule_id": "emergency_adjacent",
+      "severity": "red_flag",
+      "keywords": ["unsafe", "danger", "emergency", "threat", "weapon", "stalking"],
+      "message": "Possible emergency or safety issue detected."
+    },
+    {
+      "rule_id": "deadline_risk",
+      "severity": "red_flag",
+      "keywords": ["today", "tomorrow", "deadline", "appeal", "served", "hearing"],
+      "message": "Possible deadline or hearing risk detected."
+    },
+    {
+      "rule_id": "jurisdiction_risk",
+      "severity": "warning",
+      "keywords": ["other state", "moved", "federal", "uccjea", "out of state"],
+      "message": "Jurisdiction may not be clearly Maine-only."
+    },
+    {
+      "rule_id": "confidentiality_risk",
+      "severity": "warning",
+      "keywords": ["sealed", "confidential", "juvenile", "therapy note", "medical record", "ssn"],
+      "message": "Confidentiality or protected-record issue detected."
+    },
+    {
+      "rule_id": "service_process_risk",
+      "severity": "warning",
+      "keywords": ["served", "service", "summons", "notice"],
+      "message": "Service or notice posture needs confirmation."
+    }
+  ],
+  "severity_order": ["red_flag", "required", "warning", "recommended"]
+}

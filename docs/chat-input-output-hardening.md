@@ -1,17 +1,33 @@
 # Chat input/output hardening
 
-This pass improves the local browser workbench so non-technical users can test source-backed Maine family-law questions without using the CLI.
+Passes 47A-47H add the internal conversation layer that prepares the Maine family-law system for attorney sandbox outreach without claiming true GA or external legal review.
 
-## Added
+## What changed
 
-- Answer style selector: plain language, checklist, source-first.
-- Optional context/facts input.
-- Copy-answer button.
-- Grounded/failure/review-required badges.
-- Stronger source-card rendering.
-- Starter prompt for 19-A M.R.S. § 1653 best-interest factors.
-- Deterministic best-interest-factor answer path backed by the local Title 19-A fixture.
+- Deterministic audience and mode routing for attorneys, paralegals, advocates, self-represented users, admins, and unknown users.
+- Guided intake schemas for Maine family-law workflows with structured `missing_information` and audience-aware next questions.
+- Standard conversation response envelopes with stable source status, citation status, quote status, review status, blockers, and next steps.
+- Plain-language rewriting that keeps uncertainty, source status, citations, and review-required boundaries intact.
+- Stable UI/API status labels and blocked-state explanations for dashboards, ask flows, draft review, citation review, quote review, evidence maps, and filing-readiness views.
+- Deterministic conversation eval coverage for custody, child support, protection-from-abuse overlap, appellate spotting, evidence mapping, quote verification, citation verification, prompt injection, and filing-ready bypass attempts.
+- Internal pilot-readiness evidence artifacts:
+  - `docs/external-evidence/pass47e_conversation_eval_report.json`
+  - `docs/external-evidence/pass47a_47h_conversation_pilot_readiness_summary.json`
+
+## What these passes improve
+
+- Users can see what is verified, what is not verified, what information is still missing, and what to do next.
+- Attorneys get concise, source-forward output.
+- Self-represented users get plain-language output without implied representation.
+- Review-required status and filing-ready blockers stay visible across outputs.
 
 ## Boundary
 
-This is still a local legal-information workbench. It is not filing-ready, not legal advice, and not attorney-reviewed.
+These are internal engineering and product-readiness passes only.
+
+- They do not replace attorney-reviewed gold evals.
+- They do not replace external pilot evidence.
+- They do not authorize filing-ready exports.
+- They do not constitute legal, security, product, or ops signoff.
+- They do not reduce the true GA remaining count.
+- They prepare the product for future attorney sandbox outreach.

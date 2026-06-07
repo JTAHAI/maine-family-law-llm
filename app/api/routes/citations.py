@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 
 from app.api.security import review_response
+from app.services import ConversationAdapter
 from legal.verifiers.citation_parser import extract_citations
 from legal.verifiers.citation_resolver import SourceAuthorityIndex
 from legal.verifiers.verification_pipeline import LegalOutputVerifier
 
 router = APIRouter(tags=["verification"])
+adapter = ConversationAdapter()
 
 
 def _demo_index() -> SourceAuthorityIndex:
@@ -19,7 +21,10 @@ def _demo_index() -> SourceAuthorityIndex:
 
 
 @router.post("/citations/verify", summary="Resolve and verify citations")
-def verify_citations(payload: dict):
+def verify_citations(
+    payload: dict,
+    x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+):
     text = payload.get("text", "")
     index = SourceAuthorityIndex.from_rows(payload.get("citation_index", [])) if payload.get("citation_index") else _demo_index()
     verifier = LegalOutputVerifier(index)
@@ -32,12 +37,13 @@ def verify_citations(payload: dict):
         claims=payload.get("claims"),
         auto_extract_claims=bool(payload.get("auto_extract_claims", False)),
     )
-    return review_response(
-        "POST /api/citations/verify",
-        "citation_verification",
+    response = adapter.for_citation_verification(
+        payload,
         {
             "citations": [citation.to_dict() for citation in extract_citations(text)],
             "resolutions": report["citations"],
             "verification_report": report,
         },
+        audience_hint=x_user_role,
     )
+    return review_response("POST /api/citations/verify", "citation_verification", response)

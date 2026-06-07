@@ -43,3 +43,21 @@ def test_report_ga_pass_count_script_summary() -> None:
     assert "true_ga_remaining=4" in completed.stdout
     assert "true_ga_completed=29" in completed.stdout
     assert "next_pass=48" in completed.stdout
+    assert "internal_conversation_pilot_readiness=pass" in completed.stdout
+
+
+def test_report_ga_pass_count_script_json_includes_internal_conversation_status_without_changing_true_ga_counts() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "report-ga-pass-count.py")],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["true_ga_remaining"] == 4
+    assert payload["next_true_ga_pass"] == 48
+    assert payload["internal_conversation_pilot_readiness"]["status"] == "pass"
+    assert payload["internal_conversation_pilot_readiness"]["does_not_reduce_true_ga_count"] is True

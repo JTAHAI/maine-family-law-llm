@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Internal pilot-readiness conversation passes that do not reduce the true GA pass count.",
+  "passes": [
+    {"pass": "47A", "title": "Conversation modes and audience policy"},
+    {"pass": "47B", "title": "Guided intake and missing-information engine"},
+    {"pass": "47C", "title": "Structured response contract and renderers"},
+    {"pass": "47D", "title": "Plain-language and accessibility hardening"},
+    {"pass": "47E", "title": "Conversation eval pack and tone regression tests"},
+    {"pass": "47F", "title": "UI copy, empty states, and status labels"},
+    {"pass": "47G", "title": "API contract adapters for conversation outputs"},
+    {"pass": "47H", "title": "Pass evidence, release-gate integration, and documentation"}
+  ],
+  "required_summary_artifact": "docs/external-evidence/pass47a_47h_conversation_pilot_readiness_summary.json"
+}

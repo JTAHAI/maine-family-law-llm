@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0",
+  "workflows": {
+    "divorce": {
+      "required_fields": ["county", "children_involved", "service_status", "requested_relief"],
+      "recommended_fields": ["existing_orders", "income_summary", "property_and_debt_summary", "safety_concerns"],
+      "sensitive_fields": ["address", "dob", "ssn", "minor_identifiers", "medical_details", "financial_account_numbers"],
+      "questions": {
+        "county": {
+          "attorney": "Which Maine county and court division are involved?",
+          "self_represented": "Which Maine court or county is this case in, if you know?"
+        },
+        "children_involved": {
+          "attorney": "Are minor children involved and are there any existing child-related orders?",
+          "self_represented": "Are there children involved, and is there already a court order about them?"
+        },
+        "service_status": {
+          "attorney": "What is the service posture and are any response dates already running?",
+          "self_represented": "Have papers already been served, and do you see any deadlines on them?"
+        },
+        "requested_relief": {
+          "attorney": "What exact relief is being requested?",
+          "self_represented": "What are you asking the court to do?"
+        }
+      }
+    },
+    "parental_rights_and_responsibilities": {
+      "required_fields": ["children_involved", "existing_orders", "requested_relief", "safety_concerns"],
+      "recommended_fields": ["primary_residence_status", "contact_schedule_status", "best_interest_facts", "jurisdiction_facts"],
+      "sensitive_fields": ["address", "minor_identifiers", "juvenile_details", "medical_details"],
+      "questions": {
+        "existing_orders": {
+          "attorney": "Is there a temporary or final parenting order already in place?",
+          "self_represented": "Is there already a court order about where the child lives or contact with the child?"
+        }
+      }
+    },
+    "child_support": {
+      "required_fields": ["children_involved", "income_summary", "existing_orders", "requested_relief"],
+      "recommended_fields": ["childcare_costs", "health_insurance", "support_worksheet_status", "deviation_facts"],
+      "sensitive_fields": ["ssn", "financial_account_numbers", "employer_account_numbers", "dob"],
+      "questions": {
+        "income_summary": {
+          "attorney": "What current income information is available for each parent?",
+          "self_represented": "Do you have current income information for each parent?"
+        }
+      }
+    },
+    "parentage": {
+      "required_fields": ["children_involved", "existing_orders", "requested_relief"],
+      "recommended_fields": ["acknowledgment_status", "testing_status", "jurisdiction_facts"],
+      "sensitive_fields": ["minor_identifiers", "dob", "medical_details"],
+      "questions": {}
+    },
+    "motion_to_modify": {
+      "required_fields": ["existing_orders", "requested_relief", "changed_circumstances"],
+      "recommended_fields": ["children_involved", "service_status", "best_interest_facts", "supporting_documents"],
+      "sensitive_fields": ["minor_identifiers", "medical_details", "financial_account_numbers"],
+      "questions": {}
+    },
+    "motion_to_enforce": {
+      "required_fields": ["existing_orders", "requested_relief", "violation_facts"],
+      "recommended_fields": ["service_status", "supporting_documents", "deadline_details"],
+      "sensitive_fields": ["minor_identifiers", "address"],
+      "questions": {}
+    },
+    "motion_for_contempt": {
+      "required_fields": ["existing_orders", "requested_relief", "violation_facts"],
+      "recommended_fields": ["willfulness_facts", "service_status", "supporting_documents"],
+      "sensitive_fields": ["minor_identifiers", "address"],
+      "questions": {}
+    },
+    "protection_from_abuse_overlap": {
+      "required_fields": ["safety_concerns", "existing_orders", "requested_relief"],
+      "recommended_fields": ["children_involved", "service_status", "confidentiality_concerns"],
+      "sensitive_fields": ["address", "minor_identifiers", "medical_details", "sealed_record_details"],
+      "questions": {}
+    },
+    "guardianship": {
+      "required_fields": ["children_involved", "requested_relief", "existing_orders"],
+      "recommended_fields": ["caregiver_role", "probate_overlap", "supporting_documents"],
+      "sensitive_fields": ["minor_identifiers", "medical_details", "address"],
+      "questions": {}
+    },
+    "appellate_rule_52_findings_issue": {
+      "required_fields": ["existing_orders", "deadline_details", "record_status"],
+      "recommended_fields": ["requested_relief", "transcript_status", "preservation_status"],
+      "sensitive_fields": ["minor_identifiers", "sealed_record_details"],
+      "questions": {}
+    },
+    "document_review": {
+      "required_fields": ["document_type", "requested_relief"],
+      "recommended_fields": ["existing_orders", "service_status", "deadline_details"],
+      "sensitive_fields": ["address", "ssn", "dob", "minor_identifiers", "medical_details"],
+      "questions": {}
+    },
+    "form_guidance": {
+      "required_fields": ["requested_relief", "county"],
+      "recommended_fields": ["children_involved", "existing_orders", "service_status"],
+      "sensitive_fields": ["address", "ssn", "dob", "minor_identifiers"],
+      "questions": {}
+    },
+    "evidence_mapping": {
+      "required_fields": ["supporting_documents", "requested_relief"],
+      "recommended_fields": ["existing_orders", "timeline_events", "children_involved"],
+      "sensitive_fields": ["address", "minor_identifiers", "medical_details", "financial_account_numbers"],
+      "questions": {}
+    }
+  }
+}
