@@ -612,3 +612,8 @@ The local `/ask` endpoint now returns structured JSON recovery payloads for empt
 ## v1.82 chat missing-information and reviewer handoff
 
 The local chat workbench now includes a missing-information answer style, a reviewer handoff panel, JSON transcript handoff metadata, and `/api/missing-information-prompts`. The deterministic chat library now contains 104 source-backed starter items and remains review-required, not legal advice, and not filing-ready.
+
+
+## Universal full-case corpus builder
+
+This repository now includes a reusable local-first corpus builder for private forensic masters, external legal-matter releases, and role-specific review packages.

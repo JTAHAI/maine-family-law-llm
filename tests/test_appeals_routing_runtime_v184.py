@@ -23,18 +23,19 @@ def test_v184_runtime_diagnostics_endpoint_and_html_markers() -> None:
     import pytest
 
     pytest.importorskip("fastapi")
-    from maine_family_law_llm import api
+    from maine_family_law_llm import __version__, api
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
     diagnostics = api.runtime_diagnostics()
-    assert diagnostics["version"] == "2.06.0"
-    assert diagnostics["ui_version"] == "1.87.0-chat-library-routing-input-clear"
+    assert diagnostics["version"] == __version__
+    assert diagnostics["ui_version"] == "2.08.0-modern-constitutional-chat"
     assert diagnostics["enter_to_submit"] is True
     assert diagnostics["appeals_routing_fix"] is True
 
     html = render_local_workbench_html()
-    assert 'data-ui-version="1.87.0-chat-library-routing-input-clear"' in html
+    assert 'data-ui-version="2.08.0-modern-constitutional-chat"' in html
     assert 'id="runtime-diagnostics"' in html
     assert "What court handles appeals?" in html
     assert "/api/runtime-diagnostics" in html
-    assert "focaf.jtforme.com" in html
+    assert "WE THE PEOPLE" in html
+    assert "... establish JUSTICE ..." in html

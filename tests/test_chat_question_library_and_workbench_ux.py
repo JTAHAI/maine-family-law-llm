@@ -40,7 +40,8 @@ def test_workbench_has_error_json_handling_enter_submit_and_branding() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
     html = render_local_workbench_html()
-    assert "focaf.jtforme.com" in html
+    assert "WE THE PEOPLE" in html
+    assert "... establish JUSTICE ..." in html
     assert "id=\"audience\"" in html
     assert "id=\"transcript\"" in html
     assert "fetchJson" in html

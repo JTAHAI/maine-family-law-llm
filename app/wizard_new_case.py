@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from maine_family_law_llm.case_corpus_builder import build_case_corpus
+
+
+def launch_new_case_wizard(repo_root: Path, source_root: Path, output_root: Path, case_name: str):
+    return build_case_corpus(repo_root=repo_root, source_roots=[source_root], output_root=output_root, case_name=case_name)

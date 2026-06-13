@@ -17,14 +17,15 @@ def test_v187_runtime_diagnostics_reports_input_clear_and_routing_flags() -> Non
     import pytest
 
     pytest.importorskip("fastapi")
-    from maine_family_law_llm import api
+    from maine_family_law_llm import __version__, api
 
     payload = api.runtime_diagnostics()
-    assert payload["version"] == "2.06.0"
-    assert payload["ui_version"] == "1.87.0-chat-library-routing-input-clear"
+    assert payload["version"] == __version__
+    assert payload["ui_version"] == "2.08.0-modern-constitutional-chat"
     assert payload["enter_to_submit"] is True
     assert payload["enter_submit_clears_input"] is True
     assert payload["chat_library_routing_v187"] is True
+    assert payload["chat_panel_primary_layout"] is True
 
 
 def test_v187_wrong_match_routes_common_questions_to_correct_library_items() -> None:

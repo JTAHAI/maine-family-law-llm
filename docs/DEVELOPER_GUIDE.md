@@ -1,0 +1,1 @@
+The universal corpus builder uses local hashing, classifiers, question coverage, role packages, and proof reports. Outputs stay under the chosen case root.

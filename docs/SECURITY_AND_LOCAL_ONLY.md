@@ -1,0 +1,1 @@
+Default operation is local-first, no telemetry, no hidden analytics, and no cloud evidence uploads without explicit opt-in.

@@ -16,14 +16,18 @@ def test_live_ui_has_unambiguous_branding_and_enter_submit_marker() -> None:
     script = _script_from(html)
 
     assert 'id="focaf-brand-shell"' in html
-    assert 'data-ui-version="1.87.0-chat-library-routing-input-clear"' in html
-    assert "focaf.jtforme.com" in html
-    assert "UI v1.87 classic desktop FOCAF research workbench + Enter submit + appeals/runtime diagnostics" in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '1.87.0-chat-library-routing-input-clear'" in script
+    assert 'data-ui-version="2.08.0-modern-constitutional-chat"' in html
+    assert "WE THE PEOPLE" in html
+    assert "Justice does not belong to one institution or one profession" in html
+    assert "UI v2.08 modern constitutional chat workbench." in html
+    assert "window.__MFL_WORKBENCH_UI_VERSION = '2.08.0-modern-constitutional-chat'" in script
     assert "question.addEventListener('keydown'" in script
     assert "event.key === 'Enter' && !event.shiftKey" in script
     assert "event.preventDefault();" in script
     assert "ask();" in script
+    assert 'data-fixed-composer="true"' in html
+    assert "overflow: hidden;" in html
+    assert "chat-scroll {" in html
 
 
 def test_v183_local_workbench_script_does_not_break_on_transcript_newline_literals() -> None:
