@@ -38,9 +38,10 @@ def test_package_version_metadata_is_consistent_and_current() -> None:
     package_version = re.search(r'__version__\s*=\s*"([^"]+)"', init_py)
     assert pyproject_version is not None
     assert package_version is not None
-    assert pyproject_version.group(1) == package_version.group(1) == "2.06.0"
-    assert "v2.06.0" in release_notes
-    assert "v2.06.0" in pass_changes
+    current_version = pyproject_version.group(1)
+    assert current_version == package_version.group(1)
+    assert f"v{current_version}" in release_notes
+    assert f"v{current_version}" in pass_changes
 
 
 def test_public_source_preflight_cli_writes_report(tmp_path: Path) -> None:

@@ -50,10 +50,25 @@ def test_tests_directory_contains_only_tests() -> None:
 
 
 def test_only_pass_changes_txt_is_packaged() -> None:
+    ignored_parts = {
+        ".git",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".mfl_work",
+        "dist",
+        "build",
+        "node_modules",
+    }
     txt_files = sorted(
         path.relative_to(ROOT).as_posix()
         for path in ROOT.rglob("*.txt")
-        if ".git" not in path.relative_to(ROOT).parts
+        if not any(
+            part in ignored_parts or part.endswith(".egg-info")
+            for part in path.relative_to(ROOT).parts
+        )
     )
     assert txt_files == ["PASS_CHANGES.txt"]
 

@@ -678,6 +678,7 @@ def render_local_workbench_html() -> str:
             <button class="secondary example" data-example="What should I gather for child support?">Child support checklist</button>
             <button class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing</button>
             <button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers</button>
+            <button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence</button>
             <button class="secondary example" data-example="What court handles appeals?">Appeals routing</button>
           </div>
         </section>
@@ -1161,7 +1162,7 @@ def render_local_workbench_html() -> str:
     loadQuestionLibrary();
     loadPromptPacks();
     loadRuntimeDiagnostics();
-    // v2.08 marker: modern_constitutional_chat, we_the_people_branding, chat_primary_layout, fixed_composer_outside_scroll, brand_kit_assets, appeals_routing_fix, enter_submit_clears_input, reviewer_handoff, local_chat_transcript_v3
+    // v2.08 marker: modern_constitutional_chat, we_the_people_branding, chat_primary_layout, fixed_composer_outside_scroll, brand_kit_assets, appeals_routing_fix, enter_submit_clears_input, reviewer_handoff, local_chat_transcript_v3, organize_evidence_starter
   </script>
 </body>
 </html>

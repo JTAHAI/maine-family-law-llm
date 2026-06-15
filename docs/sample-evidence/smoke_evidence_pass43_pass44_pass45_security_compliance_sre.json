@@ -4,6 +4,12 @@
     44,
     45
   ],
+  "ga_evidence_reports": {
+    "combined": "docs\\security-compliance-sre-evidence-report.json",
+    "pass43": "docs\\enterprise-security-test-report.json",
+    "pass44": "docs\\governance-compliance-packet-report.json",
+    "pass45": "docs\\sre-reliability-report.json"
+  },
   "generated_at": "2026-06-14T21:43:46.406967+00:00",
   "governance_compliance_packet": {
     "blockers": [],

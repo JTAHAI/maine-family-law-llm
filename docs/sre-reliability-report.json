@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-31T01:38:48.286464+00:00",
+  "generated_at": "2026-06-14T21:43:46.406967+00:00",
   "pass": 45,
   "reliability_sre": {
     "blockers": [],
@@ -27,7 +27,7 @@
       "backup_id": "backup-offline-demo-001",
       "checksum_after": "abc123",
       "checksum_before": "abc123",
-      "completed_at": "2026-05-31T01:38:48.286406+00:00",
+      "completed_at": "2026-06-14T21:43:46.406940+00:00",
       "restore_target": "/tmp/maine-family-law-llm-restore-drill",
       "status": "pass"
     },

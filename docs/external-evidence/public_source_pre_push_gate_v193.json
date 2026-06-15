@@ -16,7 +16,7 @@
     {
       "blockers": [],
       "details": {
-        "checked_files": 740,
+        "checked_files": 978,
         "github_ci_present": true,
         "only_one_txt_file": true,
         "production_legal_ready": false,
@@ -29,9 +29,9 @@
     {
       "blockers": [],
       "details": {
-        "expected_heading": "v1.93.0",
-        "package_version": "1.93.0",
-        "pyproject_version": "1.93.0"
+        "expected_heading": "v2.07.0",
+        "package_version": "2.07.0",
+        "pyproject_version": "2.07.0"
       },
       "name": "version_consistency",
       "status": "pass",
@@ -80,6 +80,7 @@
           "run-public-source-preflight.py",
           "test_chat_library_v187_input_clear_and_routing.py",
           "test_pass48_51_launch_evidence_gates.py",
+          "test_enterprise_release_control_v206.py",
           "test_public_source_pre_push_gate_v191.py",
           "test_git_safe_push_v192.py",
           "test_attorney_sandbox_review_kit_v193.py"
@@ -90,10 +91,10 @@
       "summary": "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
     }
   ],
-  "generated_at": "2026-06-02T17:30:02.601752+00:00",
+  "generated_at": "2026-06-15T20:59:55.556022+00:00",
   "interpretation": "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.",
   "production_legal_ready": false,
-  "project_root": "D:\\dev\\maine-family-law-llm_git",
+  "project_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
   "safe_to_push": true,
   "schema": "maine_family_law_llm.public_source_pre_push_gate.v2",
   "status": "pass"

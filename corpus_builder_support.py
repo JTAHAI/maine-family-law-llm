@@ -13,7 +13,7 @@ from maine_family_law_llm.case_corpus_builder import (
 )
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parent
 
 
 def create_fixture_source_corpus(tmp_path: Path) -> Path:
@@ -91,7 +91,12 @@ def build_fixture_case(tmp_path: Path, case_name: str = "Fixture Family Matter")
 def relative_links_from_html(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
     links = re.findall(r'href="([^"]+)"', text)
-    return [link for link in links if not link.startswith(("http://", "https://", "mailto:", "#"))]
+    return [
+        link
+        for link in links
+        if not link.startswith(("http://", "https://", "mailto:", "#"))
+        and "${" not in link
+    ]
 
 
 def assert_root_launchers_exist(repo_root: Path) -> None:

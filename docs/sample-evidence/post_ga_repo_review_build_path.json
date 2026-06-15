@@ -147,15 +147,15 @@
       "title": "Attach real security, compliance, SRE, pilot, and owner-signoff evidence"
     }
   ],
-  "data_root": "/mnt/data/maine-family-law-llm-data",
-  "eval_root": "/mnt/data/work_next6/eval_data",
+  "data_root": "D:\\mnt\\data\\maine-family-law-llm-data",
+  "eval_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder\\eval_data",
   "fixture_evidence_detected": true,
   "interpretation": "All numbered pass source-control foundations are present, but this repo is not a real production GA legal product until the external build path is executed and fixture evidence is replaced with live official Maine authority, attorney-reviewed gold data, measured release metrics, pilot/security evidence, and accountable signoffs.",
   "numbered_pass_foundations_complete": true,
   "only_one_pass_txt_file": true,
   "production_ready": false,
   "production_status": "blocked_real_build_path_required",
-  "project_root": "/mnt/data/work_next6",
+  "project_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
   "single_pass_log_present": true,
   "source_repo_clean": true,
   "status": "pass"

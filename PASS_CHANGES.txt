@@ -1,9 +1,9 @@
-## v2.06.0 — Enterprise release control center
+## v2.07.0 — Universal full-case corpus builder stabilization
 
 - Added a fail-closed enterprise release control module for Pass 48-51 launch readiness, including external evidence checklist, enterprise control areas, release blocker cards, forbidden release claims, and operator action plan.
 - Added deterministic packet, audit, HTML, and test-summary evidence under `docs/external-evidence/` plus a CLI evidence builder.
 - Added tests proving missing or placeholder launch/signoff artifacts keep `enterprise_ready`, `production_legal_ready`, and `ga_shipped` false, while explicit external Pass 48-51 evidence can satisfy the release control gate.
-- Bumped package metadata to `2.06.0`. This pass does not claim attorney review, legal signoff, limited pilot completion, GA shipment, private data packaging, or filing-ready output.
+- Bumped package metadata to `2.07.0` and aligned the source tree, launchers, and release checks around the universal full-case corpus builder path. This pass does not claim attorney review, legal signoff, limited pilot completion, GA shipment, private data packaging, or filing-ready output.
 
 ## v2.05.0 — Family Justice Workbench polish
 

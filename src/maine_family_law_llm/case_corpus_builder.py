@@ -31,7 +31,7 @@ ROOT_LAUNCHERS = (
     "START_MAINE_FAMILY_LAW_LLM.bat",
     "START_MAINE_FAMILY_LAW_LLM.vbs",
     "START_HERE.html",
-    "README_FIRST.txt",
+    "README_FIRST.md",
     "VERIFY_INSTALLATION.cmd",
     "REPAIR_AND_REBUILD_INDEX.cmd",
 )
@@ -133,6 +133,401 @@ def write_html(path: Path, title: str, body_html: str) -> None:
                 "</html>",
             ]
         ),
+    )
+
+
+def relative_href(from_path: Path, to_path: Path) -> str:
+    return os.path.relpath(to_path, start=from_path.parent).replace("\\", "/")
+
+
+def stage_case_copy(destination_root: Path, evidence_id: str, source_path: Path) -> str:
+    if not source_path.exists():
+        return ""
+    destination_root.mkdir(parents=True, exist_ok=True)
+    destination_name = f"{evidence_id}_{source_path.name}".replace(" ", "_")
+    destination = destination_root / destination_name
+    if not destination.exists():
+        shutil.copy2(source_path, destination)
+    return destination_name
+
+
+def write_case_portal(
+    case_root: Path,
+    *,
+    case_name: str,
+    external_records: Sequence[dict[str, Any]],
+    proof: Mapping[str, Any],
+) -> None:
+    portal_root = case_root / "00_START_HERE"
+    detail_root = portal_root / "records"
+    detail_root.mkdir(parents=True, exist_ok=True)
+
+    dataset: list[dict[str, Any]] = []
+    source_types = sorted({str(row.get("source_type", "")) for row in external_records if row.get("source_type")})
+    issue_lanes = sorted({lane for row in external_records for lane in row.get("issue_lanes", []) if lane})
+
+    for row in external_records:
+        detail_path = detail_root / f"{str(row['evidence_id']).replace(' ', '_')}.html"
+        row["detail_page_relpath"] = detail_path.relative_to(case_root).as_posix()
+        external_copy_relpath = str(row.get("external_copy_relpath", ""))
+        external_copy_path = case_root / external_copy_relpath if external_copy_relpath else None
+        external_file_href = relative_href(detail_path, external_copy_path) if external_copy_path and external_copy_path.exists() else ""
+        proof_href = relative_href(detail_path, case_root / "15_PROOF_VALIDATION" / "CASE_BUILD_REPORT.html")
+        search_href = relative_href(detail_path, portal_root / "search.html")
+
+        write_text(
+            detail_path,
+            "\n".join(
+                [
+                    "<!doctype html>",
+                    "<html lang=\"en\">",
+                    "<head>",
+                    "<meta charset=\"utf-8\">",
+                    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+                    f"<title>{html.escape(str(row.get('title') or row['evidence_id']))}</title>",
+                    "<style>body{margin:0;background:#f5f1ea;color:#17212b;font-family:Segoe UI,Arial,sans-serif;}main{max-width:1080px;margin:0 auto;padding:28px;}a{color:#165f6d;}code,pre{background:#fff;border:1px solid rgba(23,33,43,.12);padding:10px;border-radius:10px;display:block;white-space:pre-wrap;word-break:break-word;}section{background:#fff;border:1px solid rgba(23,33,43,.12);border-radius:14px;padding:18px;margin-top:14px;}ul{line-height:1.6;}</style>",
+                    "</head>",
+                    "<body>",
+                    "<main>",
+                    f"<p><a href=\"{html.escape(search_href)}\">Back to search</a> · <a href=\"{html.escape(proof_href)}\">Open proof report</a></p>",
+                    f"<h1>{html.escape(str(row.get('title') or row['evidence_id']))}</h1>",
+                    f"<p><strong>Evidence ID:</strong> {html.escape(str(row['evidence_id']))}</p>",
+                    f"<p><strong>Source type:</strong> {html.escape(str(row.get('source_type', '')))} · <strong>Date:</strong> {html.escape(str(row.get('date_created_if_available') or row.get('date_modified') or 'Undated'))}</p>",
+                    f"<p><strong>Issue lanes:</strong> {html.escape(', '.join(row.get('issue_lanes', [])) or 'none tagged')}</p>",
+                    f"<p><strong>Inclusion reason:</strong> {html.escape(str(row.get('inclusion_reason') or 'Not stated'))}</p>",
+                    f"<p><strong>Privacy classes:</strong> {html.escape(', '.join(row.get('privacy_classes', [])) or 'none')}</p>",
+                    f"<p><strong>SHA-256:</strong> {html.escape(str(row.get('source_hash', '')))}</p>",
+                    (
+                        f"<p><a href=\"{html.escape(external_file_href)}\" target=\"_blank\" rel=\"noopener noreferrer\">Open staged external-safe file</a></p>"
+                        if external_file_href
+                        else "<p><strong>Staged file:</strong> unavailable in this case portal.</p>"
+                    ),
+                    "<section><h2>Source excerpt</h2>",
+                    f"<pre>{html.escape(str(row.get('text_excerpt') or 'No extracted text was available for this record.'))}</pre>",
+                    "</section>",
+                    "<section><h2>Source manifest row</h2>",
+                    f"<pre>{html.escape(json.dumps(row, indent=2, sort_keys=True))}</pre>",
+                    "</section>",
+                    "</main>",
+                    "</body>",
+                    "</html>",
+                ]
+            ),
+        )
+
+        dataset.append(
+            {
+                "evidence_id": row["evidence_id"],
+                "title": str(row.get("subject") or row.get("title") or row["evidence_id"]),
+                "source_type": str(row.get("source_type", "")),
+                "issue_lanes": list(row.get("issue_lanes", [])),
+                "date": str(row.get("date_created_if_available") or row.get("date_modified") or ""),
+                "text_excerpt": str(row.get("text_excerpt", "")),
+                "privacy_status": str(row.get("privacy_status", "")),
+                "source_hash": str(row.get("source_hash", "")),
+                "detail_href": f"records/{detail_path.name}",
+                "file_href": relative_href(portal_root / "search.html", external_copy_path) if external_copy_path and external_copy_path.exists() else "",
+            }
+        )
+
+    write_text(
+        portal_root / "search_records.js",
+        "window.__CASE_RECORDS__ = " + json.dumps(dataset) + ";\n",
+    )
+
+    metrics_markup = "".join(
+        [
+            f"<div class=\"metric\"><span>Indexed records</span><strong>{proof.get('total_files_indexed', 0):,}</strong></div>",
+            f"<div class=\"metric\"><span>External-safe records</span><strong>{proof.get('legal_matter_items', 0):,}</strong></div>",
+            f"<div class=\"metric\"><span>PDF pages</span><strong>{proof.get('total_pdf_pages', 0):,}</strong></div>",
+            f"<div class=\"metric\"><span>Excluded personal</span><strong>{proof.get('personal_nonlegal_excluded', 0):,}</strong></div>",
+        ]
+    )
+    type_options = "".join(f"<option value=\"{html.escape(item)}\">{html.escape(item)}</option>" for item in source_types)
+    lane_options = "".join(f"<option value=\"{html.escape(item)}\">{html.escape(item)}</option>" for item in issue_lanes)
+    search_html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(case_name)} - Search the Record</title>
+  <style>
+    :root {{
+      --ink: #17212b;
+      --muted: #5c6875;
+      --line: rgba(23,33,43,.12);
+      --paper: #f6f2eb;
+      --panel: #ffffff;
+      --accent: #165f6d;
+      --accent-dark: #103945;
+      --warm: #a44b22;
+    }}
+    * {{ box-sizing: border-box; }}
+    html, body {{ height: 100%; }}
+    body {{ margin: 0; min-height: 100vh; overflow: hidden; background: linear-gradient(180deg, #efe7da 0%, #f6f2eb 55%, #f8f4ee 100%); color: var(--ink); font-family: "Segoe UI", Arial, sans-serif; }}
+    a {{ color: var(--accent); }}
+    .shell {{ height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 14px; padding: 18px; max-width: 1480px; margin: 0 auto; }}
+    .hero {{ display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; }}
+    .hero-main, .hero-rail, .toolbar, .results, .detail {{ background: rgba(255,255,255,.88); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 38px rgba(23,33,43,.08); }}
+    .hero-main {{ padding: 22px 26px; }}
+    .hero-main h1 {{ margin: 8px 0 10px; font-size: clamp(2.6rem, 5vw, 4.2rem); line-height: .95; font-family: Georgia, "Times New Roman", serif; font-weight: 700; }}
+    .eyebrow {{ color: var(--accent); font-weight: 800; letter-spacing: .2em; text-transform: uppercase; font-size: .9rem; }}
+    .case-badge {{ display: inline-flex; align-items: center; padding: 10px 14px; border-radius: 999px; background: #eef4f5; border: 1px solid rgba(22,95,109,.18); color: var(--accent); font-weight: 800; }}
+    .hero-note {{ margin: 0; max-width: 82ch; color: var(--muted); font-size: 1rem; line-height: 1.55; }}
+    .hero-note-secondary {{ margin-top: 10px; }}
+    .hero-rail {{ padding: 22px; display: grid; align-content: start; gap: 14px; }}
+    .hero-rail h2 {{ margin: 0; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-dark); }}
+    .hero-rail p {{ margin: 0; color: var(--muted); line-height: 1.55; }}
+    .metric-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+    .metric {{ border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }}
+    .metric span {{ display: block; font-size: .82rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }}
+    .metric strong {{ display: block; margin-top: 6px; font-size: 1.55rem; }}
+    .toolbar {{ display: grid; grid-template-columns: minmax(0, 1.5fr) 180px 220px auto; gap: 12px; padding: 14px; }}
+    label {{ display: block; margin-bottom: 6px; color: var(--muted); font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }}
+    input, select, button {{ font: inherit; }}
+    input, select {{ width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }}
+    button {{ border: 0; border-radius: 12px; padding: 12px 16px; background: var(--accent-dark); color: #fff; font-weight: 700; cursor: pointer; }}
+    .workspace {{ min-height: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr); gap: 14px; }}
+    .results, .detail {{ min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }}
+    .panel-head {{ padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }}
+    .panel-head h2 {{ margin: 0; font-size: 1rem; letter-spacing: .06em; text-transform: uppercase; }}
+    .panel-body {{ min-height: 0; overflow: auto; padding: 16px 18px; }}
+    .result-card {{ border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 14px; display: grid; gap: 10px; margin-bottom: 12px; }}
+    .result-card h3 {{ margin: 0; font-size: 1.04rem; }}
+    .result-meta {{ display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: .88rem; }}
+    .pill {{ display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; background: #eef4f5; color: var(--accent); font-weight: 700; }}
+    .excerpt {{ color: #31404e; line-height: 1.55; }}
+    .card-actions {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+    .card-actions a, .card-actions button {{ text-decoration: none; }}
+    .card-actions .secondary {{ background: #eef4f5; color: var(--accent-dark); }}
+    .detail-empty {{ color: var(--muted); line-height: 1.6; }}
+    pre {{ margin: 0; white-space: pre-wrap; word-break: break-word; }}
+    .footer-links {{ display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: .92rem; }}
+    @media (max-width: 1080px) {{
+      body {{ overflow: auto; }}
+      .shell {{ height: auto; min-height: 100vh; }}
+      .hero, .workspace, .toolbar {{ grid-template-columns: 1fr; }}
+    }}
+    @media (max-height: 820px) and (min-width: 1081px) {{
+      .shell {{ gap: 10px; padding: 10px; }}
+      .hero {{ gap: 12px; }}
+      .hero-main {{ padding: 14px 18px; }}
+      .hero-main h1 {{ margin: 4px 0 8px; font-size: clamp(1.95rem, 3.6vw, 3.05rem); }}
+      .eyebrow {{ font-size: .82rem; letter-spacing: .18em; }}
+      .case-badge {{ padding: 8px 12px; font-size: .92rem; }}
+      .hero-note {{ font-size: .9rem; line-height: 1.42; }}
+      .hero-note-secondary {{ display: none; }}
+      .hero-rail {{ padding: 16px; gap: 10px; }}
+      .metric strong {{ font-size: 1.25rem; }}
+      .toolbar {{ gap: 10px; padding: 10px; }}
+      label {{ margin-bottom: 4px; font-size: .78rem; }}
+      input, select {{ padding: 10px 12px; }}
+      button {{ padding: 10px 14px; }}
+      .panel-head {{ padding: 12px 14px; }}
+      .panel-body {{ padding: 12px 14px; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">We The People</div>
+        <h1>&ldquo;... establish JUSTICE ...&rdquo;</h1>
+        <p class="case-badge">Maine Family Law Evidence Assistant</p>
+        <p class="hero-note" style="margin-top:14px;">Justice does not belong to one institution or one profession, it belongs to the People which these institutions of government are meant to serve; it is Public.</p>
+        <p class="hero-note hero-note-secondary">This case workspace preserves a private forensic master, produces an external-safe legal-matter release, and keeps the record reviewable without turning the corpus into an unstructured dump.</p>
+      </div>
+      <aside class="hero-rail">
+        <h2>Case Summary</h2>
+        <p><strong>{html.escape(case_name)}</strong></p>
+        <p>Search the external-safe legal-matter record, open staged files, inspect source-manifest rows, and follow role-package links without using the command line.</p>
+        <div class="metric-grid">{metrics_markup}</div>
+      </aside>
+    </section>
+    <section class="toolbar">
+      <div><label for="query">Search the record</label><input id="query" placeholder="school, contact, medical, support, docket, therapy, records access"></div>
+      <div><label for="source-type">Source type</label><select id="source-type"><option value="">All source types</option>{type_options}</select></div>
+      <div><label for="issue-lane">Issue lane</label><select id="issue-lane"><option value="">All issue lanes</option>{lane_options}</select></div>
+      <div style="display:flex;align-items:end;"><button id="clear-search" type="button">Clear filters</button></div>
+    </section>
+    <section class="workspace">
+      <section class="results">
+        <div class="panel-head"><h2>External-Safe Search Results</h2><span id="results-count" class="pill">0 results</span></div>
+        <div class="panel-body" id="results"></div>
+      </section>
+      <aside class="detail">
+        <div class="panel-head"><h2>Record Detail</h2><span class="pill">Review required</span></div>
+        <div class="panel-body" id="detail">
+          <div class="detail-empty">
+            Select a result to inspect its excerpt, hash, issue lanes, and staged file links.
+            <div class="footer-links">
+              <a href="../04_INDEXES/QUESTION_COVERAGE_MATRIX.html">Question coverage</a>
+              <a href="../05_TIMELINES/timeline.html">Timeline</a>
+              <a href="../06_ISSUE_LANES/issue_lanes.html">Issue lanes</a>
+              <a href="../03_ROLE_PACKAGES/01_GAL_REVIEW_USB/index.html">Role packages</a>
+              <a href="../15_PROOF_VALIDATION/CASE_BUILD_REPORT.html">Proof report</a>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </div>
+  <script src="search_records.js"></script>
+  <script>
+    const records = window.__CASE_RECORDS__ || [];
+    const queryInput = document.getElementById('query');
+    const sourceType = document.getElementById('source-type');
+    const issueLane = document.getElementById('issue-lane');
+    const clearSearch = document.getElementById('clear-search');
+    const resultsNode = document.getElementById('results');
+    const detailNode = document.getElementById('detail');
+    const countNode = document.getElementById('results-count');
+
+    function escapeHtml(value) {{
+      return (value || '').toString().replace(/[&<>\"']/g, (char) => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}}[char]));
+    }}
+
+    function renderDetail(record) {{
+      if (!record) {{
+        detailNode.innerHTML = '<div class="detail-empty">Select a result to inspect the record.</div>';
+        return;
+      }}
+      const lanes = (record.issue_lanes || []).map((item) => `<span class="pill">${{escapeHtml(item)}}</span>`).join(' ');
+      const actions = [
+        `<a href="${{record.detail_href}}" target="_blank" rel="noopener noreferrer">Open detail page</a>`,
+        record.file_href ? `<a href="${{record.file_href}}" target="_blank" rel="noopener noreferrer">Open staged file</a>` : ''
+      ].filter(Boolean).join(' · ');
+      detailNode.innerHTML = `
+        <h3>${{escapeHtml(record.title || record.evidence_id)}}</h3>
+        <p><strong>Evidence ID:</strong> ${{escapeHtml(record.evidence_id)}}</p>
+        <p><strong>Date:</strong> ${{escapeHtml(record.date || 'Undated')}} · <strong>Source type:</strong> ${{escapeHtml(record.source_type || 'unknown')}}</p>
+        <div class="result-meta">${{lanes || '<span class="pill">no issue lane</span>'}}</div>
+        <p class="excerpt">${{escapeHtml(record.text_excerpt || 'No excerpt available.')}}</p>
+        <p><strong>Privacy:</strong> ${{escapeHtml(record.privacy_status || 'review required')}}</p>
+        <p><strong>SHA-256:</strong><br><code>${{escapeHtml(record.source_hash || '')}}</code></p>
+        <div class="footer-links">${{actions}}</div>
+      `;
+    }}
+
+    function renderResults() {{
+      const needle = queryInput.value.trim().toLowerCase();
+      const typeNeedle = sourceType.value;
+      const laneNeedle = issueLane.value;
+      const filtered = records.filter((record) => {{
+        const blob = [record.title, record.evidence_id, record.source_type, record.date, record.text_excerpt, ...(record.issue_lanes || [])].join(' ').toLowerCase();
+        if (needle && !blob.includes(needle)) return false;
+        if (typeNeedle && record.source_type !== typeNeedle) return false;
+        if (laneNeedle && !(record.issue_lanes || []).includes(laneNeedle)) return false;
+        return true;
+      }});
+      countNode.textContent = `${{filtered.length}} result${{filtered.length === 1 ? '' : 's'}}`;
+      resultsNode.innerHTML = filtered.map((record) => {{
+        const laneMarkup = (record.issue_lanes || []).map((item) => `<span class="pill">${{escapeHtml(item)}}</span>`).join(' ');
+        return `
+          <article class="result-card">
+            <h3>${{escapeHtml(record.title || record.evidence_id)}}</h3>
+            <div class="result-meta">
+              <span>${{escapeHtml(record.date || 'Undated')}}</span>
+              <span>${{escapeHtml(record.source_type || 'unknown')}}</span>
+              ${{laneMarkup}}
+            </div>
+            <div class="excerpt">${{escapeHtml(record.text_excerpt || 'No excerpt available.')}}</div>
+            <div class="card-actions">
+              <button type="button" data-detail="${{escapeHtml(record.evidence_id)}}">Inspect here</button>
+              <a class="secondary" href="${{record.detail_href}}" target="_blank" rel="noopener noreferrer">Open detail</a>
+              ${{record.file_href ? `<a class="secondary" href="${{record.file_href}}" target="_blank" rel="noopener noreferrer">Open file</a>` : ''}}
+            </div>
+          </article>
+        `;
+      }}).join('') || '<div class="detail-empty">No records matched those filters.</div>';
+
+      document.querySelectorAll('[data-detail]').forEach((button) => {{
+        button.addEventListener('click', () => {{
+          const record = records.find((item) => item.evidence_id === button.dataset.detail);
+          renderDetail(record || null);
+        }});
+      }});
+
+      renderDetail(filtered[0] || null);
+    }}
+
+    [queryInput, sourceType, issueLane].forEach((element) => {{
+      element.addEventListener('input', renderResults);
+      element.addEventListener('change', renderResults);
+    }});
+    clearSearch.addEventListener('click', () => {{
+      queryInput.value = '';
+      sourceType.value = '';
+      issueLane.value = '';
+      renderResults();
+    }});
+    renderResults();
+  </script>
+</body>
+</html>
+"""
+    write_text(portal_root / "search.html", search_html)
+    write_text(
+        portal_root / "START_HERE.html",
+        "\n".join(
+            [
+                "<!doctype html>",
+                "<html lang=\"en\">",
+                "<head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Start Here</title><style>body{margin:0;background:#f6f2eb;color:#17212b;font-family:Segoe UI,Arial,sans-serif;}main{max-width:1100px;margin:0 auto;padding:28px;}a{color:#165f6d;}ul{line-height:1.8;}.button-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;}a.button{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:999px;background:#103945;color:#fff;text-decoration:none;font-weight:700;}</style></head>",
+                "<body><main>",
+                "<p><strong>Review required.</strong> Local-first evidence navigation only. Not legal advice.</p>",
+                "<h1>Maine Family Law Evidence Assistant</h1>",
+                "<p>Open the search portal to review the external-safe record, inspect proof and hashes, or move into role-specific review packages.</p>",
+                "<div class=\"button-row\">",
+                "<a class=\"button\" href=\"search.html\">Open search portal</a>",
+                "<a class=\"button\" href=\"../03_ROLE_PACKAGES/01_GAL_REVIEW_USB/index.html\">Open role packages</a>",
+                "<a class=\"button\" href=\"../15_PROOF_VALIDATION/CASE_BUILD_REPORT.html\">Open proof report</a>",
+                "</div>",
+                "<ul>",
+                "<li><a href=\"search.html\">Search the external-safe record</a></li>",
+                "<li><a href=\"../04_INDEXES/QUESTION_COVERAGE_MATRIX.html\">Question coverage</a></li>",
+                "<li><a href=\"../05_TIMELINES/timeline.html\">Timeline</a></li>",
+                "<li><a href=\"../06_ISSUE_LANES/issue_lanes.html\">Issue lanes</a></li>",
+                "<li><a href=\"../09_PRIVACY_PRIVILEGE_REVIEW/privacy_summary.html\">Privacy summary</a></li>",
+                "</ul>",
+                "</main></body></html>",
+            ]
+        ),
+    )
+    write_text(
+        portal_root / "index.html",
+        "<!doctype html><html><head><meta http-equiv=\"refresh\" content=\"0; url=START_HERE.html\"></head><body><a href=\"START_HERE.html\">Open start page</a></body></html>",
+    )
+    write_html(
+        portal_root / "timeline.html",
+        "Timeline",
+        "<h1>Timeline</h1><p>Open <a href=\"../05_TIMELINES/timeline.html\">the generated timeline</a>.</p>",
+    )
+    write_html(
+        portal_root / "issue_lanes.html",
+        "Issue Lanes",
+        "<h1>Issue Lanes</h1><p>Open <a href=\"../06_ISSUE_LANES/issue_lanes.html\">the issue-lane summary</a>.</p>",
+    )
+    write_html(
+        portal_root / "role_packages.html",
+        "Role Packages",
+        "<h1>Role Packages</h1><p>Open the package folders under <a href=\"../03_ROLE_PACKAGES/01_GAL_REVIEW_USB/index.html\">03_ROLE_PACKAGES</a>.</p>",
+    )
+    write_html(
+        portal_root / "proof.html",
+        "Proof",
+        "<h1>Proof</h1><p>Open <a href=\"../15_PROOF_VALIDATION/CASE_BUILD_REPORT.html\">the case build proof report</a>.</p>",
+    )
+    write_html(
+        portal_root / "known_limitations.html",
+        "Known Limitations",
+        "<h1>Known Limitations</h1><p>OCR and PST/OST parsing remain inventory-only unless additional local tooling is installed.</p>",
+    )
+    write_html(
+        portal_root / "privacy_summary.html",
+        "Privacy Summary",
+        "<h1>Privacy Summary</h1><p>Open <a href=\"../09_PRIVACY_PRIVILEGE_REVIEW/privacy_summary.html\">the generated privacy summary</a>.</p>",
     )
 
 
@@ -255,18 +650,22 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
         "<p>This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. "
         "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.</p>"
         "<ul>"
-        "<li><a href=\"README_FIRST.txt\">Read first</a></li>"
+        "<li><a href=\"README_FIRST.md\">Read first</a></li>"
         "<li><a href=\"docs/README_FOR_NONTECHNICAL_USERS.html\">Nontechnical guide</a></li>"
         "<li><a href=\"dist/windows_portable/INSTALL_OR_RUN.html\">Portable distribution</a></li>"
         "</ul>"
     )
-    verify_cmd = "@echo off\r\nsetlocal\r\nif exist app\\launcher.py (echo INSTALLATION_OK & exit /b 0) else (echo INSTALLATION_MISSING & exit /b 1)\r\n"
+    verify_cmd = (
+        "@echo off\r\nsetlocal\r\ncd /d %~dp0\r\n"
+        "python -c \"import maine_family_law_llm.case_corpus_builder, app.launcher\" >nul 2>nul\r\n"
+        "if errorlevel 1 (echo INSTALLATION_IMPORT_FAILED & exit /b 1) else (echo INSTALLATION_OK & exit /b 0)\r\n"
+    )
     repair_cmd = "@echo off\r\nsetlocal\r\ncd /d %~dp0\r\npython -m maine_family_law_llm.case_corpus_builder --bootstrap --repo-root .\r\n"
     launchers = {
         "START_MAINE_FAMILY_LAW_LLM.cmd": start_cmd,
         "START_MAINE_FAMILY_LAW_LLM.bat": start_bat,
         "START_MAINE_FAMILY_LAW_LLM.vbs": start_vbs,
-        "README_FIRST.txt": readme_text,
+        "README_FIRST.md": readme_text,
         "VERIFY_INSTALLATION.cmd": verify_cmd,
         "REPAIR_AND_REBUILD_INDEX.cmd": repair_cmd,
     }
@@ -466,6 +865,10 @@ def build_case_corpus(
         (case_root / relative).mkdir(parents=True, exist_ok=True)
 
     source_files = discover_source_files(source_roots)
+    private_root = case_root / "01_PRIVATE_FORENSIC_MASTER_INTERNAL_ONLY"
+    external_root = case_root / "02_EXTERNAL_LEGAL_MATTER_RELEASE"
+    private_files_root = private_root / "files"
+    external_files_root = external_root / "files"
     records: list[dict[str, Any]] = []
     timeline_rows: list[dict[str, Any]] = []
     problem_files: list[dict[str, Any]] = []
@@ -488,6 +891,15 @@ def build_case_corpus(
         derivative_text = text_value.strip() or f"Inventory-only {source_type} record for {path.name}."
         derivative_hash = sha256_text(derivative_text)
         external_allowed = bool(legal["external_release_allowed"] and privacy["external_release_allowed"])
+        private_copy_relpath = ""
+        external_copy_relpath = ""
+        staged_private_name = stage_case_copy(private_files_root, evidence_id, path)
+        if staged_private_name:
+            private_copy_relpath = private_root.joinpath("files", staged_private_name).relative_to(case_root).as_posix()
+        if external_allowed:
+            staged_external_name = stage_case_copy(external_files_root, evidence_id, path)
+            if staged_external_name:
+                external_copy_relpath = external_root.joinpath("files", staged_external_name).relative_to(case_root).as_posix()
         if source_type == "unsupported":
             legal["needs_human_review"] = True
             problem_files.append({"source_path": str(path), "reason": "unsupported"})
@@ -520,6 +932,8 @@ def build_case_corpus(
             "evidence_ids_created": [evidence_id],
             "text_excerpt": derivative_text[:1200],
             "page_count": page_count,
+            "private_copy_relpath": private_copy_relpath,
+            "external_copy_relpath": external_copy_relpath,
             **email_fields,
         }
         records.append(record)
@@ -565,8 +979,6 @@ def build_case_corpus(
     write_json(index_root / "search_index.json", external_rows)
     write_sqlite_index(index_root / "search_index.sqlite", external_rows)
 
-    private_root = case_root / "01_PRIVATE_FORENSIC_MASTER_INTERNAL_ONLY"
-    external_root = case_root / "02_EXTERNAL_LEGAL_MATTER_RELEASE"
     write_jsonl(private_root / "private_forensic_master.jsonl", private_rows)
     write_jsonl(external_root / "external_legal_matter_release.jsonl", external_rows)
     write_html(
@@ -627,28 +1039,6 @@ def build_case_corpus(
     write_json(case_root / "13_DUPLICATES_VERSION_HISTORY" / "source_to_derivative_graph.json", {row["source_path"]: row["derivative_hash"] for row in records})
 
     question_coverage_counts = build_question_coverage(case_root, records, bootstrap["question_bank_path"])
-    role_package_result = build_role_packages(
-        case_root,
-        records=records,
-        external_records=external_rows,
-        private_manifest_path=private_manifest_path,
-        external_manifest_path=external_manifest_path,
-    )
-
-    portal_root = case_root / "00_START_HERE"
-    for filename in PORTAL_FILES:
-        body = (
-            "<h1>Maine Family Law Evidence Assistant</h1>"
-            "<p>Full record does not mean public dump. Full record means the full case-relevant record is preserved, indexed, and made reviewable, while unrelated personal material, privileged material, and sensitive child/medical records are handled through privacy and role-specific controls.</p>"
-            "<ul>"
-            "<li><a href=\"../04_INDEXES/QUESTION_COVERAGE_MATRIX.html\">Question coverage</a></li>"
-            "<li><a href=\"../05_TIMELINES/timeline.html\">Timeline</a></li>"
-            "<li><a href=\"../06_ISSUE_LANES/issue_lanes.html\">Issue lanes</a></li>"
-            "<li><a href=\"../03_ROLE_PACKAGES/01_GAL_REVIEW_USB/index.html\">Role packages</a></li>"
-            "<li><a href=\"../15_PROOF_VALIDATION/CASE_BUILD_REPORT.html\">Proof report</a></li>"
-            "</ul>"
-        )
-        write_html(portal_root / filename, filename.replace(".html", "").replace("_", " "), body)
 
     proof = {
         "result": "PASS",
@@ -671,7 +1061,7 @@ def build_case_corpus(
         "total_problem_files": len(problem_files),
         "private_forensic_master_built": True,
         "external_legal_matter_release_built": True,
-        "role_packages_built": [row["path"] for row in role_package_result["role_packages"]],
+        "role_packages_built": [],
         "legal_matter_items": len(external_rows),
         "personal_nonlegal_excluded": privacy_summary["personal_nonlegal_excluded"],
         "privilege_flags": sum(1 for row in records if "privileged_or_possible_privileged" in row["privacy_classes"]),
@@ -710,6 +1100,18 @@ def build_case_corpus(
         "Case Build Report",
         f"<h1>Case Build Report</h1><p>Indexed files: {proof['total_files_indexed']}</p><p>External legal-matter items: {proof['legal_matter_items']}</p>",
     )
+
+    write_case_portal(case_root, case_name=case_name, external_records=external_rows, proof=proof)
+    role_package_result = build_role_packages(
+        case_root,
+        records=records,
+        external_records=external_rows,
+        private_manifest_path=private_manifest_path,
+        external_manifest_path=external_manifest_path,
+    )
+
+    proof["role_packages_built"] = [row["path"] for row in role_package_result["role_packages"]]
+    write_json(proof_json_path, proof)
 
     return CaseBuildResult(case_root=case_root, proof_json_path=proof_json_path, question_bank_path=bootstrap["question_bank_path"])
 
@@ -799,6 +1201,28 @@ def export_to_usb(case_root: Path, export_root: Path, package_names: Sequence[st
     selected = package_names or [package["folder"] for package in ROLE_PACKAGE_DEFS]
     role_root = case_root / "03_ROLE_PACKAGES"
     copied: list[Path] = []
+    shared_dirs = (
+        "00_START_HERE",
+        "02_EXTERNAL_LEGAL_MATTER_RELEASE",
+        "04_INDEXES",
+        "05_TIMELINES",
+        "06_ISSUE_LANES",
+        "07_ENTITIES_WITNESSES_DOCKETS",
+        "08_SOURCE_MANIFESTS_HASHES",
+        "09_PRIVACY_PRIVILEGE_REVIEW",
+        "13_DUPLICATES_VERSION_HISTORY",
+        "14_QUARANTINE_UNREADABLE_UNSUPPORTED",
+        "15_PROOF_VALIDATION",
+    )
+    for name in shared_dirs:
+        src = case_root / name
+        if not src.exists():
+            continue
+        dst = export_root / name
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+        copied.append(dst)
     for name in selected:
         src = role_root / name
         if src.exists():
@@ -814,12 +1238,12 @@ def export_to_usb(case_root: Path, export_root: Path, package_names: Sequence[st
     write_text(export_root / "USB_COPY_MANIFEST_SHA256.txt", "\n".join(manifest_lines))
     write_text(
         export_root / "VERIFY_USB.cmd",
-        "@echo off\r\nsetlocal\r\nif exist USB_COPY_MANIFEST_SHA256.txt (echo USB_VERIFY_OK & exit /b 0) else (echo USB_VERIFY_FAIL & exit /b 1)\r\n",
+        "@echo off\r\nsetlocal\r\nif not exist USB_COPY_MANIFEST_SHA256.txt (echo USB_VERIFY_FAIL & exit /b 1)\r\nif not exist 00_START_HERE\\START_HERE.html (echo USB_PORTAL_MISSING & exit /b 1)\r\nif not exist 15_PROOF_VALIDATION\\CASE_BUILD_PROOF.json (echo USB_PROOF_MISSING & exit /b 1)\r\necho USB_VERIFY_OK\r\nexit /b 0\r\n",
     )
     write_html(
         export_root / "START_HERE_USB.html",
         "USB Start Here",
-        "<h1>USB Export</h1><p>Use the copied role-package folders and VERIFY_USB.cmd. Relative links only.</p>",
+        "<h1>USB Export</h1><p>This USB copy includes the start portal, external-safe release, role packages, indexes, privacy summary, and proof report. Run VERIFY_USB.cmd, then open 00_START_HERE/START_HERE.html.</p>",
     )
     return {"export_root": export_root, "copied_packages": [str(path) for path in copied]}
 

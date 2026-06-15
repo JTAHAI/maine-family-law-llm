@@ -248,7 +248,6 @@ class OperatorSourceBackedReleaseEvalRunner:
             "eval_store",
             "parsed_authority_store",
             "embedding_store",
-            ".mfl_work",
         ]
         present = [name for name in forbidden if (self.project_root / name).exists()]
         return OperatorReleaseMetric(

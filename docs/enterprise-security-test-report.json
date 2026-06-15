@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-31T01:38:48.286464+00:00",
+  "generated_at": "2026-06-14T21:43:46.406967+00:00",
   "pass": 43,
   "security_implementation": {
     "audit_trail": {
@@ -143,18 +143,18 @@
       }
     ],
     "immutable_export_log": {
-      "chain_head": "d936c4f62433d9c91d899b373669f444ae0176ea66202a4f18eb9f0bd4a30d5e",
+      "chain_head": "c1de135e1b7738a956a09e92a8bb8862f256ad1a6183950a7a73247bfb59cfe5",
       "event_count": 1,
       "events": [
         {
-          "event_hash": "d936c4f62433d9c91d899b373669f444ae0176ea66202a4f18eb9f0bd4a30d5e",
+          "event_hash": "c1de135e1b7738a956a09e92a8bb8862f256ad1a6183950a7a73247bfb59cfe5",
           "export_id": "export-demo-001",
           "export_status": "blocked_review_required",
           "filing_ready_gate_hash": "5f87b8e9b47f79dd44fe4448c5f036fabea743ff935dca04bd09b2d0a0622e3f",
           "matter_id": "matter-demo-001",
           "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
           "tenant_id": "tenant-maine-demo",
-          "timestamp": "2026-05-31T01:38:48.284515+00:00",
+          "timestamp": "2026-06-14T21:43:46.406361+00:00",
           "user_id": "admin-001",
           "verifier_status": "review_required_verified_sources_pending_human_review"
         }
@@ -162,17 +162,17 @@
       "verified": true
     },
     "key_rotation_ledger": {
-      "chain_head": "b7e049566a108f71df02b6c68f82ffac6fbde1c09fc8b63d5763607fdb80d604",
+      "chain_head": "fe4339dda88f4edafff1cd42ae3f30de91f327e9a7f95e37320aea30dd8f6009",
       "event_count": 1,
       "events": [
         {
           "action": "rotate",
           "actor": "security-admin",
-          "event_hash": "b7e049566a108f71df02b6c68f82ffac6fbde1c09fc8b63d5763607fdb80d604",
+          "event_hash": "fe4339dda88f4edafff1cd42ae3f30de91f327e9a7f95e37320aea30dd8f6009",
           "key_id": "tenant-maine-demo-kek-2026-05",
           "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
           "reason": "pass43 scheduled key rotation evidence",
-          "timestamp": "2026-05-31T01:38:48.284401+00:00"
+          "timestamp": "2026-06-14T21:43:46.406334+00:00"
         }
       ],
       "verified": true

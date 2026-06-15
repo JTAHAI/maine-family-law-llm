@@ -1,9 +1,9 @@
-## v2.06.0 — Enterprise release control center
+## v2.07.0 — Universal full-case corpus builder stabilization
 
 - Added `legal/release/enterprise_release_control_v206.py`, a fail-closed enterprise release control packet that audits Pass 48-51 launch evidence and surfaces the remaining attorney sandbox, limited real-matter pilot, release-candidate, and GA shipment blockers.
 - Added deterministic v2.06 evidence generation for packet JSON, audit JSON, HTML, and test summary under `docs/external-evidence/`.
 - Added `scripts/build-enterprise-release-control-evidence.py` and focused regression coverage proving production/legal/GA readiness remains false by default and can only become true with explicit external signed launch evidence.
-- Updated package metadata to `2.06.0`. No production legal readiness, attorney review, real-matter pilot, release-candidate signoff, GA shipment, private data packaging, or filing-ready status is claimed from repo evidence alone.
+- Updated package metadata to `2.07.0` and aligned the universal full-case builder launch/release path. No production legal readiness, attorney review, real-matter pilot, release-candidate signoff, GA shipment, private data packaging, or filing-ready status is claimed from repo evidence alone.
 
 ## v2.05.0 — Family Justice Workbench polish
 

@@ -1,0 +1,377 @@
+{
+  "blockers": [
+    "external_eval_root_required_for_release_metrics",
+    "gold_rows_minimum_not_met:maine_authority_ranking_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_citation_validity_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_drafting_review_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_fact_to_evidence_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_forms_freshness_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_hallucination_negative_cases.jsonl",
+    "gold_rows_minimum_not_met:maine_issue_classification_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_law_court_holding_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_posture_classification_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_quote_span_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_rag_retrieval_gold.jsonl",
+    "gold_rows_minimum_not_met:maine_rule_52_gap_gold.jsonl",
+    "missing_metric:attorney_review_sample_present",
+    "missing_metric:citation_existence",
+    "missing_metric:citation_support",
+    "missing_metric:filing_gate_false_pass_rate",
+    "missing_metric:form_freshness_detection",
+    "missing_metric:hallucination_rate",
+    "missing_metric:quote_span_verification",
+    "missing_metric:retrieval_recall_at_20",
+    "missing_metric:source_freshness_report_present",
+    "missing_task_specific_release_metric_measurements"
+  ],
+  "eval_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder\\eval_data",
+  "evidence_basis": "release_metrics_evidence_builder",
+  "ga_thresholds": {
+    "attorney_review_sample_present": {
+      "minimum_sample_size": 50,
+      "operator": "==",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 1.0
+    },
+    "citation_existence": {
+      "minimum_sample_size": 500,
+      "operator": ">=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.99
+    },
+    "citation_support": {
+      "minimum_sample_size": 500,
+      "operator": ">=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.95
+    },
+    "filing_gate_false_pass_rate": {
+      "minimum_sample_size": 100,
+      "operator": "==",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.0
+    },
+    "form_freshness_detection": {
+      "minimum_sample_size": 100,
+      "operator": ">=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.99
+    },
+    "hallucination_rate": {
+      "minimum_sample_size": 250,
+      "operator": "<=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.03
+    },
+    "private_data_packaging": {
+      "minimum_sample_size": 1,
+      "operator": "==",
+      "required": true,
+      "requires_attorney_review": false,
+      "target": 1.0
+    },
+    "quote_span_verification": {
+      "minimum_sample_size": 500,
+      "operator": ">=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.97
+    },
+    "retrieval_recall_at_20": {
+      "minimum_sample_size": 500,
+      "operator": ">=",
+      "required": true,
+      "requires_attorney_review": true,
+      "target": 0.95
+    },
+    "source_freshness_report_present": {
+      "minimum_sample_size": 1,
+      "operator": "==",
+      "required": true,
+      "requires_attorney_review": false,
+      "target": 1.0
+    }
+  },
+  "gate_report": {
+    "blockers": [
+      "missing_metric:attorney_review_sample_present",
+      "missing_metric:citation_existence",
+      "missing_metric:citation_support",
+      "missing_metric:filing_gate_false_pass_rate",
+      "missing_metric:form_freshness_detection",
+      "missing_metric:hallucination_rate",
+      "missing_metric:quote_span_verification",
+      "missing_metric:retrieval_recall_at_20",
+      "missing_metric:source_freshness_report_present"
+    ],
+    "gate_results": [
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_rag_retrieval_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:retrieval_recall_at_20",
+        "metric": "retrieval_recall_at_20",
+        "minimum_sample_size": 500,
+        "operator": ">=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.95,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_citation_validity_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:citation_existence",
+        "metric": "citation_existence",
+        "minimum_sample_size": 500,
+        "operator": ">=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.99,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_citation_validity_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:citation_support",
+        "metric": "citation_support",
+        "minimum_sample_size": 500,
+        "operator": ">=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.95,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_quote_span_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:quote_span_verification",
+        "metric": "quote_span_verification",
+        "minimum_sample_size": 500,
+        "operator": ">=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.97,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_hallucination_negative_cases.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:hallucination_rate",
+        "metric": "hallucination_rate",
+        "minimum_sample_size": 250,
+        "operator": "<=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.03,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_drafting_review_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:filing_gate_false_pass_rate",
+        "metric": "filing_gate_false_pass_rate",
+        "minimum_sample_size": 100,
+        "operator": "==",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.0,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "blocked_gold_dataset:maine_forms_freshness_gold.jsonl:blocked_minimum_rows",
+        "blocker": "missing_metric:form_freshness_detection",
+        "metric": "form_freshness_detection",
+        "minimum_sample_size": 100,
+        "operator": ">=",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 0.99,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "automated_repo_packaging_audit",
+        "blocker": null,
+        "metric": "private_data_packaging",
+        "minimum_sample_size": 1,
+        "operator": "==",
+        "requires_attorney_review": false,
+        "sample_size": 1,
+        "status": "pass",
+        "target": 1.0,
+        "value": 1.0
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "missing_external_source_update_report",
+        "blocker": "missing_metric:source_freshness_report_present",
+        "metric": "source_freshness_report_present",
+        "minimum_sample_size": 1,
+        "operator": "==",
+        "requires_attorney_review": false,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 1.0,
+        "value": null
+      },
+      {
+        "attorney_reviewed": false,
+        "basis": "missing_attorney_reviewed_gold_rows",
+        "blocker": "missing_metric:attorney_review_sample_present",
+        "metric": "attorney_review_sample_present",
+        "minimum_sample_size": 50,
+        "operator": "==",
+        "requires_attorney_review": true,
+        "sample_size": 0,
+        "status": "blocked_missing_metric",
+        "target": 1.0,
+        "value": null
+      }
+    ],
+    "readiness": "production_release_blocked",
+    "release_allowed": false,
+    "required_metrics": [
+      "attorney_review_sample_present",
+      "citation_existence",
+      "citation_support",
+      "filing_gate_false_pass_rate",
+      "form_freshness_detection",
+      "hallucination_rate",
+      "private_data_packaging",
+      "quote_span_verification",
+      "retrieval_recall_at_20",
+      "source_freshness_report_present"
+    ]
+  },
+  "generated_at": "2026-06-14T21:43:41.461142+00:00",
+  "metrics": [
+    {
+      "attorney_reviewed": false,
+      "basis": "missing_attorney_reviewed_gold_rows",
+      "name": "attorney_review_sample_present",
+      "notes": "Requires at least 50 attorney-reviewed samples across the gold pack.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_attorney_review",
+      "sample_size": 0,
+      "status": "missing",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_citation_validity_gold.jsonl:blocked_minimum_rows",
+      "name": "citation_existence",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_citation_validity_gold.jsonl:blocked_minimum_rows",
+      "name": "citation_support",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_drafting_review_gold.jsonl:blocked_minimum_rows",
+      "name": "filing_gate_false_pass_rate",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_forms_freshness_gold.jsonl:blocked_minimum_rows",
+      "name": "form_freshness_detection",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_hallucination_negative_cases.jsonl:blocked_minimum_rows",
+      "name": "hallucination_rate",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "automated_repo_packaging_audit",
+      "name": "private_data_packaging",
+      "notes": "Runtime stores, private matter data, model weights, and external corpora are excluded by package policy.",
+      "pass_fail": "pass",
+      "reviewer_status": "not_required",
+      "sample_size": 1,
+      "status": "measured",
+      "value": 1.0
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_quote_span_gold.jsonl:blocked_minimum_rows",
+      "name": "quote_span_verification",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "blocked_gold_dataset:maine_rag_retrieval_gold.jsonl:blocked_minimum_rows",
+      "name": "retrieval_recall_at_20",
+      "notes": "No GA metric value emitted because attorney-reviewed dataset minimums are not met.",
+      "pass_fail": "block",
+      "reviewer_status": "missing_or_insufficient_attorney_review",
+      "sample_size": 0,
+      "status": "blocked",
+      "value": null
+    },
+    {
+      "attorney_reviewed": false,
+      "basis": "missing_external_source_update_report",
+      "name": "source_freshness_report_present",
+      "notes": "Source freshness report must come from a real external data root release run and contain a passing freshness audit.",
+      "pass_fail": "block",
+      "reviewer_status": "not_required",
+      "sample_size": 0,
+      "status": "missing",
+      "value": null
+    }
+  ],
+  "readiness": "ga_release_eval_no_ship_until_all_thresholds_real_gold_and_signoffs_pass",
+  "release_allowed": false,
+  "ship_decision": "no_ship",
+  "status": "pass"
+}

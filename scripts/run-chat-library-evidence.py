@@ -181,7 +181,7 @@ def main() -> int:
         "questions_to_ask_style": "questions_to_ask" in html,
         "branding": "focaf.jtforme.com" in html,
         "transcript": "id=\"transcript\"" in html,
-        "json_transcript_export": "local_chat_transcript_v2" in html and "id=\"download-json-button\"" in html,
+        "json_transcript_export": "local_chat_transcript_v3" in html and "id=\"download-json-button\"" in html,
         "library_search": "id=\"library-search\"" in html,
         "topic_filter": "id=\"topic-filter\"" in html and "populateTopicFilter" in html,
         "quick_topic_search": "id=\"library-topic-search\"" in html,

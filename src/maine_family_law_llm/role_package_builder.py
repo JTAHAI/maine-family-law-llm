@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -63,6 +64,10 @@ def _write_html(path: Path, title: str, body_html: str) -> None:
     )
 
 
+def _relative_href(from_path: Path, to_path: Path) -> str:
+    return os.path.relpath(to_path, start=from_path.parent).replace("\\", "/")
+
+
 def build_role_packages(
     case_root: Path,
     *,
@@ -81,7 +86,24 @@ def build_role_packages(
         package_records = external_records
         if package["folder"].startswith("06_"):
             package_records = records
+        package_page = package_root / "index.html"
         evidence_ids = [str(row["evidence_id"]) for row in package_records[:25]]
+        linked_rows = []
+        for row in package_records[:30]:
+            detail_relpath = str(row.get("detail_page_relpath", ""))
+            detail_href = _relative_href(package_page, case_root / detail_relpath) if detail_relpath else ""
+            file_relpath = str(row.get("external_copy_relpath") or row.get("private_copy_relpath") or "")
+            file_href = _relative_href(package_page, case_root / file_relpath) if file_relpath else ""
+            linked_rows.append(
+                {
+                    "evidence_id": str(row.get("evidence_id", "")),
+                    "title": str(row.get("subject") or row.get("title") or row.get("evidence_id", "")),
+                    "date": str(row.get("date_created_if_available") or row.get("date_modified") or ""),
+                    "issue_lanes": ", ".join(row.get("issue_lanes", [])) or "none tagged",
+                    "detail_href": detail_href,
+                    "file_href": file_href,
+                }
+            )
         _write_text(
             package_root / "README.txt",
             "\n".join(
@@ -95,17 +117,36 @@ def build_role_packages(
             ),
         )
         _write_html(
-            package_root / "index.html",
+            package_page,
             title,
             "\n".join(
                 [
                     f"<h1>{html.escape(title)}</h1>",
                     f"<p>{html.escape(package['description'])}</p>",
                     "<p>This package is for evidence navigation, source review, and role-specific review.</p>",
+                    "<p><a href=\""
+                    + html.escape(_relative_href(package_page, case_root / "00_START_HERE" / "search.html"))
+                    + "\">Open search portal</a> · <a href=\""
+                    + html.escape(_relative_href(package_page, case_root / "15_PROOF_VALIDATION" / "CASE_BUILD_REPORT.html"))
+                    + "\">Open proof report</a></p>",
                     "<ul>",
                     *[
-                        f"<li><code>{html.escape(record_id)}</code></li>"
-                        for record_id in evidence_ids[:12]
+                        (
+                            "<li>"
+                            + (
+                                f"<a href=\"{html.escape(row['detail_href'])}\">{html.escape(row['title'])}</a>"
+                                if row["detail_href"]
+                                else f"<code>{html.escape(row['evidence_id'])}</code>"
+                            )
+                            + f" <small>{html.escape(row['date'])}</small> · {html.escape(row['issue_lanes'])}"
+                            + (
+                                f" · <a href=\"{html.escape(row['file_href'])}\">open file</a>"
+                                if row["file_href"]
+                                else ""
+                            )
+                            + "</li>"
+                        )
+                        for row in linked_rows[:12]
                     ],
                     "</ul>",
                 ]

@@ -1,0 +1,35 @@
+{
+  "evidence_file_count": 0,
+  "expected_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
+  "expected_windows_repo_root": "C:\\dev\\ME_FM_LLM",
+  "findings": [],
+  "generated_at": "2026-06-14T21:43:48.415354+00:00",
+  "interpretation": "Source acceptance is separate from production legal readiness. A public/source-ready tree still cannot be used as a production legal product until every external evidence marker is satisfied.",
+  "only_one_txt_file": true,
+  "production_blockers": [
+    "external_data_manifest_attached",
+    "parsed_authority_manifest_attached",
+    "retrieval_index_manifest_attached",
+    "attorney_reviewed_gold_manifest_attached",
+    "measured_release_metrics_attached",
+    "pilot_evidence_attached",
+    "owner_signoffs_attached"
+  ],
+  "production_legal_ready": false,
+  "project_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
+  "public_source_ready": true,
+  "release_lock_present": false,
+  "required_file_count": 31,
+  "source_hashes": {
+    "PASS_CHANGES.txt": "df9e7e45c15016cf3a6c3dbcf3d28cd1d78b5df28f5d8bdab2b64ca95267baf0",
+    "README.md": "5488163d25eea21e7f2c6361a87caa9c030def6fc7f52043115bf0cbfb2752b1",
+    "configs/maine_enterprise_acceptance_policy.json": "e94816f9db2267eba830a7f710d6ae928bffb97c940306b121454f8c8ccf7137",
+    "configs/maine_public_release_policy.json": "4968529b6c5019f9363fc75458200c3f8f5039cf714cef2c6726fc813b5e7f6e",
+    "docs/enterprise-acceptance-and-github-publish.md": "47e58fb8e99d71673bc492badda8b5dfe5f323e54b68f3e5a94950b81394059a",
+    "pyproject.toml": "0320fcbc30935d328686277cf25a0f7d02d4157ecf8a82fb9440f9fd8660df14",
+    "scripts/collect-enterprise-resources.py": "b13c855130f6eb1c4eb42aa1f6c8e390a04def130c02f6b6221637e3663b193b",
+    "scripts/run-enterprise-preflight.py": "096e407ad1934317658fce65cf4051262046f4c488e770e2013af2b7a6a13fb2",
+    "scripts/run-quality-checks.py": "870a50ff70add77f74aeecbe70b8a77858fbad33530e0d8d6b15b075ea3b5696"
+  },
+  "status": "pass"
+}

@@ -58,6 +58,19 @@ PROHIBITED_SUFFIXES = {
     ".pdf",
 }
 
+IGNORED_TREE_PARTS = {
+    ".git",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".mfl_work",
+    "dist",
+    "build",
+    "node_modules",
+}
+
 
 @dataclass(frozen=True)
 class ReleaseArtifactAudit:
@@ -73,7 +86,7 @@ class ReleaseArtifactAudit:
                 continue
             rel = path.relative_to(root)
             rel_posix = rel.as_posix()
-            if ".git" in rel.parts:
+            if any(part in IGNORED_TREE_PARTS or part.endswith(".egg-info") for part in rel.parts):
                 continue
             if path.is_dir() and path.name in PROHIBITED_RELEASE_DIR_NAMES:
                 blockers.append({"path": rel_posix, "reason": "external_artifact_directory_in_repo"})

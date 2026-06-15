@@ -43,6 +43,10 @@ ME_FM_LLM_venv/
 *.bak
 screenshots/
 local-screenshots/
+/proof/
+/enterprise_acceptance_evidence.json
+/source_release_lock.json
+/source_sbom.json
 docs/outreach/sent/
 docs/outreach/private/
 docs/outreach/*live*.csv

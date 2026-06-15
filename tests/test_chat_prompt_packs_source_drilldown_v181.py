@@ -91,7 +91,7 @@ def test_v181_ui_has_role_prompt_packs_source_inspector_and_json_export() -> Non
     assert "data-pack-prompt" in html
     assert "questions_to_ask" in html
     assert 'id="download-json-button"' in html
-    assert "local_chat_transcript_v2" in html
+    assert "local_chat_transcript_v3" in html
     assert 'id="source-inspector"' in html
     assert "data-inspect-source" in html
     assert "inspectSource" in html
