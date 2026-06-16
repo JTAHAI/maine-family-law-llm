@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -59,31 +59,55 @@ class PrePushGateReport:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-
 def _remove_bytecode_artifacts(project_root: Path) -> None:
-    for artifact_name in ("__pycache__", ".pytest_cache", ".ruff_cache", ".mfl_work", ".local_tmp", ".proofs"):
-        for path in project_root.rglob(artifact_name):
-            if ".git" in path.parts or any(part in {".venv", "venv", "env", "node_modules"} for part in path.parts):
+    ignored_parts = {".venv", "venv", "env", "node_modules"}
+    artifact_names = (
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".mfl_work",
+        ".local_tmp",
+        ".proofs",
+    )
+    for artifact_name in artifact_names:
+        paths = sorted(
+            project_root.rglob(artifact_name),
+            key=lambda item: len(item.parts),
+            reverse=True,
+        )
+        for path in paths:
+            if ".git" in path.parts or any(part in ignored_parts for part in path.parts):
                 continue
             shutil.rmtree(path, ignore_errors=True)
-    for path in project_root.rglob("*.pyc"):
-        if ".git" in path.parts or any(part in {".venv", "venv", "env", "node_modules"} for part in path.parts):
+    for path in sorted(
+        project_root.rglob("*.pyc"),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    ):
+        if ".git" in path.parts or any(part in ignored_parts for part in path.parts):
             continue
         try:
             path.unlink()
         except FileNotFoundError:
             pass
 
+
 def _doctor_check(project_root: Path) -> PrePushCheck:
     result = subprocess.run(
-        [sys.executable, "scripts/doctor-local-repo.py", "--repo-root", str(project_root), "--json"],
+        [
+            sys.executable,
+            "scripts/doctor-local-repo.py",
+            "--repo-root",
+            str(project_root),
+            "--json",
+        ],
         cwd=project_root,
         text=True,
         capture_output=True,
@@ -96,7 +120,11 @@ def _doctor_check(project_root: Path) -> PrePushCheck:
             name="local_doctor",
             status="fail",
             summary="doctor-local-repo.py did not emit valid JSON",
-            details={"returncode": result.returncode, "stdout": result.stdout[-1000:], "stderr": result.stderr[-1000:]},
+            details={
+                "returncode": result.returncode,
+                "stdout": result.stdout[-1000:],
+                "stderr": result.stderr[-1000:],
+            },
             blockers=("local_doctor_invalid_json",),
         )
     blockers = tuple(str(item) for item in payload.get("forbidden_paths", []))
@@ -104,7 +132,11 @@ def _doctor_check(project_root: Path) -> PrePushCheck:
     return PrePushCheck(
         name="local_doctor",
         status=status,
-        summary="local source tree hygiene is clean" if status == "pass" else "local source tree hygiene found push blockers",
+        summary=(
+            "local source tree hygiene is clean"
+            if status == "pass"
+            else "local source tree hygiene found push blockers"
+        ),
         details={
             "returncode": result.returncode,
             "safe_to_push": payload.get("safe_to_push"),
@@ -117,12 +149,18 @@ def _doctor_check(project_root: Path) -> PrePushCheck:
 
 def _public_readiness_check(project_root: Path) -> PrePushCheck:
     payload = PublicRepoReadinessAuditor(project_root).audit().as_dict()
-    findings = tuple(f"{finding['path']}:{finding['reason']}" for finding in payload.get("findings", []))
+    findings = tuple(
+        f"{finding['path']}:{finding['reason']}" for finding in payload.get("findings", [])
+    )
     status = "pass" if payload.get("public_source_ready") is True else "fail"
     return PrePushCheck(
         name="public_repo_readiness",
         status=status,
-        summary="public source release checks pass" if status == "pass" else "public source release checks found blockers",
+        summary=(
+            "public source release checks pass"
+            if status == "pass"
+            else "public source release checks found blockers"
+        ),
         details={
             "checked_files": payload.get("checked_files"),
             "only_one_txt_file": payload.get("only_one_txt_file"),
@@ -167,8 +205,16 @@ def _version_consistency_check(project_root: Path) -> PrePushCheck:
     return PrePushCheck(
         name="version_consistency",
         status=status,
-        summary="package metadata, release notes, and pass log agree" if status == "pass" else "release metadata is inconsistent",
-        details={"pyproject_version": pyproject_version, "package_version": package_version, "expected_heading": expected_heading},
+        summary=(
+            "package metadata, release notes, and pass log agree"
+            if status == "pass"
+            else "release metadata is inconsistent"
+        ),
+        details={
+            "pyproject_version": pyproject_version,
+            "package_version": package_version,
+            "expected_heading": expected_heading,
+        },
         blockers=tuple(blockers),
     )
 
@@ -180,12 +226,16 @@ def _launch_gate_fail_closed_check(project_root: Path) -> PrePushCheck:
     ).as_dict()
     expected_open = [48, 49, 50, 51]
     fail_closed = report.get("status") == "blocked" and report.get("open_passes") == expected_open
-    blockers: tuple[str, ...] = () if fail_closed else ("launch_evidence_gate_not_fail_closed_for_missing_external_evidence",)
+    if fail_closed:
+        blockers: tuple[str, ...] = ()
+    else:
+        blockers = ("launch_evidence_gate_not_fail_closed_for_missing_external_evidence",)
     return PrePushCheck(
         name="launch_evidence_fail_closed",
         status="pass" if fail_closed else "fail",
         summary=(
-            "Pass 48-51 evidence gate remains blocked until external pilot/release evidence is supplied"
+            "Pass 48-51 evidence gate remains blocked until external pilot/release "
+            "evidence is supplied"
             if fail_closed
             else "Pass 48-51 evidence gate did not block missing launch evidence as expected"
         ),
@@ -219,7 +269,8 @@ def _safe_push_wrapper_check(project_root: Path) -> PrePushCheck:
     if "run_git_safe_push" not in python_text or "--dry-run" not in python_text:
         blockers.append("python_safe_push_cli_missing_dry_run_or_runner")
 
-    module_text = _read_text(project_root / "legal" / "release" / "git_safe_push.py") if (project_root / "legal" / "release" / "git_safe_push.py").is_file() else ""
+    module_path = project_root / "legal" / "release" / "git_safe_push.py"
+    module_text = _read_text(module_path) if module_path.is_file() else ""
     required_module_markers = (
         "git diff",
         "--cached",
@@ -284,7 +335,11 @@ def _ci_guardrail_check(project_root: Path) -> PrePushCheck:
     return PrePushCheck(
         name="ci_guardrails",
         status="pass" if not missing else "fail",
-        summary="CI includes source hygiene, chat/UI, launch-gate, and pre-push checks" if not missing else "CI is missing required guardrail tests",
+        summary=(
+            "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
+            if not missing
+            else "CI is missing required guardrail tests"
+        ),
         details={"required_markers": list(required_markers), "missing_markers": list(missing)},
         blockers=tuple(f"ci_missing_marker:{marker}" for marker in missing),
     )
@@ -293,14 +348,19 @@ def _ci_guardrail_check(project_root: Path) -> PrePushCheck:
 def run_pre_push_gate(project_root: str | Path = ".") -> PrePushGateReport:
     root = Path(project_root).resolve()
     _remove_bytecode_artifacts(root)
-    checks = (
-        _doctor_check(root),
-        _public_readiness_check(root),
-        _version_consistency_check(root),
-        _launch_gate_fail_closed_check(root),
-        _safe_push_wrapper_check(root),
-        _ci_guardrail_check(root),
-    )
+    checks_list: list[PrePushCheck] = []
+    for check in (
+        _doctor_check,
+        _public_readiness_check,
+        _version_consistency_check,
+        _launch_gate_fail_closed_check,
+        _safe_push_wrapper_check,
+        _ci_guardrail_check,
+    ):
+        _remove_bytecode_artifacts(root)
+        checks_list.append(check(root))
+    _remove_bytecode_artifacts(root)
+    checks = tuple(checks_list)
     blockers = tuple(blocker for check in checks for blocker in check.blockers)
     status = "pass" if not blockers and all(check.status == "pass" for check in checks) else "fail"
     return PrePushGateReport(
@@ -313,7 +373,11 @@ def run_pre_push_gate(project_root: str | Path = ".") -> PrePushGateReport:
         checks=checks,
         blockers=blockers,
         interpretation=(
-            "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence."
+            "Safe-to-push means the public source tree is clean, push wrappers are "
+            "no-op safe, and guardrails are present. It does not mean the legal "
+            "product is GA-shipped; Passes 48-51 still require external attorney "
+            "sandbox, limited real-matter pilot, release-candidate signoff, and GA "
+            "shipment signoff evidence."
         ),
     )
 

@@ -116,3 +116,23 @@ def test_local_scripts_exist_parse_and_doctor_json() -> None:
     payload = json.loads(doctor.stdout)
     assert payload["status"] == "pass"
     assert payload["safe_to_push"] is True
+
+
+def test_source_checkout_supports_plain_module_import_without_pythonpath() -> None:
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    completed = subprocess.run(
+        [
+            "python",
+            "-c",
+            "import maine_family_law_llm.api, maine_family_law_llm.cli; print('ok')",
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=TIMEOUT,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "ok" in completed.stdout

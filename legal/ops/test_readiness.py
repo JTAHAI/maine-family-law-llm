@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +16,15 @@ from legal.resources.offline_validation_pack import OfflineValidationPackBuilder
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _load_policy(project_root: Path) -> dict[str, Any]:
-    return json.loads((project_root / "configs" / "maine_local_test_readiness_policy.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (project_root / "configs" / "maine_local_test_readiness_policy.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def _run_command(command: list[str], cwd: Path, *, timeout_seconds: int) -> dict[str, Any]:
@@ -123,7 +126,11 @@ class LocalTestReadinessAuditor:
 
         pytest_result: dict[str, Any] = {"status": "skipped", "returncode": 0, "timed_out": False}
         if run_pytest:
-            pytest_result = _run_command([sys.executable, "-m", "pytest", "-q"], self.project_root, timeout_seconds=timeout_seconds)
+            pytest_result = _run_command(
+                [sys.executable, "-m", "pytest", "-q"],
+                self.project_root,
+                timeout_seconds=timeout_seconds,
+            )
             if pytest_result["returncode"] != 0:
                 blockers.append("pytest_failed_or_timed_out")
 
@@ -141,7 +148,11 @@ class LocalTestReadinessAuditor:
         if public_report["status"] != "pass":
             blockers.append("public_source_readiness_failed")
 
-        preflight_report = EnterprisePreflightRunner(self.project_root, self.data_root).run(create_external_dirs=True).as_dict()
+        preflight_report = (
+            EnterprisePreflightRunner(self.project_root, self.data_root)
+            .run(create_external_dirs=True)
+            .as_dict()
+        )
         if preflight_report["status"] != "pass":
             blockers.append("enterprise_preflight_failed")
 
@@ -152,8 +163,11 @@ class LocalTestReadinessAuditor:
         if offline_pack.get("fixture_only") is not True:
             blockers.append("offline_validation_pack_must_remain_fixture_only")
 
+        evidence_root = self.data_root / "_local_test_readiness_evidence"
+        evidence_root.mkdir(parents=True, exist_ok=True)
+
         acceptance = EnterpriseAcceptanceAuditor(self.project_root).write(
-            self.project_root / "enterprise_acceptance_evidence.json"
+            evidence_root / "enterprise_acceptance_evidence.json"
         ).as_dict()
         if acceptance["status"] != "pass":
             blockers.append("enterprise_acceptance_failed")
@@ -162,7 +176,7 @@ class LocalTestReadinessAuditor:
 
         supply_chain = SupplyChainAuditor(self.project_root).audit(
             write_sbom=True,
-            output_path=self.project_root / "source_sbom.json",
+            output_path=evidence_root / "source_sbom.json",
         ).as_dict()
         supply_summary = {k: v for k, v in supply_chain.items() if k != "sbom"}
         if supply_chain["status"] != "pass":
@@ -170,7 +184,7 @@ class LocalTestReadinessAuditor:
 
         # Build the release lock after generated source-evidence files are refreshed so the
         # lockfile audit reflects the actual staged source tree.
-        lock_path = self.project_root / "source_release_lock.json"
+        lock_path = evidence_root / "source_release_lock.json"
         ReleaseLockfileBuilder(self.project_root).write(lock_path)
         lock_audit = ReleaseLockfileBuilder(self.project_root).audit(lock_path).as_dict()
         if lock_audit["status"] != "pass":
@@ -200,15 +214,19 @@ class LocalTestReadinessAuditor:
             supply_chain_summary=supply_summary,
             blockers=blockers,
             warnings=warnings,
-            recommended_windows_test_commands=self.policy.get("recommended_windows_test_commands", []),
+            recommended_windows_test_commands=self.policy.get(
+                "recommended_windows_test_commands", []
+            ),
             production_legal_readiness_required_external_evidence=self.policy.get(
                 "production_legal_readiness_required_external_evidence", []
             ),
             interpretation=(
-                "Ready to test locally means the source tree, scripts, audits, lockfile, offline fixture pack, "
-                "public-source hygiene, and external-data-root preflight are runnable. It does not mean the product "
-                "is ready for legal production use; production legal readiness remains blocked until real external "
-                "authority, attorney-reviewed evals, measured metrics, pilot/security evidence, and signoffs are attached."
+                "Ready to test locally means the source tree, scripts, audits, lockfile, "
+                "offline fixture pack, public-source hygiene, and external-data-root "
+                "preflight are runnable. It does not mean the product is ready for legal "
+                "production use; production legal readiness remains blocked until real "
+                "external authority, attorney-reviewed evals, measured metrics, "
+                "pilot/security evidence, and signoffs are attached."
             ),
         )
 

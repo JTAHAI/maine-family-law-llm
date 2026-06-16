@@ -9,8 +9,12 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
+- The local browser workbench currently serves the constitutional modern chat UI and should show `UI v2.08 modern constitutional chat workbench` in the footer after a fresh start.
+- The default local browser entry point is `http://127.0.0.1:8000/`.
+- The workbench is local-first, source-backed, review-required, and not legal advice.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
 - The sample builder output and USB export both live under `dist/example_case_template/` and are meant as fictional demonstration material only.
+- If older sections below mention earlier UI pass labels such as `v1.83` or `v1.86`, treat the footer/runtime diagnostics in the running app as the source of truth.
 
 ## Download
 

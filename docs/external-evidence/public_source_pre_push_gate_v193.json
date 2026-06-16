@@ -16,7 +16,7 @@
     {
       "blockers": [],
       "details": {
-        "checked_files": 978,
+        "checked_files": 981,
         "github_ci_present": true,
         "only_one_txt_file": true,
         "production_legal_ready": false,
@@ -91,10 +91,10 @@
       "summary": "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
     }
   ],
-  "generated_at": "2026-06-15T20:59:55.556022+00:00",
+  "generated_at": "2026-06-16T22:02:52.640438+00:00",
   "interpretation": "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.",
   "production_legal_ready": false,
-  "project_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
+  "project_root": "D:\\dev\\maine-family-law-llm_git",
   "safe_to_push": true,
   "schema": "maine_family_law_llm.public_source_pre_push_gate.v2",
   "status": "pass"

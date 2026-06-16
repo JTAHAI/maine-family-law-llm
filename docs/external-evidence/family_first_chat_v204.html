@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maine Family Law Chat Studio v2.04.0</title>
+  <style>
+    :root {
+      --bg0:#07111f; --bg1:#0f2a44; --card:#ffffff; --ink:#0f172a; --muted:#64748b;
+      --line:#dbeafe; --soft:#f8fafc; --accent:#1d4ed8; --accent2:#0f766e; --warn:#991b1b;
+      --gold:#f59e0b; --shadow:0 24px 80px rgba(2,8,23,.35); --radius:28px;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; color:var(--ink); background:
+      radial-gradient(circle at top left, rgba(37,99,235,.45), transparent 34rem),
+      radial-gradient(circle at top right, rgba(15,118,110,.35), transparent 32rem),
+      linear-gradient(135deg, var(--bg0), var(--bg1)); min-height:100vh; }
+    .shell { max-width:1220px; margin:0 auto; padding:28px; }
+    .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:22px; align-items:stretch; }
+    .panel { background:rgba(255,255,255,.96); border:1px solid rgba(255,255,255,.65); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .heroCard { padding:34px; color:white; background:linear-gradient(145deg, rgba(15,23,42,.96), rgba(30,64,175,.84)); border-radius:var(--radius); min-height:360px; position:relative; overflow:hidden; }
+    .heroCard:after { content:""; position:absolute; inset:auto -80px -120px auto; width:280px; height:280px; border-radius:999px; background:rgba(255,255,255,.09); }
+    .eyebrow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+    .badge { border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.14); color:white; border-radius:999px; padding:7px 10px; font-weight:800; font-size:12px; letter-spacing:.02em; }
+    .badge.light { color:#1e3a8a; border-color:#bfdbfe; background:#eff6ff; }
+    h1 { font-size:clamp(34px, 5vw, 62px); line-height:.94; margin:0 0 18px; letter-spacing:-.05em; }
+    .sub { font-size:18px; color:#dbeafe; line-height:1.55; max-width:780px; }
+    .chat { padding:22px; display:flex; flex-direction:column; min-height:360px; }
+    label { font-weight:900; display:block; margin:0 0 8px; }
+    select, textarea, button { font:inherit; }
+    select, textarea { width:100%; border:1px solid #cbd5e1; border-radius:18px; padding:13px 14px; outline:none; background:white; }
+    textarea { min-height:116px; resize:vertical; line-height:1.45; }
+    textarea:focus, select:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,.14); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+    button { border:0; border-radius:16px; padding:12px 16px; font-weight:900; cursor:pointer; }
+    .primary { background:linear-gradient(135deg, #2563eb, #0f766e); color:white; }
+    .secondary { background:#e0f2fe; color:#075985; }
+    .ghost { background:#f1f5f9; color:#334155; }
+    .grid { display:grid; grid-template-columns:.95fr 1.05fr; gap:22px; margin-top:22px; }
+    .section { padding:22px; }
+    .section h2 { margin:0 0 12px; letter-spacing:-.02em; }
+    .answer { font-size:18px; line-height:1.55; }
+    .meta { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:7px 10px; font-size:12px; font-weight:900; background:#f1f5f9; color:#334155; }
+    .pill.block { background:#fef2f2; color:#991b1b; }
+    .pill.good { background:#ecfdf5; color:#047857; }
+    .cards { display:grid; gap:12px; }
+    .source { border:1px solid #dbeafe; border-radius:20px; padding:14px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .source strong { display:block; margin-bottom:5px; }
+    .source small { color:#475569; }
+    .checklist { margin:0; padding-left:22px; line-height:1.65; }
+    .promptBank { display:grid; gap:10px; margin-top:14px; }
+    .prompt { text-align:left; background:#f8fafc; border:1px solid #e2e8f0; color:#0f172a; padding:12px; border-radius:16px; font-weight:800; }
+    .gate { border:1px solid #fecaca; background:#fff7f7; border-radius:20px; padding:14px; }
+    .footer { color:#dbeafe; text-align:center; padding:24px; font-size:13px; }
+    @media (max-width: 860px) { .hero, .grid, .row { grid-template-columns:1fr; } .shell { padding:14px; } .heroCard { padding:24px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="heroCard">
+        <div class="eyebrow"><span class="badge">Maine-only</span><span class="badge">Source-first</span><span class="badge">Review-required</span><span class="badge">v2.04.0</span></div>
+        <h1>Family-law help that feels calm, fast, and safe.</h1>
+        <p class="sub">Ask a Maine family-law question. Get issue labels, source cards to verify, intake questions, next actions, and a filing gate that blocks unsupported or unreviewed output.</p>
+      </div>
+      <div class="panel chat">
+        <div class="row">
+          <div><label for="audience">Audience</label><select id="audience"><option value="parent">Parent or caregiver</option><option value="lawyer">Lawyer / legal professional</option><option value="advocate">Legal aid / advocate</option><option value="court_helper">Court helper / navigator</option></select></div>
+          <div><label for="mode">Mode</label><select id="mode"><option value="guided_chat">Guided chat</option><option value="review_checklist">Review checklist</option><option value="draft_triage">Draft triage</option><option value="source_cards">Source cards</option></select></div>
+        </div>
+        <div style="margin-top:12px"><label for="question">Question</label><textarea id="question"></textarea></div>
+        <div class="actions"><button class="primary" onclick="ask()">Ask safely</button><button class="secondary" onclick="copyPacket()">Copy packet JSON</button><button class="ghost" onclick="resetSample()">Reset sample</button></div>
+        <div class="promptBank" id="promptBank"></div>
+      </div>
+    </section>
+    <section class="grid">
+      <div class="panel section"><h2>Answer</h2><div class="meta" id="meta"></div><div class="answer" id="answer"></div><h2 style="margin-top:22px">Checklist</h2><ol class="checklist" id="checklist"></ol></div>
+      <div class="panel section"><h2>Source cards to verify</h2><div class="cards" id="sources"></div><h2 style="margin-top:22px">Filing gate</h2><div class="gate" id="gate"></div></div>
+    </section>
+    <p class="footer">Not legal advice. No attorney-client relationship. No filing-ready export without source, citation, quote, fact, form, posture, and human-review gates.</p>
+  </main>
+  <script>
+    const seedPacket = {"answer_blocks": {"audience_label": "Parent or caregiver", "copy_safe_note": "Copy only the checklist or question list into client communications unless a qualified reviewer approves legal conclusions.", "plain_language": ["Start with the actual papers: complaint, motion, order, notice, form packet, service papers, and any scheduled hearing information.", "Separate legal questions from factual claims. Legal questions need verified Maine authority. Factual claims need evidence with dates and document spans.", "Do not treat a draft, checklist, or chat answer as filing-ready until a qualified human reviewer confirms it."], "professional_workflow": ["Build source scope and authority matrix before drafting.", "Resolve citations to source IDs and confirm quote offsets.", "Map facts to evidence and mark unsupported assertions before export.", "Keep final certification outside the generator; only the filing-ready gate and human review can pass export."], "source_cards_to_verify": [{"authority_status": "requires_live_verification", "canonical_citation": "M.R. Civ. P. 52", "freshness_status": "must_verify_current_official_source", "jurisdiction": "maine", "matched_issue": "Rule_52_findings", "source_class": "court_rule", "source_id": "starter_me_rule_52", "title": "Maine Rule 52 findings starter card", "why_it_matters": "Findings can matter for final family orders, appellate review, and proposed findings workflows."}, {"authority_status": "requires_live_verification", "canonical_citation": "19-A M.R.S. § 1653", "freshness_status": "must_verify_current_official_source", "jurisdiction": "maine", "matched_issue": "best_interest_factor_gap", "source_class": "statute_review_checklist", "source_id": "starter_me_best_interest_review", "title": "Best-interest factor coverage review", "why_it_matters": "A draft or order should not skip material best-interest factors when they are relevant."}, {"authority_status": "requires_live_verification", "canonical_citation": "19-A M.R.S. § 1653", "freshness_status": "must_verify_current_official_source", "jurisdiction": "maine", "matched_issue": "parental_rights_responsibilities", "source_class": "statute", "source_id": "starter_me_19a_1653", "title": "Maine parental rights / best-interest statute starter card", "why_it_matters": "Often central to parental rights, residence, contact, and best-interest review."}], "summary": "This looks like a Maine family-law question involving Rule 52 findings, best interest factor gap, contact schedule, parental rights responsibilities, therapist non delegation. The safest next step is to identify the case stage (motion for findings), gather the relevant orders/forms/facts, and verify the official Maine sources before relying on any answer. This tool can organize questions and source cards, but it cannot tell you what choice to make."}, "audience": "parent", "audience_config": {"label": "Parent or caregiver", "primary_goal": "understand the next safe step and what Maine sources/forms to verify", "tone": "plain language, calm, practical, safety-aware"}, "citation_report": [{"blocks_filing_ready": true, "citation_text": "19-A M.R.S. § 1653", "citation_type": "maine_statute", "end": 167, "start": 148, "status": "parsed_unverified_needs_source_registry_resolution"}], "claims": {"attorney_review_completed": false, "filing_ready": false, "legal_advice": false, "model_memory_used_as_authority": false, "private_data_packaged": false}, "disclaimer": "Maine Family Law LLM is legal information and workflow support, not legal advice. It does not create an attorney-client relationship. Every answer, checklist, form note, and draft remains review-required unless source freshness, authority, citations, quotes, facts, procedure, forms, and human review are verified.", "filing_gate": {"blockers": [{"blocks_filing_ready": true, "category": "source_scope", "message": "Live official Maine source registry resolution has not been completed in this chat packet."}, {"blocks_filing_ready": true, "category": "human_review", "message": "Human legal review is required before any filing-ready export."}, {"blocks_filing_ready": true, "category": "citation_resolution", "citations": [{"blocks_filing_ready": true, "citation_text": "19-A M.R.S. § 1653", "citation_type": "maine_statute", "end": 167, "start": 148, "status": "parsed_unverified_needs_source_registry_resolution"}], "message": "One or more user-provided citations were parsed but not resolved to source IDs in this packet."}, {"blocks_filing_ready": true, "category": "freshness", "message": "Starter source cards require live freshness verification before current-law language is allowed."}, {"blocks_filing_ready": true, "category": "red_flags", "message": "Potential legal, safety, procedural, privacy, or record problems were detected.", "red_flags": [{"matched_terms": ["no findings"], "red_flag": "missing Rule 52 findings", "review_required": true, "severity": "blocker"}, {"matched_terms": ["therapist decides"], "red_flag": "therapist or third-party delegated contact decision", "review_required": true, "severity": "blocker"}]}], "filing_ready": false, "review_required": true, "status": "blocked", "warnings": ["This v2.04 chat packet is an intake and UX layer. It does not certify live law, form freshness, fact support, or filing readiness.", "Private matter facts should stay in the approved matter store or user-controlled upload flow, not in the source repository."]}, "generated_at": "2026-06-05T02:07:32.703415+00:00", "intake_questions": ["What Maine court order, case number, form packet, or filing stage are we dealing with?", "What exact outcome is being requested, and is there an existing order?", "What sources have already been verified: statutes, rules, forms, orders, notices, transcripts, exhibits, or messages?", "Does the order include findings tied to the relevant statutory factors, or only conclusions?"], "issue_labels": ["Rule_52_findings", "best_interest_factor_gap", "contact_schedule", "parental_rights_responsibilities", "therapist_non_delegation"], "mode": "guided_chat", "next_actions": [{"action": "confirm_posture", "label": "Identify the case stage: starting case, temporary order, final order, post-judgment, contempt, appeal, or unknown."}, {"action": "attach_sources", "label": "Attach or verify official Maine source cards before relying on any legal claim."}, {"action": "map_facts", "label": "Turn each important factual statement into a fact-to-evidence row with document, date, quote/span, and confidence."}, {"action": "run_gate", "label": "Run citation, quote, source freshness, form freshness, claim-support, and human-review gates before export."}, {"action": "best_interest_check", "label": "Review best-interest factor coverage and any contact/residence restrictions."}, {"action": "findings_check", "label": "Check whether proposed or final findings are specific enough for review."}], "posture_labels": ["motion_for_findings"], "question": "I have a final Maine parenting order with no findings. The therapist decides contact and I need to know what to gather before asking for help about 19-A M.R.S. § 1653.", "red_flags": [{"matched_terms": ["no findings"], "red_flag": "missing Rule 52 findings", "review_required": true, "severity": "blocker"}, {"matched_terms": ["therapist decides"], "red_flag": "therapist or third-party delegated contact decision", "review_required": true, "severity": "blocker"}], "schema": "maine_family_law_llm.family_first_chat.packet.v1", "starter_prompts": {"advocate": ["Create a plain-language intake checklist for a Maine parent asking about child support and contact.", "Spot safety, service, jurisdiction, and form-freshness issues in a Maine family matter.", "Explain why a draft is review-required and not filing-ready."], "court_helper": ["Help identify what kind of Maine family form packet someone may need without giving legal advice.", "Create a neutral missing-information checklist for a person asking about a post-judgment motion.", "Explain source cards, citation checks, and human review in plain language."], "lawyer": ["Review a proposed final parental-rights order for Rule 52 findings, best-interest coverage, and filing-readiness blockers.", "Build an authority matrix for a post-judgment motion to modify contact after a substantial change.", "Generate a citation and quote verification checklist for a draft motion relying on 19-A M.R.S. § 1653.", "Triage appellate red flags in a family judgment with missing transcript and thin findings."], "parent": ["I have a Maine parenting order and the other parent is not following the contact schedule. What should I gather before asking for help?", "What Maine sources and forms should I check before filing for divorce with children?", "The final order does not explain the best-interest reasons. What should I ask a lawyer to review?", "I am worried about safety during exchanges. What information should I organize before seeking help?"]}, "status": "review_required", "ui": {"badges": ["Maine-only", "Source-first", "Review-required", "No private data in repo"], "empty_state": "Ask a question, choose an audience, and get a review-required source workflow.", "hero": "Fast, calm Maine family-law help with source cards and review gates.", "primary_cta": "Ask safely", "secondary_cta": "Build review checklist", "tabs": ["Answer", "Source cards", "Checklist", "Filing gate"]}, "version": "2.04.0"};
+    const starterPrompts = {"advocate": ["Create a plain-language intake checklist for a Maine parent asking about child support and contact.", "Spot safety, service, jurisdiction, and form-freshness issues in a Maine family matter.", "Explain why a draft is review-required and not filing-ready."], "court_helper": ["Help identify what kind of Maine family form packet someone may need without giving legal advice.", "Create a neutral missing-information checklist for a person asking about a post-judgment motion.", "Explain source cards, citation checks, and human review in plain language."], "lawyer": ["Review a proposed final parental-rights order for Rule 52 findings, best-interest coverage, and filing-readiness blockers.", "Build an authority matrix for a post-judgment motion to modify contact after a substantial change.", "Generate a citation and quote verification checklist for a draft motion relying on 19-A M.R.S. § 1653.", "Triage appellate red flags in a family judgment with missing transcript and thin findings."], "parent": ["I have a Maine parenting order and the other parent is not following the contact schedule. What should I gather before asking for help?", "What Maine sources and forms should I check before filing for divorce with children?", "The final order does not explain the best-interest reasons. What should I ask a lawyer to review?", "I am worried about safety during exchanges. What information should I organize before seeking help?"]};
+    let currentPacket = seedPacket;
+    function esc(s){ return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function labelsFor(q){
+      const low = q.toLowerCase(); const labels = [];
+      const map = {divorce:['divorce','spouse'], parental_rights_responsibilities:['custody','parental rights','parenting'], child_support:['child support','worksheet','income'], protection_from_abuse:['pfa','abuse','protection'], Rule_52_findings:['rule 52','findings','no findings'], best_interest_factor_gap:['best interest','1653'], UCCJEA_jurisdiction:['uccjea','home state','other state','moved to maine'], appeal_preservation:['appeal','law court','transcript']};
+      Object.entries(map).forEach(([k, arr]) => { if(arr.some(x => low.includes(x))) labels.push(k); });
+      return labels.length ? labels : ['general_family_law_question'];
+    }
+    function simplePacket(){
+      const q = document.getElementById('question').value.trim() || seedPacket.question;
+      const audience = document.getElementById('audience').value;
+      const mode = document.getElementById('mode').value;
+      const issues = labelsFor(q);
+      const cards = seedPacket.answer_blocks.source_cards_to_verify.filter(c => issues.includes(c.matched_issue));
+      const sourceCards = cards.length ? cards : seedPacket.answer_blocks.source_cards_to_verify;
+      return {...seedPacket, question:q, audience, mode, issue_labels:issues, answer_blocks:{...seedPacket.answer_blocks, summary:`This is a review-required Maine family-law workflow for: ${q}. Likely labels: ${issues.join(', ')}. Verify official Maine source cards, map facts to evidence, and keep any draft blocked until human review.` , source_cards_to_verify:sourceCards}};
+    }
+    function render(p){
+      currentPacket = p;
+      document.getElementById('meta').innerHTML = [...p.issue_labels.map(x=>`<span class="pill">${esc(x)}</span>`), `<span class="pill block">filing_ready=false</span>`, `<span class="pill good">review_required=true</span>`].join('');
+      document.getElementById('answer').innerHTML = `<p>${esc(p.answer_blocks.summary)}</p><p><strong>Remember:</strong> ${esc(p.disclaimer)}</p>`;
+      document.getElementById('checklist').innerHTML = p.intake_questions.map(x=>`<li>${esc(x)}</li>`).join('') + p.next_actions.map(x=>`<li>${esc(x.label)}</li>`).join('');
+      document.getElementById('sources').innerHTML = p.answer_blocks.source_cards_to_verify.map(c=>`<div class="source"><strong>${esc(c.title)}</strong><small>${esc(c.canonical_citation)} · ${esc(c.source_class)} · ${esc(c.freshness_status)}</small><p>${esc(c.why_it_matters)}</p></div>`).join('');
+      document.getElementById('gate').innerHTML = `<strong>Blocked by design.</strong><p>${esc(p.filing_gate.blockers.map(b=>b.message).join(' '))}</p>`;
+    }
+    function renderPromptBank(){
+      const audience = document.getElementById('audience').value;
+      document.getElementById('promptBank').innerHTML = (starterPrompts[audience] || []).map(p=>`<button class="prompt" onclick="usePrompt(this)">${esc(p)}</button>`).join('');
+    }
+    function usePrompt(btn){ document.getElementById('question').value = btn.textContent; ask(); }
+    function ask(){ render(simplePacket()); }
+    function resetSample(){ document.getElementById('question').value = seedPacket.question; render(seedPacket); renderPromptBank(); }
+    async function copyPacket(){ await navigator.clipboard.writeText(JSON.stringify(currentPacket, null, 2)); }
+    document.getElementById('audience').addEventListener('change', renderPromptBank);
+    resetSample();
+  </script>
+</body>
+</html>

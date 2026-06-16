@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "filing_ready_blocked": true,
+    "legal_advice_claim_false": true,
+    "packet_schema_present": true,
+    "private_data_packaged_false": true,
+    "review_required": true,
+    "source_cards_present": true,
+    "starter_prompts_present": true
+  },
+  "generated_at": "2026-06-05T02:07:32.704147+00:00",
+  "outputs_expected": [
+    "docs/external-evidence/family_first_chat_v204_packet.json",
+    "docs/external-evidence/family_first_chat_v204_audit.json",
+    "docs/external-evidence/family_first_chat_v204.html"
+  ],
+  "schema": "maine_family_law_llm.family_first_chat.audit.v1",
+  "status": "pass",
+  "version": "2.04.0"
+}

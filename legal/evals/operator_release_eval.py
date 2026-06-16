@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 OPERATOR_RELEASE_THRESHOLDS: dict[str, dict[str, Any]] = {
     "retrieval_recall_at_20": {"operator": ">=", "target": 0.90, "minimum_sample_size": 1},
@@ -61,7 +59,9 @@ class OperatorReleaseEvalReport:
     legal_signoff: bool
     pilot_signoff: bool
     metrics: list[OperatorReleaseMetric]
-    thresholds: dict[str, dict[str, Any]] = field(default_factory=lambda: OPERATOR_RELEASE_THRESHOLDS)
+    thresholds: dict[str, dict[str, Any]] = field(
+        default_factory=lambda: OPERATOR_RELEASE_THRESHOLDS
+    )
     blockers: list[str] = field(default_factory=list)
     measurement_output_path: str | None = None
 
@@ -115,7 +115,7 @@ class OperatorSourceBackedReleaseEvalRunner:
                 if operator_allowed
                 else "pass46_operator_source_backed_release_eval_blocked"
             ),
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             data_root=str(data_root),
             eval_root=str(eval_root),
             operator_release_allowed=operator_allowed,
@@ -125,14 +125,19 @@ class OperatorSourceBackedReleaseEvalRunner:
             pilot_signoff=False,
             metrics=metrics,
             blockers=blockers,
-            measurement_output_path=str(measurement_output_path) if measurement_output_path else None,
+            measurement_output_path=(
+                str(measurement_output_path) if measurement_output_path else None
+            ),
         )
         if measurement_output_path:
             self._write_measurements(report, Path(measurement_output_path))
         if output_path:
             output = Path(output_path)
             output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(json.dumps(report.as_dict(), indent=2, sort_keys=True), encoding="utf-8")
+            output.write_text(
+                json.dumps(report.as_dict(), indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
         return report
 
     def _collect_metrics(self, *, data_root: Path, eval_root: Path) -> list[OperatorReleaseMetric]:
@@ -172,7 +177,12 @@ class OperatorSourceBackedReleaseEvalRunner:
             "release_metric_measurements.operator_source_backed.json",
             "release_metric_measurements.json",
         ]
-        roots = [data_root, eval_root, data_root / "release_evidence", eval_root / "release_evidence"]
+        roots = [
+            data_root,
+            eval_root,
+            data_root / "release_evidence",
+            eval_root / "release_evidence",
+        ]
         return [root / name for root in roots for name in names]
 
     @staticmethod
@@ -221,7 +231,10 @@ class OperatorSourceBackedReleaseEvalRunner:
             if not path.exists():
                 continue
             payload = _read_json(path)
-            if isinstance(payload, dict) and (payload.get("status") == "pass" or payload.get("freshness_audit_passed") is True):
+            if isinstance(payload, dict) and (
+                payload.get("status") == "pass"
+                or payload.get("freshness_audit_passed") is True
+            ):
                 return OperatorReleaseMetric(
                     name="source_freshness_report_present",
                     value=1.0,
@@ -242,6 +255,8 @@ class OperatorSourceBackedReleaseEvalRunner:
         )
 
     def _private_packaging_metric(self) -> OperatorReleaseMetric:
+        # The Pass 46 metric audits source-release boundary risk, not temporary
+        # ignored caches that the local doctor can clean before packaging.
         forbidden = [
             "ME_FM_LLM_data",
             "official_authority_store",
@@ -250,6 +265,11 @@ class OperatorSourceBackedReleaseEvalRunner:
             "embedding_store",
         ]
         present = [name for name in forbidden if (self.project_root / name).exists()]
+        notes = (
+            "Forbidden runtime/external data directories present: " + ", ".join(present)
+            if present
+            else "No forbidden runtime/external data directories present in repo root."
+        )
         return OperatorReleaseMetric(
             name="private_data_packaging",
             value=0.0 if present else 1.0,
@@ -259,7 +279,7 @@ class OperatorSourceBackedReleaseEvalRunner:
             operator_source_backed=True,
             reviewer_status="not_required",
             status="measured" if not present else "blocked",
-            notes="Forbidden runtime/external data directories present: " + ", ".join(present) if present else "No forbidden runtime/external data directories present in repo root.",
+            notes=notes,
         )
 
     def _evaluate(self, metrics: list[OperatorReleaseMetric]) -> list[str]:
@@ -305,12 +325,21 @@ def _load_measurements(path: Path) -> list[OperatorReleaseMetric]:
     if payload is None:
         return []
     if isinstance(payload, dict):
-        raw_metrics = payload.get("release_metric_measurements") or payload.get("metrics") or payload
+        raw_metrics = (
+            payload.get("release_metric_measurements")
+            or payload.get("metrics")
+            or payload
+        )
     else:
         raw_metrics = payload
     rows: list[Any]
     if isinstance(raw_metrics, dict):
-        rows = [{"name": name, **value} if isinstance(value, dict) else {"name": name, "value": value} for name, value in raw_metrics.items()]
+        rows = [
+            {"name": name, **value}
+            if isinstance(value, dict)
+            else {"name": name, "value": value}
+            for name, value in raw_metrics.items()
+        ]
     elif isinstance(raw_metrics, list):
         rows = raw_metrics
     else:
@@ -331,7 +360,9 @@ def _load_measurements(path: Path) -> list[OperatorReleaseMetric]:
                 sample_size=sample_size,
                 basis=str(row.get("basis") or row.get("evidence_basis") or path.name),
                 source_path=str(path),
-                operator_source_backed=bool(row.get("operator_source_backed")) or "operator_source_backed" in str(row.get("reviewer_status", "")).lower(),
+                operator_source_backed=bool(row.get("operator_source_backed"))
+                or "operator_source_backed"
+                in str(row.get("reviewer_status", "")).lower(),
                 attorney_reviewed=bool(row.get("attorney_reviewed")),
                 reviewer_status=str(row.get("reviewer_status") or "unknown"),
                 status=str(row.get("status") or "measured"),

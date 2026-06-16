@@ -3,7 +3,7 @@
   "branch": "main",
   "commit_created": true,
   "dry_run": false,
-  "generated_at": "2026-06-02T17:29:40.817983+00:00",
+  "generated_at": "2026-06-02T17:30:07.790704+00:00",
   "interpretation": "This wrapper verifies source hygiene before pushing public source code. It does not claim legal GA readiness, attorney review, pilot completion, or filing-ready output.",
   "message": "Apply v1.93 attorney sandbox review kit pass",
   "no_changes_to_commit": false,
@@ -61,7 +61,7 @@
       "skipped": false,
       "status": "pass",
       "stderr_tail": "",
-      "stdout_tail": "  50,\n          51\n        ]\n      },\n      \"name\": \"launch_evidence_fail_closed\",\n      \"status\": \"pass\",\n      \"summary\": \"Pass 48-51 evidence gate remains blocked until external pilot/release evidence is supplied\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"no_op_commit_guard\": \"git diff --cached --quiet\",\n        \"report_output\": \"docs/external-evidence/public_source_pre_push_gate_v193.json\",\n        \"required_files\": [\n          \"scripts/git-safe-push.py\",\n          \"PUSH_SAFE.ps1\",\n          \"scripts/git-safe-push.ps1\",\n          \"scripts/git-safe-push.sh\"\n        ]\n      },\n      \"name\": \"git_safe_push_wrapper\",\n      \"status\": \"pass\",\n      \"summary\": \"safe push wrappers delegate to the no-op-safe Python gate\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"missing_markers\": [],\n        \"required_markers\": [\n          \"doctor-local-repo.py\",\n          \"run-chat-library-evidence.py\",\n          \"run-public-source-preflight.py\",\n          \"test_chat_library_v187_input_clear_and_routing.py\",\n          \"test_pass48_51_launch_evidence_gates.py\",\n          \"test_public_source_pre_push_gate_v191.py\",\n          \"test_git_safe_push_v192.py\",\n          \"test_attorney_sandbox_review_kit_v193.py\"\n        ]\n      },\n      \"name\": \"ci_guardrails\",\n      \"status\": \"pass\",\n      \"summary\": \"CI includes source hygiene, chat/UI, launch-gate, and pre-push checks\"\n    }\n  ],\n  \"generated_at\": \"2026-06-02T17:29:35.144952+00:00\",\n  \"interpretation\": \"Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.\",\n  \"production_legal_ready\": false,\n  \"project_root\": \"D:\\\\dev\\\\maine-family-law-llm_git\",\n  \"safe_to_push\": true,\n  \"schema\": \"maine_family_law_llm.public_source_pre_push_gate.v2\",\n  \"status\": \"pass\"\n}\n"
+      "stdout_tail": "  50,\n          51\n        ]\n      },\n      \"name\": \"launch_evidence_fail_closed\",\n      \"status\": \"pass\",\n      \"summary\": \"Pass 48-51 evidence gate remains blocked until external pilot/release evidence is supplied\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"no_op_commit_guard\": \"git diff --cached --quiet\",\n        \"report_output\": \"docs/external-evidence/public_source_pre_push_gate_v193.json\",\n        \"required_files\": [\n          \"scripts/git-safe-push.py\",\n          \"PUSH_SAFE.ps1\",\n          \"scripts/git-safe-push.ps1\",\n          \"scripts/git-safe-push.sh\"\n        ]\n      },\n      \"name\": \"git_safe_push_wrapper\",\n      \"status\": \"pass\",\n      \"summary\": \"safe push wrappers delegate to the no-op-safe Python gate\"\n    },\n    {\n      \"blockers\": [],\n      \"details\": {\n        \"missing_markers\": [],\n        \"required_markers\": [\n          \"doctor-local-repo.py\",\n          \"run-chat-library-evidence.py\",\n          \"run-public-source-preflight.py\",\n          \"test_chat_library_v187_input_clear_and_routing.py\",\n          \"test_pass48_51_launch_evidence_gates.py\",\n          \"test_public_source_pre_push_gate_v191.py\",\n          \"test_git_safe_push_v192.py\",\n          \"test_attorney_sandbox_review_kit_v193.py\"\n        ]\n      },\n      \"name\": \"ci_guardrails\",\n      \"status\": \"pass\",\n      \"summary\": \"CI includes source hygiene, chat/UI, launch-gate, and pre-push checks\"\n    }\n  ],\n  \"generated_at\": \"2026-06-02T17:30:02.601752+00:00\",\n  \"interpretation\": \"Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.\",\n  \"production_legal_ready\": false,\n  \"project_root\": \"D:\\\\dev\\\\maine-family-law-llm_git\",\n  \"safe_to_push\": true,\n  \"schema\": \"maine_family_law_llm.public_source_pre_push_gate.v2\",\n  \"status\": \"pass\"\n}\n"
     },
     {
       "command": [
@@ -96,7 +96,7 @@
       "skipped": false,
       "status": "pass",
       "stderr_tail": "",
-      "stdout_tail": " M .github/workflows/ci.yml\n M PASS_CHANGES.txt\n M docs/release-notes.md\n M legal/pilot/__init__.py\n M legal/release/git_safe_push.py\n M legal/release/pre_push_gate.py\n M pyproject.toml\n M scripts/run-public-source-preflight.py\n M src/maine_family_law_llm/__init__.py\n M tests/test_chat_library_v187_input_clear_and_routing.py\n M tests/test_public_source_pre_push_gate_v191.py\n?? docs/external-evidence/attorney_sandbox_review_kit_v193_summary.json\n?? docs/external-evidence/public_source_pre_push_gate_v193.json\n?? docs/external-evidence/source_zip_content_audit_v193.json\n?? docs/pass48-attorney-sandbox-review-kit-v193.md\n?? legal/pilot/attorney_review_kit.py\n?? scripts/build-attorney-sandbox-review-kit.py\n?? tests/test_attorney_sandbox_review_kit_v193.py\n"
+      "stdout_tail": " M docs/external-evidence/public_source_pre_push_gate_v193.json\n?? docs/external-evidence/git_safe_push_v192.json\n"
     },
     {
       "command": [
@@ -137,7 +137,7 @@
       "skipped": false,
       "status": "pass",
       "stderr_tail": "",
-      "stdout_tail": "[main 29ed52a] Apply v1.93 attorney sandbox review kit pass\n 18 files changed, 633 insertions(+), 7 deletions(-)\n create mode 100644 docs/external-evidence/attorney_sandbox_review_kit_v193_summary.json\n create mode 100644 docs/external-evidence/public_source_pre_push_gate_v193.json\n create mode 100644 docs/external-evidence/source_zip_content_audit_v193.json\n create mode 100644 docs/pass48-attorney-sandbox-review-kit-v193.md\n create mode 100644 legal/pilot/attorney_review_kit.py\n create mode 100644 scripts/build-attorney-sandbox-review-kit.py\n create mode 100644 tests/test_attorney_sandbox_review_kit_v193.py\n"
+      "stdout_tail": "[main f7cd886] Apply v1.93 attorney sandbox review kit pass\n 2 files changed, 160 insertions(+), 2 deletions(-)\n create mode 100644 docs/external-evidence/git_safe_push_v192.json\n"
     },
     {
       "command": [
@@ -151,7 +151,7 @@
       "returncode": 0,
       "skipped": false,
       "status": "pass",
-      "stderr_tail": "To https://github.com/JTAHAI/maine-family-law-llm.git\n   14fd0d9..29ed52a  main -> main\n",
+      "stderr_tail": "To https://github.com/JTAHAI/maine-family-law-llm.git\n   29ed52a..f7cd886  main -> main\n",
       "stdout_tail": "branch 'main' set up to track 'origin/main'.\n"
     }
   ]

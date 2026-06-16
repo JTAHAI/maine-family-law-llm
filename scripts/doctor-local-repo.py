@@ -5,18 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from pathlib import Path
-
 
 FORBIDDEN_DIR_NAMES = {
     ".local_tmp",
     ".mfl_work",
     ".proofs",
-    ".pytest_cache",
-    ".ruff_cache",
-    ".mypy_cache",
     ".sentinel_tmp",
-    "__pycache__",
     ".eggs",
     "ME_FM_LLM_data",
     "node_modules",
@@ -56,8 +52,6 @@ ROOT_GENERATED_JSON_NAMES = {
 }
 
 FORBIDDEN_SUFFIXES = {
-    ".pyc",
-    ".pyo",
     ".db",
     ".sqlite",
     ".sqlite3",
@@ -106,6 +100,26 @@ def _is_under_ignored_path(rel: Path) -> bool:
     return any(part == ".git" for part in rel.parts)
 
 
+def _remove_transient_cache_artifacts(repo_root: Path) -> None:
+    """Remove bytecode/test caches that can be regenerated during local test runs."""
+    transient_dir_names = {"__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
+    for name in transient_dir_names:
+        paths = sorted(repo_root.rglob(name), key=lambda item: len(item.parts), reverse=True)
+        for path in paths:
+            rel = path.relative_to(repo_root)
+            if _is_under_ignored_path(rel) or any(part in VENV_DIR_NAMES for part in rel.parts):
+                continue
+            shutil.rmtree(path, ignore_errors=True)
+    for path in sorted(repo_root.rglob("*.py[co]"), key=lambda item: len(item.parts), reverse=True):
+        rel = path.relative_to(repo_root)
+        if _is_under_ignored_path(rel) or any(part in VENV_DIR_NAMES for part in rel.parts):
+            continue
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _scan_tests_contamination(repo_root: Path) -> list[str]:
     tests_dir = repo_root / "tests"
     if not tests_dir.exists():
@@ -134,6 +148,7 @@ def _scan_tests_contamination(repo_root: Path) -> list[str]:
 
 def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
     repo_root = repo_root.resolve()
+    _remove_transient_cache_artifacts(repo_root)
     forbidden: list[str] = []
     for path in repo_root.rglob("*"):
         rel = path.relative_to(repo_root)
@@ -164,7 +179,11 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
             forbidden.append(rel.as_posix())
             continue
-        if path.is_file() and path.suffix.lower() == ".txt" and rel.as_posix() != "PASS_CHANGES.txt":
+        if (
+            path.is_file()
+            and path.suffix.lower() == ".txt"
+            and rel.as_posix() != "PASS_CHANGES.txt"
+        ):
             forbidden.append(rel.as_posix())
 
     missing_required = sorted(
@@ -196,7 +215,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", default=str(Path(__file__).resolve().parents[1]))
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--allow-venv", action="store_true", help="Permit repo-local venvs for temporary local-only checks.")
+    parser.add_argument(
+        "--allow-venv",
+        action="store_true",
+        help="Permit repo-local venvs for temporary local-only checks.",
+    )
     parser.add_argument(
         "--strict-venv",
         action="store_true",

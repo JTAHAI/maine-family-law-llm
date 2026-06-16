@@ -1,0 +1,611 @@
+{
+  "claims": {
+    "filing_ready": false,
+    "legal_advice": false,
+    "private_data_packaged": false,
+    "production_ga": false
+  },
+  "generated_at": "2026-06-05T02:07:32.703603+00:00",
+  "packets": [
+    {
+      "answer_blocks": {
+        "audience_label": "Parent or caregiver",
+        "copy_safe_note": "Copy only the checklist or question list into client communications unless a qualified reviewer approves legal conclusions.",
+        "plain_language": [
+          "Start with the actual papers: complaint, motion, order, notice, form packet, service papers, and any scheduled hearing information.",
+          "Separate legal questions from factual claims. Legal questions need verified Maine authority. Factual claims need evidence with dates and document spans.",
+          "Do not treat a draft, checklist, or chat answer as filing-ready until a qualified human reviewer confirms it."
+        ],
+        "professional_workflow": [
+          "Build source scope and authority matrix before drafting.",
+          "Resolve citations to source IDs and confirm quote offsets.",
+          "Map facts to evidence and mark unsupported assertions before export.",
+          "Keep final certification outside the generator; only the filing-ready gate and human review can pass export."
+        ],
+        "source_cards_to_verify": [
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "M.R. Civ. P. 52",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "Rule_52_findings",
+            "source_class": "court_rule",
+            "source_id": "starter_me_rule_52",
+            "title": "Maine Rule 52 findings starter card",
+            "why_it_matters": "Findings can matter for final family orders, appellate review, and proposed findings workflows."
+          },
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "19-A M.R.S. \u00a7 1653",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "best_interest_factor_gap",
+            "source_class": "statute_review_checklist",
+            "source_id": "starter_me_best_interest_review",
+            "title": "Best-interest factor coverage review",
+            "why_it_matters": "A draft or order should not skip material best-interest factors when they are relevant."
+          },
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "19-A M.R.S. \u00a7 1653",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "parental_rights_responsibilities",
+            "source_class": "statute",
+            "source_id": "starter_me_19a_1653",
+            "title": "Maine parental rights / best-interest statute starter card",
+            "why_it_matters": "Often central to parental rights, residence, contact, and best-interest review."
+          }
+        ],
+        "summary": "This looks like a Maine family-law question involving Rule 52 findings, best interest factor gap, contact schedule, parental rights responsibilities, therapist non delegation. The safest next step is to identify the case stage (motion for findings), gather the relevant orders/forms/facts, and verify the official Maine sources before relying on any answer. This tool can organize questions and source cards, but it cannot tell you what choice to make."
+      },
+      "audience": "parent",
+      "audience_config": {
+        "label": "Parent or caregiver",
+        "primary_goal": "understand the next safe step and what Maine sources/forms to verify",
+        "tone": "plain language, calm, practical, safety-aware"
+      },
+      "citation_report": [
+        {
+          "blocks_filing_ready": true,
+          "citation_text": "19-A M.R.S. \u00a7 1653",
+          "citation_type": "maine_statute",
+          "end": 167,
+          "start": 148,
+          "status": "parsed_unverified_needs_source_registry_resolution"
+        }
+      ],
+      "claims": {
+        "attorney_review_completed": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "disclaimer": "Maine Family Law LLM is legal information and workflow support, not legal advice. It does not create an attorney-client relationship. Every answer, checklist, form note, and draft remains review-required unless source freshness, authority, citations, quotes, facts, procedure, forms, and human review are verified.",
+      "filing_gate": {
+        "blockers": [
+          {
+            "blocks_filing_ready": true,
+            "category": "source_scope",
+            "message": "Live official Maine source registry resolution has not been completed in this chat packet."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "human_review",
+            "message": "Human legal review is required before any filing-ready export."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "citation_resolution",
+            "citations": [
+              {
+                "blocks_filing_ready": true,
+                "citation_text": "19-A M.R.S. \u00a7 1653",
+                "citation_type": "maine_statute",
+                "end": 167,
+                "start": 148,
+                "status": "parsed_unverified_needs_source_registry_resolution"
+              }
+            ],
+            "message": "One or more user-provided citations were parsed but not resolved to source IDs in this packet."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "freshness",
+            "message": "Starter source cards require live freshness verification before current-law language is allowed."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "red_flags",
+            "message": "Potential legal, safety, procedural, privacy, or record problems were detected.",
+            "red_flags": [
+              {
+                "matched_terms": [
+                  "no findings"
+                ],
+                "red_flag": "missing Rule 52 findings",
+                "review_required": true,
+                "severity": "blocker"
+              },
+              {
+                "matched_terms": [
+                  "therapist decides"
+                ],
+                "red_flag": "therapist or third-party delegated contact decision",
+                "review_required": true,
+                "severity": "blocker"
+              }
+            ]
+          }
+        ],
+        "filing_ready": false,
+        "review_required": true,
+        "status": "blocked",
+        "warnings": [
+          "This v2.04 chat packet is an intake and UX layer. It does not certify live law, form freshness, fact support, or filing readiness.",
+          "Private matter facts should stay in the approved matter store or user-controlled upload flow, not in the source repository."
+        ]
+      },
+      "generated_at": "2026-06-05T02:07:32.703415+00:00",
+      "intake_questions": [
+        "What Maine court order, case number, form packet, or filing stage are we dealing with?",
+        "What exact outcome is being requested, and is there an existing order?",
+        "What sources have already been verified: statutes, rules, forms, orders, notices, transcripts, exhibits, or messages?",
+        "Does the order include findings tied to the relevant statutory factors, or only conclusions?"
+      ],
+      "issue_labels": [
+        "Rule_52_findings",
+        "best_interest_factor_gap",
+        "contact_schedule",
+        "parental_rights_responsibilities",
+        "therapist_non_delegation"
+      ],
+      "mode": "guided_chat",
+      "next_actions": [
+        {
+          "action": "confirm_posture",
+          "label": "Identify the case stage: starting case, temporary order, final order, post-judgment, contempt, appeal, or unknown."
+        },
+        {
+          "action": "attach_sources",
+          "label": "Attach or verify official Maine source cards before relying on any legal claim."
+        },
+        {
+          "action": "map_facts",
+          "label": "Turn each important factual statement into a fact-to-evidence row with document, date, quote/span, and confidence."
+        },
+        {
+          "action": "run_gate",
+          "label": "Run citation, quote, source freshness, form freshness, claim-support, and human-review gates before export."
+        },
+        {
+          "action": "best_interest_check",
+          "label": "Review best-interest factor coverage and any contact/residence restrictions."
+        },
+        {
+          "action": "findings_check",
+          "label": "Check whether proposed or final findings are specific enough for review."
+        }
+      ],
+      "posture_labels": [
+        "motion_for_findings"
+      ],
+      "question": "I have a final Maine parenting order with no findings. The therapist decides contact and I need to know what to gather before asking for help about 19-A M.R.S. \u00a7 1653.",
+      "red_flags": [
+        {
+          "matched_terms": [
+            "no findings"
+          ],
+          "red_flag": "missing Rule 52 findings",
+          "review_required": true,
+          "severity": "blocker"
+        },
+        {
+          "matched_terms": [
+            "therapist decides"
+          ],
+          "red_flag": "therapist or third-party delegated contact decision",
+          "review_required": true,
+          "severity": "blocker"
+        }
+      ],
+      "schema": "maine_family_law_llm.family_first_chat.packet.v1",
+      "starter_prompts": {
+        "advocate": [
+          "Create a plain-language intake checklist for a Maine parent asking about child support and contact.",
+          "Spot safety, service, jurisdiction, and form-freshness issues in a Maine family matter.",
+          "Explain why a draft is review-required and not filing-ready."
+        ],
+        "court_helper": [
+          "Help identify what kind of Maine family form packet someone may need without giving legal advice.",
+          "Create a neutral missing-information checklist for a person asking about a post-judgment motion.",
+          "Explain source cards, citation checks, and human review in plain language."
+        ],
+        "lawyer": [
+          "Review a proposed final parental-rights order for Rule 52 findings, best-interest coverage, and filing-readiness blockers.",
+          "Build an authority matrix for a post-judgment motion to modify contact after a substantial change.",
+          "Generate a citation and quote verification checklist for a draft motion relying on 19-A M.R.S. \u00a7 1653.",
+          "Triage appellate red flags in a family judgment with missing transcript and thin findings."
+        ],
+        "parent": [
+          "I have a Maine parenting order and the other parent is not following the contact schedule. What should I gather before asking for help?",
+          "What Maine sources and forms should I check before filing for divorce with children?",
+          "The final order does not explain the best-interest reasons. What should I ask a lawyer to review?",
+          "I am worried about safety during exchanges. What information should I organize before seeking help?"
+        ]
+      },
+      "status": "review_required",
+      "ui": {
+        "badges": [
+          "Maine-only",
+          "Source-first",
+          "Review-required",
+          "No private data in repo"
+        ],
+        "empty_state": "Ask a question, choose an audience, and get a review-required source workflow.",
+        "hero": "Fast, calm Maine family-law help with source cards and review gates.",
+        "primary_cta": "Ask safely",
+        "secondary_cta": "Build review checklist",
+        "tabs": [
+          "Answer",
+          "Source cards",
+          "Checklist",
+          "Filing gate"
+        ]
+      },
+      "version": "2.04.0"
+    },
+    {
+      "answer_blocks": {
+        "audience_label": "Lawyer or legal professional",
+        "copy_safe_note": "Copy only the checklist or question list into client communications unless a qualified reviewer approves legal conclusions.",
+        "plain_language": [
+          "Start with the actual papers: complaint, motion, order, notice, form packet, service papers, and any scheduled hearing information.",
+          "Separate legal questions from factual claims. Legal questions need verified Maine authority. Factual claims need evidence with dates and document spans.",
+          "Do not treat a draft, checklist, or chat answer as filing-ready until a qualified human reviewer confirms it."
+        ],
+        "professional_workflow": [
+          "Build source scope and authority matrix before drafting.",
+          "Resolve citations to source IDs and confirm quote offsets.",
+          "Map facts to evidence and mark unsupported assertions before export.",
+          "Keep final certification outside the generator; only the filing-ready gate and human review can pass export."
+        ],
+        "source_cards_to_verify": [
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "M.R. Civ. P. 52",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "Rule_52_findings",
+            "source_class": "court_rule",
+            "source_id": "starter_me_rule_52",
+            "title": "Maine Rule 52 findings starter card",
+            "why_it_matters": "Findings can matter for final family orders, appellate review, and proposed findings workflows."
+          },
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "19-A M.R.S. \u00a7 1653",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "parental_rights_responsibilities",
+            "source_class": "statute",
+            "source_id": "starter_me_19a_1653",
+            "title": "Maine parental rights / best-interest statute starter card",
+            "why_it_matters": "Often central to parental rights, residence, contact, and best-interest review."
+          }
+        ],
+        "summary": "Triage result: likely issues are Rule 52 findings, parental rights responsibilities, transcript record issue; posture is motion for findings. Treat this as an authority/evidence workflow, not a final answer. Start with source-scope verification for M.R. Civ. P. 52, 19-A M.R.S. \u00a7 1653, then run citation, quote, claim-support, form-freshness, and human-review gates."
+      },
+      "audience": "lawyer",
+      "audience_config": {
+        "label": "Lawyer or legal professional",
+        "primary_goal": "triage issues, authority, evidence, citations, and filing-readiness blockers",
+        "tone": "concise legal workflow, authority-first, review-gate oriented"
+      },
+      "citation_report": [],
+      "claims": {
+        "attorney_review_completed": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "disclaimer": "Maine Family Law LLM is legal information and workflow support, not legal advice. It does not create an attorney-client relationship. Every answer, checklist, form note, and draft remains review-required unless source freshness, authority, citations, quotes, facts, procedure, forms, and human review are verified.",
+      "filing_gate": {
+        "blockers": [
+          {
+            "blocks_filing_ready": true,
+            "category": "source_scope",
+            "message": "Live official Maine source registry resolution has not been completed in this chat packet."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "human_review",
+            "message": "Human legal review is required before any filing-ready export."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "freshness",
+            "message": "Starter source cards require live freshness verification before current-law language is allowed."
+          }
+        ],
+        "filing_ready": false,
+        "review_required": true,
+        "status": "blocked",
+        "warnings": [
+          "This v2.04 chat packet is an intake and UX layer. It does not certify live law, form freshness, fact support, or filing readiness.",
+          "Private matter facts should stay in the approved matter store or user-controlled upload flow, not in the source repository."
+        ]
+      },
+      "generated_at": "2026-06-05T02:07:32.703508+00:00",
+      "intake_questions": [
+        "What Maine court order, case number, form packet, or filing stage are we dealing with?",
+        "What exact outcome is being requested, and is there an existing order?",
+        "What sources have already been verified: statutes, rules, forms, orders, notices, transcripts, exhibits, or messages?",
+        "Does the order include findings tied to the relevant statutory factors, or only conclusions?"
+      ],
+      "issue_labels": [
+        "Rule_52_findings",
+        "parental_rights_responsibilities",
+        "transcript_record_issue"
+      ],
+      "mode": "guided_chat",
+      "next_actions": [
+        {
+          "action": "confirm_posture",
+          "label": "Identify the case stage: starting case, temporary order, final order, post-judgment, contempt, appeal, or unknown."
+        },
+        {
+          "action": "attach_sources",
+          "label": "Attach or verify official Maine source cards before relying on any legal claim."
+        },
+        {
+          "action": "map_facts",
+          "label": "Turn each important factual statement into a fact-to-evidence row with document, date, quote/span, and confidence."
+        },
+        {
+          "action": "run_gate",
+          "label": "Run citation, quote, source freshness, form freshness, claim-support, and human-review gates before export."
+        },
+        {
+          "action": "best_interest_check",
+          "label": "Review best-interest factor coverage and any contact/residence restrictions."
+        },
+        {
+          "action": "findings_check",
+          "label": "Check whether proposed or final findings are specific enough for review."
+        }
+      ],
+      "posture_labels": [
+        "motion_for_findings"
+      ],
+      "question": "Review a proposed final parental rights order for Rule 52 findings, best-interest coverage, transcript risk, and quote/citation gates.",
+      "red_flags": [],
+      "schema": "maine_family_law_llm.family_first_chat.packet.v1",
+      "starter_prompts": {
+        "advocate": [
+          "Create a plain-language intake checklist for a Maine parent asking about child support and contact.",
+          "Spot safety, service, jurisdiction, and form-freshness issues in a Maine family matter.",
+          "Explain why a draft is review-required and not filing-ready."
+        ],
+        "court_helper": [
+          "Help identify what kind of Maine family form packet someone may need without giving legal advice.",
+          "Create a neutral missing-information checklist for a person asking about a post-judgment motion.",
+          "Explain source cards, citation checks, and human review in plain language."
+        ],
+        "lawyer": [
+          "Review a proposed final parental-rights order for Rule 52 findings, best-interest coverage, and filing-readiness blockers.",
+          "Build an authority matrix for a post-judgment motion to modify contact after a substantial change.",
+          "Generate a citation and quote verification checklist for a draft motion relying on 19-A M.R.S. \u00a7 1653.",
+          "Triage appellate red flags in a family judgment with missing transcript and thin findings."
+        ],
+        "parent": [
+          "I have a Maine parenting order and the other parent is not following the contact schedule. What should I gather before asking for help?",
+          "What Maine sources and forms should I check before filing for divorce with children?",
+          "The final order does not explain the best-interest reasons. What should I ask a lawyer to review?",
+          "I am worried about safety during exchanges. What information should I organize before seeking help?"
+        ]
+      },
+      "status": "review_required",
+      "ui": {
+        "badges": [
+          "Maine-only",
+          "Source-first",
+          "Review-required",
+          "No private data in repo"
+        ],
+        "empty_state": "Ask a question, choose an audience, and get a review-required source workflow.",
+        "hero": "Fast, calm Maine family-law help with source cards and review gates.",
+        "primary_cta": "Ask safely",
+        "secondary_cta": "Build review checklist",
+        "tabs": [
+          "Answer",
+          "Source cards",
+          "Checklist",
+          "Filing gate"
+        ]
+      },
+      "version": "2.04.0"
+    },
+    {
+      "answer_blocks": {
+        "audience_label": "Legal aid / advocate",
+        "copy_safe_note": "Copy only the checklist or question list into client communications unless a qualified reviewer approves legal conclusions.",
+        "plain_language": [
+          "Start with the actual papers: complaint, motion, order, notice, form packet, service papers, and any scheduled hearing information.",
+          "Separate legal questions from factual claims. Legal questions need verified Maine authority. Factual claims need evidence with dates and document spans.",
+          "Do not treat a draft, checklist, or chat answer as filing-ready until a qualified human reviewer confirms it."
+        ],
+        "professional_workflow": [
+          "Build source scope and authority matrix before drafting.",
+          "Resolve citations to source IDs and confirm quote offsets.",
+          "Map facts to evidence and mark unsupported assertions before export.",
+          "Keep final certification outside the generator; only the filing-ready gate and human review can pass export."
+        ],
+        "source_cards_to_verify": [
+          {
+            "authority_status": "requires_live_verification",
+            "canonical_citation": "Maine UCCJEA provisions / 19-A M.R.S.",
+            "freshness_status": "must_verify_current_official_source",
+            "jurisdiction": "maine",
+            "matched_issue": "UCCJEA_jurisdiction",
+            "source_class": "statute_jurisdiction",
+            "source_id": "starter_me_uccjea",
+            "title": "Maine child-custody jurisdiction starter card",
+            "why_it_matters": "When children recently moved or another state has orders, jurisdiction must be checked before drafting."
+          }
+        ],
+        "summary": "This looks like a Maine family-law question involving UCCJEA jurisdiction. The safest next step is to identify the case stage (posture unknown), gather the relevant orders/forms/facts, and verify the official Maine sources before relying on any answer. This tool can organize questions and source cards, but it cannot tell you what choice to make."
+      },
+      "audience": "advocate",
+      "audience_config": {
+        "label": "Legal aid / advocate",
+        "primary_goal": "spot issues, missing facts, safety concerns, and review needs",
+        "tone": "plain language with structured triage and referral-friendly next steps"
+      },
+      "citation_report": [],
+      "claims": {
+        "attorney_review_completed": false,
+        "filing_ready": false,
+        "legal_advice": false,
+        "model_memory_used_as_authority": false,
+        "private_data_packaged": false
+      },
+      "disclaimer": "Maine Family Law LLM is legal information and workflow support, not legal advice. It does not create an attorney-client relationship. Every answer, checklist, form note, and draft remains review-required unless source freshness, authority, citations, quotes, facts, procedure, forms, and human review are verified.",
+      "filing_gate": {
+        "blockers": [
+          {
+            "blocks_filing_ready": true,
+            "category": "source_scope",
+            "message": "Live official Maine source registry resolution has not been completed in this chat packet."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "human_review",
+            "message": "Human legal review is required before any filing-ready export."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "freshness",
+            "message": "Starter source cards require live freshness verification before current-law language is allowed."
+          },
+          {
+            "blocks_filing_ready": true,
+            "category": "red_flags",
+            "message": "Potential legal, safety, procedural, privacy, or record problems were detected.",
+            "red_flags": [
+              {
+                "matched_terms": [
+                  "other state",
+                  "just moved"
+                ],
+                "red_flag": "jurisdiction defect",
+                "review_required": true,
+                "severity": "blocker"
+              }
+            ]
+          }
+        ],
+        "filing_ready": false,
+        "review_required": true,
+        "status": "blocked",
+        "warnings": [
+          "This v2.04 chat packet is an intake and UX layer. It does not certify live law, form freshness, fact support, or filing readiness.",
+          "Private matter facts should stay in the approved matter store or user-controlled upload flow, not in the source repository."
+        ]
+      },
+      "generated_at": "2026-06-05T02:07:32.703583+00:00",
+      "intake_questions": [
+        "What Maine court order, case number, form packet, or filing stage are we dealing with?",
+        "What exact outcome is being requested, and is there an existing order?",
+        "What sources have already been verified: statutes, rules, forms, orders, notices, transcripts, exhibits, or messages?",
+        "Where has the child lived during the last six months, and is there an order or case in another state?"
+      ],
+      "issue_labels": [
+        "UCCJEA_jurisdiction"
+      ],
+      "mode": "guided_chat",
+      "next_actions": [
+        {
+          "action": "confirm_posture",
+          "label": "Identify the case stage: starting case, temporary order, final order, post-judgment, contempt, appeal, or unknown."
+        },
+        {
+          "action": "attach_sources",
+          "label": "Attach or verify official Maine source cards before relying on any legal claim."
+        },
+        {
+          "action": "map_facts",
+          "label": "Turn each important factual statement into a fact-to-evidence row with document, date, quote/span, and confidence."
+        },
+        {
+          "action": "run_gate",
+          "label": "Run citation, quote, source freshness, form freshness, claim-support, and human-review gates before export."
+        }
+      ],
+      "posture_labels": [
+        "posture_unknown"
+      ],
+      "question": "A parent just moved to Maine with a child and there may be an order from another state. What jurisdiction facts should be collected?",
+      "red_flags": [
+        {
+          "matched_terms": [
+            "other state",
+            "just moved"
+          ],
+          "red_flag": "jurisdiction defect",
+          "review_required": true,
+          "severity": "blocker"
+        }
+      ],
+      "schema": "maine_family_law_llm.family_first_chat.packet.v1",
+      "starter_prompts": {
+        "advocate": [
+          "Create a plain-language intake checklist for a Maine parent asking about child support and contact.",
+          "Spot safety, service, jurisdiction, and form-freshness issues in a Maine family matter.",
+          "Explain why a draft is review-required and not filing-ready."
+        ],
+        "court_helper": [
+          "Help identify what kind of Maine family form packet someone may need without giving legal advice.",
+          "Create a neutral missing-information checklist for a person asking about a post-judgment motion.",
+          "Explain source cards, citation checks, and human review in plain language."
+        ],
+        "lawyer": [
+          "Review a proposed final parental-rights order for Rule 52 findings, best-interest coverage, and filing-readiness blockers.",
+          "Build an authority matrix for a post-judgment motion to modify contact after a substantial change.",
+          "Generate a citation and quote verification checklist for a draft motion relying on 19-A M.R.S. \u00a7 1653.",
+          "Triage appellate red flags in a family judgment with missing transcript and thin findings."
+        ],
+        "parent": [
+          "I have a Maine parenting order and the other parent is not following the contact schedule. What should I gather before asking for help?",
+          "What Maine sources and forms should I check before filing for divorce with children?",
+          "The final order does not explain the best-interest reasons. What should I ask a lawyer to review?",
+          "I am worried about safety during exchanges. What information should I organize before seeking help?"
+        ]
+      },
+      "status": "review_required",
+      "ui": {
+        "badges": [
+          "Maine-only",
+          "Source-first",
+          "Review-required",
+          "No private data in repo"
+        ],
+        "empty_state": "Ask a question, choose an audience, and get a review-required source workflow.",
+        "hero": "Fast, calm Maine family-law help with source cards and review gates.",
+        "primary_cta": "Ask safely",
+        "secondary_cta": "Build review checklist",
+        "tabs": [
+          "Answer",
+          "Source cards",
+          "Checklist",
+          "Filing gate"
+        ]
+      },
+      "version": "2.04.0"
+    }
+  ],
+  "schema": "maine_family_law_llm.family_first_chat.packet.v1",
+  "version": "2.04.0"
+}
