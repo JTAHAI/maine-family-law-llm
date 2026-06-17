@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import os
 import subprocess
 import sys
@@ -16,6 +17,11 @@ def test_root_launchers_and_portable_distribution_exist() -> None:
     assert (portable_root / "START_MAINE_FAMILY_LAW_LLM.cmd").exists()
     assert (portable_root / "START_HERE.html").exists()
     assert (portable_root / "INSTALL_OR_RUN.html").exists()
+    assert (REPO_ROOT / "scripts" / "bootstrap-windows-launcher.ps1").exists()
+    assert (REPO_ROOT / "installer" / "install.ps1").exists()
+    assert (REPO_ROOT / "installer" / "install.cmd").exists()
+    assert (REPO_ROOT / "scripts" / "build-windows-installer.ps1").exists()
+    assert (REPO_ROOT / ".github" / "workflows" / "windows-installer.yml").exists()
 
 
 def test_first_run_wizards_import() -> None:
@@ -31,6 +37,59 @@ def test_first_run_wizards_import() -> None:
     assert wizard_build_packages.build_role_packages_wizard is not None
     assert wizard_verify_release.verify_release is not None
     assert wizard_usb_export.export_case_to_usb is not None
+    assert any(label == "Gmail / Workspace" for label, _ in launcher.SOURCE_GUIDE_SPECS)
+    assert any(label == "Outlook / Hotmail" for label, _ in launcher.SOURCE_GUIDE_SPECS)
+    assert any(label == "Phone / screenshots" for label, _ in launcher.SOURCE_GUIDE_SPECS)
+
+
+def test_corpus_build_wizard_renders_nontechnical_source_guide_buttons() -> None:
+    from app import launcher
+
+    build_ui_source = inspect.getsource(launcher.CorpusBuildWizard._build_ui)
+    assert "Need help getting records out?" in build_ui_source
+    assert "These guides walk nontechnical users through Gmail, Outlook, Hotmail, Google Workspace, phone screenshots, attachments, and evidence staging." in build_ui_source
+    assert "command=lambda current=guide_path: self._open_guide(current)" in build_ui_source
+
+
+def test_nontechnical_docs_cover_common_email_and_phone_sources() -> None:
+    bootstrap_repository(REPO_ROOT)
+    doc_names = [
+        "README_FOR_NONTECHNICAL_USERS.html",
+        "HOW_TO_ADD_YOUR_CORPUS.html",
+        "HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html",
+        "HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html",
+        "HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html",
+        "SYSTEM_REQUIREMENTS.html",
+    ]
+    for name in doc_names:
+        assert (REPO_ROOT / "docs" / name).exists(), name
+    readme_html = (REPO_ROOT / "docs" / "README_FOR_NONTECHNICAL_USERS.html").read_text(encoding="utf-8")
+    assert "Open Existing Case Corpus" in readme_html
+    assert "Import More Evidence" in readme_html
+    corpus_html = (REPO_ROOT / "docs" / "HOW_TO_ADD_YOUR_CORPUS.html").read_text(encoding="utf-8")
+    assert ".eml" in corpus_html
+    assert "Do not rely on raw PST/OST/MBOX archives as your only format" in corpus_html
+    gmail_html = (REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html").read_text(encoding="utf-8")
+    assert "Google Workspace" in gmail_html
+    assert "Google Takeout" in gmail_html
+    outlook_html = (REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html").read_text(encoding="utf-8")
+    assert "Hotmail" in outlook_html
+    assert "Outlook on the web" in outlook_html
+    phone_html = (REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html").read_text(encoding="utf-8")
+    assert "iPhone" in phone_html
+    assert "Android" in phone_html
+    requirements_html = (REPO_ROOT / "docs" / "SYSTEM_REQUIREMENTS.html").read_text(encoding="utf-8")
+    assert "16 GB RAM" in requirements_html
+    assert "Intel i7 or Ryzen 7" in requirements_html
+
+
+def test_bootstrap_script_reuses_or_installs_prerequisites() -> None:
+    script_text = (REPO_ROOT / "scripts" / "bootstrap-windows-launcher.ps1").read_text(encoding="utf-8")
+    assert "Python 3.11+" in script_text
+    assert "winget" in script_text
+    assert "Python.Python.3.11" in script_text
+    assert "bootstrap-state.json" in script_text
+    assert "Installing or updating required packages" in script_text
 
 
 def test_launcher_runs_as_raw_source_file_without_installed_package() -> None:

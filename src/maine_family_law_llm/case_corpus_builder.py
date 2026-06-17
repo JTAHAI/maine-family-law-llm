@@ -105,12 +105,14 @@ def sha256_text(value: str) -> str:
 
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
 
 
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(payload, indent=2, sort_keys=True))
 
 
 def write_html(path: Path, title: str, body_html: str) -> None:
@@ -593,16 +595,230 @@ def create_example_case_template(repo_root: Path) -> Path:
     return source_root
 
 
+def _nontechnical_readme_html() -> str:
+    return (
+        "<h1>Maine Family Law LLM for Nontechnical Users</h1>"
+        "<p>This tool is built so a parent, caregiver, GAL, lawyer, or reviewer can double-click a launcher instead of using a command line. "
+        "It runs locally on Windows, keeps your originals read-only, and tells you when something was not found in the indexed corpus.</p>"
+        "<h2>Quick start</h2>"
+        "<ol>"
+        "<li>Download the GitHub ZIP or the Windows installer package.</li>"
+        "<li>Double-click <strong>START_MAINE_FAMILY_LAW_LLM.cmd</strong> or <strong>INSTALL_MAINE_FAMILY_LAW_LLM.cmd</strong>.</li>"
+        "<li>If Python or required packages are missing, the launcher will install them and skip what is already present.</li>"
+        "<li>Click <strong>Create New Case Corpus</strong> if you are starting a fresh matter.</li>"
+        "<li>Click <strong>Open Existing Case Corpus</strong> if somebody already built your case workspace and you only want to use the LLM/search tools.</li>"
+        "<li>Click <strong>Import More Evidence</strong> later if you need to add more records without mutating the earlier build.</li>"
+        "<li>Use the <strong>Installed corpus library</strong> to switch between saved family/client matters through one install.</li>"
+        "</ol>"
+        "<h2>Source export guides</h2>"
+        "<ul>"
+        "<li><a href=\"HOW_TO_ADD_YOUR_CORPUS.html\">What files the wizard accepts</a></li>"
+        "<li><a href=\"HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html\">Gmail and Google Workspace</a></li>"
+        "<li><a href=\"HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html\">Outlook desktop, Outlook on the web, Hotmail, and Outlook.com</a></li>"
+        "<li><a href=\"HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html\">Phones, screenshots, photos, and attachments</a></li>"
+        "<li><a href=\"SYSTEM_REQUIREMENTS.html\">Recommended Windows system requirements</a></li>"
+        "</ul>"
+        "<h2>Skip the import wizard if your corpus already exists</h2>"
+        "<p>You do not need to rebuild the corpus every time. If someone already gave you a completed case folder, open the launcher and choose "
+        "<strong>Open Existing Case Corpus</strong>. Then use <strong>Open Review Portal</strong>, <strong>Open Search / Indexes</strong>, or the browser LLM/chat workbench.</p>"
+    )
+
+
+def _corpus_ingest_guide_html() -> str:
+    return (
+        "<h1>How to Add Your Corpus</h1>"
+        "<p>The corpus wizard expects ordinary folders, not special databases. For best results, gather copies of the records into one staging folder and then point the wizard at that folder.</p>"
+        "<h2>Preferred file types</h2>"
+        "<ul>"
+        "<li><strong>Email:</strong> <code>.eml</code>, printed email PDFs, downloaded attachments, exported text</li>"
+        "<li><strong>Documents:</strong> <code>.pdf</code>, <code>.txt</code>, <code>.md</code>, <code>.docx</code>, <code>.rtf</code>, <code>.html</code></li>"
+        "<li><strong>Images:</strong> screenshots, photos, scans, <code>.jpg</code>, <code>.png</code>, <code>.heic</code>, <code>.tif</code></li>"
+        "<li><strong>Spreadsheets:</strong> <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code></li>"
+        "</ul>"
+        "<h2>Best practice staging layout</h2>"
+        "<pre>My Case Export\\\n"
+        "  01_email_eml_or_pdf\\\n"
+        "  02_filings_and_orders_pdf\\\n"
+        "  03_phone_screenshots_and_photos\\\n"
+        "  04_attachments_and_reports\\\n"
+        "  05_school_medical_counseling\\\n"
+        "  06_timelines_notes_and_spreadsheets</pre>"
+        "<h2>What the wizard does</h2>"
+        "<ol>"
+        "<li>Hashes the originals read-only.</li>"
+        "<li>Inventories every file it can see.</li>"
+        "<li>Builds a private forensic master.</li>"
+        "<li>Builds an external-safe legal-matter release.</li>"
+        "<li>Builds role packages, indexes, proof reports, and USB exports.</li>"
+        "</ol>"
+        "<h2>What to avoid</h2>"
+        "<ul>"
+        "<li>Do not point the wizard at your whole computer profile or your whole mailbox unless you truly mean to review all of it.</li>"
+        "<li>Do not rely on raw PST/OST/MBOX archives as your only format. The safest search path is still PDFs, <code>.eml</code>, attachments, screenshots, and plainly readable documents.</li>"
+        "<li>Keep an untouched copy of the originals somewhere safe. This tool never mutates them, but preservation still matters.</li>"
+        "</ul>"
+    )
+
+
+def _gmail_export_guide_html() -> str:
+    return (
+        "<h1>Export from Gmail and Google Workspace</h1>"
+        "<p>This guide is for free Gmail accounts and paid Google Workspace accounts.</p>"
+        "<h2>Best import formats</h2>"
+        "<ul>"
+        "<li>Download important messages as <code>.eml</code> when Gmail offers it.</li>"
+        "<li>Print important emails to PDF so the message is human-readable even outside Gmail.</li>"
+        "<li>Download every attachment into the same staging folder.</li>"
+        "</ul>"
+        "<h2>Single-message workflow</h2>"
+        "<ol>"
+        "<li>Open the email in Gmail.</li>"
+        "<li>Use the message menu to download the message or print it to PDF.</li>"
+        "<li>Save attachments beside the message PDF or <code>.eml</code>.</li>"
+        "<li>Place those files in a case staging folder such as <code>01_email_eml_or_pdf</code>.</li>"
+        "</ol>"
+        "<h2>Large-mailbox workflow</h2>"
+        "<ol>"
+        "<li>Use Google Takeout if you need a cold-storage export of a large mailbox.</li>"
+        "<li>Keep the Takeout archive as preservation evidence.</li>"
+        "<li>For the best search experience in this tool, still convert the important threads into PDFs or <code>.eml</code> files and save their attachments in plain folders.</li>"
+        "</ol>"
+        "<h2>Good reminder</h2>"
+        "<p>If a message matters, preserve it in more than one readable way: one printed PDF, one downloaded message copy when possible, and the original attachments.</p>"
+    )
+
+
+def _outlook_export_guide_html() -> str:
+    return (
+        "<h1>Export from Outlook Desktop, Outlook on the Web, Hotmail, and Outlook.com</h1>"
+        "<p>This guide is written for the Microsoft free-email ecosystem most parents actually use: Outlook.com, Hotmail, Live, and Outlook Web App, plus installed Outlook desktop where available.</p>"
+        "<h2>Preferred approach</h2>"
+        "<ul>"
+        "<li>Print important messages to PDF.</li>"
+        "<li>Download attachments beside the email PDF.</li>"
+        "<li>If Outlook desktop lets you save readable message files, keep them too, but do not depend on PST/OST alone for search.</li>"
+        "</ul>"
+        "<h2>Outlook.com / Hotmail / Outlook on the web</h2>"
+        "<ol>"
+        "<li>Open the message in the browser.</li>"
+        "<li>Use the browser print function and save to PDF.</li>"
+        "<li>Download any attachments into the same case staging folder.</li>"
+        "<li>Repeat for the messages that matter most.</li>"
+        "</ol>"
+        "<h2>Outlook desktop</h2>"
+        "<ol>"
+        "<li>Open the message and print it to PDF.</li>"
+        "<li>Save attachments separately.</li>"
+        "<li>If you also export a PST/OST for preservation, keep it as a cold-storage original, not as the only thing you import.</li>"
+        "</ol>"
+        "<h2>Why this matters</h2>"
+        "<p>The local search and LLM layers work best with ordinary readable files in ordinary folders. A folder full of PDFs, attachments, and plain documents is easier to verify, review, and hand to another person than a single mailbox database.</p>"
+    )
+
+
+def _phone_export_guide_html() -> str:
+    return (
+        "<h1>Export from iPhone, Android, Photos, and Screenshots</h1>"
+        "<p>Phones often hold the evidence that never makes it into a formal document: screenshots, texts, call logs, photos of paperwork, portal screens, and downloaded attachments.</p>"
+        "<h2>What to gather</h2>"
+        "<ul>"
+        "<li>Screenshots of messages, portals, attendance notices, payment screens, or missed-contact logs</li>"
+        "<li>Photos of letters, envelopes, binders, school papers, or handwritten notes</li>"
+        "<li>Downloaded PDFs or attachments already saved on the phone</li>"
+        "<li>Voicemail transcripts or notes exported to PDF/text where available</li>"
+        "</ul>"
+        "<h2>iPhone / iPad</h2>"
+        "<ol>"
+        "<li>Use the Photos app or Files app to gather screenshots, scans, and downloaded documents.</li>"
+        "<li>Connect by USB to the Windows computer or upload to a temporary transfer folder such as OneDrive, iCloud Drive, Google Drive, or a cable-import folder.</li>"
+        "<li>Copy the files into a staging folder such as <code>03_phone_screenshots_and_photos</code>.</li>"
+        "</ol>"
+        "<h2>Android</h2>"
+        "<ol>"
+        "<li>Use Files, Photos, or your screenshot folder to gather the records.</li>"
+        "<li>Transfer them to the Windows computer by USB, Nearby Share, Drive, or another normal file transfer method.</li>"
+        "<li>Keep the folder names understandable so another reviewer can tell what came from the phone.</li>"
+        "</ol>"
+        "<h2>Practical advice</h2>"
+        "<p>If a phone screen matters, capture the surrounding date/time context too. A screenshot plus a PDF export plus the related attachment is often stronger than any one artifact by itself.</p>"
+    )
+
+
+def _system_requirements_html() -> str:
+    return (
+        "<h1>Recommended Windows System Requirements</h1>"
+        "<p>The builder and local chat are meant to stay usable on ordinary Windows machines. A discrete GPU is not required.</p>"
+        "<h2>Minimum practical setup</h2>"
+        "<ul>"
+        "<li>Windows 10 or Windows 11</li>"
+        "<li>64-bit Intel i5 / Ryzen 5 class CPU or better</li>"
+        "<li>16 GB RAM</li>"
+        "<li>At least 15 GB free SSD space for the app, Python, indexes, and a modest case build</li>"
+        "<li>Internet access for the first install only, if Python or packages need to be downloaded</li>"
+        "</ul>"
+        "<h2>Recommended setup</h2>"
+        "<ul>"
+        "<li>Intel i7 or Ryzen 7 class CPU</li>"
+        "<li>24 GB to 32 GB RAM for smoother indexing, bigger cases, and browser chat workbench use</li>"
+        "<li>SSD storage with 30 GB or more free working space</li>"
+        "<li>A 1920x1080 display or better</li>"
+        "</ul>"
+        "<h2>Important notes</h2>"
+        "<ul>"
+        "<li>The tool is local-first and does not require a discrete GPU.</li>"
+        "<li>Very large corpora still benefit from more RAM and fast SSD storage.</li>"
+        "<li>The browser workbench, launcher, and corpus builder all remain usable without cloud evidence upload by default.</li>"
+        "</ul>"
+    )
+
+
+def _root_readme_markdown() -> str:
+    return (
+        "Maine Family Law LLM\n\n"
+        "Double-click START_MAINE_FAMILY_LAW_LLM.cmd to open the launcher, or run INSTALL_MAINE_FAMILY_LAW_LLM.cmd from the Windows installer package.\n\n"
+        "Quick path for nontechnical users:\n"
+        "1. Run the launcher.\n"
+        "2. Let it install missing prerequisites and skip the ones already present.\n"
+        "3. Choose Create New Case Corpus if you need to build a case.\n"
+        "4. Choose Open Existing Case Corpus if somebody already built the matter for you.\n"
+        "5. Use Import More Evidence later to build a new expanded case without mutating the earlier one.\n"
+        "6. Use the Installed corpus library to switch between saved family/client matters through one install.\n\n"
+        "Helpful guides:\n"
+        "- docs/README_FOR_NONTECHNICAL_USERS.html\n"
+        "- docs/HOW_TO_ADD_YOUR_CORPUS.html\n"
+        "- docs/HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html\n"
+        "- docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html\n"
+        "- docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html\n"
+        "- docs/SYSTEM_REQUIREMENTS.html\n"
+    )
+
+
+def _start_here_body_html() -> str:
+    return (
+        "<h1>Maine Family Law LLM</h1>"
+        "<p>This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, investigators, or parents to search through an unstructured personal archive. "
+        "It preserves a private forensic master, builds an external-safe legal-matter release, and keeps the original sources read-only.</p>"
+        "<ul>"
+        "<li><a href=\"README_FIRST.md\">Read first</a></li>"
+        "<li><a href=\"docs/README_FOR_NONTECHNICAL_USERS.html\">Nontechnical guide</a></li>"
+        "<li><a href=\"docs/HOW_TO_ADD_YOUR_CORPUS.html\">How to add your corpus</a></li>"
+        "<li><a href=\"docs/SYSTEM_REQUIREMENTS.html\">System requirements</a></li>"
+        "<li><a href=\"dist/windows_portable/INSTALL_OR_RUN.html\">Portable distribution</a></li>"
+        "</ul>"
+    )
+
+
 def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     question_bank_path = write_question_bank(repo_root / "sample_question_bank" / "generic_question_bank.jsonl")
     example_source_root = create_example_case_template(repo_root)
     append_changelog_entry(repo_root)
     docs = {
-        "README_FOR_NONTECHNICAL_USERS.html": (
-            "<h1>Maine Family Law LLM</h1>"
-            "<p>Double-click the launcher, choose a corpus, build a private master, then build external-safe role packages.</p>"
-        ),
-        "HOW_TO_ADD_YOUR_CORPUS.html": "<h1>How to Add Your Corpus</h1><p>Select source folders and an output root. The tool hashes sources before processing and never mutates them.</p>",
+        "README_FOR_NONTECHNICAL_USERS.html": _nontechnical_readme_html(),
+        "HOW_TO_ADD_YOUR_CORPUS.html": _corpus_ingest_guide_html(),
+        "HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html": _gmail_export_guide_html(),
+        "HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html": _outlook_export_guide_html(),
+        "HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html": _phone_export_guide_html(),
+        "SYSTEM_REQUIREMENTS.html": _system_requirements_html(),
         "HOW_TO_BUILD_GAL_PACKAGE.html": "<h1>How to Build a GAL Package</h1><p>GAL mode prioritizes child stability, contact implementation, school, medical, and counseling review.</p>",
         "HOW_TO_BUILD_COURT_PACKAGE.html": "<h1>How to Build a Court Package</h1><p>Court mode focuses on orders, filings, service, docket entries, and missing proof.</p>",
         "HOW_TO_BUILD_LAWYER_PACKAGE.html": "<h1>How to Build a Lawyer Package</h1><p>Lawyer intake mode creates a 10-minute overview, issue map, and missing-record list.</p>",
@@ -632,35 +848,26 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     )
     if "## Universal full-case corpus builder" not in readme_text:
         write_text(readme_path, readme_text + readme_appendix)
-    start_cmd = "@echo off\r\nsetlocal\r\ncd /d %~dp0\r\npython app\\launcher.py %*\r\n"
+    start_cmd = (
+        "@echo off\nsetlocal\ncd /d %~dp0\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" %*\n"
+    )
     start_bat = start_cmd
     start_vbs = (
-        'Set shell = CreateObject("WScript.Shell")\r\n'
-        'root = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)\r\n'
-        'shell.Run "cmd /c cd /d """ & root & """ && python app\\launcher.py", 1, False\r\n'
+        'Set shell = CreateObject("WScript.Shell")\n'
+        'root = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)\n'
+        'shell.Run "cmd /c """" & root & "\\START_MAINE_FAMILY_LAW_LLM.cmd""""", 1, False\n'
     )
-    readme_text = (
-        "Maine Family Law LLM\n\n"
-        "Double-click START_MAINE_FAMILY_LAW_LLM.cmd to open the launcher.\n"
-        "This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. "
-        "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.\n"
-    )
-    start_here_body = (
-        "<h1>Maine Family Law LLM</h1>"
-        "<p>This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. "
-        "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.</p>"
-        "<ul>"
-        "<li><a href=\"README_FIRST.md\">Read first</a></li>"
-        "<li><a href=\"docs/README_FOR_NONTECHNICAL_USERS.html\">Nontechnical guide</a></li>"
-        "<li><a href=\"dist/windows_portable/INSTALL_OR_RUN.html\">Portable distribution</a></li>"
-        "</ul>"
-    )
+    readme_text = _root_readme_markdown()
+    start_here_body = _start_here_body_html()
     verify_cmd = (
-        "@echo off\r\nsetlocal\r\ncd /d %~dp0\r\n"
-        "python -c \"import maine_family_law_llm.case_corpus_builder, app.launcher\" >nul 2>nul\r\n"
-        "if errorlevel 1 (echo INSTALLATION_IMPORT_FAILED & exit /b 1) else (echo INSTALLATION_OK & exit /b 0)\r\n"
+        "@echo off\nsetlocal\ncd /d %~dp0\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" -VerifyOnly\n"
     )
-    repair_cmd = "@echo off\r\nsetlocal\r\ncd /d %~dp0\r\npython -m maine_family_law_llm.case_corpus_builder --bootstrap --repo-root .\r\n"
+    repair_cmd = (
+        "@echo off\nsetlocal\ncd /d %~dp0\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" -Repair\n"
+    )
     launchers = {
         "START_MAINE_FAMILY_LAW_LLM.cmd": start_cmd,
         "START_MAINE_FAMILY_LAW_LLM.bat": start_bat,
@@ -680,7 +887,7 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     write_html(
         portable_root / "INSTALL_OR_RUN.html",
         "Install or Run",
-        "<h1>Install or Run</h1><p>Double-click START_MAINE_FAMILY_LAW_LLM.cmd from this portable folder. No admin rights are required.</p>",
+        "<h1>Install or Run</h1><p>Double-click START_MAINE_FAMILY_LAW_LLM.cmd from this portable folder. The launcher checks for Python and required packages, installs missing prerequisites, and skips anything already present. No admin rights are required for the normal per-user path.</p>",
     )
     write_html(portable_root / "START_HERE.html", "Portable Start Here", start_here_body)
     return {
@@ -1116,9 +1323,18 @@ def build_case_corpus(
     return CaseBuildResult(case_root=case_root, proof_json_path=proof_json_path, question_bank_path=bootstrap["question_bank_path"])
 
 
-def answer_case_question(case_root: Path, question: str, role: str = "court") -> dict[str, Any]:
+def load_case_search_records(case_root: Path) -> list[dict[str, Any]]:
     records_path = case_root / "04_INDEXES" / "search_index.json"
-    records = json.loads(records_path.read_text(encoding="utf-8")) if records_path.exists() else []
+    if records_path.exists():
+        return json.loads(records_path.read_text(encoding="utf-8"))
+    jsonl_path = case_root / "04_INDEXES" / "search_index.jsonl"
+    if jsonl_path.exists():
+        return [json.loads(line) for line in jsonl_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return []
+
+
+def answer_case_question(case_root: Path, question: str, role: str = "court") -> dict[str, Any]:
+    records = load_case_search_records(case_root)
     lowered = question.lower()
     stopwords = {
         "the",
@@ -1188,7 +1404,25 @@ def answer_case_question(case_root: Path, question: str, role: str = "court") ->
             {
                 "evidence_id": row["evidence_id"],
                 "source_hash": row["source_hash"],
-                "packet_path": f"03_ROLE_PACKAGES/{ROLE_PACKAGE_DEFS[1]['folder']}/index.html",
+                "packet_path": str(row.get("detail_page_relpath") or row.get("external_copy_relpath") or ""),
+            }
+            for row in top_rows
+        ],
+        "citations": [
+            {
+                "source_id": row["evidence_id"],
+                "title": row.get("subject") or row.get("title") or row["evidence_id"],
+                "snippet": row["text_excerpt"][:240],
+                "metadata": {
+                    "id": row["evidence_id"],
+                    "title": row.get("subject") or row.get("title") or row["evidence_id"],
+                    "source_type": row.get("source_type", ""),
+                    "source_hash": row.get("source_hash", ""),
+                    "issue_lanes": ", ".join(row.get("issue_lanes", [])),
+                    "detail_page_relpath": row.get("detail_page_relpath", ""),
+                    "external_copy_relpath": row.get("external_copy_relpath", ""),
+                    "source_path": row.get("source_path", ""),
+                },
             }
             for row in top_rows
         ],

@@ -9,6 +9,8 @@ from legal.product.family_justice_workbench_v205 import build_workbench_packet
 
 from . import __version__
 from .answer import compose_answer
+from .case_corpus_builder import answer_case_question, load_case_search_records
+from .case_library import active_case_root, describe_case_root, list_registered_case_roots, set_active_case_root
 from .chat_library import expand_query_for_library, public_library, public_missing_information_prompts, public_prompt_packs, public_topics
 from .local_workbench_ui import render_local_workbench_html
 from .draft import draft_from_sources
@@ -57,6 +59,10 @@ class FamilyJusticeWorkbenchRequest(BaseModel):
     requested_output_style: str = "plain_language"
 
 
+class ActivateCorpusRequest(BaseModel):
+    case_root: str
+
+
 if FastAPI is None:  # pragma: no cover
     app = None
 else:
@@ -87,6 +93,8 @@ if FastAPI is not None:
 
 
     def _runtime_diagnostics_payload() -> dict[str, Any]:
+        active_case = active_case_root()
+        case_summary = describe_case_root(active_case) if active_case else None
         return {
             "status": "ok",
             "version": __version__,
@@ -105,6 +113,55 @@ if FastAPI is not None:
             "workbench_url": "/",
             "review_required": True,
             "not_legal_advice": True,
+            "active_case_root": str(active_case) if active_case else "",
+            "active_case_label": case_summary["label"] if case_summary else "",
+            "registered_case_count": len(list_registered_case_roots()),
+        }
+
+
+    def _active_case_chat_payload(payload: AskRequest) -> dict[str, Any] | None:
+        case_root = active_case_root()
+        if case_root is None:
+            return None
+        records = load_case_search_records(case_root)
+        if not records:
+            return None
+        case_summary = describe_case_root(case_root)
+        answer_payload = answer_case_question(case_root, payload.question, role="court")
+        grounded = answer_payload["direct_answer"] != "not found in the indexed corpus."
+        snippets = answer_payload.get("evidence_relied_on", [])
+        answer_text = answer_payload["direct_answer"]
+        if snippets:
+            answer_text += "\n\nRelevant record slices:\n" + "\n".join(f"- {snippet}" for snippet in snippets)
+        return {
+            "question": payload.question,
+            "answer_style": payload.answer_style,
+            "matter_context_used": bool((payload.matter_context or "").strip()),
+            "safety": {
+                "category": "private_case_corpus",
+                "requires_citations": True,
+                "requires_disclaimer": True,
+                "requires_emergency_language": False,
+            },
+            "answer": answer_text,
+            "grounded": grounded,
+            "failure_class": "none" if grounded else "not_found_in_indexed_case_corpus",
+            "recovery_hint": "Switch the active corpus, broaden the question, or inspect the case search portal if the answer stayed empty.",
+            "citations": answer_payload.get("citations", []),
+            "source_card_count": len(answer_payload.get("citations", [])),
+            "review_required": True,
+            "not_legal_advice": True,
+            "corpus_mode": "active_case_corpus",
+            "active_case_root": str(case_root),
+            "active_case_label": case_summary["label"],
+            "metadata": {
+                "active_case_root": str(case_root),
+                "active_case_label": case_summary["label"],
+                "indexed_records": case_summary["indexed_records"],
+                "pdf_pages": case_summary["pdf_pages"],
+                "missing_information": [] if grounded else ["Confirm the right client/family corpus is active for this install."],
+                "follow_up_questions": [] if grounded else ["Do you need to switch to another family or client corpus first?"],
+            },
         }
 
 
@@ -154,7 +211,35 @@ if FastAPI is not None:
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:
+        case_root = active_case_root()
+        if case_root is not None:
+            records = load_case_search_records(case_root)
+            if records:
+                return records[:200]
         return [entry.to_dict() for entry in load_seed_manifest()]
+
+    @app.get("/api/corpus-library")
+    def api_corpus_library() -> dict[str, Any]:
+        active_case = active_case_root()
+        case_summary = describe_case_root(active_case) if active_case else None
+        return {
+            "active_case_root": str(active_case) if active_case else "",
+            "active_case_label": case_summary["label"] if case_summary else "",
+            "cases": list_registered_case_roots(),
+        }
+
+    @app.post("/api/activate-corpus")
+    def api_activate_corpus(payload: ActivateCorpusRequest) -> dict[str, Any]:
+        case_root = Path(payload.case_root).expanduser()
+        if not case_root.exists():
+            raise HTTPException(status_code=404, detail="case_corpus_not_found")
+        set_active_case_root(case_root)
+        summary = describe_case_root(case_root)
+        return {
+            "status": "ok",
+            "active_case_root": str(case_root.resolve()),
+            "active_case_label": summary["label"],
+        }
 
     @app.get("/api/question-library")
     def question_library() -> list[dict[str, Any]]:
@@ -209,6 +294,9 @@ if FastAPI is not None:
                 "citations": [],
             }
         try:
+            active_case_payload = _active_case_chat_payload(payload)
+            if active_case_payload is not None:
+                return active_case_payload
             query_text = question
             if payload.matter_context.strip():
                 query_text = f"{question}\n\nContext: {payload.matter_context.strip()}"
@@ -258,6 +346,11 @@ if FastAPI is not None:
 
     @app.get("/inspect-source/{source_id}")
     def inspect_source(source_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is not None:
+            for row in load_case_search_records(case_root):
+                if str(row.get("evidence_id", "")) == source_id:
+                    return row
         entry = get_source(load_seed_manifest(), source_id)
         if entry is None:
             raise HTTPException(status_code=404, detail="source_not_found")

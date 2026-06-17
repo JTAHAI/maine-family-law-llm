@@ -75,7 +75,7 @@ def generate_builtin_question_bank() -> list[dict[str, object]]:
 def write_question_bank(path: Path, rows: Iterable[dict[str, object]] | None = None) -> Path:
     payload = list(rows or generate_builtin_question_bank())
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
         for row in payload:
             handle.write(json.dumps(row, sort_keys=True) + "\n")
     return path

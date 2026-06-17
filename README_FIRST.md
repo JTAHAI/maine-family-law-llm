@@ -1,4 +1,19 @@
 Maine Family Law LLM
 
-Double-click START_MAINE_FAMILY_LAW_LLM.cmd to open the launcher.
-This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.
+Double-click START_MAINE_FAMILY_LAW_LLM.cmd to open the launcher, or run INSTALL_MAINE_FAMILY_LAW_LLM.cmd from the Windows installer package.
+
+Quick path for nontechnical users:
+1. Run the launcher.
+2. Let it install missing prerequisites and skip the ones already present.
+3. Choose Create New Case Corpus if you need to build a case.
+4. Choose Open Existing Case Corpus if somebody already built the matter for you.
+5. Use Import More Evidence later to build a new expanded case without mutating the earlier one.
+6. Use the Installed corpus library to switch between saved family/client matters through one install.
+
+Helpful guides:
+- docs/README_FOR_NONTECHNICAL_USERS.html
+- docs/HOW_TO_ADD_YOUR_CORPUS.html
+- docs/HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html
+- docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html
+- docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html
+- docs/SYSTEM_REQUIREMENTS.html

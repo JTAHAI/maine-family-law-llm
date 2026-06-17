@@ -7,7 +7,13 @@
 </head>
 <body>
 <main>
-<h1>How to Add Your Corpus</h1><p>Select source folders and an output root. The tool hashes sources before processing and never mutates them.</p>
+<h1>How to Add Your Corpus</h1><p>The corpus wizard expects ordinary folders, not special databases. For best results, gather copies of the records into one staging folder and then point the wizard at that folder.</p><h2>Preferred file types</h2><ul><li><strong>Email:</strong> <code>.eml</code>, printed email PDFs, downloaded attachments, exported text</li><li><strong>Documents:</strong> <code>.pdf</code>, <code>.txt</code>, <code>.md</code>, <code>.docx</code>, <code>.rtf</code>, <code>.html</code></li><li><strong>Images:</strong> screenshots, photos, scans, <code>.jpg</code>, <code>.png</code>, <code>.heic</code>, <code>.tif</code></li><li><strong>Spreadsheets:</strong> <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code></li></ul><h2>Best practice staging layout</h2><pre>My Case Export\
+  01_email_eml_or_pdf\
+  02_filings_and_orders_pdf\
+  03_phone_screenshots_and_photos\
+  04_attachments_and_reports\
+  05_school_medical_counseling\
+  06_timelines_notes_and_spreadsheets</pre><h2>What the wizard does</h2><ol><li>Hashes the originals read-only.</li><li>Inventories every file it can see.</li><li>Builds a private forensic master.</li><li>Builds an external-safe legal-matter release.</li><li>Builds role packages, indexes, proof reports, and USB exports.</li></ol><h2>What to avoid</h2><ul><li>Do not point the wizard at your whole computer profile or your whole mailbox unless you truly mean to review all of it.</li><li>Do not rely on raw PST/OST/MBOX archives as your only format. The safest search path is still PDFs, <code>.eml</code>, attachments, screenshots, and plainly readable documents.</li><li>Keep an untouched copy of the originals somewhere safe. This tool never mutates them, but preservation still matters.</li></ul>
 </main>
 </body>
 </html>

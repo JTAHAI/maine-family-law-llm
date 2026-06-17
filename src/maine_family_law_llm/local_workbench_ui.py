@@ -642,6 +642,19 @@ def render_local_workbench_html() -> str:
         </section>
 
         <section class="rail-panel">
+          <div class="rail-title">Corpus library</div>
+          <label for="corpus-select">Active case corpus</label>
+          <select id="corpus-select">
+            <option value="">General Maine law workbench only</option>
+          </select>
+          <div class="row" style="margin-top:10px">
+            <button id="activate-corpus-button" class="secondary" type="button">Use selected corpus</button>
+            <button id="refresh-corpus-button" class="secondary" type="button">Refresh corpora</button>
+          </div>
+          <div id="corpus-status" class="status-strip">No private case corpus is active yet. The general Maine-law workbench remains available.</div>
+        </section>
+
+        <section class="rail-panel">
           <div class="rail-title">Latest answer</div>
           <div id="answer-badges" class="badges"><span class="badge">waiting</span></div>
           <div id="answer" class="answer" aria-live="polite">Ask a question to test the local source-grounded workbench.</div>
@@ -737,6 +750,10 @@ def render_local_workbench_html() -> str:
     const sourceInspector = document.getElementById('source-inspector');
     const handoffPanel = document.getElementById('handoff-panel');
     const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
+    const corpusSelect = document.getElementById('corpus-select');
+    const activateCorpusButton = document.getElementById('activate-corpus-button');
+    const refreshCorpusButton = document.getElementById('refresh-corpus-button');
+    const corpusStatus = document.getElementById('corpus-status');
     const viewportProof = document.getElementById('viewport-proof');
     window.__MFL_WORKBENCH_UI_VERSION = '2.08.0-modern-constitutional-chat';
     const messages = [];
@@ -788,6 +805,8 @@ def render_local_workbench_html() -> str:
       if (payload.review_required !== false) badges.push('<span class="badge warn">review required</span>');
       if (payload.metadata && payload.metadata.matched_library_topic) badges.push(`<span class="badge">${escapeHtml(payload.metadata.matched_library_topic)}</span>`);
       if (payload.source_card_count !== undefined) badges.push(`<span class="badge">${escapeHtml(payload.source_card_count)} source cards</span>`);
+      if (payload.corpus_mode === 'active_case_corpus') badges.push('<span class="badge good">active case corpus</span>');
+      if (payload.active_case_label) badges.push(`<span class="badge">${escapeHtml(payload.active_case_label)}</span>`);
       answerBadges.innerHTML = badges.join('');
     }
 
@@ -836,11 +855,11 @@ def render_local_workbench_html() -> str:
         const url = meta.url || '';
         const sourceType = meta.source_type || meta.source_class || 'source';
         const official = meta.official === false ? 'unofficial' : 'official/source-backed';
-        const snippet = item.snippet || meta.description || meta.url || meta.id || '';
+        const snippet = item.snippet || item.text_excerpt || meta.text_excerpt || meta.description || meta.url || meta.id || '';
         const citation = item.citation || meta.citation_hint || '';
         const version = meta.version_label || '';
         const effective = meta.effective_date || '';
-        const sourceId = item.source_id || meta.source_id || meta.id || '';
+        const sourceId = item.source_id || item.evidence_id || meta.source_id || meta.id || '';
         return `<article class="source-card" data-source-card="visible" data-source-id="${escapeHtml(sourceId)}">
           <strong>${escapeHtml(title)}</strong>
           <div class="muted">${escapeHtml(sourceType)} | ${escapeHtml(official)}</div>
@@ -878,6 +897,54 @@ def render_local_workbench_html() -> str:
       } catch (err) {
         const local = lastSources.find((item) => (item.source_id || item?.metadata?.id || item?.metadata?.source_id) === sourceId) || {};
         sourceInspector.innerHTML = `<details open><summary>${escapeHtml(sourceId)} local card</summary><pre>${escapeHtml(JSON.stringify(local, null, 2))}</pre><p class="status-warn">Full source metadata was not available: ${escapeHtml(err.message)}</p></details>`;
+      }
+    }
+
+    function renderCorpusLibrary(payload) {
+      const cases = payload?.cases || [];
+      const activeRoot = payload?.active_case_root || '';
+      corpusSelect.innerHTML = '<option value="">General Maine law workbench only</option>' + cases.map((item) => {
+        const counts = [];
+        if (item.indexed_records) counts.push(`${Number(item.indexed_records).toLocaleString()} indexed`);
+        if (item.pdf_pages) counts.push(`${Number(item.pdf_pages).toLocaleString()} PDF pages`);
+        const suffix = counts.length ? ` (${counts.join(' | ')})` : '';
+        return `<option value="${escapeHtml(item.case_root)}"${item.case_root === activeRoot ? ' selected' : ''}>${escapeHtml(item.label)}${escapeHtml(suffix)}</option>`;
+      }).join('');
+      if (activeRoot) {
+        corpusStatus.innerHTML = `<strong>Active corpus:</strong> ${escapeHtml(payload.active_case_label || activeRoot)}<br><span class="muted">${escapeHtml(activeRoot)}</span>`;
+      } else {
+        corpusStatus.textContent = 'No private case corpus is active yet. The general Maine-law workbench remains available.';
+      }
+    }
+
+    async function loadCorpusLibrary() {
+      try {
+        const payload = await fetchJson('/api/corpus-library');
+        renderCorpusLibrary(payload);
+      } catch (err) {
+        corpusStatus.innerHTML = `<span class="status-bad">Could not load the installed corpus library: ${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    async function activateSelectedCorpus() {
+      const caseRoot = corpusSelect.value || '';
+      if (!caseRoot) {
+        corpusStatus.textContent = 'General Maine law workbench mode remains active. Choose a saved case corpus to switch the private record layer.';
+        return;
+      }
+      activateCorpusButton.disabled = true;
+      try {
+        const payload = await fetchJson('/api/activate-corpus', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({case_root: caseRoot})
+        });
+        corpusStatus.innerHTML = `<strong>Active corpus switched:</strong> ${escapeHtml(payload.active_case_label || payload.active_case_root)}<br><span class="muted">${escapeHtml(payload.active_case_root || '')}</span>`;
+        await loadCorpusLibrary();
+      } catch (err) {
+        corpusStatus.innerHTML = `<span class="status-bad">Could not switch the active corpus: ${escapeHtml(err.message)}</span>`;
+      } finally {
+        activateCorpusButton.disabled = false;
       }
     }
 
@@ -957,7 +1024,7 @@ def render_local_workbench_html() -> str:
       sourcesButton.disabled = true;
       try {
         const payload = await fetchJson('/sources');
-        const cards = payload.map((item) => ({metadata: item, snippet: item.description || item.url || item.id}));
+        const cards = payload.map((item) => ({metadata: item, snippet: item.text_excerpt || item.description || item.url || item.id}));
         renderSources(cards);
       } catch (err) {
         sourceCards.innerHTML = `<span class="status-bad">Could not load sources: ${escapeHtml(err.message)}</span>`;
@@ -1123,6 +1190,8 @@ def render_local_workbench_html() -> str:
       lastSources = [];
     });
     sourcesButton.addEventListener('click', loadSources);
+    activateCorpusButton?.addEventListener('click', activateSelectedCorpus);
+    refreshCorpusButton?.addEventListener('click', loadCorpusLibrary);
     audience.addEventListener('change', () => {
       const presets = {lawyer: 'intake', counselor: 'professional_boundary', therapist: 'professional_boundary', caregiver: 'missing_information', parent: 'plain_language'};
       answerStyle.value = presets[audience.value] || answerStyle.value;
@@ -1159,6 +1228,7 @@ def render_local_workbench_html() -> str:
         viewportProof.textContent = `innerWidth=${window.innerWidth}; scrollWidth=${document.documentElement.scrollWidth}; bodyClientWidth=${document.body.clientWidth}`;
       });
     }
+    loadCorpusLibrary();
     loadQuestionLibrary();
     loadPromptPacks();
     loadRuntimeDiagnostics();

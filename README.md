@@ -8,6 +8,7 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
+- The Windows installer package can copy the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, create shortcuts, install missing prerequisites, and skip the ones already present.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
 - The local browser workbench currently serves the constitutional modern chat UI and should show `UI v2.08 modern constitutional chat workbench` in the footer after a fresh start.
 - The default local browser entry point is `http://127.0.0.1:8000/`.
@@ -16,27 +17,83 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 - The sample builder output and USB export both live under `dist/example_case_template/` and are meant as fictional demonstration material only.
 - If older sections below mention earlier UI pass labels such as `v1.83` or `v1.86`, treat the footer/runtime diagnostics in the running app as the source of truth.
 
-## Download
+## Nontechnical quick start
+
+If you are helping a parent, caregiver, GAL, or reviewer who does not want to touch a terminal, use this path:
+
+1. Download the repo ZIP or the Windows installer package from GitHub.
+2. Extract it.
+3. Double-click `INSTALL_MAINE_FAMILY_LAW_LLM.cmd` from the installer package, or `START_MAINE_FAMILY_LAW_LLM.cmd` from a normal checkout.
+4. Let the launcher install missing prerequisites. It reuses Python if it already exists and skips anything already present.
+5. Choose one of these launcher paths:
+   - `Create New Case Corpus` if you need to build a new matter from source folders.
+   - `Open Existing Case Corpus` if somebody already built the case workspace and you only need the LLM/search surfaces.
+   - `Import More Evidence` if you want to add more records later without mutating the prior build.
+6. Use the installed corpus library to switch the active family/client corpus through one install when a lawyer, GAL, caregiver, counselor, or reviewer needs to move between matters.
+
+The launcher now includes built-in guide buttons for:
+
+- Gmail and Google Workspace
+- Outlook desktop, Outlook on the web, Hotmail, and Outlook.com
+- iPhone, Android, screenshots, photos, and attachments
+- import formats, privacy, hashing, and chain-of-custody basics
+
+Primary nontechnical docs:
+
+- [`docs/README_FOR_NONTECHNICAL_USERS.html`](docs/README_FOR_NONTECHNICAL_USERS.html)
+- [`docs/HOW_TO_ADD_YOUR_CORPUS.html`](docs/HOW_TO_ADD_YOUR_CORPUS.html)
+- [`docs/HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html`](docs/HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html)
+- [`docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html`](docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html)
+- [`docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html`](docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html)
+- [`docs/SYSTEM_REQUIREMENTS.html`](docs/SYSTEM_REQUIREMENTS.html)
+
+## Recommended system requirements
+
+The app is meant to stay usable on ordinary Windows hardware. A discrete GPU is not required.
+
+- Minimum practical setup:
+  - Windows 10 or Windows 11
+  - 64-bit Intel i5 / Ryzen 5 class CPU or better
+  - 16 GB RAM
+  - 15 GB free SSD space
+- Recommended setup:
+  - Intel i7 or Ryzen 7 class CPU
+  - 24 GB to 32 GB RAM
+  - 30 GB or more free SSD space
+  - 1920x1080 display or better
+
+Large corpora still benefit from more RAM and fast SSD storage, but the base local builder/chat flow is intentionally designed for machines without a discrete GPU.
+
+## Download and install
 
 For most users, download the latest release ZIP from GitHub, extract it, and run the local chat starter.
 
 ```powershell
-cd D:\dev
-# Put the downloaded ZIP in your Downloads folder first.
 $zipName = "ME_FM_LLM_latest.zip"
 $zipPath = "$env:USERPROFILE\Downloads\$zipName"
+$targetPath = "C:\Users\$env:USERNAME\Downloads\ME_FM_LLM"
 
-Remove-Item D:\dev\ME_FM_LLM -Recurse -Force -ErrorAction SilentlyContinue
-Expand-Archive $zipPath -DestinationPath D:\dev\ME_FM_LLM -Force
-cd D:\dev\ME_FM_LLM
+Remove-Item $targetPath -Recurse -Force -ErrorAction SilentlyContinue
+Expand-Archive $zipPath -DestinationPath $targetPath -Force
+Set-Location $targetPath
+.\START_MAINE_FAMILY_LAW_LLM.cmd
 ```
 
 Repository users can also clone it directly:
 
 ```powershell
-git clone https://github.com/JTAHAI/maine-family-law-llm.git D:\dev\ME_FM_LLM
-cd D:\dev\ME_FM_LLM
+git clone https://github.com/JTAHAI/maine-family-law-llm.git C:\Users\$env:USERNAME\Downloads\ME_FM_LLM
+Set-Location C:\Users\$env:USERNAME\Downloads\ME_FM_LLM
+.\START_MAINE_FAMILY_LAW_LLM.cmd
 ```
+
+If you downloaded the Windows installer package, extract it and double-click:
+
+```text
+INSTALL_MAINE_FAMILY_LAW_LLM.cmd
+```
+
+That installer copies the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, creates shortcuts, installs missing prerequisites, and then starts the launcher.
 
 
 ## Local chat question library

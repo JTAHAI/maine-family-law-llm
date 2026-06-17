@@ -15,6 +15,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from app.wizard_import_corpus import import_additional_corpus
 from app.wizard_new_case import default_case_build_root, launch_new_case_wizard, suggest_case_name
+from maine_family_law_llm.case_library import active_case_root, list_registered_case_roots, prune_missing_case_roots, set_active_case_root
 from maine_family_law_llm.case_corpus_builder import (
     bootstrap_repository,
     create_sample_case_build,
@@ -38,6 +39,14 @@ ACTION_SPECS = (
     ("Export to USB", "export_usb"),
     ("Repair / Troubleshoot", "repair_repo"),
     ("Exit", "destroy"),
+)
+
+SOURCE_GUIDE_SPECS = (
+    ("What can I import?", REPO_ROOT / "docs" / "HOW_TO_ADD_YOUR_CORPUS.html"),
+    ("Gmail / Workspace", REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html"),
+    ("Outlook / Hotmail", REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html"),
+    ("Phone / screenshots", REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html"),
+    ("Privacy / hashes", REPO_ROOT / "docs" / "HASH_AND_CHAIN_OF_CUSTODY.html"),
 )
 
 
@@ -121,6 +130,20 @@ class CorpusBuildWizard(tk.Toplevel):
             wraplength=220,
             justify="left",
         ).pack(anchor="w", pady=(12, 0))
+        guide_frame = ttk.LabelFrame(sources_buttons, text="Need help getting records out?", padding=10)
+        guide_frame.pack(fill="x", pady=(12, 0))
+        for label, guide_path in SOURCE_GUIDE_SPECS:
+            ttk.Button(
+                guide_frame,
+                text=label,
+                command=lambda current=guide_path: self._open_guide(current),
+            ).pack(fill="x", pady=(0, 6))
+        ttk.Label(
+            guide_frame,
+            text="These guides walk nontechnical users through Gmail, Outlook, Hotmail, Google Workspace, phone screenshots, attachments, and evidence staging.",
+            wraplength=220,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 0))
         sources_frame.columnconfigure(0, weight=1)
         sources_frame.rowconfigure(0, weight=1)
 
@@ -176,6 +199,12 @@ class CorpusBuildWizard(tk.Toplevel):
         if selected:
             self.output_root_var.set(selected)
 
+    def _open_guide(self, guide_path: Path) -> None:
+        if not guide_path.exists():
+            messagebox.showwarning("Guide not found", f"Guide not found at {guide_path}", parent=self)
+            return
+        os.startfile(str(guide_path))
+
     def _submit(self) -> None:
         if not self.source_roots:
             messagebox.showwarning("Source folders required", "Add at least one source folder before building.", parent=self)
@@ -203,9 +232,16 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.geometry("840x560")
         self.repo_root = REPO_ROOT
         bootstrap_repository(self.repo_root)
+        prune_missing_case_roots()
         self.case_root_var = tk.StringVar(value="")
+        self.saved_case_var = tk.StringVar(value="")
         self.status_var = tk.StringVar(value="Ready. Local-first mode is enabled.")
+        self.saved_case_lookup: dict[str, Path] = {}
         self._build_ui()
+        self._refresh_case_library()
+        current_active = active_case_root()
+        if current_active is not None:
+            self._set_case_root(current_active, "Loaded the last active case corpus for this install.")
 
     def _build_ui(self) -> None:
         frame = ttk.Frame(self, padding=16)
@@ -222,8 +258,63 @@ class MaineFamilyLawLauncher(tk.Tk):
             ttk.Button(grid, text=label, command=getattr(self, method_name)).grid(row=idx // 2, column=idx % 2, sticky="ew", padx=6, pady=6)
         grid.columnconfigure(0, weight=1)
         grid.columnconfigure(1, weight=1)
+        library_frame = ttk.LabelFrame(frame, text="Installed corpus library", padding=12)
+        library_frame.pack(fill="x", pady=(16, 0))
+        ttk.Label(
+            library_frame,
+            text="One install can manage multiple families or client matters. Switch the active corpus here before opening the review portal or asking questions in the local workbench.",
+            wraplength=700,
+            justify="left",
+        ).grid(row=0, column=0, columnspan=3, sticky="w")
+        self.saved_case_combo = ttk.Combobox(library_frame, textvariable=self.saved_case_var, state="readonly")
+        self.saved_case_combo.grid(row=1, column=0, sticky="ew", pady=(10, 0))
+        ttk.Button(library_frame, text="Use selected corpus", command=self.activate_selected_saved_case).grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
+        ttk.Button(library_frame, text="Refresh library", command=self._refresh_case_library).grid(row=1, column=2, padx=(10, 0), pady=(10, 0), sticky="ew")
+        library_frame.columnconfigure(0, weight=1)
         ttk.Label(frame, textvariable=self.case_root_var, foreground="#0b5c7d").pack(anchor="w", pady=(18, 8))
         ttk.Label(frame, textvariable=self.status_var, wraplength=700).pack(anchor="w")
+
+    def _set_case_root(self, case_root: Path, status_text: str) -> None:
+        self.case_root_var.set(str(case_root))
+        set_active_case_root(case_root)
+        self._refresh_case_library(selected_case_root=case_root)
+        self.status_var.set(status_text)
+
+    def _refresh_case_library(self, selected_case_root: Path | None = None) -> None:
+        entries = list_registered_case_roots()
+        self.saved_case_lookup = {}
+        display_values: list[str] = []
+        for entry in entries:
+            label = str(entry["label"])
+            counts = []
+            if entry.get("indexed_records"):
+                counts.append(f"{int(entry['indexed_records']):,} indexed")
+            if entry.get("pdf_pages"):
+                counts.append(f"{int(entry['pdf_pages']):,} PDF pages")
+            suffix = f" ({' | '.join(counts)})" if counts else ""
+            display = f"{label}{suffix} - {entry['case_root']}"
+            self.saved_case_lookup[display] = Path(str(entry["case_root"]))
+            display_values.append(display)
+        self.saved_case_combo["values"] = display_values
+        if selected_case_root is not None:
+            selected = str(selected_case_root.resolve())
+            for label, path in self.saved_case_lookup.items():
+                if str(path.resolve()) == selected:
+                    self.saved_case_var.set(label)
+                    break
+        elif display_values and not self.saved_case_var.get():
+            self.saved_case_var.set(display_values[0])
+
+    def activate_selected_saved_case(self) -> None:
+        selected = self.saved_case_var.get().strip()
+        if not selected:
+            self.status_var.set("No saved corpus is selected yet.")
+            return
+        case_root = self.saved_case_lookup.get(selected)
+        if case_root is None or not case_root.exists():
+            self.status_var.set("The selected saved corpus is missing. Refresh the library to prune stale entries.")
+            return
+        self._set_case_root(case_root, f"Active corpus switched to {case_root}.")
 
     def _select_output_root(self) -> Path | None:
         selected = filedialog.askdirectory(title="Select Output Folder")
@@ -270,14 +361,12 @@ class MaineFamilyLawLauncher(tk.Tk):
             messagebox.showerror("Create New Case Corpus", str(exc), parent=self)
             self.status_var.set("Create New Case Corpus failed.")
             return
-        self.case_root_var.set(str(result.case_root))
-        self.status_var.set(f"Built case corpus at {result.case_root} from {len(plan.source_roots)} source folder(s).")
+        self._set_case_root(result.case_root, f"Built case corpus at {result.case_root} from {len(plan.source_roots)} source folder(s).")
 
     def open_existing_case(self) -> None:
         selected = filedialog.askdirectory(title="Open Existing Case Corpus")
         if selected:
-            self.case_root_var.set(selected)
-            self.status_var.set("Case corpus selected.")
+            self._set_case_root(Path(selected), "Case corpus selected and made active for this install.")
 
     def import_more_evidence(self) -> None:
         case_root = self._require_case_root()
@@ -304,15 +393,14 @@ class MaineFamilyLawLauncher(tk.Tk):
             messagebox.showerror("Import More Evidence", str(exc), parent=self)
             self.status_var.set("Import More Evidence failed.")
             return
-        self.case_root_var.set(str(result.case_root))
-        self.status_var.set(
-            f"Built expanded case corpus at {result.case_root} from {len(plan.source_roots)} additional source folder(s)."
+        self._set_case_root(
+            result.case_root,
+            f"Built expanded case corpus at {result.case_root} from {len(plan.source_roots)} additional source folder(s).",
         )
 
     def build_sample_case(self) -> None:
         result = create_sample_case_build(self.repo_root)
-        self.case_root_var.set(str(result.case_root))
-        self.status_var.set("Built a neutral sample case corpus and refreshed its portal, indexes, and packages.")
+        self._set_case_root(result.case_root, "Built a neutral sample case corpus and refreshed its portal, indexes, and packages.")
 
     def _current_case_root(self) -> Path | None:
         value = self.case_root_var.get().strip()
