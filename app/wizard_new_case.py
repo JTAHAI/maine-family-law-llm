@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -11,18 +10,23 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from maine_family_law_llm.case_corpus_builder import build_case_corpus
+from maine_family_law_llm.case_workspace import (
+    default_case_build_root as workspace_default_case_build_root,
+    default_documents_root as workspace_default_documents_root,
+    default_workspace_root as workspace_default_workspace_root,
+)
 
 
 def default_documents_root() -> Path:
-    return Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documents"
+    return workspace_default_documents_root()
 
 
 def default_workspace_root() -> Path:
-    return default_documents_root() / "MaineFamilyLawLLM"
+    return workspace_default_workspace_root()
 
 
 def default_case_build_root() -> Path:
-    return default_workspace_root() / "CaseBuilds"
+    return workspace_default_case_build_root()
 
 
 def coerce_source_roots(source_roots: Path | Sequence[Path]) -> list[Path]:

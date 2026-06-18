@@ -11,6 +11,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from app.wizard_new_case import coerce_source_roots, default_case_build_root
 from maine_family_law_llm.case_corpus_builder import build_case_corpus
+from maine_family_law_llm.case_workspace import expand_case_source_roots
 
 
 def import_additional_corpus(
@@ -21,6 +22,7 @@ def import_additional_corpus(
     case_name: str = "",
 ):
     normalized_sources = coerce_source_roots(source_roots)
+    cumulative_sources = expand_case_source_roots(existing_case_root, normalized_sources)
     fallback_output_root = Path(existing_case_root).parent if existing_case_root else default_case_build_root()
     resolved_output_root = Path(output_root) if output_root else fallback_output_root
     if case_name.strip():
@@ -33,7 +35,7 @@ def import_additional_corpus(
         resolved_case_name = "Expanded Family Matter"
     return build_case_corpus(
         repo_root=repo_root,
-        source_roots=normalized_sources,
+        source_roots=cumulative_sources,
         output_root=resolved_output_root,
         case_name=resolved_case_name,
     )

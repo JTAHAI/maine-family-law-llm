@@ -21,6 +21,7 @@ from .legal_matter_classifier import classify_legal_matter
 from .privacy_classifier import classify_privacy
 from .question_bank import generate_builtin_question_bank, write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
+from .case_workspace import write_case_source_roots
 
 
 REPO_VERSION = "2.07.0"
@@ -600,9 +601,42 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     docs = {
         "README_FOR_NONTECHNICAL_USERS.html": (
             "<h1>Maine Family Law LLM</h1>"
-            "<p>Double-click the launcher, choose a corpus, build a private master, then build external-safe role packages.</p>"
+            "<p>This system is built for people who need serious record review without becoming command-line users. "
+            "Double-click the launcher, choose or create a case corpus, and let the app build a local evidence workspace for you.</p>"
+            "<h2>Simple daily flow</h2>"
+            "<ol>"
+            "<li>Double-click <strong>START_MAINE_FAMILY_LAW_LLM.cmd</strong>.</li>"
+            "<li>Click <strong>Create New Case Corpus</strong> the first time.</li>"
+            "<li>Add folders or files such as court PDFs, screenshots, phone exports, email exports, school records, or therapy records.</li>"
+            "<li>Later, reopen the same app and use <strong>Reopen Intake / Add More Evidence</strong>. The app remembers the earlier source folders automatically.</li>"
+            "</ol>"
+            "<p>The build is read-only against your originals. It hashes files before and after processing so source material is not silently changed.</p>"
         ),
-        "HOW_TO_ADD_YOUR_CORPUS.html": "<h1>How to Add Your Corpus</h1><p>Select source folders and an output root. The tool hashes sources before processing and never mutates them.</p>",
+        "HOW_TO_ADD_YOUR_CORPUS.html": (
+            "<h1>How to Add Your Corpus</h1>"
+            "<p>Use the launcher if you want the easiest path. Click <strong>Create New Case Corpus</strong> for a first build, or "
+            "<strong>Reopen Intake / Add More Evidence</strong> when you want to add more material later.</p>"
+            "<h2>What you can add</h2>"
+            "<ul>"
+            "<li>Downloaded court PDFs, notices, motions, orders, and exhibits</li>"
+            "<li>Email export folders or individual <code>.eml</code> files from Gmail, Outlook, Hotmail, or Workspace</li>"
+            "<li>Phone screenshot folders, camera-roll exports, scanned batches, and USB copies</li>"
+            "<li>School, counseling, therapy, medical, and provider records</li>"
+            "<li>Word files, spreadsheets, text files, and mixed evidence folders</li>"
+            "</ul>"
+            "<h2>Good first places to look</h2>"
+            "<ul>"
+            "<li><strong>Downloads</strong>: court filings, PDF notices, email attachments, portal exports</li>"
+            "<li><strong>Documents</strong>: prepared filings, letters, school records, case folders</li>"
+            "<li><strong>Desktop</strong>: recent exports or temporary review folders</li>"
+            "<li><strong>Pictures</strong>: screenshots, scans, and phone image exports</li>"
+            "</ul>"
+            "<h2>Email and phone guidance</h2>"
+            "<p>If your evidence still lives in webmail or on a phone, export or copy it to this computer first. "
+            "The app then ingests those folders read-only and keeps them attached to the case for future rebuilds.</p>"
+            "<p>When you reopen intake later, you only need to add the new material. Previously remembered source folders stay included automatically unless the underlying drive or folder is missing.</p>"
+            "<p>The tool hashes sources before processing and never mutates the originals.</p>"
+        ),
         "HOW_TO_BUILD_GAL_PACKAGE.html": "<h1>How to Build a GAL Package</h1><p>GAL mode prioritizes child stability, contact implementation, school, medical, and counseling review.</p>",
         "HOW_TO_BUILD_COURT_PACKAGE.html": "<h1>How to Build a Court Package</h1><p>Court mode focuses on orders, filings, service, docket entries, and missing proof.</p>",
         "HOW_TO_BUILD_LAWYER_PACKAGE.html": "<h1>How to Build a Lawyer Package</h1><p>Lawyer intake mode creates a 10-minute overview, issue map, and missing-record list.</p>",
@@ -643,16 +677,21 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
         "Maine Family Law LLM\n\n"
         "Double-click START_MAINE_FAMILY_LAW_LLM.cmd to open the launcher.\n"
         "This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. "
-        "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.\n"
+        "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.\n\n"
+        "First build: click Create New Case Corpus.\n"
+        "Later: click Reopen Intake / Add More Evidence. The launcher remembers earlier source folders so users do not have to rebuild from scratch.\n"
     )
     start_here_body = (
         "<h1>Maine Family Law LLM</h1>"
         "<p>This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, or investigators to search through an unstructured personal archive. "
         "It preserves the user's full private evidence universe internally, then builds external-safe legal-matter review packages with source citations, hashes, timelines, issue lanes, limitations, and verification steps.</p>"
+        "<p>For most people, the simple path is: open the launcher, create a case once, then reopen intake later whenever new evidence arrives.</p>"
         "<ul>"
         "<li><a href=\"README_FIRST.md\">Read first</a></li>"
         "<li><a href=\"docs/README_FOR_NONTECHNICAL_USERS.html\">Nontechnical guide</a></li>"
+        "<li><a href=\"docs/HOW_TO_ADD_YOUR_CORPUS.html\">How to add your corpus</a></li>"
         "<li><a href=\"dist/windows_portable/INSTALL_OR_RUN.html\">Portable distribution</a></li>"
+        "<li><a href=\"docs/TROUBLESHOOTING.html\">Troubleshooting</a></li>"
         "</ul>"
     )
     verify_cmd = (
@@ -680,7 +719,10 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     write_html(
         portable_root / "INSTALL_OR_RUN.html",
         "Install or Run",
-        "<h1>Install or Run</h1><p>Double-click START_MAINE_FAMILY_LAW_LLM.cmd from this portable folder. No admin rights are required.</p>",
+        "<h1>Install or Run</h1>"
+        "<p>Double-click <strong>START_MAINE_FAMILY_LAW_LLM.cmd</strong> from this portable folder. No admin rights are required.</p>"
+        "<p>If you are building your own case, start with <strong>Create New Case Corpus</strong>. When you gather more evidence later, return and use "
+        "<strong>Reopen Intake / Add More Evidence</strong> so the case keeps growing over time.</p>",
     )
     write_html(portable_root / "START_HERE.html", "Portable Start Here", start_here_body)
     return {
@@ -761,6 +803,11 @@ def read_text_for_record(path: Path, source_type: str) -> tuple[str, dict[str, s
 def discover_source_files(source_roots: Sequence[Path]) -> list[Path]:
     files: list[Path] = []
     for root in source_roots:
+        if root.is_file():
+            files.append(root)
+            continue
+        if not root.exists():
+            continue
         for path in sorted(root.rglob("*")):
             if path.is_file():
                 files.append(path)
@@ -1091,6 +1138,11 @@ def build_case_corpus(
     proof_root = case_root / "15_PROOF_VALIDATION"
     proof_json_path = proof_root / CASE_PROOF_JSON
     write_json(proof_json_path, proof)
+    write_case_source_roots(
+        case_root,
+        case_name=case_name,
+        source_roots=source_roots,
+    )
     write_text(
         proof_root / "CASE_BUILD_REPORT.md",
         f"# Case Build Report\n\n- Result: {proof['result']}\n- Indexed files: {proof['total_files_indexed']}\n- External legal-matter items: {proof['legal_matter_items']}\n",

@@ -9,6 +9,7 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
+- Case intake is now persistent: users can reopen an existing case later, add new folders or files, and rebuild from the cumulative source set instead of starting over.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
 - The sample builder output and USB export both live under `dist/example_case_template/` and are meant as fictional demonstration material only.
 
@@ -33,6 +34,13 @@ Repository users can also clone it directly:
 git clone https://github.com/JTAHAI/maine-family-law-llm.git D:\dev\ME_FM_LLM
 cd D:\dev\ME_FM_LLM
 ```
+
+For non-technical users using the launcher:
+
+1. Double-click `START_MAINE_FAMILY_LAW_LLM.cmd`.
+2. Click `Create New Case Corpus` the first time.
+3. Later, reopen the same app and use `Reopen Intake / Add More Evidence`.
+4. The launcher remembers the earlier source folders for that case and adds the new ones on top.
 
 
 ## Local chat question library
