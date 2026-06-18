@@ -29,6 +29,7 @@ def test_first_run_wizards_import() -> None:
 
     assert launcher.main is not None
     assert ("Open Review Portal", "open_review_portal") in launcher.ACTION_SPECS
+    assert ("Reopen Intake / Add More Evidence", "import_more_evidence") in launcher.ACTION_SPECS
     assert ("Open External Legal-Matter Release", "open_external_release") in launcher.ACTION_SPECS
     assert ("Build Neutral Sample Corpus", "build_sample_case") in launcher.ACTION_SPECS
     assert all(method_name != "rebuild_index" for _, method_name in launcher.ACTION_SPECS)
@@ -65,10 +66,12 @@ def test_nontechnical_docs_cover_common_email_and_phone_sources() -> None:
         assert (REPO_ROOT / "docs" / name).exists(), name
     readme_html = (REPO_ROOT / "docs" / "README_FOR_NONTECHNICAL_USERS.html").read_text(encoding="utf-8")
     assert "Open Existing Case Corpus" in readme_html
-    assert "Import More Evidence" in readme_html
+    assert "Reopen Intake / Add More Evidence" in readme_html
     corpus_html = (REPO_ROOT / "docs" / "HOW_TO_ADD_YOUR_CORPUS.html").read_text(encoding="utf-8")
     assert ".eml" in corpus_html
     assert "Do not rely on raw PST/OST/MBOX archives as your only format" in corpus_html
+    assert "Documents" in corpus_html
+    assert "Downloads" in corpus_html
     gmail_html = (REPO_ROOT / "docs" / "HOW_TO_EXPORT_FROM_GMAIL_AND_GOOGLE_WORKSPACE.html").read_text(encoding="utf-8")
     assert "Google Workspace" in gmail_html
     assert "Google Takeout" in gmail_html
@@ -181,3 +184,12 @@ def test_launcher_import_wrapper_uses_multi_source_import_flow(monkeypatch, tmp_
     assert captured["source_roots"] == source_roots
     assert captured["output_root"] == output_root
     assert captured["case_name"] == "Expanded Matter"
+
+
+def test_launcher_source_mentions_workspace_reopen_flow() -> None:
+    launcher_text = (REPO_ROOT / "app" / "launcher.py").read_text(encoding="utf-8")
+    assert "Reopen Intake / Add More Evidence" in launcher_text
+    assert "Open workspace folder" in launcher_text
+    assert "Add Documents" in launcher_text
+    assert "Add Pictures" in launcher_text
+    assert "Missing remembered source paths" in launcher_text

@@ -21,6 +21,7 @@ from .legal_matter_classifier import classify_legal_matter
 from .privacy_classifier import classify_privacy
 from .question_bank import generate_builtin_question_bank, write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
+from .case_workspace import write_case_source_roots
 
 
 REPO_VERSION = "2.07.0"
@@ -607,7 +608,8 @@ def _nontechnical_readme_html() -> str:
         "<li>If Python or required packages are missing, the launcher will install them and skip what is already present.</li>"
         "<li>Click <strong>Create New Case Corpus</strong> if you are starting a fresh matter.</li>"
         "<li>Click <strong>Open Existing Case Corpus</strong> if somebody already built your case workspace and you only want to use the LLM/search tools.</li>"
-        "<li>Click <strong>Import More Evidence</strong> later if you need to add more records without mutating the earlier build.</li>"
+        "<li>Click <strong>Reopen Intake / Add More Evidence</strong> later if you need to add more records without mutating the earlier build.</li>"
+        "<li>The launcher remembers earlier source folders for that case, so you only need to add the new files or folders.</li>"
         "<li>Use the <strong>Installed corpus library</strong> to switch between saved family/client matters through one install.</li>"
         "</ol>"
         "<h2>Source export guides</h2>"
@@ -627,13 +629,20 @@ def _nontechnical_readme_html() -> str:
 def _corpus_ingest_guide_html() -> str:
     return (
         "<h1>How to Add Your Corpus</h1>"
-        "<p>The corpus wizard expects ordinary folders, not special databases. For best results, gather copies of the records into one staging folder and then point the wizard at that folder.</p>"
+        "<p>The corpus wizard accepts ordinary folders and individual files. For best results, gather copies of the records into one staging folder and then point the wizard at that folder.</p>"
         "<h2>Preferred file types</h2>"
         "<ul>"
         "<li><strong>Email:</strong> <code>.eml</code>, printed email PDFs, downloaded attachments, exported text</li>"
         "<li><strong>Documents:</strong> <code>.pdf</code>, <code>.txt</code>, <code>.md</code>, <code>.docx</code>, <code>.rtf</code>, <code>.html</code></li>"
         "<li><strong>Images:</strong> screenshots, photos, scans, <code>.jpg</code>, <code>.png</code>, <code>.heic</code>, <code>.tif</code></li>"
         "<li><strong>Spreadsheets:</strong> <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code></li>"
+        "</ul>"
+        "<h2>Good first places to look</h2>"
+        "<ul>"
+        "<li><strong>Documents</strong>: prepared filings, letters, school records, case folders</li>"
+        "<li><strong>Downloads</strong>: court PDFs, saved email attachments, portal exports</li>"
+        "<li><strong>Desktop</strong>: temporary review sets or recent exports</li>"
+        "<li><strong>Pictures</strong>: screenshots, scans, and phone image exports</li>"
         "</ul>"
         "<h2>Best practice staging layout</h2>"
         "<pre>My Case Export\\\n"
@@ -651,6 +660,7 @@ def _corpus_ingest_guide_html() -> str:
         "<li>Builds an external-safe legal-matter release.</li>"
         "<li>Builds role packages, indexes, proof reports, and USB exports.</li>"
         "</ol>"
+        "<p>When you reopen intake later, the earlier remembered source folders stay attached to the case automatically unless those folders or drives are no longer available.</p>"
         "<h2>What to avoid</h2>"
         "<ul>"
         "<li>Do not point the wizard at your whole computer profile or your whole mailbox unless you truly mean to review all of it.</li>"
@@ -781,8 +791,9 @@ def _root_readme_markdown() -> str:
         "2. Let it install missing prerequisites and skip the ones already present.\n"
         "3. Choose Create New Case Corpus if you need to build a case.\n"
         "4. Choose Open Existing Case Corpus if somebody already built the matter for you.\n"
-        "5. Use Import More Evidence later to build a new expanded case without mutating the earlier one.\n"
-        "6. Use the Installed corpus library to switch between saved family/client matters through one install.\n\n"
+        "5. Use Reopen Intake / Add More Evidence later to build a new expanded case without mutating the earlier one.\n"
+        "6. The launcher remembers the earlier source folders for that case, so you only need to add the new material.\n\n"
+        "Use the Installed corpus library to switch between saved family/client matters through one install.\n\n"
         "Helpful guides:\n"
         "- docs/README_FOR_NONTECHNICAL_USERS.html\n"
         "- docs/HOW_TO_ADD_YOUR_CORPUS.html\n"
@@ -798,6 +809,7 @@ def _start_here_body_html() -> str:
         "<h1>Maine Family Law LLM</h1>"
         "<p>This tool helps make the full case record reviewable without forcing courts, GALs, lawyers, investigators, or parents to search through an unstructured personal archive. "
         "It preserves a private forensic master, builds an external-safe legal-matter release, and keeps the original sources read-only.</p>"
+        "<p>For most people, the simple path is: create a case once, then reopen intake later whenever new evidence arrives.</p>"
         "<ul>"
         "<li><a href=\"README_FIRST.md\">Read first</a></li>"
         "<li><a href=\"docs/README_FOR_NONTECHNICAL_USERS.html\">Nontechnical guide</a></li>"
@@ -887,7 +899,7 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     write_html(
         portable_root / "INSTALL_OR_RUN.html",
         "Install or Run",
-        "<h1>Install or Run</h1><p>Double-click START_MAINE_FAMILY_LAW_LLM.cmd from this portable folder. The launcher checks for Python and required packages, installs missing prerequisites, and skips anything already present. No admin rights are required for the normal per-user path.</p>",
+        "<h1>Install or Run</h1><p>Double-click START_MAINE_FAMILY_LAW_LLM.cmd from this portable folder. The launcher checks for Python and required packages, installs missing prerequisites, and skips anything already present. No admin rights are required for the normal per-user path.</p><p>When new evidence arrives later, reopen the launcher and use <strong>Reopen Intake / Add More Evidence</strong> so the case keeps growing over time.</p>",
     )
     write_html(portable_root / "START_HERE.html", "Portable Start Here", start_here_body)
     return {
@@ -968,6 +980,11 @@ def read_text_for_record(path: Path, source_type: str) -> tuple[str, dict[str, s
 def discover_source_files(source_roots: Sequence[Path]) -> list[Path]:
     files: list[Path] = []
     for root in source_roots:
+        if root.is_file():
+            files.append(root)
+            continue
+        if not root.exists():
+            continue
         for path in sorted(root.rglob("*")):
             if path.is_file():
                 files.append(path)
@@ -1298,6 +1315,11 @@ def build_case_corpus(
     proof_root = case_root / "15_PROOF_VALIDATION"
     proof_json_path = proof_root / CASE_PROOF_JSON
     write_json(proof_json_path, proof)
+    write_case_source_roots(
+        case_root,
+        case_name=case_name,
+        source_roots=source_roots,
+    )
     write_text(
         proof_root / "CASE_BUILD_REPORT.md",
         f"# Case Build Report\n\n- Result: {proof['result']}\n- Indexed files: {proof['total_files_indexed']}\n- External legal-matter items: {proof['legal_matter_items']}\n",

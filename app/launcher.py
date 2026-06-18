@@ -21,11 +21,19 @@ from maine_family_law_llm.case_corpus_builder import (
     create_sample_case_build,
     export_to_usb,
 )
+from maine_family_law_llm.case_workspace import (
+    append_case_ingest_history,
+    default_workspace_root,
+    inherit_case_ingest_history,
+    load_case_summary,
+    read_case_ingest_history,
+    read_case_source_roots,
+)
 
 ACTION_SPECS = (
     ("Create New Case Corpus", "create_new_case"),
     ("Open Existing Case Corpus", "open_existing_case"),
-    ("Import More Evidence", "import_more_evidence"),
+    ("Reopen Intake / Add More Evidence", "import_more_evidence"),
     ("Build Neutral Sample Corpus", "build_sample_case"),
     ("Open Search / Indexes", "open_search_indexes"),
     ("Open GAL Package", "open_gal_package"),
@@ -97,6 +105,8 @@ class CorpusBuildWizard(tk.Toplevel):
         confirm_text: str,
         default_output_root: Path,
         default_case_name: str,
+        existing_source_roots: list[Path] | None = None,
+        history_rows: list[dict[str, object]] | None = None,
     ) -> None:
         super().__init__(parent)
         self.title(title_text)
@@ -105,6 +115,8 @@ class CorpusBuildWizard(tk.Toplevel):
         self.grab_set()
         self.result: CorpusBuildPlan | None = None
         self.source_roots: list[Path] = []
+        self.existing_source_roots = existing_source_roots or []
+        self.history_rows = history_rows or []
         self.case_name_var = tk.StringVar(value=default_case_name)
         self.output_root_var = tk.StringVar(value=str(default_output_root))
         self.confirm_text = confirm_text
@@ -116,17 +128,80 @@ class CorpusBuildWizard(tk.Toplevel):
         frame.pack(fill="both", expand=True)
         ttk.Label(frame, text=instructions, wraplength=760, justify="left").pack(anchor="w")
 
-        sources_frame = ttk.LabelFrame(frame, text="Source folders", padding=12)
+        if self.existing_source_roots:
+            existing_frame = ttk.LabelFrame(frame, text="Already included in this case", padding=12)
+            existing_frame.pack(fill="x", pady=(14, 10))
+            self.existing_listbox = tk.Listbox(existing_frame, height=min(6, max(3, len(self.existing_source_roots))), selectmode="extended")
+            self.existing_listbox.grid(row=0, column=0, sticky="nsew")
+            for path in self.existing_source_roots:
+                status = "available" if path.exists() else "missing"
+                self.existing_listbox.insert(tk.END, f"{path} [{status}]")
+            existing_buttons = ttk.Frame(existing_frame)
+            existing_buttons.grid(row=0, column=1, sticky="n", padx=(12, 0))
+            ttk.Button(existing_buttons, text="Open selected", command=self._open_selected_existing_source).pack(fill="x")
+            ttk.Label(
+                existing_frame,
+                text=(
+                    "These source folders stay included automatically when you add more evidence later. "
+                    "You only need to add the new files or folders below."
+                ),
+                wraplength=720,
+                justify="left",
+            ).grid(row=1, column=0, sticky="w", pady=(10, 0))
+            missing_count = sum(1 for path in self.existing_source_roots if not path.exists())
+            if missing_count:
+                ttk.Label(
+                    existing_frame,
+                    text=(
+                        f"Warning: {missing_count} remembered source path(s) are missing right now. "
+                        "Reconnect a moved drive or folder before rebuilding if you want those files included again."
+                    ),
+                    foreground="#8a3b12",
+                    wraplength=720,
+                    justify="left",
+                ).grid(row=2, column=0, sticky="w", pady=(8, 0))
+            existing_frame.columnconfigure(0, weight=1)
+
+        if self.history_rows:
+            recent = self.history_rows[-4:]
+            history_lines = []
+            for row in reversed(recent):
+                when = str(row.get("recorded_at", ""))[:10] or "undated"
+                mode = str(row.get("mode", "update")).replace("_", " ")
+                added_count = len(row.get("source_roots_added", []) or [])
+                cumulative_count = len(row.get("cumulative_source_roots", []) or [])
+                history_lines.append(
+                    f"{when}: {mode} - added {added_count} path(s), cumulative source roots {cumulative_count}."
+                )
+            history_frame = ttk.LabelFrame(frame, text="Recent intake history", padding=12)
+            history_frame.pack(fill="x", pady=(0, 10))
+            ttk.Label(
+                history_frame,
+                text="\n".join(history_lines),
+                wraplength=720,
+                justify="left",
+            ).pack(anchor="w")
+
+        sources_frame = ttk.LabelFrame(frame, text="Add new source folders or files", padding=12)
         sources_frame.pack(fill="both", expand=True, pady=(14, 12))
-        self.sources_listbox = tk.Listbox(sources_frame, height=8)
-        self.sources_listbox.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        self.sources_listbox = tk.Listbox(sources_frame, height=8, selectmode="extended")
+        self.sources_listbox.grid(row=0, column=0, rowspan=6, sticky="nsew")
         sources_buttons = ttk.Frame(sources_frame)
         sources_buttons.grid(row=0, column=1, sticky="n", padx=(12, 0))
         ttk.Button(sources_buttons, text="Add folder", command=self._add_source_folder).pack(fill="x")
+        ttk.Button(sources_buttons, text="Add files", command=self._add_source_files).pack(fill="x", pady=(8, 0))
+        ttk.Button(sources_buttons, text="Add Documents", command=lambda: self._add_known_folder(Path.home() / "Documents")).pack(fill="x", pady=(8, 0))
+        ttk.Button(sources_buttons, text="Add Downloads", command=lambda: self._add_known_folder(Path.home() / "Downloads")).pack(fill="x", pady=(8, 0))
+        ttk.Button(sources_buttons, text="Add Desktop", command=lambda: self._add_known_folder(Path.home() / "Desktop")).pack(fill="x", pady=(8, 0))
+        ttk.Button(sources_buttons, text="Add Pictures", command=lambda: self._add_known_folder(Path.home() / "Pictures")).pack(fill="x", pady=(8, 0))
+        ttk.Button(sources_buttons, text="Open selected", command=self._open_selected_new_source).pack(fill="x", pady=(8, 0))
         ttk.Button(sources_buttons, text="Remove selected", command=self._remove_selected_source).pack(fill="x", pady=(8, 0))
         ttk.Label(
             sources_buttons,
-            text="Add every folder you want included.\nThe build stays read-only against the originals.",
+            text=(
+                "Supported inputs: folders, PDFs, screenshots, phone exports, email exports, Word files, "
+                "spreadsheets, ZIPs, and scanned batches. The build stays read-only against the originals."
+            ),
             wraplength=220,
             justify="left",
         ).pack(anchor="w", pady=(12, 0))
@@ -144,6 +219,17 @@ class CorpusBuildWizard(tk.Toplevel):
             wraplength=220,
             justify="left",
         ).pack(anchor="w", pady=(4, 0))
+        help_frame = ttk.LabelFrame(frame, text="Common source examples", padding=12)
+        help_frame.pack(fill="x", pady=(0, 12))
+        ttk.Label(
+            help_frame,
+            text=(
+                "Court PDFs, downloaded attachments, phone screenshot folders, school records, counseling or provider records, "
+                "USB copies, and staged exports from Gmail, Outlook, Hotmail, or Workspace."
+            ),
+            wraplength=720,
+            justify="left",
+        ).pack(anchor="w")
         sources_frame.columnconfigure(0, weight=1)
         sources_frame.rowconfigure(0, weight=1)
 
@@ -182,6 +268,54 @@ class CorpusBuildWizard(tk.Toplevel):
             self.source_roots.append(candidate)
             self._refresh_sources()
 
+    def _add_source_files(self) -> None:
+        selected = filedialog.askopenfilenames(
+            parent=self,
+            title="Add Source Files",
+            initialdir=str(Path.home()),
+        )
+        if not selected:
+            return
+        changed = False
+        for item in selected:
+            candidate = Path(item)
+            if candidate not in self.source_roots:
+                self.source_roots.append(candidate)
+                changed = True
+        if changed:
+            self._refresh_sources()
+
+    def _add_known_folder(self, candidate: Path) -> None:
+        if candidate.exists() and candidate not in self.source_roots:
+            self.source_roots.append(candidate)
+            self._refresh_sources()
+
+    def _open_selected_existing_source(self) -> None:
+        if not hasattr(self, "existing_listbox"):
+            return
+        selection = list(self.existing_listbox.curselection())
+        if not selection:
+            return
+        path = self.existing_source_roots[selection[0]]
+        if path.exists():
+            os.startfile(str(path))
+        else:
+            messagebox.showwarning(
+                "Source path unavailable",
+                f"This remembered source path is not available right now:\n\n{path}",
+                parent=self,
+            )
+
+    def _open_selected_new_source(self) -> None:
+        selection = list(self.sources_listbox.curselection())
+        if not selection:
+            return
+        path = self.source_roots[selection[0]]
+        if path.exists():
+            os.startfile(str(path))
+        else:
+            messagebox.showwarning("Source path unavailable", f"Path not found:\n\n{path}", parent=self)
+
     def _remove_selected_source(self) -> None:
         selection = list(self.sources_listbox.curselection())
         if not selection:
@@ -207,7 +341,11 @@ class CorpusBuildWizard(tk.Toplevel):
 
     def _submit(self) -> None:
         if not self.source_roots:
-            messagebox.showwarning("Source folders required", "Add at least one source folder before building.", parent=self)
+            messagebox.showwarning(
+                "Source paths required",
+                "Add at least one new source folder or file before continuing.",
+                parent=self,
+            )
             return
         output_text = self.output_root_var.get().strip()
         if not output_text:
@@ -229,12 +367,13 @@ class MaineFamilyLawLauncher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Maine Family Law LLM")
-        self.geometry("840x560")
+        self.geometry("980x700")
         self.repo_root = REPO_ROOT
         bootstrap_repository(self.repo_root)
         prune_missing_case_roots()
         self.case_root_var = tk.StringVar(value="")
         self.saved_case_var = tk.StringVar(value="")
+        self.case_summary_var = tk.StringVar(value="No case corpus selected yet.")
         self.status_var = tk.StringVar(value="Ready. Local-first mode is enabled.")
         self.saved_case_lookup: dict[str, Path] = {}
         self._build_ui()
@@ -249,8 +388,11 @@ class MaineFamilyLawLauncher(tk.Tk):
         ttk.Label(frame, text="Maine Family Law Full Record Review System", font=("Segoe UI", 16, "bold")).pack(anchor="w")
         ttk.Label(
             frame,
-            text="Create New Case Corpus, open an existing case root, or build a neutral sample case. Advanced details stay hidden unless you open the output folders.",
-            wraplength=700,
+            text=(
+                "Create a case corpus, reopen it later, and keep adding new documents over time. "
+                "The launcher remembers prior source folders for each case so users do not have to start over."
+            ),
+            wraplength=860,
         ).pack(anchor="w", pady=(6, 18))
         grid = ttk.Frame(frame)
         grid.pack(fill="x")
@@ -270,15 +412,39 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.saved_case_combo.grid(row=1, column=0, sticky="ew", pady=(10, 0))
         ttk.Button(library_frame, text="Use selected corpus", command=self.activate_selected_saved_case).grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
         ttk.Button(library_frame, text="Refresh library", command=self._refresh_case_library).grid(row=1, column=2, padx=(10, 0), pady=(10, 0), sticky="ew")
+        ttk.Button(library_frame, text="Open selected case folder", command=self.open_selected_case_folder).grid(row=2, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
+        ttk.Button(library_frame, text="Open workspace folder", command=self._open_workspace_folder).grid(row=2, column=2, padx=(10, 0), pady=(10, 0), sticky="ew")
         library_frame.columnconfigure(0, weight=1)
-        ttk.Label(frame, textvariable=self.case_root_var, foreground="#0b5c7d").pack(anchor="w", pady=(18, 8))
-        ttk.Label(frame, textvariable=self.status_var, wraplength=700).pack(anchor="w")
+        ttk.Label(frame, textvariable=self.case_root_var, foreground="#0b5c7d", wraplength=860).pack(anchor="w", pady=(18, 6))
+        ttk.Label(frame, textvariable=self.case_summary_var, wraplength=860, justify="left").pack(anchor="w", pady=(0, 6))
+        ttk.Label(frame, textvariable=self.status_var, wraplength=860, justify="left").pack(anchor="w")
 
     def _set_case_root(self, case_root: Path, status_text: str) -> None:
         self.case_root_var.set(str(case_root))
         set_active_case_root(case_root)
         self._refresh_case_library(selected_case_root=case_root)
-        self.status_var.set(status_text)
+        summary = load_case_summary(case_root)
+        last_import = str(summary.get("last_import_at", "")).replace("T", " ").replace("Z", " UTC").strip()
+        missing_roots = int(summary.get("missing_source_root_count", 0) or 0)
+        self.case_summary_var.set(
+            " | ".join(
+                [
+                    f"Case: {summary.get('case_name', case_root.name)}",
+                    f"Indexed files: {int(summary.get('total_files_indexed', 0) or 0):,}",
+                    f"Legal-matter items: {int(summary.get('legal_matter_items', 0) or 0):,}",
+                    f"PDF pages: {int(summary.get('total_pdf_pages', 0) or 0):,}",
+                    f"Remembered source roots: {int(summary.get('source_root_count', 0) or 0)}",
+                    f"Available now: {int(summary.get('available_source_root_count', 0) or 0)}",
+                    f"Missing remembered source paths: {missing_roots}",
+                    f"Intake history entries: {int(summary.get('history_count', 0) or 0)}",
+                    f"Last intake: {last_import or 'not recorded yet'}",
+                ]
+            )
+        )
+        if missing_roots:
+            self.status_var.set(f"{status_text} Warning: {missing_roots} remembered source path(s) are currently unavailable.")
+        else:
+            self.status_var.set(status_text)
 
     def _refresh_case_library(self, selected_case_root: Path | None = None) -> None:
         entries = list_registered_case_roots()
@@ -316,6 +482,19 @@ class MaineFamilyLawLauncher(tk.Tk):
             return
         self._set_case_root(case_root, f"Active corpus switched to {case_root}.")
 
+    def open_selected_case_folder(self) -> None:
+        case_root = self._require_case_root()
+        if case_root is None:
+            return
+        os.startfile(str(case_root))
+        self.status_var.set(f"Opened selected case folder at {case_root}.")
+
+    def _open_workspace_folder(self) -> None:
+        workspace_root = default_workspace_root()
+        workspace_root.mkdir(parents=True, exist_ok=True)
+        os.startfile(str(workspace_root))
+        self.status_var.set(f"Opened workspace folder at {workspace_root}.")
+
     def _select_output_root(self) -> Path | None:
         selected = filedialog.askdirectory(title="Select Output Folder")
         return Path(selected) if selected else None
@@ -328,6 +507,8 @@ class MaineFamilyLawLauncher(tk.Tk):
         confirm_text: str,
         default_output_root: Path,
         default_case_name: str,
+        existing_source_roots: list[Path] | None = None,
+        history_rows: list[dict[str, object]] | None = None,
     ) -> CorpusBuildPlan | None:
         wizard = CorpusBuildWizard(
             self,
@@ -336,6 +517,8 @@ class MaineFamilyLawLauncher(tk.Tk):
             confirm_text=confirm_text,
             default_output_root=default_output_root,
             default_case_name=default_case_name,
+            existing_source_roots=existing_source_roots,
+            history_rows=history_rows,
         )
         self.wait_window(wizard)
         return wizard.result
@@ -343,7 +526,10 @@ class MaineFamilyLawLauncher(tk.Tk):
     def create_new_case(self) -> None:
         plan = self._show_corpus_build_wizard(
             title_text="Create New Case Corpus",
-            instructions="Add one or more source folders for the case you want to build. The launcher will hash and inventory the originals read-only, then build a fresh local case workspace from the combined sources.",
+            instructions=(
+                "Add one or more source folders or files for the case you want to build. "
+                "The launcher hashes and inventories the originals read-only, then builds a fresh local case workspace from the combined sources."
+            ),
             confirm_text="Build corpus",
             default_output_root=default_case_build_root(),
             default_case_name="",
@@ -361,7 +547,15 @@ class MaineFamilyLawLauncher(tk.Tk):
             messagebox.showerror("Create New Case Corpus", str(exc), parent=self)
             self.status_var.set("Create New Case Corpus failed.")
             return
-        self._set_case_root(result.case_root, f"Built case corpus at {result.case_root} from {len(plan.source_roots)} source folder(s).")
+        append_case_ingest_history(
+            result.case_root,
+            mode="create_new_case",
+            case_name=plan.case_name,
+            source_roots_added=plan.source_roots,
+            cumulative_source_roots=read_case_source_roots(result.case_root),
+            notes="Initial case build from user-selected source folders and files.",
+        )
+        self._set_case_root(result.case_root, f"Built case corpus at {result.case_root} from {len(plan.source_roots)} source path(s).")
 
     def open_existing_case(self) -> None:
         selected = filedialog.askdirectory(title="Open Existing Case Corpus")
@@ -372,12 +566,20 @@ class MaineFamilyLawLauncher(tk.Tk):
         case_root = self._require_case_root()
         if case_root is None:
             return
+        case_summary = load_case_summary(case_root)
+        existing_sources = read_case_source_roots(case_root)
+        history_rows = read_case_ingest_history(case_root)
         plan = self._show_corpus_build_wizard(
-            title_text="Import More Evidence",
-            instructions="Add one or more additional source folders. The launcher will build a new expanded case workspace instead of mutating the existing case in place.",
+            title_text="Reopen Intake / Add More Evidence",
+            instructions=(
+                "Add one or more new source folders or files. The launcher automatically carries forward the source "
+                "folders already used for this case, then builds a new expanded case workspace without mutating the older one."
+            ),
             confirm_text="Build expanded case",
             default_output_root=case_root.parent,
-            default_case_name=f"{case_root.name} expanded",
+            default_case_name=f"{case_summary.get('case_name', case_root.name)} expanded",
+            existing_source_roots=existing_sources,
+            history_rows=history_rows,
         )
         if plan is None:
             return
@@ -390,16 +592,37 @@ class MaineFamilyLawLauncher(tk.Tk):
                 case_name=plan.case_name,
             )
         except Exception as exc:
-            messagebox.showerror("Import More Evidence", str(exc), parent=self)
-            self.status_var.set("Import More Evidence failed.")
+            messagebox.showerror("Reopen Intake / Add More Evidence", str(exc), parent=self)
+            self.status_var.set("Reopen Intake / Add More Evidence failed.")
             return
+        cumulative_sources = read_case_source_roots(result.case_root)
+        inherit_case_ingest_history(
+            result.case_root,
+            existing_case_root=case_root,
+            mode="add_more_evidence",
+            case_name=plan.case_name,
+            source_roots_added=plan.source_roots,
+            cumulative_source_roots=cumulative_sources,
+            notes="Expanded case build that keeps prior source roots and adds newly selected evidence.",
+        )
         self._set_case_root(
             result.case_root,
-            f"Built expanded case corpus at {result.case_root} from {len(plan.source_roots)} additional source folder(s).",
+            (
+                f"Built expanded case corpus at {result.case_root} from {len(plan.source_roots)} new source path(s). "
+                f"The new case now remembers {len(cumulative_sources)} cumulative source root(s)."
+            ),
         )
 
     def build_sample_case(self) -> None:
         result = create_sample_case_build(self.repo_root)
+        append_case_ingest_history(
+            result.case_root,
+            mode="sample_case",
+            case_name="Example Family Matter",
+            source_roots_added=read_case_source_roots(result.case_root),
+            cumulative_source_roots=read_case_source_roots(result.case_root),
+            notes="Neutral sample case for orientation and testing.",
+        )
         self._set_case_root(result.case_root, "Built a neutral sample case corpus and refreshed its portal, indexes, and packages.")
 
     def _current_case_root(self) -> Path | None:
@@ -424,7 +647,9 @@ class MaineFamilyLawLauncher(tk.Tk):
         case_root = self._require_case_root()
         if case_root is None:
             return
-        self._open_path(case_root / "00_START_HERE" / "search.html", "search and index portal")
+        preferred = case_root / "00_START_HERE" / "index.html"
+        fallback = case_root / "00_START_HERE" / "search.html"
+        self._open_path(preferred if preferred.exists() else fallback, "search and index portal")
 
     def _open_role_package(self, folder_name: str, description: str) -> None:
         case_root = self._require_case_root()
@@ -460,7 +685,9 @@ class MaineFamilyLawLauncher(tk.Tk):
         case_root = self._require_case_root()
         if case_root is None:
             return
-        self._open_path(case_root / "00_START_HERE" / "START_HERE.html", "review portal")
+        preferred = case_root / "00_START_HERE" / "index.html"
+        fallback = case_root / "00_START_HERE" / "START_HERE.html"
+        self._open_path(preferred if preferred.exists() else fallback, "review portal")
 
     def verify_hashes(self) -> None:
         case_root = self._require_case_root()
@@ -496,6 +723,7 @@ class MaineFamilyLawLauncher(tk.Tk):
 
     def repair_repo(self) -> None:
         bootstrap_repository(self.repo_root)
+        self._refresh_case_library()
         self.status_var.set("Repository launchers, docs, and sample assets were refreshed.")
 
 

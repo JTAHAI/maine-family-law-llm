@@ -28,7 +28,8 @@ If you are helping a parent, caregiver, GAL, or reviewer who does not want to to
 5. Choose one of these launcher paths:
    - `Create New Case Corpus` if you need to build a new matter from source folders.
    - `Open Existing Case Corpus` if somebody already built the case workspace and you only need the LLM/search surfaces.
-   - `Import More Evidence` if you want to add more records later without mutating the prior build.
+   - `Reopen Intake / Add More Evidence` if you want to add more records later without mutating the prior build.
+   - The launcher remembers the earlier source folders for that case, so users only need to add the new material.
 6. Use the installed corpus library to switch the active family/client corpus through one install when a lawyer, GAL, caregiver, counselor, or reviewer needs to move between matters.
 
 The launcher now includes built-in guide buttons for:

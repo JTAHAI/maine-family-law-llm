@@ -7,8 +7,10 @@ Quick path for nontechnical users:
 2. Let it install missing prerequisites and skip the ones already present.
 3. Choose Create New Case Corpus if you need to build a case.
 4. Choose Open Existing Case Corpus if somebody already built the matter for you.
-5. Use Import More Evidence later to build a new expanded case without mutating the earlier one.
-6. Use the Installed corpus library to switch between saved family/client matters through one install.
+5. Use Reopen Intake / Add More Evidence later to build a new expanded case without mutating the earlier one.
+6. The launcher remembers the earlier source folders for that case, so you only need to add the new material.
+
+Use the Installed corpus library to switch between saved family/client matters through one install.
 
 Helpful guides:
 - docs/README_FOR_NONTECHNICAL_USERS.html
