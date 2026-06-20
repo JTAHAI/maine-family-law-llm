@@ -1,3 +1,72 @@
+﻿<!-- SEO-INTRO-START -->
+# Maine Family Law LLM
+
+Open-source Maine family law AI workbench for legal research, court-form guidance, document review, evidence mapping, citation checking, and review-required drafting.
+
+Built for Maine family-law workflows: divorce, parental rights and responsibilities, child support, protection from abuse, post-judgment motions, contempt, Rule 52 findings, best-interest factors, UCCJEA issues, appellate record problems, and Maine court forms.
+
+This is not legal advice and not a lawyer. It is a local-first, source-grounded legal information and drafting-support tool. Outputs remain review-required unless verified by source, citation, quote-span, fact/evidence, freshness, and human-review gates.
+
+## What is Maine Family Law LLM?
+
+Maine Family Law LLM is a standalone legal AI workbench focused on Maine family law. It helps users research Maine authority, review legal documents, organize evidence, check citations, identify red flags, and produce review-required drafts.
+
+## Maine family-law topics covered
+
+- Divorce
+- Parental rights and responsibilities
+- Primary residence
+- Contact schedules
+- Child support
+- Parentage
+- Post-judgment motions
+- Motions to modify
+- Motions to enforce
+- Motions for contempt
+- Protection from abuse
+- Protection from harassment
+- Grandparent visitation
+- Guardianship
+- GAL issues
+- UCCJEA jurisdiction
+- Rule 52 findings
+- Best-interest factor gaps
+- Appeal preservation
+- Transcript and record issues
+- Maine eCourts record access
+- Maine court forms
+
+## What the workbench can do
+
+- Answer Maine family-law questions with source cards
+- Retrieve Maine statutes, rules, forms, and Law Court authority
+- Review documents for issue labels, posture, red flags, and missing information
+- Build timelines and fact-to-evidence maps
+- Generate authority matrices
+- Check citations and quote spans
+- Draft working motions, affidavits, letters, objections, proposed findings, and checklists
+- Generate filing-readiness blocker reports
+- Keep outputs review-required by default
+
+## What it does not do
+
+- It does not replace a lawyer.
+- It does not provide legal advice.
+- It does not guarantee filing-ready output.
+- It does not treat model memory as authority.
+- It does not train shared models on private matter data by default.
+- It does not package private files, model weights, vector stores, corpora, OCR caches, or runtime databases in the source repository.
+
+## Source-grounded legal AI, not a generic chatbot
+
+This project prioritizes official Maine authority, verified retrieval, citation verification, quote-span verification, legal review gates, and human review. Source correctness matters more than polished prose.
+
+## Local-first privacy and external data boundaries
+
+Private matter files, corpora, vector databases, embeddings, OCR caches, runtime databases, generated legal work product, and model weights must stay outside the source repository.
+
+<!-- SEO-INTRO-END -->
+
 # Maine Family Law LLM
 
 Standalone Maine family-law legal AI system for source-grounded research, drafting support, document review, issue spotting, evidence mapping, and Maine-specific legal workflow assistance.
@@ -394,7 +463,7 @@ The expected status in a source-only package is `blocked_real_build_path_require
 - Pass 8: rule-based Maine Law Court intelligence foundation.
 - Pass 5: dependency-free BM25, exact lookup, semantic adapter, hybrid fusion, source cards, and retrieval metrics.
 - Pass 6 foundation: schemas and seed rows for required gold dataset families.
-- Pass 2–4: official source catalog, ingestion primitives, canonical document model, citation/source resolution, authority graph.
+- Pass 2â€“4: official source catalog, ingestion primitives, canonical document model, citation/source resolution, authority graph.
 - Pass 1: data-boundary policies, private-data scanning/redaction, retention policy, and release scanning.
 - Pass 0: repo hardening, packaging, CI, quality checks, and private/runtime artifact exclusion.
 
@@ -462,7 +531,7 @@ This repo now has all numbered roadmap foundations through Pass 15. It is not en
 
 This release adds an enterprise data-product gate. The source ZIP is still a clean code artifact, not the bundled legal corpus. Production release requires external official Maine authority stores, parsed authority, retrieval indexes, source freshness reports, and attorney-reviewed gold eval datasets meeting minimum sample sizes.
 
-## Pass 19–21 authority execution, parsed store, and freshness update
+## Pass 19â€“21 authority execution, parsed store, and freshness update
 
 This release advances the external legal data-product workstream:
 
@@ -527,7 +596,7 @@ Expected test result for this release:
 Important: this source ZIP does not include the external official authority corpus, parsed authority store, eval store, embedding store, runtime DBs, model weights, secrets, private matter files, or attorney work product.
 
 
-## Pass 22–25 authority graph, retrieval indexes, smoke eval, and triage
+## Pass 22â€“25 authority graph, retrieval indexes, smoke eval, and triage
 
 This release turns parsed authority records into an external authority/retrieval product:
 
@@ -640,12 +709,12 @@ python scripts/doctor-local-repo.py --repo-root . --json
 After starting `http://127.0.0.1:8000/`, test the source-backed chat with:
 
 ```text
-What are Maine's best-interest factors under 19-A M.R.S. § 1653?
+What are Maine's best-interest factors under 19-A M.R.S. Â§ 1653?
 What Maine sources should I check for parental rights and responsibilities?
 What should I review before drafting a child support checklist?
 ```
 
-The browser workbench now includes answer style controls, optional context, copyable answers, grounded/failure badges, and source cards. The bundled fixture contains a short source-backed excerpt of **19-A M.R.S. § 1653(3)** so the offline demo can answer the best-interest-factor question without model memory. Always verify against the current official statute before relying on the answer.
+The browser workbench now includes answer style controls, optional context, copyable answers, grounded/failure badges, and source cards. The bundled fixture contains a short source-backed excerpt of **19-A M.R.S. Â§ 1653(3)** so the offline demo can answer the best-interest-factor question without model memory. Always verify against the current official statute before relying on the answer.
 
 
 ## v1.81 chat prompt packs and source drilldown
@@ -687,3 +756,4 @@ The local chat workbench now includes a missing-information answer style, a revi
 ## Universal full-case corpus builder
 
 This repository now includes a reusable local-first corpus builder for private forensic masters, external legal-matter releases, and role-specific review packages.
+
