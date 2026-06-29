@@ -7,7 +7,36 @@
 </head>
 <body>
 <main>
-<h1>Troubleshooting</h1><p>If a parser is missing, the file is inventoried as needs-human-review or unsupported, and the build continues with warnings.</p>
+<h1>Troubleshooting</h1>
+<p>If a parser is missing, the file is inventoried as needs-human-review or unsupported, and the build continues with warnings.</p>
+<h2>Windows setup fixes</h2>
+<p>Use these checks when the launcher or local workbench does not start on Windows.</p>
+<h3>PowerShell blocks a script</h3>
+<p>If PowerShell reports that script execution is disabled, run the project script with a process-scoped bypass instead of changing the machine policy:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File .\START_LOCAL_TEST.ps1 -SkipTests</code></pre>
+<p>You can use the same pattern with other project scripts, for example:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File .\START_LOCAL_CHAT.ps1</code></pre>
+<h3>Python is not found</h3>
+<p>Open a new terminal after installing Python, then check which launcher is available:</p>
+<pre><code>py -3 --version
+python --version</code></pre>
+<p>If neither command works, reinstall Python and enable the option that adds Python to PATH. If both work, prefer the project launcher scripts because they set the local paths for you.</p>
+<h3>Virtual environment activation fails</h3>
+<p>If activating the virtual environment fails, rebuild it from the repository root with the local test script:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File .\START_LOCAL_TEST.ps1 -SkipTests</code></pre>
+<p>If you activate it manually, use the repository-local environment path:</p>
+<pre><code>.\.venv\Scripts\Activate.ps1</code></pre>
+<h3>Port 8000 is already in use</h3>
+<p>The local API normally starts on <code>http://127.0.0.1:8000/</code>. Stop the project server first:</p>
+<pre><code>.\STOP_LOCAL_TEST.ps1</code></pre>
+<p>If another process is using the port, find it and stop it from an elevated terminal only if you recognize it:</p>
+<pre><code>Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue |
+  Select-Object LocalAddress, LocalPort, OwningProcess</code></pre>
+<h3>Launcher closes immediately</h3>
+<p>Start the launcher from an already-open PowerShell window so the error stays visible:</p>
+<pre><code>.\START_MAINE_FAMILY_LAW_LLM.cmd</code></pre>
+<p>Then run the local smoke check to verify the source checkout and fixture path:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File .\scripts\run-local-smoke.ps1 -RepoRoot . -DataRoot C:\dev\ME_FM_LLM_data</code></pre>
 </main>
 </body>
 </html>
