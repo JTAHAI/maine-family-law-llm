@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Fork your state
- description: A practical checklist for adapting Maine Family Law LLM into a properly verified state-specific legal-information workbench.
+description: A practical checklist for adapting Maine Family Law LLM into a properly verified state-specific legal-information workbench.
 permalink: /fork-your-state/
 ---
 
