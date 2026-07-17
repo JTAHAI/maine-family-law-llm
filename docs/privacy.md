@@ -1,371 +1,168 @@
 ---
-
+layout: default
 title: Privacy Policy
-description: Privacy Policy for Maine Family Law LLM
+description: Privacy Policy for the Maine Family Law LLM local Windows application and open-source project.
 permalink: /privacy/
---------------------
+---
 
-# Privacy Policy for Maine Family Law LLM
+<section class="page-hero">
+  <div class="shell">
+    <div class="eyebrow">Privacy policy</div>
+    <h1>Local-first handling of sensitive family records.</h1>
+    <p class="lead"><strong>Effective and last updated: July 17, 2026.</strong> This policy explains how Maine Family Law LLM handles information when you install or use the application.</p>
+  </div>
+</section>
 
-**Effective date:** July 17, 2026
-**Last updated:** July 17, 2026
+<div class="content-wrap">
+  <div class="callout callout--teal">
+    <p><strong>Summary:</strong> The standard local application is designed to process selected information on your own Windows computer. Private matter files are not uploaded to TAHAI, GitHub, Microsoft, or shared model-training systems merely because you install or use the application.</p>
+  </div>
 
-This Privacy Policy explains how **Maine Family Law LLM** handles information when you install or use the application.
+  <h2>1. About the application</h2>
 
-Maine Family Law LLM is an open-source, local-first legal-information, document-organization, research, evidence-mapping, and drafting-support application focused on Maine family-law matters.
+  <p><strong>Maine Family Law LLM</strong> is an open-source, local-first legal-information, record-organization, evidence-mapping, research, and drafting-support application focused on Maine family-law matters.</p>
 
-The application is not a lawyer, does not provide legal advice, and is not affiliated with the Maine Judicial Branch, any Maine court, Microsoft, or any government agency.
+  <p>The application is not a lawyer, does not provide legal advice, and is not affiliated with the Maine Judicial Branch, any court, Microsoft, or any government agency.</p>
 
-Project repository:
+  <p>Project repository: <a href="https://github.com/JTAHAI/maine-family-law-llm">github.com/JTAHAI/maine-family-law-llm</a></p>
 
-https://github.com/JTAHAI/maine-family-law-llm
+  <h2>2. Default privacy behavior</h2>
 
-## 1. Summary
+  <p>By default, the standard local edition:</p>
 
-The standard local version of Maine Family Law LLM is designed to process information on your own Windows computer.
+  <ul class="check-list">
+    <li>Keeps selected documents on your computer or in a storage location you choose.</li>
+    <li>Does not require an online account.</li>
+    <li>Does not sell personal information or user activity.</li>
+    <li>Does not use advertising trackers or behavioral advertising.</li>
+    <li>Does not intentionally collect product telemetry or behavioral analytics.</li>
+    <li>Does not use private matter files to train shared models by default.</li>
+    <li>Does not place private matter files, runtime databases, embeddings, vector stores, OCR caches, or generated legal work product in the public source repository.</li>
+  </ul>
 
-By default:
+  <h2>3. Information the application may process</h2>
 
-* Your selected documents remain on your computer or in a storage location you choose.
-* Private matter files are not uploaded to TAHAI, GitHub, Microsoft, or a shared model-training system.
-* Private matter files are not used to train shared artificial-intelligence models.
-* The application does not sell personal information.
-* The application does not use advertising trackers.
-* The application does not require you to create an online account.
-* The application does not intentionally collect telemetry or behavioral analytics.
+  <p>The application may process files and information that you intentionally select, import, paste, or place in an approved folder. Depending on the matter, this can include:</p>
 
-Some optional features may use an external service or model provider. Those features must be separately enabled or configured and may transmit information to that provider. Review Section 8 before enabling any external service.
+  <ul>
+    <li>Court pleadings, motions, orders, exhibits, forms, and docket records</li>
+    <li>Emails, messages, letters, screenshots, photographs, and attachments</li>
+    <li>Names, contact information, dates of birth, and information concerning children</li>
+    <li>Financial, employment, tax, debt, support, and property information</li>
+    <li>School, childcare, counseling, medical, or provider information</li>
+    <li>Information concerning abuse, harassment, safety, or protection orders</li>
+    <li>Parenting schedules and family-history information</li>
+    <li>Attorney, guardian ad litem, therapist, counselor, agency, or provider communications</li>
+    <li>Notes, timelines, evidence maps, summaries, reports, citations, and drafts</li>
+    <li>Local operational information such as file paths, timestamps, hashes, preferences, and diagnostic logs</li>
+  </ul>
 
-## 2. Information the application may process
+  <p>Family-law files may contain highly sensitive information. Import only information you are authorized to possess and process.</p>
 
-The application may process files and information that you intentionally select, import, upload, paste, or place in an approved folder.
+  <h2>4. How files are accessed</h2>
 
-Depending on your matter, this information may include:
+  <p>The application is designed to access private files through an action you initiate, such as selecting a file or folder, opening an existing matter workspace, or adding records to an earlier intake. It does not automatically search unrelated areas of your computer for private legal records.</p>
 
-* Court pleadings, motions, orders, exhibits, and docket records
-* Emails, text messages, letters, and other communications
-* Photographs, screenshots, scanned documents, and attachments
-* Names, addresses, telephone numbers, and email addresses
-* Dates of birth and information concerning children
-* Financial, employment, tax, debt, support, or property information
-* School, childcare, counseling, medical, or provider records
-* Allegations or records concerning abuse, harassment, safety, or protection orders
-* Parenting schedules and family-history information
-* Attorney, guardian ad litem, counselor, therapist, or agency communications
-* Notes, timelines, evidence maps, summaries, and drafts created by the user or application
-* Technical information needed to operate locally, such as application settings, file paths, timestamps, hashes, and local diagnostic logs
+  <p>Original source records are intended to be read without modification. The application may create separate working copies, extracted text, hashes, indexes, reports, timelines, evidence maps, and generated work products.</p>
 
-Family-law records may contain highly sensitive information. You should import only information you are authorized to possess and process.
+  <h2>5. Where information is stored</h2>
 
-## 3. How files are accessed
+  <p>Local information may be stored in:</p>
 
-The application accesses private files only through an action you initiate, such as:
+  <ul>
+    <li>A matter or corpus workspace selected by you</li>
+    <li>An external drive or folder selected by you</li>
+    <li>Your Windows local application-data directory</li>
+    <li>Temporary local working directories used during processing</li>
+    <li>Locally generated reports, indexes, logs, manifests, hashes, and drafts</li>
+  </ul>
 
-* Selecting a file
-* Selecting a folder
-* Importing a document
-* Opening an existing matter workspace
-* Choosing a location for a new matter workspace
-* Reopening an earlier intake and adding further records
+  <p>Application preferences and limited operational state may be stored under <code>%LOCALAPPDATA%\MaineFamilyLawLLM</code>. Matter workspaces and case-specific outputs should remain in the separate location selected by the user.</p>
 
-The application is designed to read original source documents without modifying them. It may create separate working copies, extracted text, hashes, indexes, reports, timelines, evidence maps, and other generated work products in the matter workspace you select.
+  <h2>6. Purposes of processing</h2>
 
-The application does not automatically search unrelated areas of your computer for private legal records.
+  <p>Selected information may be processed to organize records, extract text, calculate hashes, build source manifests and indexes, identify issues and procedural posture, create timelines, map facts to evidence, locate Maine authority, verify citations and quote spans, generate source cards and authority matrices, identify missing records or red flags, and create review-required working drafts.</p>
 
-## 4. Where information is stored
+  <p>Outputs may be incomplete or incorrect and must be reviewed before reliance, disclosure, submission, or filing.</p>
 
-Information processed by the local application may be stored in:
+  <h2>7. Information received by TAHAI</h2>
 
-* A matter or corpus workspace selected by you
-* An external drive or folder selected by you
-* Your Windows local application-data directory
-* Temporary local working directories used during processing
-* Locally generated reports, indexes, logs, manifests, hashes, or drafts
+  <p>TAHAI does not receive your local matter files merely because you install or use the standard local application.</p>
 
-Application preferences and limited operational state may be stored under a location such as:
+  <p>TAHAI may receive information when you separately choose to send email, request support, report a bug, open a GitHub issue, contribute code, participate in a pilot, or voluntarily provide logs, screenshots, or sample files.</p>
 
-`%LOCALAPPDATA%\MaineFamilyLawLLM`
+  <p><strong>Do not post confidential, privileged, sealed, juvenile, medical, or personally identifying matter information in a public GitHub issue.</strong> Use fictional or appropriately redacted examples for public support requests.</p>
 
-Matter records, evidence collections, generated legal work products, indexes, and case-specific outputs should remain in the separate workspace selected by the user.
+  <h2>8. Optional external AI and cloud services</h2>
 
-The installed application package and the public source-code repository are not intended to contain private matter files, runtime databases, private corpora, embeddings, vector stores, OCR caches, model weights, or generated legal work product.
+  <p>A user or organization may configure an optional external model, hosted API, storage provider, OCR provider, or other third-party service. When an external service is enabled, information submitted to that feature may leave your device and be processed under the provider’s own terms.</p>
 
-## 5. Purposes for processing information
+  <p>Information transmitted to an optional provider could include questions, retrieved source excerpts, document text, draft text, matter facts, citations, and diagnostic information. Before enabling an external service, identify the provider, review its retention and training terms, assess confidentiality protections, obtain required consent or approval, and redact information that is not necessary.</p>
 
-The application may process selected information to provide functions such as:
+  <p>TAHAI is not responsible for a third-party service selected, modified, configured, or operated by another person or organization.</p>
 
-* Organizing legal records
-* Extracting text from documents
-* Creating file hashes and source manifests
-* Searching selected records
-* Identifying potential family-law issues and procedural posture
-* Building timelines
-* Mapping factual statements to supporting records
-* Creating exhibit or document indexes
-* Identifying missing records or information
-* Retrieving Maine statutes, court rules, forms, or cases
-* Checking citations and quoted passages
-* Creating source cards and authority matrices
-* Identifying possible red flags
-* Producing review-required working drafts
-* Generating privacy-filtered or role-specific packages
-* Creating audit, provenance, or verification reports
+  <h2>9. Model training</h2>
 
-Outputs may be incomplete or incorrect and must be reviewed by a qualified person before reliance, submission, or filing.
+  <p>Private matter files are not used to train shared models by default. Public project development may use official public legal sources, public government material, fictional or synthetic examples, properly licensed material, and de-identified or expressly authorized evaluation data.</p>
 
-## 6. Information collected by TAHAI
+  <p>Private matter information should be used for training or product improvement only through a separate, explicit, lawful, documented, and appropriately reviewed process.</p>
 
-The standard local application is not designed to send your private matter files or application activity to TAHAI.
+  <h2>10. Sharing and disclosure</h2>
 
-TAHAI does not receive your local matter files merely because you install or use the application.
+  <p>The standard local application does not intentionally share selected matter information with TAHAI or third parties by default. Information may nevertheless be disclosed when you export, copy, email, upload, synchronize, or share it; when another person has access to your device or storage; when you enable an external service; when malware or unauthorized access compromises the device; or when you voluntarily provide information for support.</p>
 
-TAHAI may receive information when you separately choose to:
+  <p>Review every export before sharing it. A privacy-filtered export can reduce risk but cannot guarantee that every sensitive fact has been removed.</p>
 
-* Send an email
-* Submit a support request
-* Report a bug
-* Open a GitHub issue
-* Contribute code
-* Participate in a pilot or testing program
-* Voluntarily provide logs, screenshots, or sample files
+  <h2>11. Security</h2>
 
-Do not send confidential, privileged, sealed, juvenile, medical, or personally identifying matter information through GitHub issues, public discussions, or ordinary support email.
+  <p>No software or storage method can guarantee absolute security. Users should protect their Windows account, enable full-disk encryption where available, keep the operating system updated, restrict matter-folder access, secure backups and removable drives, scan imported files, and avoid untrusted plugins, models, scripts, and documents.</p>
 
-When requesting support, use fictional or appropriately redacted examples whenever possible.
+  <p>Unless the application expressly states otherwise for a particular feature, do not assume that every matter workspace or export is independently encrypted by the application.</p>
 
-## 7. Telemetry, analytics, and advertising
+  <h2>12. Retention and deletion</h2>
 
-The standard application does not intentionally include:
+  <p>Local files generally remain until you delete them. This can include source records, workspaces, extracted text, OCR output, indexes, logs, timelines, evidence maps, drafts, exports, and backups.</p>
 
-* Advertising
-* Cross-application tracking
-* Behavioral advertising
-* Third-party advertising analytics
-* Sale of personal information
-* Sale of user activity
-* Automatic transmission of private matter files for product analytics
+  <p>To remove local matter information:</p>
 
-The project may later add optional, privacy-reviewed diagnostic features. Any such feature must be disclosed and should not transmit private matter content without affirmative user action.
+  <ol>
+    <li>Close the application.</li>
+    <li>Locate the matter workspace you selected.</li>
+    <li>Delete the workspace or individual files you no longer wish to retain.</li>
+    <li>Empty the Recycle Bin where appropriate.</li>
+    <li>Review synchronized folders, backups, exported packages, and removable drives.</li>
+    <li>Delete <code>%LOCALAPPDATA%\MaineFamilyLawLLM</code> if you also want to reset local application settings and logs.</li>
+  </ol>
 
-GitHub, Microsoft Store, web browsers, operating systems, and download hosts may independently collect technical information under their own privacy policies. TAHAI does not control those independent platforms.
+  <p>Uninstalling the application may remove installed program files but may not delete user-created matter workspaces or exports stored elsewhere. This separation is intentional so an update or uninstall does not silently destroy legal records.</p>
 
-## 8. Optional external AI or cloud services
+  <h2>13. Children’s, sealed, and restricted information</h2>
 
-The core project is designed to support local operation. However, a user, organization, administrator, or later product version may configure an optional external model, hosted API, storage provider, OCR provider, or other third-party service.
+  <p>The application is intended for adults and authorized users, but family-law matters frequently contain children’s information. Adults using the application are responsible for protecting that information and complying with applicable confidentiality, court-record, juvenile-record, medical, education, sealing, and protective-order requirements.</p>
 
-When an external service is enabled, information submitted to that feature may leave your device and be processed by the external provider.
+  <p>Special care is required for sealed records, child-protection records, medical or mental-health information, education records, attorney-client communications, attorney work product, guardian ad litem material, Social Security numbers, financial-account information, and information restricted by court order.</p>
 
-Depending on the configuration, transmitted information could include:
+  <h2>14. Open-source forks</h2>
 
-* User questions
-* Retrieved source excerpts
-* Document text
-* Draft text
-* Matter facts
-* Citations
-* Diagnostic information
+  <p>A person or organization that forks, modifies, redistributes, hosts, or operates its own edition may change how information is collected, stored, transmitted, or used. This policy applies to the official Maine Family Law LLM distribution identified by TAHAI; it does not automatically apply to third-party forks.</p>
 
-Before enabling an external service:
+  <p>A state-specific fork must independently replace and validate statutes, court rules, forms, case law, citation standards, legal ontology, freshness controls, evaluation materials, privacy rules, and human-review procedures.</p>
 
-1. Identify the provider.
-2. Review the provider’s privacy and data-retention terms.
-3. Confirm whether submitted content is used for model training.
-4. Confirm contractual confidentiality protections.
-5. Determine whether the service is appropriate for privileged, sealed, juvenile, medical, or sensitive information.
-6. Obtain any legally required consent or organizational approval.
-7. Redact unnecessary personal information.
-8. Avoid transmitting information where confidentiality cannot be adequately protected.
+  <h2>15. Microsoft Store distribution</h2>
 
-TAHAI is not responsible for a third-party service selected, added, configured, or operated by another person or organization.
+  <p>When obtained through Microsoft Store, Microsoft may independently process account, device, licensing, download, installation, crash, or Store-usage information under Microsoft’s own terms and privacy statement. TAHAI does not control Microsoft’s independent processing.</p>
 
-## 9. Model training
+  <h2>16. Changes and contact</h2>
 
-Private matter files are not used to train shared models by default.
+  <p>This policy may be updated when the application, data practices, optional integrations, or legal requirements change. Material changes will be reflected in the “last updated” date and public Git history.</p>
 
-The public project may use:
+  <p>Questions may be raised through the <a href="https://github.com/JTAHAI/maine-family-law-llm/issues">project issue tracker</a>, but do not include private or sensitive matter information in a public issue. For private correspondence, use the contact route listed by TAHAI in the Microsoft Store support listing or on its official website.</p>
 
-* Official public legal sources
-* Publicly available government materials
-* Fictional examples
-* Synthetic examples
-* Properly licensed materials
-* De-identified or expressly authorized evaluation materials
-
-Private matter information should be used for training or product improvement only through a separate, explicit, documented, lawful, and appropriately reviewed process.
-
-Posting content publicly to GitHub or another public forum may make that content available to others. Never post private family-law records to a public repository.
-
-## 10. Sharing and disclosure
-
-The local application does not intentionally share selected matter information with TAHAI or third parties by default.
-
-Information may nevertheless be disclosed when:
-
-* You export, copy, email, upload, or share it
-* You save it in a synced folder
-* You enable an external service
-* Another person has access to your Windows account, device, storage location, backup, or network
-* Malware or unauthorized access compromises your computer
-* You voluntarily provide information for support
-* Disclosure is required by applicable law and TAHAI actually possesses the relevant information
-
-You are responsible for reviewing exported packages before sharing them.
-
-A privacy-filtered export reduces risk but cannot guarantee that every sensitive fact has been removed.
-
-## 11. Security
-
-The application is intended to support local control of sensitive information, but no software or storage method can guarantee absolute security.
-
-Users should consider:
-
-* Using a strong Windows password or PIN
-* Enabling full-disk encryption such as BitLocker where available
-* Keeping Windows and security software updated
-* Restricting access to matter folders
-* Avoiding shared or public computers
-* Encrypting removable drives
-* Using secure backups
-* Avoiding untrusted plugins, models, scripts, and document files
-* Scanning imported files for malware
-* Protecting exported packages
-* Following attorney, court, employer, or organizational confidentiality requirements
-
-Unless the application expressly states otherwise for a particular feature, do not assume that every matter workspace or export is independently encrypted by the application.
-
-## 12. Retention
-
-The local application does not centrally control how long your files remain on your computer.
-
-Files generally remain until you delete them, including:
-
-* Original source records
-* Matter workspaces
-* Extracted text
-* OCR output
-* Search indexes
-* Logs
-* Timelines
-* Evidence maps
-* Drafts
-* Export packages
-* Backups
-
-Retention may also depend on Windows, cloud-sync software, backup utilities, removable drives, or organizational policies.
-
-Users are responsible for complying with any legal, ethical, litigation-hold, court, client, employer, or professional-retention obligations.
-
-## 13. Deleting information
-
-To remove local matter information:
-
-1. Close the application.
-2. Locate the matter workspace you selected.
-3. Delete the workspace or the specific files you no longer wish to retain.
-4. Empty the Recycle Bin where appropriate.
-5. Review backup locations, synchronized folders, exported packages, and removable drives.
-6. Remove local application state from `%LOCALAPPDATA%\MaineFamilyLawLLM` if you also want to reset application preferences and local logs.
-
-Uninstalling the application may remove installed program files but may not delete user-created matter workspaces, exports, backups, or files stored outside the application-installation directory.
-
-This separation is intentional so uninstalling or updating the application does not silently destroy legal records.
-
-Secure deletion cannot be guaranteed on every storage device, backup service, or synchronized platform.
-
-## 14. Children’s information
-
-The application is intended for use by adults, legal professionals, caregivers, advocates, and other authorized users.
-
-Because family-law matters often involve children, selected records may contain children’s personal information.
-
-The application does not knowingly solicit information directly from children through an online account or public service.
-
-Adults using the application are responsible for protecting children’s information and complying with applicable laws, court rules, confidentiality requirements, and sealing restrictions.
-
-## 15. Sealed, privileged, and restricted records
-
-Do not assume that a record is safe to share merely because it was processed locally.
-
-Special care is required for:
-
-* Sealed court records
-* Juvenile records
-* Child-protection records
-* Medical or mental-health information
-* Education records
-* Attorney-client communications
-* Attorney work product
-* Guardian ad litem records
-* Social Security numbers
-* Financial account information
-* Protection-from-abuse records
-* Personally identifying information
-* Information restricted by court order
-
-The application does not determine whether you have lawful authority to possess, process, disclose, or file a particular record.
-
-## 16. Legal-information limitation
-
-Maine Family Law LLM provides legal-information and drafting-support functions.
-
-It does not:
-
-* Form an attorney-client relationship
-* Replace legal advice
-* Guarantee that a source is current
-* Guarantee that a citation is valid
-* Guarantee that a draft is complete
-* Guarantee that an export is safe to disclose
-* Guarantee that a document is filing-ready
-* Decide legal rights
-* Provide representation
-
-Generated materials remain review-required unless independently verified.
-
-## 17. Open-source repository and forks
-
-The source code is available at:
-
-https://github.com/JTAHAI/maine-family-law-llm
-
-A person or organization that forks, modifies, redistributes, hosts, or operates its own edition may change how data is collected, stored, transmitted, or used.
-
-This Privacy Policy applies to the official Maine Family Law LLM distribution identified by TAHAI. It does not automatically apply to every fork, derivative product, hosted copy, or third-party distribution.
-
-Users of a fork should review the privacy policy supplied by that fork’s operator.
-
-A state-specific fork must independently replace and validate its statutes, court rules, forms, case law, citation standards, legal ontology, freshness controls, evaluation materials, privacy rules, and human-review procedures.
-
-## 18. Microsoft Store distribution
-
-When the application is obtained through Microsoft Store, Microsoft may process account, device, licensing, download, installation, crash, or Store-usage information under Microsoft’s own terms and privacy statement.
-
-TAHAI does not control Microsoft’s independent processing.
-
-The Microsoft Store version of Maine Family Law LLM is intended to follow the same local-first information-handling principles described in this Policy.
-
-## 19. Changes to this Policy
-
-This Policy may be updated when the application, data practices, legal requirements, or optional integrations change.
-
-Material changes will be published on this page and reflected in the “Last updated” date.
-
-Older versions may be preserved in the Git history of the public repository.
-
-## 20. Contact
-
-Questions about this Privacy Policy may be submitted through the project repository:
-
-https://github.com/JTAHAI/maine-family-law-llm/issues
-
-Do not include private, privileged, sealed, juvenile, medical, or personally identifying matter information in a public GitHub issue.
-
-For non-public privacy correspondence, use the private contact method listed by TAHAI on its official website or in the Microsoft Store support listing.
-
-## 21. Source availability
-
-This Policy is published with the open-source project so users can inspect the application’s stated privacy commitments alongside its source code.
-
-Repository:
-
-https://github.com/JTAHAI/maine-family-law-llm
+  <div class="cta-band">
+    <div>
+      <h2>Inspect the privacy commitments beside the code.</h2>
+      <p>The repository is public so users and reviewers can compare the application’s stated privacy boundaries with its implementation.</p>
+    </div>
+    <a class="button button--warm" href="https://github.com/JTAHAI/maine-family-law-llm">View the repository</a>
+  </div>
+</div>
