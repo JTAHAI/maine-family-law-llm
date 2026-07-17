@@ -12,16 +12,16 @@ permalink: /
       <h1>Maine family-law records, organized around the truth.</h1>
       <p class="lead">Maine Family Law LLM is an open-source workbench for organizing documents, building timelines and evidence maps, reviewing citations, finding Maine authority, and creating working drafts that remain subject to human review.</p>
       <div class="hero-actions">
-        <a class="button button--primary" href="https://github.com/JTAHAI/maine-family-law-llm">View the source on GitHub</a>
-        <a class="button button--secondary" href="{{ '/features/' | relative_url }}">See what it does</a>
-        <a class="button button--warm" href="https://focaf.jtforme.com/">Visit FOCaF</a>
+        <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Get it from Microsoft Store</a>
+        <a class="button button--secondary" href="{{ '/getting-started/' | relative_url }}">First-run guide</a>
+        <a class="button button--warm" href="https://github.com/JTAHAI/maine-family-law-llm">View the source</a>
       </div>
       <p class="microcopy">Not a lawyer. Not legal advice. Not affiliated with the Maine Judicial Branch or any court. Outputs are review-required.</p>
       <div class="status-row">
+        <span class="status-pill">Available in Microsoft Store</span>
         <span class="status-pill">Open source</span>
         <span class="status-pill">Windows local app</span>
         <span class="status-pill">Private data stays outside the repo</span>
-        <span class="status-pill">Microsoft Store packaging underway</span>
       </div>
     </div>
     <div class="hero-mark" aria-label="FOCaF Maine Family Law LLM brand mark">
@@ -30,6 +30,37 @@ permalink: /
         <strong>For Our Children &amp; Families</strong>
         A public-interest path toward calmer organization, verified sources, and safer review.
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--wash">
+  <div class="shell">
+    <div class="section-intro">
+      <div class="eyebrow">Start here</div>
+      <h2>Learn the workflow with fictional sample records first.</h2>
+      <p class="lead">Install the app, build the neutral sample corpus, select it in the installed corpus library, and then open Local AI Chat. Once the workflow is familiar, create a separate protected workspace from records you intentionally select.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card">
+        <div class="card-number">01</div>
+        <h3>Install the Windows app</h3>
+        <p>Get Maine Family Law LLM directly from Microsoft Store. No online account is required for the standard local workflow.</p>
+      </article>
+      <article class="card">
+        <div class="card-number">02</div>
+        <h3>Build the neutral sample</h3>
+        <p>Select <strong>Build Neutral Sample Corpus</strong>, wait for the background build, then make the sample the active corpus.</p>
+      </article>
+      <article class="card">
+        <div class="card-number">03</div>
+        <h3>Open the local workbench</h3>
+        <p>Select <strong>Open Local AI Chat</strong> to explore search, source cards, review tools, and the difference between legal research and case-record review.</p>
+      </article>
+    </div>
+    <div class="hero-actions">
+      <a class="button button--primary" href="{{ '/getting-started/' | relative_url }}">Read the complete getting-started guide</a>
+      <a class="button button--secondary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Open Microsoft Store</a>
     </div>
   </div>
 </section>
