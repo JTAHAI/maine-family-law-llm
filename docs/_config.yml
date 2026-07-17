@@ -1,11 +1,8 @@
 title: Maine Family Law LLM
 description: Open-source, local-first Maine family-law legal-information and record-organization workbench.
-url: "https://tahai.net"
+url: "https://jtahai.github.io"
 baseurl: "/maine-family-law-llm"
-
 repository: JTAHAI/maine-family-law-llm
-
-theme: minima
 
 markdown: kramdown
 permalink: pretty
@@ -13,11 +10,18 @@ permalink: pretty
 lang: en-US
 timezone: America/New_York
 
-author:
-  name: TAHAI
+brand:
+  name: For Our Children & Families
+  short_name: FOCaF
+  url: https://focaf.jtforme.com/
+
+github_url: https://github.com/JTAHAI/maine-family-law-llm
 
 header_pages:
   - index.md
+  - features.md
+  - safety.md
+  - fork-your-state.md
   - privacy.md
 
 exclude:
