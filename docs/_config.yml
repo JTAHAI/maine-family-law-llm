@@ -1,0 +1,36 @@
+title: Maine Family Law LLM
+description: Open-source, local-first Maine family-law legal-information and record-organization workbench.
+url: "https://tahai.net"
+baseurl: "/maine-family-law-llm"
+
+repository: JTAHAI/maine-family-law-llm
+
+theme: minima
+
+markdown: kramdown
+permalink: pretty
+
+lang: en-US
+timezone: America/New_York
+
+author:
+  name: TAHAI
+
+header_pages:
+  - index.md
+  - privacy.md
+
+exclude:
+  - README.md
+  - "*.py"
+  - "*.ps1"
+  - "*.cmd"
+  - "*.sh"
+  - tests
+  - runtime
+  - uploads
+  - vectorstores
+  - corpora
+  - dist
+  - .venv
+  - node_modules
