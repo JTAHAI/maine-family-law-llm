@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="{{ site.lang | default: 'en-US' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a2d49">
+  <meta name="description" content="{{ page.description | default: site.description | escape }}">
+  <meta property="og:title" content="{{ page.title | default: site.title | escape }}">
+  <meta property="og:description" content="{{ page.description | default: site.description | escape }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ page.url | absolute_url }}">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div class="safety-strip" role="note">
+    <div class="shell safety-strip__inner">
+      <span><strong>Immediate danger?</strong> Call 911. Crisis support: call or text 988. Maine services: dial 211.</span>
+      <span>This project is not a hotline or legal advice.</span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="shell header-grid">
+      <a class="brand" href="{{ '/' | relative_url }}" aria-label="Maine Family Law LLM home">
+        <svg class="brand-mark" viewBox="0 0 120 120" role="img" aria-label="FOCaF Family Law LLM mark">
+          <rect x="9" y="32" width="54" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="7"/>
+          <rect x="57" y="9" width="54" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="7" opacity=".95"/>
+          <rect x="57" y="57" width="54" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="7" opacity=".95"/>
+          <path d="M45 30h23v9H54v12h12v9H54v25h-9z" fill="currentColor"/>
+        </svg>
+        <span class="brand-copy">
+          <span class="brand-kicker">For Our Children &amp; Families</span>
+          <span class="brand-title">Maine Family Law LLM</span>
+        </span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+        <a href="{{ '/' | relative_url }}">Home</a>
+        <a href="{{ '/features/' | relative_url }}">What it does</a>
+        <a href="{{ '/safety/' | relative_url }}">Safety &amp; data</a>
+        <a href="{{ '/fork-your-state/' | relative_url }}">Fork your state</a>
+        <a href="{{ '/privacy/' | relative_url }}">Privacy</a>
+        <a class="nav-cta" href="{{ site.github_url }}">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    {{ content }}
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div>
+        <div class="footer-brand">Maine Family Law LLM</div>
+        <p>Open-source, local-first legal-information and record-organization software. Review required. Not legal advice.</p>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <a href="{{ site.github_url }}">Source code on GitHub</a>
+        <a href="{{ '/fork-your-state/' | relative_url }}">Build one for your state</a>
+        <a href="{{ '/privacy/' | relative_url }}">Privacy policy</a>
+      </div>
+      <div>
+        <h2>FOCaF</h2>
+        <a href="{{ site.brand.url }}">For Our Children &amp; Families</a>
+        <p>Practical family help, Maine resources, and public education.</p>
+      </div>
+    </div>
+    <div class="shell footer-bottom">
+      <span>© 2026 TAHAI / For Our Children &amp; Families</span>
+      <span>Not affiliated with the Maine Judicial Branch, any court, Microsoft, or any government agency.</span>
+    </div>
+  </footer>
+
+  <script>
+    const toggle = document.querySelector('.nav-toggle');
+    const nav = document.querySelector('#site-nav');
+    if (toggle && nav) {
+      toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!expanded));
+        nav.classList.toggle('is-open', !expanded);
+      });
+    }
+  </script>
+</body>
+</html>
