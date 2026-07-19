@@ -1,4 +1,4 @@
-v3.1.0 / MSIX build 3.1.0.7
+v3.1.0 / Microsoft Store MSIX build 3.1.0.0
 
 - added the bundled public FOCAF printable library: 103 hash-checked PDFs, 739 pages, page-level extracted text, local searchable chunks, original-PDF open/print actions, and non-authority labels
 - added explicit local inventory consent, separate optional local OCR choice, offline socket/DNS boundary, compact direct-record search behavior, and visible index review/rebuild/delete controls

@@ -3,7 +3,7 @@
 - Added 103 bundled public FOCAF family-printable PDFs with 739 pages, hash-checked original bytes, page-level extracted text, and local content search. They are visibly labeled as non-authority family resources and remain separate from Maine authority and private matter records.
 - Added a Printables drawer, local original-PDF open/print actions, chat suggestions, and Ctrl+K resource commands.
 - Added an affirmative local inventory consent dialog, a separate optional OCR decision, an offline network boundary for private parsing, direct-record-search compact results, and visible derived-index review, rebuild, and delete controls.
-- Product version is `3.1.0`; target Microsoft Store MSIX version is `3.1.0.7`.
+- Product version is `3.1.0`; target Microsoft Store MSIX version is `3.1.0.0`.
 
 ## v3.0.0 - Microsoft Store release candidate
 

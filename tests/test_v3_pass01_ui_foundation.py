@@ -149,6 +149,6 @@ def test_v3_pass01_versions_are_consistent() -> None:
 
     assert VERSION == "3.1.0"
     assert BUILD_NUMBER >= 4
-    assert PACKAGE_VERSION == f"3.1.0.{BUILD_NUMBER}"
+    assert PACKAGE_VERSION == "3.1.0.0"
     assert 'version = "3.1.0"' in pyproject
     assert identity["package_version"] == PACKAGE_VERSION

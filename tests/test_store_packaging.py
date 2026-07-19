@@ -209,3 +209,9 @@ def test_build_msix_script_normalizes_package_versions_without_leading_zero_segm
     assert '2.5.29.19={text}' in script
     assert "TAHAIWebServices.MaineFamilyLawLLM" in script
     assert "D75EE668-B409-45ED-87E5-E37AA5FE3868" in script
+
+
+def test_build_msix_script_rejects_nonzero_store_revision_numbers() -> None:
+    script = (REPO_ROOT / "scripts" / "build-msix.ps1").read_text(encoding="utf-8")
+    assert '$normalizedParts[3] -ne "0"' in script
+    assert "Microsoft Store requires the MSIX revision component to be zero" in script

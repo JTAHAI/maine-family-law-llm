@@ -124,7 +124,7 @@ def test_v3_versions_and_store_identity_are_consistent() -> None:
     identity_example = json.loads((ROOT / "store" / "msix" / "identity.example.json").read_text(encoding="utf-8"))
     assert VERSION == "3.1.0"
     assert BUILD_NUMBER == 7
-    assert PACKAGE_VERSION == "3.1.0.7"
+    assert PACKAGE_VERSION == "3.1.0.0"
     assert identity_local["package_version"] == PACKAGE_VERSION
     assert identity_example["package_version"] == PACKAGE_VERSION
 

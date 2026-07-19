@@ -48,6 +48,9 @@ function Convert-ToPackageVersion([string]$VersionText) {
   if ($normalizedParts.Count -eq 3) {
     $normalizedParts += "0"
   }
+  if ($normalizedParts[3] -ne "0") {
+    throw "Microsoft Store requires the MSIX revision component to be zero (for example, 3.1.0.0)."
+  }
   return ($normalizedParts -join ".")
 }
 

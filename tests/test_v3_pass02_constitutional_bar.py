@@ -24,8 +24,8 @@ def test_pass02_version_and_msix_build_are_incremented() -> None:
 
     assert VERSION == "3.1.0"
     assert BUILD_NUMBER == 7
-    assert PACKAGE_VERSION == "3.1.0.7"
-    assert identity["package_version"] == "3.1.0.7"
+    assert PACKAGE_VERSION == "3.1.0.0"
+    assert identity["package_version"] == "3.1.0.0"
     assert UI_PASS_MARKER == "v3.1-printables-and-private-index"
     assert UI_VERSION.endswith("-b7")
 
@@ -79,7 +79,7 @@ def test_pass02_privacy_shortcuts_and_build_overlays_are_local_and_safe() -> Non
     assert 'id="shortcuts-overlay"' in html
     assert 'id="build-overlay"' in html
     assert 'id="footer-version"' in html
-    assert "3.1.0.7" in html
+    assert "3.1.0.0" in html
     assert "This card intentionally contains no private paths" in html
     assert "does not silently send your question" in html
     assert "Every critical action remains available by mouse and touch." in html

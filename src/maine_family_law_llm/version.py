@@ -4,7 +4,9 @@ from __future__ import annotations
 
 VERSION = "3.1.0"
 BUILD_NUMBER = 7
-PACKAGE_VERSION = f"{VERSION}.{BUILD_NUMBER}"
+# Microsoft Store accepts a four-part MSIX version, but the revision component
+# must remain zero. Keep the product version in the first three components.
+PACKAGE_VERSION = f"{VERSION}.0"
 UI_TRACK = "family-justice-chat"
 UI_VERSION = f"{VERSION}-{UI_TRACK}-b{BUILD_NUMBER}"
 UI_PASS_MARKER = "v3.1-printables-and-private-index"
