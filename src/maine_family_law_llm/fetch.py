@@ -49,7 +49,14 @@ class SourceFetcher:
         self.cache_dir = Path(cache_dir)
         self.allow_live = allow_live
 
-    def fetch(self, entry: SourceManifestEntry, *, fixtures: bool = True, force: bool = False) -> FetchResult:
+    def fetch(
+        self,
+        entry: SourceManifestEntry,
+        *,
+        fixtures: bool = True,
+        force: bool = False,
+        persist_cache: bool = True,
+    ) -> FetchResult:
         if fixtures:
             fixture = self._find_fixture(entry.id)
             if fixture is None:
@@ -89,7 +96,35 @@ class SourceFetcher:
                     recovery_hint=f"Fetch failed for official URL; retry later or use fixtures. detail={exc}",
                 )
 
+        if not persist_cache:
+            return FetchResult(
+                ok=True,
+                source_id=entry.id,
+                raw_text=raw_text,
+                metadata=self._metadata(entry, retrieved_at, fixtures=fixtures),
+            )
         return self._write_cache(entry, raw_text, retrieved_at, fixtures=fixtures, force=force)
+
+    @staticmethod
+    def _metadata(
+        entry: SourceManifestEntry,
+        retrieved_at: str,
+        *,
+        fixtures: bool,
+    ) -> dict[str, object]:
+        return {
+            "source_id": entry.id,
+            "title": entry.title,
+            "url": entry.url,
+            "official": entry.official,
+            "source_type": entry.source_type,
+            "retrieved_at": retrieved_at,
+            "fixture_mode": fixtures,
+            "effective_date": entry.effective_date,
+            "version_label": entry.version_label,
+            "citation_hint": entry.citation_hint,
+            "source_priority": entry.source_priority,
+        }
 
     def _find_fixture(self, source_id: str) -> Path | None:
         for suffix in (".html", ".md", ".json"):
@@ -119,19 +154,7 @@ class SourceFetcher:
                 recovery_hint="Use force=True after inspecting the orphan cache file.",
             )
         raw_path.write_text(raw_text, encoding="utf-8")
-        metadata = {
-            "source_id": entry.id,
-            "title": entry.title,
-            "url": entry.url,
-            "official": entry.official,
-            "source_type": entry.source_type,
-            "retrieved_at": retrieved_at,
-            "fixture_mode": fixtures,
-            "effective_date": entry.effective_date,
-            "version_label": entry.version_label,
-            "citation_hint": entry.citation_hint,
-            "source_priority": entry.source_priority,
-        }
+        metadata = self._metadata(entry, retrieved_at, fixtures=fixtures)
         metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
         return FetchResult(
             ok=True,

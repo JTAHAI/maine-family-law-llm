@@ -204,13 +204,14 @@
 
     function closeOverlay(element) {
       if (!element || element.hidden) return;
-      const returnTarget = overlayReturnFocus.get(element);
+      const returnTarget = overlayReturnFocus.get(element) || newChatButton || focusModeButton;
+      // A focused descendant must leave before aria-hidden is applied.
+      if (returnTarget && typeof returnTarget.focus === 'function') {
+        returnTarget.focus();
+      }
       element.hidden = true;
       element.setAttribute('aria-hidden', 'true');
       overlayReturnFocus.delete(element);
-      if (returnTarget && typeof returnTarget.focus === 'function') {
-        window.setTimeout(() => returnTarget.focus(), 10);
-      }
     }
 
     function renderParagraphBlocks(text) {
@@ -869,6 +870,14 @@
     function setDrawerOpen(open, panel = '') {
       const wasOpen = document.body.dataset.drawer === 'open';
       if (open && !wasOpen) drawerReturnFocus = document.activeElement;
+      if (!open && wasOpen) {
+        const returnTarget = drawerReturnFocus || focusModeButton;
+        // Move focus before hiding the drawer from assistive technology.
+        if (returnTarget && typeof returnTarget.focus === 'function') {
+          returnTarget.focus();
+        }
+        drawerReturnFocus = null;
+      }
       document.body.dataset.drawer = open ? 'open' : 'closed';
       evidenceDrawer?.setAttribute('aria-hidden', open ? 'false' : 'true');
       focusModeButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -876,12 +885,6 @@
       if (open && panel) selectDrawerTab(panel);
       if (open) {
         window.setTimeout(() => closeDrawerButton?.focus(), 40);
-      } else if (wasOpen) {
-        const returnTarget = drawerReturnFocus;
-        drawerReturnFocus = null;
-        if (returnTarget && typeof returnTarget.focus === 'function') {
-          window.setTimeout(() => returnTarget.focus(), 20);
-        }
       }
     }
 

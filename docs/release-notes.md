@@ -1,3 +1,9 @@
+## v3.1.1 - Store runtime retrieval repair
+
+- Fixed the Maine-law chat lane for the read-only Microsoft Store package: bundled fixtures now stay in memory and never create a cache in the package install directory.
+- Fixed focus handling before dialogs and the evidence drawer are hidden from assistive technology.
+- Product version is `3.1.1`; target Microsoft Store MSIX version is `3.1.1.0`.
+
 ## v3.1.0 - Local printables and explicit private-index consent
 
 - Added 103 bundled public FOCAF family-printable PDFs with 739 pages, hash-checked original bytes, page-level extracted text, and local content search. They are visibly labeled as non-authority family resources and remain separate from Maine authority and private matter records.

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .runtime_support import RuntimeContext, append_runtime_log, configure_runtime_environment
+from maine_family_law_llm.version import VERSION
 
 DEFAULT_PORT_CANDIDATES = (8000, 8011, 8012, 8013)
 
@@ -56,13 +57,25 @@ def _health_url(port: int) -> str:
     return f"http://127.0.0.1:{port}/api/health"
 
 
-def _ping_health(port: int, timeout: float = 1.5) -> bool:
+def _health_payload(port: int, timeout: float = 1.5) -> dict[str, Any] | None:
     request = urllib.request.Request(_health_url(port), method="GET")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.status == 200
-    except (urllib.error.URLError, TimeoutError, OSError):
-        return False
+            if response.status != 200:
+                return None
+            payload = json.loads(response.read().decode("utf-8"))
+            return payload if isinstance(payload, dict) else None
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
+        return None
+
+
+def _ping_health(port: int, timeout: float = 1.5) -> bool:
+    return _health_payload(port, timeout=timeout) is not None
+
+
+def _service_matches_runtime_version(port: int, timeout: float = 1.5) -> bool:
+    payload = _health_payload(port, timeout=timeout)
+    return bool(payload and payload.get("status") == "ok" and payload.get("version") == VERSION)
 
 
 def _port_is_free(port: int) -> bool:
@@ -117,7 +130,7 @@ def ensure_local_service(context: RuntimeContext) -> LocalServiceStatus:
     state = _load_state(context)
     prior_port = int(state.get("port", 0) or 0)
     prior_pid = int(state.get("pid", 0) or 0) or None
-    if prior_port and _ping_health(prior_port):
+    if prior_port and _service_matches_runtime_version(prior_port):
         return LocalServiceStatus(url=_service_url(prior_port), port=prior_port, pid=prior_pid, started_now=False, healthy=True)
 
     for port in _candidate_ports(context):

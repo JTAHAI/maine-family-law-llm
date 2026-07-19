@@ -17,7 +17,14 @@ def build_fixture_chunks(*, cache_dir: str | Path = DEFAULT_CACHE_DIR) -> list[d
     fetcher = SourceFetcher(DEFAULT_FIXTURES_DIR, cache_dir, allow_live=False)
     chunks = []
     for entry in entries:
-        result = fetcher.fetch(entry, fixtures=True, force=True)
+        # Bundled fixtures are immutable package resources. The desktop/MSIX
+        # workbench must never try to create a cache beside them.
+        result = fetcher.fetch(
+            entry,
+            fixtures=True,
+            force=True,
+            persist_cache=False,
+        )
         if not result.ok:
             continue
         normalized = normalize_fetch_result(result)

@@ -57,7 +57,7 @@ if (-not (Test-Path -LiteralPath $smokeJson)) {
 }
 
 $payload = Get-Content -Path $smokeJson -Raw | ConvertFrom-Json
-if ($payload.launch_result -ne "pass" -or -not $payload.api_health_result -or -not $payload.fictional_sample_workflow_result) {
+if ($payload.launch_result -ne "pass" -or -not $payload.api_health_result -or -not $payload.fictional_sample_workflow_result -or -not $payload.answer_grounded -or $payload.answer_failure_class -ne "none") {
   throw "Store runtime smoke test did not produce a passing payload."
 }
 

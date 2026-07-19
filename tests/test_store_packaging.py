@@ -136,6 +136,8 @@ def test_store_smoke_workflow_runs_and_stays_outside_bundle(tmp_path, monkeypatc
     assert payload["api_health_result"] is True
     assert payload["fictional_sample_workflow_result"] is True
     assert payload["external_data_boundary_verification"] is True
+    assert payload["answer_grounded"] is True
+    assert payload["answer_failure_class"] == "none"
 
 
 def test_uninstall_script_does_not_delete_user_external_case_folders() -> None:
@@ -166,6 +168,12 @@ def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None
     assert "package-sha256.txt" in script
     assert "private-data-audit.json" in script
     assert "store-build-smoke.json" in script
+
+
+def test_store_runtime_gate_requires_a_grounded_chat_answer() -> None:
+    script = (REPO_ROOT / "scripts" / "test-store-runtime.ps1").read_text(encoding="utf-8")
+    assert "$payload.answer_grounded" in script
+    assert '$payload.answer_failure_class -ne "none"' in script
 
 
 def test_install_msix_script_imports_dev_certificate_into_trusted_stores() -> None:
