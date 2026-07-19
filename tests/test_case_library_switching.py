@@ -30,11 +30,15 @@ def test_api_ask_uses_active_case_corpus_when_one_is_selected(tmp_path, monkeypa
     built = build_fixture_case(tmp_path / "matter_api", case_name="Matter API")
     set_active_case_root(built["case_root"])
 
-    payload = api.ask(api.AskRequest(question="What does the corpus show about school attendance and records access?"))
+    payload = api.ask(api.AskRequest(
+            question="What does the corpus show about school attendance and records access?",
+            search_mode="my_records",
+        ))
 
     assert payload["corpus_mode"] == "active_case_corpus"
     assert payload["active_case_label"] == "Matter API"
-    assert payload["active_case_root"] == str(built["case_root"].resolve())
+    assert "active_case_root" not in payload
+    assert str(built["case_root"].resolve()) not in str(payload)
     assert payload["citations"]
     assert payload["source_card_count"] >= 1
 

@@ -1,0 +1,53 @@
+{
+  "schema_version": "maine_v3_ui_interaction_contract_v1",
+  "product_version": "3.0.0",
+  "constitutional_identity": {
+    "always_visible": [
+      "WE THE PEOPLE",
+      "… establish JUSTICE …"
+    ],
+    "popover_text": "Justice does not belong to one institution or one profession, it belongs to the People which these institutions of government are meant to serve; it is Public.",
+    "triggers": ["hover", "focus", "enter", "space", "tap", "click"],
+    "close_actions": ["escape", "outside_click", "focus_departure", "pointer_departure_delay", "close_button"],
+    "must_not_cover": ["composer", "urgent_safety_notice"],
+    "zoom_percent_required": 200
+  },
+  "command_palette": {
+    "shortcut": "Ctrl+K",
+    "visible_hint_required": true,
+    "touch_button_required": true,
+    "keyboard": ["ArrowUp", "ArrowDown", "Enter", "Escape"],
+    "groups": ["Conversation", "Research", "Matter", "Evidence", "View", "Help", "Safety"],
+    "initial_commands": [
+      "new_conversation",
+      "focus_composer",
+      "research_maine_law",
+      "search_my_records",
+      "search_both_separately",
+      "toggle_evidence_drawer",
+      "open_source_list",
+      "choose_matter",
+      "change_answer_style",
+      "open_help",
+      "open_privacy_information",
+      "open_keyboard_shortcuts",
+      "open_justice_lens"
+    ]
+  },
+  "justice_easter_egg": {
+    "shortcut": "Ctrl+J",
+    "title": "You found the Justice key",
+    "asset_policy": "local_public_domain_only",
+    "initial_focus_phrase": "establish Justice",
+    "visible_palette_entry": true,
+    "text_fallback_required": true,
+    "alt_text_required": true,
+    "reduced_motion_required": true
+  },
+  "easter_egg_guardrails": {
+    "keyboard_touch_parity": true,
+    "no_critical_information_hidden": true,
+    "no_private_paths_or_metadata": true,
+    "themes": ["public_service", "source_authority", "privacy", "human_dignity", "restraint"]
+  }
+}

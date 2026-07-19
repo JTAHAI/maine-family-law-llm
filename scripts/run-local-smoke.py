@@ -16,6 +16,16 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+
+ALLOWED_TEXT_FILES = {
+    "PASS_CHANGES.txt",
+    "store/listing/features.txt",
+    "store/listing/search-terms.txt",
+    "store/listing/short-description.txt",
+    "store/pyinstaller/requirements-store-build.txt",
+}
+
 GENERATED_PARTS = {
     ".git",
     ".pytest_cache",
@@ -138,7 +148,14 @@ def build_report(repo_root: Path, data_root: Path, *, run_pytest: bool = False) 
         for path in repo_root.rglob("*.txt")
         if not _is_ignored(path.relative_to(repo_root))
     )
-    checks.append(SmokeCheck("single_running_txt_log", "pass" if txt_files == ["PASS_CHANGES.txt"] else "fail", txt_files))
+    unexpected_txt = [path for path in txt_files if path not in ALLOWED_TEXT_FILES]
+    checks.append(
+        SmokeCheck(
+            "single_running_txt_log",
+            "pass" if not unexpected_txt and "PASS_CHANGES.txt" in txt_files else "fail",
+            {"approved": sorted(ALLOWED_TEXT_FILES), "found": txt_files, "unexpected": unexpected_txt},
+        )
+    )
 
     data_external = data_root != repo_root and repo_root not in data_root.parents
     checks.append(

@@ -96,8 +96,14 @@ class PostGARepoReviewer:
 
     def review(self, *, output_path: str | Path | None = None) -> PostGARepoReviewReport:
         pass_log = self.project_root / "PASS_CHANGES.txt"
-        numbered_complete = pass_log.exists() and "Current completed implementation pass number: 51" in pass_log.read_text(
-            encoding="utf-8"
+        pass_log_text = pass_log.read_text(encoding="utf-8") if pass_log.exists() else ""
+        # v3 intentionally collapsed the old numbered-pass history into one
+        # current release ledger. Treat that explicit v3 release marker as the
+        # successor to the legacy Pass-51 foundation marker, while preserving
+        # the separate fail-closed real-GA evidence gates below.
+        numbered_complete = (
+            "Current completed implementation pass number: 51" in pass_log_text
+            or "v3.0.0 Pass" in pass_log_text
         )
         txt_files = [path for path in self.project_root.rglob("*.txt") if self._is_repo_file(path)]
         only_one_pass_txt = len([path for path in txt_files if "pass" in path.name.lower()]) == 1

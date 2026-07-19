@@ -11,16 +11,17 @@ def _script_from(html: str) -> str:
 
 def test_live_ui_has_unambiguous_branding_and_enter_submit_marker() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
+    from maine_family_law_llm.version import UI_FOOTER_LABEL, UI_VERSION
 
     html = render_local_workbench_html()
     script = _script_from(html)
 
     assert 'id="focaf-brand-shell"' in html
-    assert 'data-ui-version="2.08.0-modern-constitutional-chat"' in html
+    assert f'data-ui-version="{UI_VERSION}"' in html
     assert "WE THE PEOPLE" in html
     assert "Justice does not belong to one institution or one profession" in html
-    assert "UI v2.08 modern constitutional chat workbench." in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '2.08.0-modern-constitutional-chat'" in script
+    assert f"{UI_FOOTER_LABEL}." in html
+    assert f"window.__MFL_WORKBENCH_UI_VERSION = '{UI_VERSION}'" in script
     assert "question.addEventListener('keydown'" in script
     assert "event.key === 'Enter' && !event.shiftKey" in script
     assert "event.preventDefault();" in script

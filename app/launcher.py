@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import sys
 import tkinter as tk
 from dataclasses import dataclass
+from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -13,6 +15,8 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from app.local_api_service import ensure_local_service, stop_local_service
+from app.runtime_support import RuntimeContext, build_runtime_context, configure_runtime_environment, local_about_links, open_path_or_url
 from app.wizard_import_corpus import import_additional_corpus
 from app.wizard_new_case import default_case_build_root, launch_new_case_wizard, suggest_case_name
 from maine_family_law_llm.case_library import active_case_root, list_registered_case_roots, prune_missing_case_roots, set_active_case_root
@@ -29,8 +33,11 @@ from maine_family_law_llm.case_workspace import (
     read_case_ingest_history,
     read_case_source_roots,
 )
+from maine_family_law_llm.local_corpus_index import local_ocr_choice
+from maine_family_law_llm.version import APP_DISPLAY_NAME, GITHUB_REPOSITORY_URL, STORE_MISSION_TAGLINE, VERSION
 
 ACTION_SPECS = (
+    ("Open Local AI Chat", "open_local_ai_chat"),
     ("Create New Case Corpus", "create_new_case"),
     ("Open Existing Case Corpus", "open_existing_case"),
     ("Reopen Intake / Add More Evidence", "import_more_evidence"),
@@ -45,6 +52,8 @@ ACTION_SPECS = (
     ("Verify Hashes / Proof", "verify_hashes"),
     ("Open Review Portal", "open_review_portal"),
     ("Export to USB", "export_usb"),
+    ("Stop Local AI Chat", "stop_local_ai_chat"),
+    ("About / Help", "show_about_help"),
     ("Repair / Troubleshoot", "repair_repo"),
     ("Exit", "destroy"),
 )
@@ -63,6 +72,26 @@ class CorpusBuildPlan:
     source_roots: list[Path]
     output_root: Path
     case_name: str
+
+
+def start_background_task(
+    after_callback: Callable[[int, Callable[[], None]], object],
+    worker: Callable[[], object],
+    on_success: Callable[[object], None],
+    on_failure: Callable[[str], None],
+) -> threading.Thread:
+    def _run() -> None:
+        try:
+            result = worker()
+        except Exception as exc:  # pragma: no cover - callback path exercised through launcher tests
+            error_text = f"{exc.__class__.__name__}: {exc}"
+            after_callback(0, lambda: on_failure(error_text))
+            return
+        after_callback(0, lambda: on_success(result))
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return thread
 
 
 def build_new_case_from_sources(
@@ -364,60 +393,314 @@ class CorpusBuildWizard(tk.Toplevel):
 
 
 class MaineFamilyLawLauncher(tk.Tk):
-    def __init__(self) -> None:
+    def __init__(self, runtime_context: RuntimeContext | None = None) -> None:
         super().__init__()
-        self.title("Maine Family Law LLM")
-        self.geometry("980x700")
-        self.repo_root = REPO_ROOT
-        bootstrap_repository(self.repo_root)
+        self.runtime = configure_runtime_environment(runtime_context or build_runtime_context())
+        self.title(f"{APP_DISPLAY_NAME} v{VERSION}")
+        self.geometry("1040x740")
+        self.minsize(900, 650)
+        self.configure(background="#eee8de")
+        self.option_add("*Font", ("Segoe UI", 10))
+        self._configure_styles()
+        self.repo_root = self.runtime.bundle_root
+        self.bootstrap_warning = ""
+        self._case_build_in_progress = False
+        self._build_progress_dialog: tk.Toplevel | None = None
+        self.action_buttons: dict[str, ttk.Button] = {}
+        if self.runtime.allows_repo_bootstrap_writes:
+            try:
+                bootstrap_repository(self.repo_root)
+            except Exception as exc:
+                self.bootstrap_warning = f"Repository bootstrap refresh did not complete cleanly: {exc}"
         prune_missing_case_roots()
         self.case_root_var = tk.StringVar(value="")
         self.saved_case_var = tk.StringVar(value="")
         self.case_summary_var = tk.StringVar(value="No case corpus selected yet.")
-        self.status_var = tk.StringVar(value="Ready. Local-first mode is enabled.")
+        self.status_var = tk.StringVar(
+            value=(
+                "Ready. Open Local AI Chat to start the local source-grounded workbench. "
+                "The intake wizard stays available, but it does not block startup."
+            )
+        )
         self.saved_case_lookup: dict[str, Path] = {}
         self._build_ui()
         self._refresh_case_library()
         current_active = active_case_root()
         if current_active is not None:
             self._set_case_root(current_active, "Loaded the last active case corpus for this install.")
+        elif self.bootstrap_warning:
+            self.status_var.set(self.bootstrap_warning)
+
+    def _configure_styles(self) -> None:
+        style = ttk.Style(self)
+        for preferred in ("vista", "clam", "default"):
+            try:
+                style.theme_use(preferred)
+                break
+            except tk.TclError:
+                continue
+        style.configure("App.TFrame", background="#eee8de")
+        style.configure("Card.TFrame", background="#fffdf9", relief="solid", borderwidth=1)
+        style.configure("Card.TLabelframe", background="#fffdf9", bordercolor="#d7cec0", relief="solid")
+        style.configure("Card.TLabelframe.Label", background="#fffdf9", foreground="#24303b", font=("Segoe UI", 10, "bold"))
+        style.configure("Body.TLabel", background="#fffdf9", foreground="#24303b")
+        style.configure("Muted.TLabel", background="#fffdf9", foreground="#65717b")
+        style.configure("Primary.TButton", font=("Segoe UI", 11, "bold"), padding=(18, 12))
+        style.configure("Action.TButton", padding=(12, 9))
+        style.configure("Quiet.TButton", padding=(10, 8))
+        style.configure("Status.TLabel", background="#24303b", foreground="#f8fafc", padding=(12, 8))
+        style.configure("TNotebook", background="#eee8de", borderwidth=0)
+        style.configure("TNotebook.Tab", padding=(16, 9), font=("Segoe UI", 10, "bold"))
 
     def _build_ui(self) -> None:
-        frame = ttk.Frame(self, padding=16)
-        frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="Maine Family Law Full Record Review System", font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        shell = ttk.Frame(self, style="App.TFrame", padding=12)
+        shell.pack(fill="both", expand=True)
+        shell.columnconfigure(0, weight=1)
+        shell.rowconfigure(1, weight=1)
+
+        header = tk.Frame(shell, bg="#1f2933", padx=18, pady=12, highlightthickness=0)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        header.columnconfigure(0, weight=1)
+        identity = tk.Frame(header, bg="#1f2933")
+        identity.grid(row=0, column=0, sticky="w")
+        tk.Label(
+            identity,
+            text="WE THE PEOPLE",
+            bg="#1f2933",
+            fg="#75d7e6",
+            font=("Segoe UI", 8, "bold"),
+        ).pack(anchor="w")
+        justice_label = tk.Label(
+            identity,
+            text="... establish JUSTICE ...",
+            bg="#1f2933",
+            fg="#ffffff",
+            font=("Georgia", 19, "bold"),
+            cursor="hand2",
+            takefocus=True,
+        )
+        justice_label.pack(anchor="w")
+        mission_popup: tk.Toplevel | None = None
+
+        def hide_mission(_event=None) -> None:
+            nonlocal mission_popup
+            if mission_popup is not None:
+                try:
+                    mission_popup.destroy()
+                except tk.TclError:
+                    pass
+                mission_popup = None
+
+        def show_mission(_event=None) -> None:
+            nonlocal mission_popup
+            if mission_popup is not None and mission_popup.winfo_exists():
+                return
+            mission_popup = tk.Toplevel(self)
+            mission_popup.overrideredirect(True)
+            mission_popup.attributes("-topmost", True)
+            tk.Label(
+                mission_popup,
+                text=(
+                    "Justice does not belong to one institution or one profession, it belongs to the People "
+                    "which these institutions of government are meant to serve; it is Public."
+                ),
+                bg="#f8f1e5",
+                fg="#24303b",
+                justify="left",
+                wraplength=620,
+                padx=12,
+                pady=9,
+                relief="solid",
+                borderwidth=1,
+            ).pack()
+            mission_popup.update_idletasks()
+            x = justice_label.winfo_rootx()
+            y = justice_label.winfo_rooty() + justice_label.winfo_height() + 6
+            mission_popup.geometry(f"+{x}+{y}")
+
+        def toggle_mission(_event=None) -> str:
+            if mission_popup is not None and mission_popup.winfo_exists():
+                hide_mission()
+            else:
+                show_mission()
+            return "break"
+
+        justice_label.bind("<Enter>", show_mission)
+        justice_label.bind("<Leave>", hide_mission)
+        justice_label.bind("<FocusIn>", show_mission)
+        justice_label.bind("<FocusOut>", hide_mission)
+        justice_label.bind("<Return>", toggle_mission)
+        justice_label.bind("<space>", toggle_mission)
+
+        brand = tk.Frame(header, bg="#1f2933")
+        brand.grid(row=0, column=1, sticky="e")
+        tk.Label(
+            brand,
+            text=APP_DISPLAY_NAME,
+            bg="#1f2933",
+            fg="#ffffff",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="e")
+        tk.Label(
+            brand,
+            text=f"v{VERSION} · local-only",
+            bg="#1f2933",
+            fg="#cbd5df",
+            font=("Segoe UI", 9),
+        ).pack(anchor="e")
+
+        notebook = ttk.Notebook(shell)
+        notebook.grid(row=1, column=0, sticky="nsew")
+
+        start_tab = ttk.Frame(notebook, style="App.TFrame", padding=4)
+        review_tab = ttk.Frame(notebook, style="App.TFrame", padding=4)
+        support_tab = ttk.Frame(notebook, style="App.TFrame", padding=4)
+        notebook.add(start_tab, text="Start here")
+        notebook.add(review_tab, text="Review & export")
+        notebook.add(support_tab, text="Support & tools")
+
+        for tab in (start_tab, review_tab, support_tab):
+            tab.columnconfigure(0, weight=1)
+
+        def action_button(parent: tk.Misc, label: str, method_name: str, *, style_name: str = "Action.TButton") -> ttk.Button:
+            button = ttk.Button(parent, text=label, command=getattr(self, method_name), style=style_name)
+            self.action_buttons[method_name] = button
+            return button
+
+        start_card = ttk.Frame(start_tab, style="Card.TFrame", padding=18)
+        start_card.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        start_card.columnconfigure(0, weight=1)
         ttk.Label(
-            frame,
+            start_card,
+            text="Start with the conversation",
+            style="Body.TLabel",
+            font=("Segoe UI", 15, "bold"),
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            start_card,
             text=(
-                "Create a case corpus, reopen it later, and keep adding new documents over time. "
-                "The launcher remembers prior source folders for each case so users do not have to start over."
+                "Ask about Maine law, review a private matter, or use both source lanes separately. "
+                "You can build or choose a corpus when the records are ready."
             ),
-            wraplength=860,
-        ).pack(anchor="w", pady=(6, 18))
-        grid = ttk.Frame(frame)
-        grid.pack(fill="x")
-        for idx, (label, method_name) in enumerate(ACTION_SPECS):
-            ttk.Button(grid, text=label, command=getattr(self, method_name)).grid(row=idx // 2, column=idx % 2, sticky="ew", padx=6, pady=6)
-        grid.columnconfigure(0, weight=1)
-        grid.columnconfigure(1, weight=1)
-        library_frame = ttk.LabelFrame(frame, text="Installed corpus library", padding=12)
-        library_frame.pack(fill="x", pady=(16, 0))
+            style="Muted.TLabel",
+            wraplength=760,
+            justify="left",
+        ).grid(row=1, column=0, sticky="w", pady=(5, 12))
+        action_button(start_card, "Open Local AI Chat", "open_local_ai_chat", style_name="Primary.TButton").grid(
+            row=2, column=0, sticky="ew"
+        )
+
+        quick = ttk.LabelFrame(start_tab, text="Matter setup", style="Card.TLabelframe", padding=14)
+        quick.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        for idx in range(3):
+            quick.columnconfigure(idx, weight=1)
+        setup_actions = (
+            ("Create New Case Corpus", "create_new_case"),
+            ("Open Existing Case Corpus", "open_existing_case"),
+            ("Reopen Intake / Add More Evidence", "import_more_evidence"),
+        )
+        for idx, (label, method_name) in enumerate(setup_actions):
+            action_button(quick, label, method_name).grid(
+                row=0, column=idx, sticky="ew", padx=(0 if idx == 0 else 8, 0)
+            )
+        ttk.Label(
+            quick,
+            text=(
+                "Create a case corpus, reopen it later, and keep adding documents without starting over. "
+                "Original source records remain read-only."
+            ),
+            style="Muted.TLabel",
+            wraplength=820,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(10, 0))
+
+        library_frame = ttk.LabelFrame(start_tab, text="Installed corpus library", style="Card.TLabelframe", padding=14)
+        library_frame.grid(row=2, column=0, sticky="ew")
+        library_frame.columnconfigure(0, weight=1)
         ttk.Label(
             library_frame,
-            text="One install can manage multiple families or client matters. Switch the active corpus here before opening the review portal or asking questions in the local workbench.",
-            wraplength=700,
+            text=(
+                "One install can manage multiple families or client matters. Switch the active corpus here before "
+                "opening the review portal or asking questions in the local AI chat."
+            ),
+            style="Muted.TLabel",
+            wraplength=820,
             justify="left",
-        ).grid(row=0, column=0, columnspan=3, sticky="w")
+        ).grid(row=0, column=0, columnspan=4, sticky="w")
         self.saved_case_combo = ttk.Combobox(library_frame, textvariable=self.saved_case_var, state="readonly")
         self.saved_case_combo.grid(row=1, column=0, sticky="ew", pady=(10, 0))
-        ttk.Button(library_frame, text="Use selected corpus", command=self.activate_selected_saved_case).grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
-        ttk.Button(library_frame, text="Refresh library", command=self._refresh_case_library).grid(row=1, column=2, padx=(10, 0), pady=(10, 0), sticky="ew")
-        ttk.Button(library_frame, text="Open selected case folder", command=self.open_selected_case_folder).grid(row=2, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
-        ttk.Button(library_frame, text="Open workspace folder", command=self._open_workspace_folder).grid(row=2, column=2, padx=(10, 0), pady=(10, 0), sticky="ew")
-        library_frame.columnconfigure(0, weight=1)
-        ttk.Label(frame, textvariable=self.case_root_var, foreground="#0b5c7d", wraplength=860).pack(anchor="w", pady=(18, 6))
-        ttk.Label(frame, textvariable=self.case_summary_var, wraplength=860, justify="left").pack(anchor="w", pady=(0, 6))
-        ttk.Label(frame, textvariable=self.status_var, wraplength=860, justify="left").pack(anchor="w")
+        ttk.Button(library_frame, text="Use selected corpus", command=self.activate_selected_saved_case, style="Action.TButton").grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="ew")
+        ttk.Button(library_frame, text="Refresh library", command=self._refresh_case_library, style="Quiet.TButton").grid(row=1, column=2, padx=(8, 0), pady=(10, 0), sticky="ew")
+        ttk.Button(library_frame, text="Open selected case folder", command=self.open_selected_case_folder, style="Quiet.TButton").grid(row=2, column=1, padx=(10, 0), pady=(8, 0), sticky="ew")
+        ttk.Button(library_frame, text="Open workspace folder", command=self._open_workspace_folder, style="Quiet.TButton").grid(row=2, column=2, padx=(8, 0), pady=(8, 0), sticky="ew")
+        ttk.Label(library_frame, textvariable=self.case_root_var, style="Muted.TLabel", wraplength=820).grid(row=3, column=0, columnspan=4, sticky="w", pady=(12, 2))
+        ttk.Label(library_frame, textvariable=self.case_summary_var, style="Body.TLabel", wraplength=820, justify="left").grid(row=4, column=0, columnspan=4, sticky="w")
+
+        review_intro = ttk.Frame(review_tab, style="Card.TFrame", padding=16)
+        review_intro.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        ttk.Label(review_intro, text="Review the active matter", style="Body.TLabel", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        ttk.Label(
+            review_intro,
+            text="These tools use the selected local corpus. Choose the correct matter on Start here before opening a package.",
+            style="Muted.TLabel",
+            wraplength=820,
+            justify="left",
+        ).pack(anchor="w", pady=(5, 0))
+
+        review_grid = ttk.LabelFrame(review_tab, text="Review portals and role packages", style="Card.TLabelframe", padding=14)
+        review_grid.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        for idx in range(2):
+            review_grid.columnconfigure(idx, weight=1)
+        review_actions = (
+            ("Open Review Portal", "open_review_portal"),
+            ("Open Search / Indexes", "open_search_indexes"),
+            ("Open GAL Package", "open_gal_package"),
+            ("Open Court Package", "open_court_package"),
+            ("Open Lawyer Package", "open_lawyer_package"),
+            ("Open ADA / Prosecutor Package", "open_ada_package"),
+            ("Open External Legal-Matter Release", "open_external_release"),
+            ("Open Private Forensic Master", "open_private_master"),
+        )
+        for idx, (label, method_name) in enumerate(review_actions):
+            action_button(review_grid, label, method_name).grid(
+                row=idx // 2, column=idx % 2, sticky="ew", padx=(0 if idx % 2 == 0 else 8, 0), pady=(0 if idx < 2 else 8, 0)
+            )
+
+        proof_grid = ttk.LabelFrame(review_tab, text="Proof and export", style="Card.TLabelframe", padding=14)
+        proof_grid.grid(row=2, column=0, sticky="ew")
+        for idx in range(3):
+            proof_grid.columnconfigure(idx, weight=1)
+        for idx, (label, method_name) in enumerate((
+            ("Verify Hashes / Proof", "verify_hashes"),
+            ("Export to USB", "export_usb"),
+            ("Build Neutral Sample Corpus", "build_sample_case"),
+        )):
+            action_button(proof_grid, label, method_name).grid(row=0, column=idx, sticky="ew", padx=(0 if idx == 0 else 8, 0))
+
+        support_card = ttk.LabelFrame(support_tab, text="Support and local runtime", style="Card.TLabelframe", padding=14)
+        support_card.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        for idx in range(2):
+            support_card.columnconfigure(idx, weight=1)
+        support_actions = (
+            ("About / Help", "show_about_help"),
+            ("Repair / Troubleshoot", "repair_repo"),
+            ("Stop Local AI Chat", "stop_local_ai_chat"),
+            ("Exit", "destroy"),
+        )
+        for idx, (label, method_name) in enumerate(support_actions):
+            action_button(support_card, label, method_name).grid(
+                row=idx // 2, column=idx % 2, sticky="ew", padx=(0 if idx % 2 == 0 else 8, 0), pady=(0 if idx < 2 else 8, 0)
+            )
+        ttk.Label(
+            support_tab,
+            text=STORE_MISSION_TAGLINE,
+            style="Muted.TLabel",
+            wraplength=820,
+            justify="left",
+        ).grid(row=1, column=0, sticky="w", padx=14, pady=(4, 0))
+
+        status = ttk.Label(shell, textvariable=self.status_var, style="Status.TLabel", wraplength=980, justify="left")
+        status.grid(row=2, column=0, sticky="ew", pady=(10, 0))
 
     def _set_case_root(self, case_root: Path, status_text: str) -> None:
         self.case_root_var.set(str(case_root))
@@ -523,6 +806,166 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.wait_window(wizard)
         return wizard.result
 
+    def _confirm_local_inventory_consent(self) -> bool:
+        """Require an affirmative, accessible choice before reading selected files."""
+
+        dialog = tk.Toplevel(self)
+        dialog.title("Build a local searchable inventory?")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        decision = tk.BooleanVar(value=False)
+        frame = ttk.Frame(dialog, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(
+            frame,
+            text="The app will read the files you selected on this computer and create a local search index so chat can search inside them. Nothing is uploaded or transmitted.",
+            wraplength=620,
+            justify="left",
+        ).pack(anchor="w")
+        ttk.Label(
+            frame,
+            text="Original source files remain unchanged. You can cancel without granting permission.",
+            wraplength=620,
+            justify="left",
+            style="Muted.TLabel",
+        ).pack(anchor="w", pady=(10, 0))
+        actions = ttk.Frame(frame)
+        actions.pack(fill="x", pady=(16, 0))
+
+        def close(approved: bool) -> None:
+            decision.set(approved)
+            dialog.destroy()
+
+        scan = ttk.Button(actions, text="Scan and inventory locally", command=lambda: close(True), style="Primary.TButton")
+        cancel = ttk.Button(actions, text="Cancel", command=lambda: close(False))
+        scan.pack(side="left")
+        cancel.pack(side="right")
+        dialog.protocol("WM_DELETE_WINDOW", lambda: close(False))
+        dialog.bind("<Escape>", lambda _event: close(False))
+        dialog.bind("<Tab>", lambda event: (scan.focus_set() if event.widget is cancel else cancel.focus_set(), "break")[1])
+        cancel.focus_set()
+        self.wait_window(dialog)
+        return bool(decision.get())
+
+    def _offer_local_ocr_choice(self, case_root: Path) -> None:
+        result = local_ocr_choice(case_root, approved=False)
+        if result["status"] == "not_needed":
+            self.status_var.set(str(result["message"]))
+            return
+        dialog = tk.Toplevel(self)
+        dialog.title("Some pages need local OCR")
+        dialog.transient(self)
+        dialog.grab_set()
+        frame = ttk.Frame(dialog, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(
+            frame,
+            text="OCR will analyze scanned or image-only pages on this computer and add recognized text to your local search index. OCR text may contain mistakes. Nothing is uploaded or transmitted.",
+            wraplength=620,
+            justify="left",
+        ).pack(anchor="w")
+        ttk.Label(frame, text=f"OCR candidates: {result['candidates']}", style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
+        candidate_text = "\n".join(
+            f"- {row['source_locator']}" + (f" ({row['page_count']} page(s))" if row.get("page_count") else "")
+            for row in result.get("candidate_files", [])[:8]
+        )
+        if candidate_text:
+            ttk.Label(frame, text=candidate_text, wraplength=620, justify="left", style="Muted.TLabel").pack(anchor="w", pady=(8, 0))
+        actions = ttk.Frame(frame)
+        actions.pack(fill="x", pady=(16, 0))
+
+        def close(choice: str) -> None:
+            dialog.destroy()
+            outcome = local_ocr_choice(case_root, approved=choice == "ocr")
+            self.status_var.set(str(outcome["message"]))
+
+        ocr_button = ttk.Button(actions, text="OCR scanned pages locally", command=lambda: close("ocr"), style="Primary.TButton")
+        keep_button = ttk.Button(actions, text="Keep them unsearchable for now", command=lambda: close("keep"))
+        cancel_button = ttk.Button(actions, text="Cancel", command=lambda: close("cancel"))
+        ocr_button.pack(side="left")
+        keep_button.pack(side="left", padx=(8, 0))
+        cancel_button.pack(side="right")
+        dialog.protocol("WM_DELETE_WINDOW", lambda: close("cancel"))
+        dialog.bind("<Escape>", lambda _event: close("cancel"))
+        buttons = (ocr_button, keep_button, cancel_button)
+        dialog.bind("<Tab>", lambda event: (buttons[(buttons.index(event.widget) + 1) % len(buttons)].focus_set() if event.widget in buttons else ocr_button.focus_set(), "break")[1])
+        cancel_button.focus_set()
+
+    def _set_case_build_controls_enabled(self, enabled: bool) -> None:
+        state = "normal" if enabled else "disabled"
+        for method_name in ("create_new_case", "import_more_evidence"):
+            button = self.action_buttons.get(method_name)
+            if button is not None:
+                button.configure(state=state)
+
+    def _show_background_build_dialog(self, title: str, message: str) -> None:
+        self._close_background_build_dialog()
+        dialog = tk.Toplevel(self)
+        dialog.title(title)
+        dialog.resizable(False, False)
+        dialog.transient(self)
+        frame = ttk.Frame(dialog, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text=message, wraplength=520, justify="left").pack(anchor="w")
+        progress = ttk.Progressbar(frame, mode="indeterminate", length=360)
+        progress.pack(fill="x", pady=(12, 0))
+        progress.start(12)
+        ttk.Label(
+            frame,
+            text="The main window stays open while the build runs in the background.",
+            wraplength=520,
+            justify="left",
+            foreground="#5f6b74",
+        ).pack(anchor="w", pady=(10, 0))
+        dialog.protocol("WM_DELETE_WINDOW", lambda: None)
+        dialog.update_idletasks()
+        x = self.winfo_rootx() + 80
+        y = self.winfo_rooty() + 80
+        dialog.geometry(f"+{x}+{y}")
+        self._build_progress_dialog = dialog
+
+    def _close_background_build_dialog(self) -> None:
+        dialog = self._build_progress_dialog
+        self._build_progress_dialog = None
+        if dialog is not None and dialog.winfo_exists():
+            dialog.destroy()
+
+    def _run_case_build_async(
+        self,
+        *,
+        action_label: str,
+        progress_message: str,
+        worker: Callable[[], object],
+        on_success: Callable[[object], None],
+    ) -> None:
+        if self._case_build_in_progress:
+            self.status_var.set("A corpus build is already running. Please wait for it to finish.")
+            return
+        self._case_build_in_progress = True
+        self._set_case_build_controls_enabled(False)
+        self.status_var.set(progress_message)
+        self._show_background_build_dialog(action_label, progress_message)
+
+        def _finish_success(result: object) -> None:
+            self._case_build_in_progress = False
+            self._close_background_build_dialog()
+            self._set_case_build_controls_enabled(True)
+            try:
+                on_success(result)
+            except Exception as exc:  # pragma: no cover - UI callback safety
+                messagebox.showerror(action_label, f"{exc.__class__.__name__}: {exc}", parent=self)
+                self.status_var.set(f"{action_label} completed, but follow-up handling failed.")
+
+        def _finish_failure(error_text: str) -> None:
+            self._case_build_in_progress = False
+            self._close_background_build_dialog()
+            self._set_case_build_controls_enabled(True)
+            messagebox.showerror(action_label, error_text, parent=self)
+            self.status_var.set(f"{action_label} failed.")
+
+        start_background_task(self.after, worker, _finish_success, _finish_failure)
+
     def create_new_case(self) -> None:
         plan = self._show_corpus_build_wizard(
             title_text="Create New Case Corpus",
@@ -536,26 +979,40 @@ class MaineFamilyLawLauncher(tk.Tk):
         )
         if plan is None:
             return
-        try:
-            result = build_new_case_from_sources(
+        if not self._confirm_local_inventory_consent():
+            self.status_var.set("Local inventory was cancelled. No selected source files were read.")
+            return
+
+        def _worker() -> object:
+            return build_new_case_from_sources(
                 repo_root=self.repo_root,
                 source_roots=plan.source_roots,
                 output_root=plan.output_root,
                 case_name=plan.case_name,
             )
-        except Exception as exc:
-            messagebox.showerror("Create New Case Corpus", str(exc), parent=self)
-            self.status_var.set("Create New Case Corpus failed.")
-            return
-        append_case_ingest_history(
-            result.case_root,
-            mode="create_new_case",
-            case_name=plan.case_name,
-            source_roots_added=plan.source_roots,
-            cumulative_source_roots=read_case_source_roots(result.case_root),
-            notes="Initial case build from user-selected source folders and files.",
+
+        def _on_success(result: object) -> None:
+            build_result = result
+            append_case_ingest_history(
+                build_result.case_root,
+                mode="create_new_case",
+                case_name=plan.case_name,
+                source_roots_added=plan.source_roots,
+                cumulative_source_roots=read_case_source_roots(build_result.case_root),
+                notes="Initial case build from user-selected source folders and files.",
+            )
+            self._set_case_root(
+                build_result.case_root,
+                f"Built case corpus at {build_result.case_root} from {len(plan.source_roots)} source path(s).",
+            )
+            self._offer_local_ocr_choice(build_result.case_root)
+
+        self._run_case_build_async(
+            action_label="Create New Case Corpus",
+            progress_message="Building the new case corpus in the background. The launcher will stay responsive.",
+            worker=_worker,
+            on_success=_on_success,
         )
-        self._set_case_root(result.case_root, f"Built case corpus at {result.case_root} from {len(plan.source_roots)} source path(s).")
 
     def open_existing_case(self) -> None:
         selected = filedialog.askdirectory(title="Open Existing Case Corpus")
@@ -583,47 +1040,76 @@ class MaineFamilyLawLauncher(tk.Tk):
         )
         if plan is None:
             return
-        try:
-            result = import_case_from_sources(
+        if not self._confirm_local_inventory_consent():
+            self.status_var.set("Local inventory was cancelled. No selected source files were read.")
+            return
+
+        def _worker() -> object:
+            return import_case_from_sources(
                 repo_root=self.repo_root,
                 existing_case_root=case_root,
                 source_roots=plan.source_roots,
                 output_root=plan.output_root,
                 case_name=plan.case_name,
             )
-        except Exception as exc:
-            messagebox.showerror("Reopen Intake / Add More Evidence", str(exc), parent=self)
-            self.status_var.set("Reopen Intake / Add More Evidence failed.")
-            return
-        cumulative_sources = read_case_source_roots(result.case_root)
-        inherit_case_ingest_history(
-            result.case_root,
-            existing_case_root=case_root,
-            mode="add_more_evidence",
-            case_name=plan.case_name,
-            source_roots_added=plan.source_roots,
-            cumulative_source_roots=cumulative_sources,
-            notes="Expanded case build that keeps prior source roots and adds newly selected evidence.",
-        )
-        self._set_case_root(
-            result.case_root,
-            (
-                f"Built expanded case corpus at {result.case_root} from {len(plan.source_roots)} new source path(s). "
-                f"The new case now remembers {len(cumulative_sources)} cumulative source root(s)."
-            ),
+
+        def _on_success(result: object) -> None:
+            build_result = result
+            cumulative_sources = read_case_source_roots(build_result.case_root)
+            inherit_case_ingest_history(
+                build_result.case_root,
+                existing_case_root=case_root,
+                mode="add_more_evidence",
+                case_name=plan.case_name,
+                source_roots_added=plan.source_roots,
+                cumulative_source_roots=cumulative_sources,
+                notes="Expanded case build that keeps prior source roots and adds newly selected evidence.",
+            )
+            self._set_case_root(
+                build_result.case_root,
+                (
+                    f"Built expanded case corpus at {build_result.case_root} from {len(plan.source_roots)} new source path(s). "
+                    f"The new case now remembers {len(cumulative_sources)} cumulative source root(s)."
+                ),
+            )
+            self._offer_local_ocr_choice(build_result.case_root)
+
+        self._run_case_build_async(
+            action_label="Reopen Intake / Add More Evidence",
+            progress_message="Adding the new evidence in the background. The launcher will stay responsive.",
+            worker=_worker,
+            on_success=_on_success,
         )
 
     def build_sample_case(self) -> None:
-        result = create_sample_case_build(self.repo_root)
-        append_case_ingest_history(
-            result.case_root,
-            mode="sample_case",
-            case_name="Example Family Matter",
-            source_roots_added=read_case_source_roots(result.case_root),
-            cumulative_source_roots=read_case_source_roots(result.case_root),
-            notes="Neutral sample case for orientation and testing.",
+        def _worker() -> object:
+            return create_sample_case_build(
+                self.repo_root,
+                output_root=default_workspace_root() / "sample_cases",
+                case_name="Example Family Matter",
+            )
+
+        def _on_success(result: object) -> None:
+            build_result = result
+            append_case_ingest_history(
+                build_result.case_root,
+                mode="sample_case",
+                case_name="Example Family Matter",
+                source_roots_added=read_case_source_roots(build_result.case_root),
+                cumulative_source_roots=read_case_source_roots(build_result.case_root),
+                notes="Neutral sample case for orientation and testing.",
+            )
+            self._set_case_root(
+                build_result.case_root,
+                "Built a neutral sample case corpus and refreshed its portal, indexes, and packages.",
+            )
+
+        self._run_case_build_async(
+            action_label="Build Neutral Sample Corpus",
+            progress_message="Building the neutral sample corpus in the background. The launcher will stay responsive.",
+            worker=_worker,
+            on_success=_on_success,
         )
-        self._set_case_root(result.case_root, "Built a neutral sample case corpus and refreshed its portal, indexes, and packages.")
 
     def _current_case_root(self) -> Path | None:
         value = self.case_root_var.get().strip()
@@ -640,8 +1126,101 @@ class MaineFamilyLawLauncher(tk.Tk):
         if not path.exists():
             self.status_var.set(f"{description} is not available yet at {path}.")
             return
-        os.startfile(str(path))
+        open_path_or_url(path)
         self.status_var.set(f"Opened {description}.")
+
+    def open_local_ai_chat(self) -> None:
+        try:
+            service = ensure_local_service(self.runtime)
+        except Exception as exc:
+            messagebox.showerror(
+                "Open Local AI Chat",
+                (
+                    "The local chat service could not start.\n\n"
+                    f"{exc.__class__.__name__}: {exc}\n\n"
+                    "Use Repair / Troubleshoot if this repeats, then review the local runtime logs."
+                ),
+                parent=self,
+            )
+            self.status_var.set("Local AI chat start failed.")
+            return
+        open_path_or_url(service.url)
+        active = self._current_case_root()
+        if active is not None and active.exists():
+            self.status_var.set(
+                f"Opened Local AI Chat at {service.url} using the active corpus {active.name}."
+            )
+        else:
+            self.status_var.set(
+                f"Opened Local AI Chat at {service.url}. No active corpus is selected yet, so sample and general local review tools remain available."
+            )
+
+    def stop_local_ai_chat(self) -> None:
+        stopped = stop_local_service(self.runtime)
+        if stopped:
+            self.status_var.set("Stopped the local AI chat service.")
+        else:
+            self.status_var.set("No running local AI chat service was found for this install.")
+
+    def show_about_help(self) -> None:
+        docs_root = self.repo_root / "docs"
+        nontechnical_readme = docs_root / "README_FOR_NONTECHNICAL_USERS.html"
+        links = local_about_links(self.runtime)
+        dialog = tk.Toplevel(self)
+        dialog.title("About / Help")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        frame = ttk.Frame(dialog, padding=18)
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text=f"{APP_DISPLAY_NAME} v{VERSION}", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        ttk.Label(
+            frame,
+            text=(
+                "Not legal advice. Review required.\n"
+                "This workbench stays local-first, keeps original source records read-only, and is not affiliated with the Maine Judicial Branch, any Maine court, or any government body."
+            ),
+            wraplength=560,
+            justify="left",
+        ).pack(anchor="w", pady=(8, 10))
+        ttk.Label(
+            frame,
+            text=(
+                "Built for Maine families. Open-sourced so every state can build its own verified, source-grounded edition.\n\n"
+                "Forks for other states must replace and validate statutes, rules, forms, case law, citation standards, ontology, freshness checks, evaluation data, and human-review policies."
+            ),
+            wraplength=560,
+            justify="left",
+        ).pack(anchor="w", pady=(0, 10))
+        ttk.Label(
+            frame,
+            text="\n".join(
+                [
+                    f"Runtime mode: {self.runtime.mode}",
+                    f"Bundle root: {self.runtime.bundle_root}",
+                    f"Writable data root: {self.runtime.writable_root}",
+                    f"Case library: {self.runtime.case_library_path}",
+                    f"Logs: {self.runtime.logs_root}",
+                    f"Source code: {GITHUB_REPOSITORY_URL}",
+                ]
+            ),
+            wraplength=560,
+            justify="left",
+            foreground="#5f6b74",
+        ).pack(anchor="w", pady=(0, 12))
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill="x")
+        ttk.Button(buttons, text="Open source code", command=lambda: open_path_or_url(GITHUB_REPOSITORY_URL)).grid(row=0, column=0, padx=(0, 8), pady=(0, 8), sticky="ew")
+        ttk.Button(buttons, text="Fork for your state", command=lambda: open_path_or_url(links["fork_guide"])).grid(row=0, column=1, padx=(0, 8), pady=(0, 8), sticky="ew")
+        ttk.Button(buttons, text="Privacy policy", command=lambda: open_path_or_url(links["privacy_policy"])).grid(row=0, column=2, pady=(0, 8), sticky="ew")
+        ttk.Button(buttons, text="Nontechnical guide", command=lambda: open_path_or_url(nontechnical_readme)).grid(row=1, column=0, padx=(0, 8), sticky="ew")
+        ttk.Button(buttons, text="Troubleshooting", command=lambda: open_path_or_url(docs_root / "TROUBLESHOOTING.html")).grid(row=1, column=1, padx=(0, 8), sticky="ew")
+        ttk.Button(buttons, text="Close", command=dialog.destroy).grid(row=1, column=2, sticky="e")
+        for idx in range(3):
+            buttons.columnconfigure(idx, weight=1)
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        self.wait_window(dialog)
+        self.status_var.set("Opened About / Help with source, privacy, and state-fork guidance.")
 
     def open_search_indexes(self) -> None:
         case_root = self._require_case_root()
@@ -722,13 +1301,21 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.status_var.set(f"USB export created at {export['export_root']}")
 
     def repair_repo(self) -> None:
-        bootstrap_repository(self.repo_root)
+        if self.runtime.allows_repo_bootstrap_writes:
+            bootstrap_repository(self.repo_root)
+            self._refresh_case_library()
+            self.status_var.set("Repository launchers, docs, and sample assets were refreshed.")
+            return
+        self.runtime.writable_root.mkdir(parents=True, exist_ok=True)
+        self.runtime.logs_root.mkdir(parents=True, exist_ok=True)
         self._refresh_case_library()
-        self.status_var.set("Repository launchers, docs, and sample assets were refreshed.")
+        self.status_var.set(
+            "Store runtime writable folders and corpus library were refreshed. Installed app files were left untouched."
+        )
 
 
-def main() -> int:
-    app = MaineFamilyLawLauncher()
+def main(runtime_context: RuntimeContext | None = None) -> int:
+    app = MaineFamilyLawLauncher(runtime_context=runtime_context)
     app.mainloop()
     return 0
 

@@ -1,6 +1,6 @@
 {
   "blockers": [],
-  "generated_at": "2026-06-14T22:21:26.670878+00:00",
+  "generated_at": "2026-07-19T00:54:32.937070+00:00",
   "no_filing_ready_bypass": true,
   "readiness": "legal_red_team_passed",
   "required_categories": [
@@ -396,7 +396,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-06-14T22:21:26.670787+00:00",
+              "requested_at": "2026-07-19T00:54:32.936978+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -419,8 +419,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-06-14T22:21:26.670798+00:00",
-            "immutable_report_hash": "4009c503378954ae698207b3780a4778a752be58bf48ad9735c1f1c373925a68",
+            "generated_at": "2026-07-19T00:54:32.936990+00:00",
+            "immutable_report_hash": "e9973e484bf84fa59e4ed30717a96e8eba524de5612ac97fe6d97cd378e68db6",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,
@@ -454,7 +454,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-06-14T22:21:26.670787+00:00",
+              "requested_at": "2026-07-19T00:54:32.936978+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -477,8 +477,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-06-14T22:21:26.670798+00:00",
-            "immutable_report_hash": "4009c503378954ae698207b3780a4778a752be58bf48ad9735c1f1c373925a68",
+            "generated_at": "2026-07-19T00:54:32.936990+00:00",
+            "immutable_report_hash": "e9973e484bf84fa59e4ed30717a96e8eba524de5612ac97fe6d97cd378e68db6",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,

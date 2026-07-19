@@ -18,13 +18,15 @@ from typing import Any, Iterable, Mapping, Sequence
 from pypdf import PdfReader, PdfWriter
 
 from .legal_matter_classifier import classify_legal_matter
+from .local_corpus_index import rebuild_local_content_index, search_local_content_index
 from .privacy_classifier import classify_privacy
 from .question_bank import generate_builtin_question_bank, write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
 from .case_workspace import write_case_source_roots
+from .version import VERSION
 
 
-REPO_VERSION = "2.07.0"
+REPO_VERSION = VERSION
 REPO_PROOF_JSON = "BASE_MAINE_FAMILY_LAW_LLM_UPGRADE_PROOF.json"
 CASE_PROOF_JSON = "CASE_BUILD_PROOF.json"
 ROOT_LAUNCHERS = (
@@ -550,8 +552,9 @@ def append_changelog_entry(repo_root: Path) -> Path:
     return changelog_path
 
 
-def create_example_case_template(repo_root: Path) -> Path:
-    source_root = repo_root / "dist" / "example_case_template" / "sample_source_corpus"
+def create_example_case_template(repo_root: Path, *, template_root: Path | None = None) -> Path:
+    base_root = template_root or (repo_root / "dist" / "example_case_template")
+    source_root = base_root / "sample_source_corpus"
     source_root.mkdir(parents=True, exist_ok=True)
     write_text(
         source_root / "2026-02-11_shared_parental_rights_order.txt",
@@ -820,10 +823,29 @@ def _start_here_body_html() -> str:
     )
 
 
+def _windows_launcher_vbs() -> str:
+    """Return a quote-safe Windows Script Host launcher."""
+
+    return (
+        'Option Explicit\n'
+        '\n'
+        'Dim shell, fso, root, launcher, comspec, command\n'
+        'Set shell = CreateObject("WScript.Shell")\n'
+        'Set fso = CreateObject("Scripting.FileSystemObject")\n'
+        '\n'
+        'root = fso.GetParentFolderName(WScript.ScriptFullName)\n'
+        'launcher = fso.BuildPath(root, "START_MAINE_FAMILY_LAW_LLM.cmd")\n'
+        'comspec = shell.ExpandEnvironmentStrings("%ComSpec%")\n'
+        'command = Chr(34) & comspec & Chr(34) & " /d /s /c " & _\n'
+        '    Chr(34) & Chr(34) & launcher & Chr(34) & Chr(34)\n'
+        '\n'
+        'shell.Run command, 1, False\n'
+    )
+
+
 def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     question_bank_path = write_question_bank(repo_root / "sample_question_bank" / "generic_question_bank.jsonl")
     example_source_root = create_example_case_template(repo_root)
-    append_changelog_entry(repo_root)
     docs = {
         "README_FOR_NONTECHNICAL_USERS.html": _nontechnical_readme_html(),
         "HOW_TO_ADD_YOUR_CORPUS.html": _corpus_ingest_guide_html(),
@@ -852,24 +874,12 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
         repo_root / "docs" / "DEVELOPER_GUIDE.md",
         "The universal corpus builder uses local hashing, classifiers, question coverage, role packages, and proof reports. Outputs stay under the chosen case root.",
     )
-    readme_path = repo_root / "README.md"
-    readme_text = readme_path.read_text(encoding="utf-8")
-    readme_appendix = (
-        "\n\n## Universal full-case corpus builder\n\n"
-        "This repository now includes a reusable local-first corpus builder for private forensic masters, external legal-matter releases, and role-specific review packages.\n"
-    )
-    if "## Universal full-case corpus builder" not in readme_text:
-        write_text(readme_path, readme_text + readme_appendix)
     start_cmd = (
         "@echo off\nsetlocal\ncd /d %~dp0\n"
         "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" %*\n"
     )
     start_bat = start_cmd
-    start_vbs = (
-        'Set shell = CreateObject("WScript.Shell")\n'
-        'root = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)\n'
-        'shell.Run "cmd /c """" & root & "\\START_MAINE_FAMILY_LAW_LLM.cmd""""", 1, False\n'
-    )
+    start_vbs = _windows_launcher_vbs()
     readme_text = _root_readme_markdown()
     start_here_body = _start_here_body_html()
     verify_cmd = (
@@ -1081,7 +1091,9 @@ def build_case_corpus(
     output_root: Path,
     case_name: str,
 ) -> CaseBuildResult:
-    bootstrap = bootstrap_repository(repo_root)
+    question_bank_path = repo_root / "sample_question_bank" / "generic_question_bank.jsonl"
+    if not question_bank_path.exists():
+        question_bank_path = write_question_bank(output_root / "_runtime_support" / "generic_question_bank.jsonl")
     case_short = slugify(case_name)[:12].upper()
     case_root = output_root / slugify(case_name)
     case_root.mkdir(parents=True, exist_ok=True)
@@ -1202,6 +1214,7 @@ def build_case_corpus(
     write_jsonl(index_root / "search_index.jsonl", external_rows)
     write_json(index_root / "search_index.json", external_rows)
     write_sqlite_index(index_root / "search_index.sqlite", external_rows)
+    local_index_proof = rebuild_local_content_index(case_root)
 
     write_jsonl(private_root / "private_forensic_master.jsonl", private_rows)
     write_jsonl(external_root / "external_legal_matter_release.jsonl", external_rows)
@@ -1262,7 +1275,7 @@ def build_case_corpus(
     write_json(case_root / "13_DUPLICATES_VERSION_HISTORY" / "version_groups.json", [])
     write_json(case_root / "13_DUPLICATES_VERSION_HISTORY" / "source_to_derivative_graph.json", {row["source_path"]: row["derivative_hash"] for row in records})
 
-    question_coverage_counts = build_question_coverage(case_root, records, bootstrap["question_bank_path"])
+    question_coverage_counts = build_question_coverage(case_root, records, question_bank_path)
 
     proof = {
         "result": "PASS",
@@ -1301,6 +1314,7 @@ def build_case_corpus(
         "coverage_restricted": question_coverage_counts["restricted"],
         "cloud_calls_made": CLOUD_CALLS_MADE,
         "source_mutation_pass": True,
+        "local_content_index": local_index_proof,
         "privacy_scan_pass": True,
         "hash_verification_pass": True,
         "tests_run": [],
@@ -1342,10 +1356,13 @@ def build_case_corpus(
     proof["role_packages_built"] = [row["path"] for row in role_package_result["role_packages"]]
     write_json(proof_json_path, proof)
 
-    return CaseBuildResult(case_root=case_root, proof_json_path=proof_json_path, question_bank_path=bootstrap["question_bank_path"])
+    return CaseBuildResult(case_root=case_root, proof_json_path=proof_json_path, question_bank_path=question_bank_path)
 
 
 def load_case_search_records(case_root: Path) -> list[dict[str, Any]]:
+    private_records_path = case_root / "04_INDEXES" / "private_search_index.json"
+    if private_records_path.exists():
+        return json.loads(private_records_path.read_text(encoding="utf-8"))
     records_path = case_root / "04_INDEXES" / "search_index.json"
     if records_path.exists():
         return json.loads(records_path.read_text(encoding="utf-8"))
@@ -1356,6 +1373,43 @@ def load_case_search_records(case_root: Path) -> list[dict[str, Any]]:
 
 
 def answer_case_question(case_root: Path, question: str, role: str = "court") -> dict[str, Any]:
+    indexed_matches = search_local_content_index(case_root, question)
+    if indexed_matches:
+        evidence_ids = [str(row["evidence_id"]) for row in indexed_matches]
+        return {
+            "direct_answer": f"The corpus shows source-backed records relevant to: {question}.",
+            "evidence_relied_on": [str(row.get("snippet") or "") for row in indexed_matches],
+            "source_type": ", ".join(sorted({str(row.get("source_type") or "") for row in indexed_matches})),
+            "timeline_anchors": [],
+            "contradictions_gaps": ["Review the original source and full context before drawing conclusions."],
+            "confidence": "medium",
+            "what_this_does_not_prove": "A text match does not establish a disputed fact or replace official records.",
+            "recommended_official_verification": ["Open the cited original source and verify the official record where applicable."],
+            "evidence_ids_hashes_packet_paths": [
+                {"evidence_id": row["evidence_id"], "source_hash": "", "packet_path": row.get("source_locator", "")}
+                for row in indexed_matches
+            ],
+            "citations": [
+                {
+                    "source_id": row["evidence_id"],
+                    "title": row.get("title") or row["evidence_id"],
+                    "snippet": row.get("snippet") or "",
+                    "metadata": {
+                        "id": row["evidence_id"],
+                        "title": row.get("title") or row["evidence_id"],
+                        "source_type": row.get("source_type", ""),
+                        "source_locator": row.get("source_locator", ""),
+                        "parent_evidence_id": row.get("parent_evidence_id", ""),
+                        "parser_status": row.get("parser_status", ""),
+                        "ocr_status": row.get("ocr_status", ""),
+                        "issue_lanes": row.get("issue_lanes", ""),
+                        "exact_content_match": bool(row.get("exact_content_match")),
+                    },
+                }
+                for row in indexed_matches
+            ],
+            "not_legal_advice": True,
+        }
     records = load_case_search_records(case_root)
     lowered = question.lower()
     stopwords = {
@@ -1394,9 +1448,21 @@ def answer_case_question(case_root: Path, question: str, role: str = "court") ->
                 ", ".join(row.get("issue_lanes", [])),
             ]
         ).lower()
-        score = sum(1 for token in meaningful_tokens if token in haystack)
-        if score >= 1 and meaningful_tokens:
-            scored.append((score, row))
+        unique_tokens = set(meaningful_tokens)
+        matched_tokens = {
+            token for token in unique_tokens if token in haystack
+        }
+        required_matches = 1 if len(unique_tokens) == 1 else 2
+        coverage = (
+            len(matched_tokens) / len(unique_tokens)
+            if unique_tokens
+            else 0.0
+        )
+        if (
+            len(matched_tokens) >= required_matches
+            and coverage >= 0.50
+        ):
+            scored.append((len(matched_tokens), row))
     scored.sort(key=lambda item: item[0], reverse=True)
     if not scored:
         return {
@@ -1575,17 +1641,23 @@ def write_repo_upgrade_proof(
     return json_path
 
 
-def create_sample_case_build(repo_root: Path) -> CaseBuildResult:
-    example_source_root = create_example_case_template(repo_root)
-    output_root = repo_root / "dist" / "example_case_template" / "sample_case_build"
-    if output_root.exists():
-        shutil.rmtree(output_root)
-    output_root.mkdir(parents=True, exist_ok=True)
+def create_sample_case_build(
+    repo_root: Path,
+    *,
+    output_root: Path | None = None,
+    case_name: str = "Example Family Matter",
+) -> CaseBuildResult:
+    sample_output_root = output_root or (repo_root / "dist" / "example_case_template" / "sample_case_build")
+    template_root = sample_output_root.parent / "_example_case_template" if output_root else None
+    example_source_root = create_example_case_template(repo_root, template_root=template_root)
+    if sample_output_root.exists():
+        shutil.rmtree(sample_output_root)
+    sample_output_root.mkdir(parents=True, exist_ok=True)
     return build_case_corpus(
         repo_root=repo_root,
         source_roots=[example_source_root],
-        output_root=output_root,
-        case_name="Example Family Matter",
+        output_root=sample_output_root,
+        case_name=case_name,
     )
 
 

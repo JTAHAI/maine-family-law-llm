@@ -59,5 +59,12 @@
     "SUPPORT.md"
   ],
   "single_text_file_allowed": "PASS_CHANGES.txt",
-  "version": "post-ga-public-release-3"
+  "version": "post-ga-public-release-4-store-text-assets",
+  "allowed_text_files": [
+    "PASS_CHANGES.txt",
+    "store/listing/features.txt",
+    "store/listing/search-terms.txt",
+    "store/listing/short-description.txt",
+    "store/pyinstaller/requirements-store-build.txt"
+  ]
 }

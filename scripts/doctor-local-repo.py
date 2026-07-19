@@ -60,6 +60,14 @@ FORBIDDEN_SUFFIXES = {
     ".safetensors",
 }
 
+ALLOWED_TEXT_FILES = {
+    "PASS_CHANGES.txt",
+    "store/listing/features.txt",
+    "store/listing/search-terms.txt",
+    "store/listing/short-description.txt",
+    "store/pyinstaller/requirements-store-build.txt",
+}
+
 VENV_DIR_NAMES = {"venv", ".venv", "ME_FM_LLM_venv", "env"}
 
 TESTS_ALLOWED_TOP_LEVEL_FILES = {"conftest.py", "__init__.py"}
@@ -95,9 +103,17 @@ TESTS_FORBIDDEN_TOP_LEVEL_NAMES = {
     "scripts",
 }
 
+PUBLIC_FOCAF_RESOURCE_PREFIX = ("src", "maine_family_law_llm", "resources", "focaf")
+
 
 def _is_under_ignored_path(rel: Path) -> bool:
     return any(part == ".git" for part in rel.parts)
+
+
+def _is_bundled_public_focaf_pdf(rel: Path) -> bool:
+    """Permit only the reviewed public PDF resources shipped with the app."""
+
+    return rel.parts[:4] == PUBLIC_FOCAF_RESOURCE_PREFIX and rel.suffix.lower() == ".pdf"
 
 
 def _remove_transient_cache_artifacts(repo_root: Path) -> None:
@@ -176,13 +192,13 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         ):
             forbidden.append(rel.as_posix())
             continue
-        if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
+        if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES and not _is_bundled_public_focaf_pdf(rel):
             forbidden.append(rel.as_posix())
             continue
         if (
             path.is_file()
             and path.suffix.lower() == ".txt"
-            and rel.as_posix() != "PASS_CHANGES.txt"
+            and rel.as_posix() not in ALLOWED_TEXT_FILES
         ):
             forbidden.append(rel.as_posix())
 

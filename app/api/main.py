@@ -2,10 +2,11 @@ from fastapi import Depends, FastAPI
 
 from app.api.routes.health import router as health_router
 from app.api.security import AuditHeaderMiddleware, require_api_role
+from maine_family_law_llm import __version__
 
 app = FastAPI(
     title="Maine Family Law LLM",
-    version="1.16.0-pass43-pass45-security-compliance-sre",
+    version=__version__,
     description=(
         "Standalone Maine family-law legal AI API. All protected endpoints require role/tenant scope, "
         "emit audit headers, and return review-required outputs unless filing-ready gates pass."

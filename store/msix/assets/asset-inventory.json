@@ -1,0 +1,62 @@
+[
+  {
+    "filename": "Square44x44Logo.png",
+    "dimensions": {
+      "width": 44,
+      "height": 44
+    },
+    "purpose": "Start menu small tile and taskbar identity",
+    "source_brand_asset": "focaf-family-law-llm-mark-1024.png",
+    "distribution": "msix"
+  },
+  {
+    "filename": "StoreLogo.png",
+    "dimensions": {
+      "width": 50,
+      "height": 50
+    },
+    "purpose": "Microsoft Store small logo",
+    "source_brand_asset": "focaf-family-law-llm-mark-1024.png",
+    "distribution": "partner-center"
+  },
+  {
+    "filename": "Square150x150Logo.png",
+    "dimensions": {
+      "width": 150,
+      "height": 150
+    },
+    "purpose": "Start menu medium tile",
+    "source_brand_asset": "focaf-family-law-llm-mark-1024.png",
+    "distribution": "msix"
+  },
+  {
+    "filename": "Wide310x150Logo.png",
+    "dimensions": {
+      "width": 310,
+      "height": 150
+    },
+    "purpose": "Wide tile",
+    "source_brand_asset": "focaf-family-law-llm-horizontal.png",
+    "distribution": "msix"
+  },
+  {
+    "filename": "Square310x310Logo.png",
+    "dimensions": {
+      "width": 310,
+      "height": 310
+    },
+    "purpose": "Large square tile",
+    "source_brand_asset": "focaf-family-law-llm-mark-1024.png",
+    "distribution": "msix"
+  },
+  {
+    "filename": "SplashScreen.png",
+    "dimensions": {
+      "width": 620,
+      "height": 300
+    },
+    "purpose": "Packaged splash screen",
+    "source_brand_asset": "focaf-family-law-llm-horizontal.png",
+    "distribution": "msix"
+  }
+]

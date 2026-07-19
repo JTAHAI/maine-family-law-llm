@@ -10,6 +10,9 @@ from typing import Any
 from legal.release.release_manifest import ReleaseManifest
 
 
+PUBLIC_FOCAF_RESOURCE_PREFIX = "src/maine_family_law_llm/resources/focaf/"
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -111,12 +114,13 @@ class PublicRepoReadinessAuditor:
 
         txt_files = sorted(path for path in rel_files if path.lower().endswith(".txt"))
         allowed_txt = self.policy.get("single_text_file_allowed", "PASS_CHANGES.txt")
-        only_one_txt_file = txt_files == [allowed_txt]
+        allowed_text_files = sorted(self.policy.get("allowed_text_files", [allowed_txt]))
+        only_one_txt_file = txt_files == allowed_text_files
         if not only_one_txt_file:
             findings.append(
                 PublicReleaseFinding(
                     path=";".join(txt_files) or "<none>",
-                    reason=f"public source tree must have exactly one .txt file: {allowed_txt}",
+                    reason=f"public source tree text files must exactly match: {', '.join(allowed_text_files)}",
                 )
             )
 
@@ -136,7 +140,9 @@ class PublicRepoReadinessAuditor:
             path = Path(rel)
             if any(part in blocked_paths for part in path.parts):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private path present"))
-            if path.suffix.lower() in blocked_suffixes:
+            if path.suffix.lower() in blocked_suffixes and not (
+                rel.startswith(PUBLIC_FOCAF_RESOURCE_PREFIX) and path.suffix.lower() == ".pdf"
+            ):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private/binary suffix present"))
 
         text_suffixes = {".py", ".ps1", ".sh", ".md", ".json", ".jsonl", ".yaml", ".yml", ".toml"}

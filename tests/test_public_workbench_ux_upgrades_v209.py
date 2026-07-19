@@ -22,7 +22,13 @@ def test_public_workbench_has_welcome_focus_help_and_context_controls() -> None:
     assert 'id="new-chat-button"' in html
     assert 'id="welcome-overlay"' in html
     assert 'id="help-overlay"' in html
-    assert 'id="context-bar"' in html
+    assert 'id="context-bar"' not in html
+    assert 'class="context-chip"' not in html
+    assert 'id="session-summary"' in html
+    assert 'id="search-mode"' in html
+    assert 'value="maine_law"' in html
+    assert 'value="my_records"' in html
+    assert 'value="both"' in html
     assert 'Copy query link' in html
     assert 'Focus mode' in html
     assert 'Help &amp; tips' in html

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "2.07.0"
+version = "3.1.0"
 description = "Standalone Maine family-law legal-information workbench upgraded into a universal local-first full-case corpus builder with privacy-filtered external releases, role packages, proof reports, and one-click launchers"
 readme = "README.md"
 requires-python = ">=3.11"

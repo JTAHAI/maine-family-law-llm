@@ -79,7 +79,7 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The Windows installer package can copy the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, create shortcuts, install missing prerequisites, and skip the ones already present.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
-- The local browser workbench currently serves the constitutional modern chat UI and should show `UI v2.08 modern constitutional chat workbench` in the footer after a fresh start.
+- The local browser workbench serves the constitutional modern chat UI and should show `v3` in the footer after a fresh start.
 - The default local browser entry point is `http://127.0.0.1:8000/`.
 - The workbench is local-first, source-backed, review-required, and not legal advice.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
@@ -101,12 +101,35 @@ If you are helping a parent, caregiver, GAL, or reviewer who does not want to to
    - The launcher remembers the earlier source folders for that case, so users only need to add the new material.
 6. Use the installed corpus library to switch the active family/client corpus through one install when a lawyer, GAL, caregiver, counselor, or reviewer needs to move between matters.
 
+## Microsoft Store and MSIX status
+
+- The repository now includes a Microsoft Store packaging branch for a self-contained x64 MSIX desktop build.
+- The Store/MSIX path packages the same project as the open-source repo, but it does not bundle private matter corpora, authority snapshots, embeddings, OCR caches, logs, uploads, or model weights.
+- The Store runtime writes local state under `%LOCALAPPDATA%\MaineFamilyLawLLM` and keeps matter/corpus builds in a user-selected external folder.
+- The Store listing and in-app help both point back to the public repository and the state-fork guide.
+- Build and local installation instructions live in:
+  - [`docs/MICROSOFT_STORE_RELEASE.md`](docs/MICROSOFT_STORE_RELEASE.md)
+  - [`docs/MSIX_ARCHITECTURE.md`](docs/MSIX_ARCHITECTURE.md)
+  - [`docs/MSIX_PRIVACY_BOUNDARIES.md`](docs/MSIX_PRIVACY_BOUNDARIES.md)
+  - [`docs/STORE_CERTIFICATION_CHECKLIST.md`](docs/STORE_CERTIFICATION_CHECKLIST.md)
+  - [`docs/PRIVACY_POLICY_MICROSOFT_STORE.html`](docs/PRIVACY_POLICY_MICROSOFT_STORE.html)
+
+## Build one for your state
+
+This Maine edition is intentionally open source. Parents, advocates, legal-aid organizations, attorneys, researchers, and technologists in other states are invited to fork the public repository and build verified state-specific editions.
+
+Do not reuse Maine authority as authority for another jurisdiction. A safe state edition must replace and validate that state's official statutes, rules, forms, case law, citation standards, freshness controls, evaluation data, privacy rules, unauthorized-practice boundaries, and human-review policies.
+
+- Public repository: [https://github.com/JTAHAI/maine-family-law-llm](https://github.com/JTAHAI/maine-family-law-llm)
+- State-fork guide: [`docs/FORK_FOR_YOUR_STATE.md`](docs/FORK_FOR_YOUR_STATE.md)
+
 The launcher now includes built-in guide buttons for:
 
 - Gmail and Google Workspace
 - Outlook desktop, Outlook on the web, Hotmail, and Outlook.com
 - iPhone, Android, screenshots, photos, and attachments
 - import formats, privacy, hashing, and chain-of-custody basics
+- optional FOCAF family resources and download-library links that open separately in the default browser without sending matter details or search terms
 
 Primary nontechnical docs:
 
@@ -116,6 +139,7 @@ Primary nontechnical docs:
 - [`docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html`](docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html)
 - [`docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html`](docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html)
 - [`docs/SYSTEM_REQUIREMENTS.html`](docs/SYSTEM_REQUIREMENTS.html)
+- [`docs/LOCAL_CORPUS_IMPORT.md`](docs/LOCAL_CORPUS_IMPORT.md)
 
 ## Recommended system requirements
 
@@ -756,4 +780,3 @@ The local chat workbench now includes a missing-information answer style, a revi
 ## Universal full-case corpus builder
 
 This repository now includes a reusable local-first corpus builder for private forensic masters, external legal-matter releases, and role-specific review packages.
-

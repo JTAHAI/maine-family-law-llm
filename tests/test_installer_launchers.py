@@ -4,6 +4,7 @@ import inspect
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from corpus_builder_support import REPO_ROOT, assert_root_launchers_exist
@@ -193,3 +194,75 @@ def test_launcher_source_mentions_workspace_reopen_flow() -> None:
     assert "Add Documents" in launcher_text
     assert "Add Pictures" in launcher_text
     assert "Missing remembered source paths" in launcher_text
+
+
+def test_launcher_case_build_path_uses_background_worker_helper() -> None:
+    from app import launcher
+
+    create_case_source = inspect.getsource(launcher.MaineFamilyLawLauncher.create_new_case)
+    import_case_source = inspect.getsource(launcher.MaineFamilyLawLauncher.import_more_evidence)
+    sample_case_source = inspect.getsource(launcher.MaineFamilyLawLauncher.build_sample_case)
+    helper_source = inspect.getsource(launcher.start_background_task)
+    assert "_run_case_build_async" in create_case_source
+    assert "_run_case_build_async" in import_case_source
+    assert "_run_case_build_async" in sample_case_source
+    assert "threading.Thread" in helper_source
+    assert "after_callback" in helper_source
+
+
+def test_background_case_build_helper_runs_worker_off_main_thread() -> None:
+    from app import launcher
+
+    worker_started = threading.Event()
+    allow_finish = threading.Event()
+    scheduled_callbacks: list[object] = []
+    successes: list[str] = []
+    failures: list[str] = []
+
+    def fake_after(delay: int, callback):
+        scheduled_callbacks.append(callback)
+
+    def worker() -> str:
+        worker_started.set()
+        assert allow_finish.wait(timeout=1)
+        return "build complete"
+
+    thread = launcher.start_background_task(fake_after, worker, successes.append, failures.append)
+    assert worker_started.wait(timeout=1)
+    assert thread.is_alive()
+    assert successes == []
+    assert failures == []
+    allow_finish.set()
+    thread.join(timeout=1)
+    assert not thread.is_alive()
+    assert len(scheduled_callbacks) == 1
+    callback = scheduled_callbacks[0]
+    callback()
+    assert successes == ["build complete"]
+    assert failures == []
+
+
+def test_launcher_startup_keeps_intake_available_without_blocking(monkeypatch) -> None:
+    from app import launcher
+    from app.runtime_support import build_runtime_context
+
+    monkeypatch.setattr(launcher, "bootstrap_repository", lambda repo_root: {"repo_root": str(repo_root)})
+    monkeypatch.setattr(launcher, "prune_missing_case_roots", lambda: None)
+    monkeypatch.setattr(launcher, "active_case_root", lambda: None)
+    monkeypatch.setattr(launcher, "list_registered_case_roots", lambda: [])
+
+    called = {"import_additional_corpus": 0}
+
+    def _should_not_run(*args, **kwargs):
+        called["import_additional_corpus"] += 1
+        raise AssertionError("Import wizard should not run during launcher startup")
+
+    monkeypatch.setattr(launcher, "import_additional_corpus", _should_not_run)
+
+    app = launcher.MaineFamilyLawLauncher(runtime_context=build_runtime_context(mode="source"))
+    try:
+        assert "does not block startup" in app.status_var.get()
+        assert ("Reopen Intake / Add More Evidence", "import_more_evidence") in launcher.ACTION_SPECS
+        assert called["import_additional_corpus"] == 0
+    finally:
+        app.destroy()

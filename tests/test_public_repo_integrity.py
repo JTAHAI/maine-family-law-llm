@@ -70,7 +70,13 @@ def test_only_pass_changes_txt_is_packaged() -> None:
             for part in path.relative_to(ROOT).parts
         )
     )
-    assert txt_files == ["PASS_CHANGES.txt"]
+    assert txt_files == [
+        "PASS_CHANGES.txt",
+        "store/listing/features.txt",
+        "store/listing/search-terms.txt",
+        "store/listing/short-description.txt",
+        "store/pyinstaller/requirements-store-build.txt",
+    ]
 
 
 def test_strict_doctor_marks_repo_safe_to_push() -> None:

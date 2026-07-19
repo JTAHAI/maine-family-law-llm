@@ -119,7 +119,8 @@ class RebootRecoveryAuditor:
         txt_files = sorted(
             path.relative_to(self.repo_root).as_posix()
             for path in self.repo_root.rglob("*.txt")
-            if not any(
+            if not path.relative_to(self.repo_root).as_posix().startswith("store/")
+            and not any(
                 part in ignored_txt_parts or part.endswith(".egg-info")
                 for part in path.relative_to(self.repo_root).parts
             )

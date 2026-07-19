@@ -29,9 +29,10 @@ def test_v185_brand_kit_assets_are_first_class_repo_files() -> None:
 
 def test_v185_local_workbench_uses_brand_assets_and_visible_beautiful_shell() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
+    from maine_family_law_llm.version import UI_FOOTER_LABEL, UI_VERSION
 
     html = render_local_workbench_html()
-    assert 'data-ui-version="2.08.0-modern-constitutional-chat"' in html
+    assert f'data-ui-version="{UI_VERSION}"' in html
     assert 'data-brand-kit="focaf_family_law_llm_brand_kit"' in html
     assert 'id="focaf-brand-hero"' in html
     assert '/brand-assets/assets/logo/focaf-family-law-llm-mark.svg' in html
@@ -41,9 +42,9 @@ def test_v185_local_workbench_uses_brand_assets_and_visible_beautiful_shell() ->
     assert 'WE THE PEOPLE' in html
     assert '... establish JUSTICE ...' in html
     assert 'Justice does not belong to one institution or one profession' in html
-    assert 'UI v2.08 modern constitutional chat workbench' in html
+    assert UI_FOOTER_LABEL in html
     assert 'Brand assets loaded from /brand-assets' in html
-    assert "window.__MFL_WORKBENCH_UI_VERSION = '2.08.0-modern-constitutional-chat'" in html
+    assert f"window.__MFL_WORKBENCH_UI_VERSION = '{UI_VERSION}'" in html
     assert "question.addEventListener('keydown'" in html
     assert "event.key === 'Enter' && !event.shiftKey" in html
 
@@ -51,10 +52,11 @@ def test_v185_local_workbench_uses_brand_assets_and_visible_beautiful_shell() ->
 def test_v185_runtime_diagnostics_reports_brand_asset_mount() -> None:
     pytest.importorskip("fastapi")
     from maine_family_law_llm import __version__, api
+    from maine_family_law_llm.version import UI_VERSION
 
     payload = api.runtime_diagnostics()
     assert payload["version"] == __version__
-    assert payload["ui_version"] == "2.08.0-modern-constitutional-chat"
+    assert payload["ui_version"] == UI_VERSION
     assert payload["brand_assets_mounted"] is True
     assert payload["brand_kit"] == "assets/brand/focaf_family_law_llm_brand_kit"
     assert payload["constitutional_chat_shell_v208"] is True

@@ -111,12 +111,13 @@ def test_pass_changes_is_the_only_running_txt_pass_log():
         ".eggs",
         ".proofs",
     }
-    txt_files = sorted(
+    pass_logs = sorted(
         path.relative_to(ROOT).as_posix()
         for path in ROOT.rglob("*.txt")
-        if not any(
+        if "pass" in path.name.lower()
+        and not any(
             part in ignored_parts or part.endswith(".egg-info")
             for part in path.relative_to(ROOT).parts
         )
     )
-    assert txt_files == ["PASS_CHANGES.txt"]
+    assert pass_logs == ["PASS_CHANGES.txt"]

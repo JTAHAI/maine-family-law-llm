@@ -30,12 +30,12 @@ def test_public_source_pre_push_gate_passes_source_hygiene_without_claiming_ga()
 
 def test_package_version_metadata_is_consistent_and_current() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    init_py = (ROOT / "src" / "maine_family_law_llm" / "__init__.py").read_text(encoding="utf-8")
+    version_py = (ROOT / "src" / "maine_family_law_llm" / "version.py").read_text(encoding="utf-8")
     release_notes = (ROOT / "docs" / "release-notes.md").read_text(encoding="utf-8")
     pass_changes = (ROOT / "PASS_CHANGES.txt").read_text(encoding="utf-8")
 
     pyproject_version = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, flags=re.M)
-    package_version = re.search(r'__version__\s*=\s*"([^"]+)"', init_py)
+    package_version = re.search(r'VERSION\s*=\s*"([^"]+)"', version_py)
     assert pyproject_version is not None
     assert package_version is not None
     current_version = pyproject_version.group(1)

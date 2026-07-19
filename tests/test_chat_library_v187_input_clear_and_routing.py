@@ -18,10 +18,11 @@ def test_v187_runtime_diagnostics_reports_input_clear_and_routing_flags() -> Non
 
     pytest.importorskip("fastapi")
     from maine_family_law_llm import __version__, api
+    from maine_family_law_llm.version import UI_VERSION
 
     payload = api.runtime_diagnostics()
     assert payload["version"] == __version__
-    assert payload["ui_version"] == "2.08.0-modern-constitutional-chat"
+    assert payload["ui_version"] == UI_VERSION
     assert payload["enter_to_submit"] is True
     assert payload["enter_submit_clears_input"] is True
     assert payload["chat_library_routing_v187"] is True

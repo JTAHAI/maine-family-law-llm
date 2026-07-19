@@ -133,7 +133,11 @@ class EnterpriseAcceptanceAuditor:
             if rel not in rel_files:
                 findings.append(EnterpriseAcceptanceFinding("required-file", "fail", "missing required file", rel))
 
-        txt_files = sorted(rel for rel in rel_files if rel.lower().endswith(".txt"))
+        txt_files = sorted(
+            rel
+            for rel in rel_files
+            if rel.lower().endswith(".txt") and not rel.startswith("store/")
+        )
         allowed_txt = self.policy.get("single_text_file_allowed", "PASS_CHANGES.txt")
         only_one_txt = txt_files == [allowed_txt]
         if not only_one_txt:

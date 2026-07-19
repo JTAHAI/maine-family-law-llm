@@ -1,3 +1,28 @@
+## v3.1.0 - Local printables and explicit private-index consent
+
+- Added 103 bundled public FOCAF family-printable PDFs with 739 pages, hash-checked original bytes, page-level extracted text, and local content search. They are visibly labeled as non-authority family resources and remain separate from Maine authority and private matter records.
+- Added a Printables drawer, local original-PDF open/print actions, chat suggestions, and Ctrl+K resource commands.
+- Added an affirmative local inventory consent dialog, a separate optional OCR decision, an offline network boundary for private parsing, direct-record-search compact results, and visible derived-index review, rebuild, and delete controls.
+- Product version is `3.1.0`; target Microsoft Store MSIX version is `3.1.0.7`.
+
+## v3.0.0 - Microsoft Store release candidate
+
+- Made the local chat the primary workspace with a closed-by-default Evidence & tools drawer.
+- Added the `family_answer_v3` response contract: clear next steps, missing information, child-centered considerations, human-help routing, and separately labeled Maine-law and private-record source lanes.
+- Added a visible Maine law / My records / Both segmented selector, an optional Child Impact Lens, request cancel control, clear-draft control, and confirmed clear-visible-conversation control.
+- Reworked onboarding around what a family needs today while keeping role selection as a secondary setting.
+- Kept the permanent constitutional identity, Ctrl+K command palette, Ctrl+J local Justice Lens, local-only assets, focus restoration, and Windows launcher quoting protections.
+- Store package identity remains `TAHAIWebServices.MaineFamilyLawLLM`; the v3 release-candidate package target is `3.0.0.5`.
+- This remains local-first legal information, not legal advice or a substitute for emergency services, a court, or qualified local professional help.
+
+## v2.09.2 — Microsoft Store local-chat hotfix and compact routing
+
+- Fixed Local AI Chat startup in the windowed Microsoft Store runtime by disabling Uvicorn's terminal-dependent default logging configuration.
+- Repaired Help overlay closing, right-rail overflow, and compact in-chat session context behavior.
+- Added explicit Maine law, My records, and Both search lanes so an active private corpus no longer hijacks general Maine-law questions.
+- Tightened private-corpus token matching to reduce unrelated one-word record matches.
+- Preserved local-only operation, source-grounding requirements, review-required status, and the not-legal-advice boundary.
+
 ## v2.07.0 — Universal full-case corpus builder stabilization
 
 - Added `legal/release/enterprise_release_control_v206.py`, a fail-closed enterprise release control packet that audits Pass 48-51 launch evidence and surfaces the remaining attorney sandbox, limited real-matter pilot, release-candidate, and GA shipment blockers.

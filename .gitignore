@@ -32,6 +32,7 @@ weights/
 
 # Local environment
 .venv/
+.venv-store-build/
 venv/
 env/
 ME_FM_LLM_venv/
@@ -58,3 +59,15 @@ docs/outreach/*sent*.eml
 Thumbs.db
 .vscode/
 .idea/
+
+# Microsoft Store / MSIX local signing and identity
+store/msix/identity.local.json
+store/msix/*.pfx
+store/msix/*.cer
+store/msix/*.pvk
+store/msix/*.snk
+store/msix/dev-cert-password.txt
+dist/store/
+
+# Prevent accidental nested full-repository snapshots
+ME_FM_LLM/

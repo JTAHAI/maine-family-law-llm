@@ -1,0 +1,54 @@
+name: build-msix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-msix:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run targeted tests
+        shell: pwsh
+        run: |
+          python -m pytest -q tests/test_local_workbench_live_ui_v183.py tests/test_appeals_routing_runtime_v184.py tests/test_brand_kit_ui_assets_v185.py tests/test_classic_desktop_ui_v186.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_installer_launchers.py tests/test_store_packaging.py
+
+      - name: Build frozen runtime
+        shell: pwsh
+        run: |
+          ./scripts/build-store-runtime.ps1 -RepoRoot $PWD
+
+      - name: Run frozen runtime smoke
+        shell: pwsh
+        run: |
+          ./scripts/test-store-runtime.ps1 -RepoRoot $PWD
+
+      - name: Build Store-ready MSIX
+        shell: pwsh
+        run: |
+          ./scripts/build-msix.ps1 -RepoRoot $PWD -IdentityConfigPath store/msix/identity.example.json
+
+      - name: Install Store-ready MSIX
+        shell: pwsh
+        run: |
+          ./scripts/install-test-msix.ps1 -RepoRoot $PWD
+
+      - name: Uninstall Store-ready MSIX
+        if: always()
+        shell: pwsh
+        run: |
+          ./scripts/uninstall-test-msix.ps1
+
+      - name: Upload Store artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: maine-family-law-llm-msix
+          path: |
+            dist/store/msix/**
+            dist/store/evidence/**

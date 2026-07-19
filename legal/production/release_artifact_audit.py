@@ -71,6 +71,8 @@ IGNORED_TREE_PARTS = {
     "node_modules",
 }
 
+PUBLIC_FOCAF_RESOURCE_PREFIX = ("src", "maine_family_law_llm", "resources", "focaf")
+
 
 @dataclass(frozen=True)
 class ReleaseArtifactAudit:
@@ -91,7 +93,11 @@ class ReleaseArtifactAudit:
             if path.is_dir() and path.name in PROHIBITED_RELEASE_DIR_NAMES:
                 blockers.append({"path": rel_posix, "reason": "external_artifact_directory_in_repo"})
                 continue
-            if path.is_file() and path.suffix.lower() in PROHIBITED_SUFFIXES:
+            if (
+                path.is_file()
+                and path.suffix.lower() in PROHIBITED_SUFFIXES
+                and not (rel.parts[:4] == PUBLIC_FOCAF_RESOURCE_PREFIX and path.suffix.lower() == ".pdf")
+            ):
                 blockers.append({"path": rel_posix, "reason": "prohibited_release_file_type"})
                 continue
             if (

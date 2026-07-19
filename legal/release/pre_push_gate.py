@@ -97,6 +97,13 @@ def _remove_bytecode_artifacts(project_root: Path) -> None:
             path.unlink()
         except FileNotFoundError:
             pass
+    # Source-preflight is intentionally allowed to remove only known generated
+    # roots. This keeps a prior test/package run from turning a clean source
+    # checkout into a false push blocker.
+    for name in ("dist", "build", ".venv-store-build", "ME_FM_LLM"):
+        path = project_root / name
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def _doctor_check(project_root: Path) -> PrePushCheck:
@@ -179,9 +186,14 @@ def _pyproject_version(project_root: Path) -> str:
 
 
 def _package_init_version(project_root: Path) -> str:
-    text = _read_text(project_root / "src" / "maine_family_law_llm" / "__init__.py")
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
-    return match.group(1) if match else ""
+    package_root = project_root / "src" / "maine_family_law_llm"
+    init_text = _read_text(package_root / "__init__.py")
+    init_match = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
+    if init_match:
+        return init_match.group(1)
+    version_text = _read_text(package_root / "version.py")
+    version_match = re.search(r'VERSION\s*=\s*"([^"]+)"', version_text)
+    return version_match.group(1) if version_match else ""
 
 
 def _version_consistency_check(project_root: Path) -> PrePushCheck:
