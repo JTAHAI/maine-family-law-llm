@@ -8,7 +8,7 @@ from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 ROOT = Path(SPECPATH).resolve().parents[1]
 ICON_PATH = ROOT / "assets" / "brand" / "focaf_family_law_llm_brand_kit" / "assets" / "favicon" / "favicon.ico"
-sys.path[:0] = [str(ROOT), str(ROOT / "src")]
+sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 DEBUG_CONSOLE = os.environ.get("MFL_STORE_DEBUG_CONSOLE", "").strip() == "1"
 
 STORE_DOCS = (
@@ -31,7 +31,7 @@ def collect_flat_files(root: Path, *, destination: str, names: tuple[str, ...]) 
 
 def collect_source_package_files(package_root: Path, *, destination: str) -> list[tuple[str, str]]:
     results: list[tuple[str, str]] = []
-    allowed_suffixes = {".py", ".html", ".css", ".js", ".svg", ".json"}
+    allowed_suffixes = {".py", ".html", ".css", ".js", ".svg", ".json", ".pdf", ".csv"}
     for path in package_root.rglob("*"):
         if not path.is_file() or "__pycache__" in path.parts:
             continue
@@ -55,13 +55,13 @@ datas.append((str(ROOT / "src" / "maine_family_law_llm" / "ui"), "maine_family_l
 for package_name in ("fastapi", "uvicorn", "httpx", "pypdf", "pypdfium2"):
     datas += copy_metadata(package_name)
 
-hiddenimports = ["sqlite3", "_sqlite3"]
-for package_name in ("app", "legal", "fastapi", "starlette", "uvicorn", "httpx", "pydantic", "pypdfium2"):
+hiddenimports = ["sqlite3", "_sqlite3", "mailbox"]
+for package_name in ("app", "legal", "maine_family_law_llm", "fastapi", "starlette", "uvicorn", "httpx", "pydantic", "pypdfium2"):
     hiddenimports += collect_submodules(package_name)
 
 a = Analysis(
     [str(ROOT / "app" / "store_entrypoint.py")],
-    pathex=[str(ROOT), str(ROOT / "src")],
+    pathex=[str(ROOT / "src"), str(ROOT)],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
