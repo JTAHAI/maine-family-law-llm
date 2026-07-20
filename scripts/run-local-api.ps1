@@ -1,6 +1,6 @@
 param(
-  [string]$RepoRoot = "C:\dev\ME_FM_LLM",
-  [string]$DataRoot = "C:\dev\ME_FM_LLM_data",
+  [string]$RepoRoot = "",
+  [string]$DataRoot = "",
   [string]$HostName = "127.0.0.1",
   [int]$Port = 8000,
   [ValidateSet("LocalWorkbench", "Enterprise")]
@@ -10,7 +10,18 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-Set-Location $RepoRoot
+if (-not $RepoRoot) {
+  $RepoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+}
+if (-not $DataRoot) {
+  $DataRoot = if ($env:MAINE_FAMILY_LAW_DATA_ROOT) {
+    $env:MAINE_FAMILY_LAW_DATA_ROOT
+  } else {
+    Join-Path (Split-Path -Parent $RepoRoot) "$(Split-Path -Leaf $RepoRoot)_data"
+  }
+}
+
+Set-Location -LiteralPath $RepoRoot
 $env:MAINE_FAMILY_LAW_DATA_ROOT = $DataRoot
 $sep = [System.IO.Path]::PathSeparator
 $env:PYTHONPATH = "$RepoRoot\src$sep$RepoRoot"

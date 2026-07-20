@@ -18,7 +18,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from pypdf import PdfReader, PdfWriter
 
 from .legal_matter_classifier import classify_legal_matter
-from .local_corpus_index import rebuild_local_content_index, search_local_content_index
+from .local_corpus_index import rebuild_local_content_index, search_local_content_index, summarize_local_search
 from .privacy_classifier import classify_privacy
 from .question_bank import generate_builtin_question_bank, write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
@@ -876,7 +876,7 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     )
     start_cmd = (
         "@echo off\nsetlocal\ncd /d %~dp0\n"
-        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" %*\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0.\" %*\n"
     )
     start_bat = start_cmd
     start_vbs = _windows_launcher_vbs()
@@ -884,11 +884,11 @@ def bootstrap_repository(repo_root: Path) -> dict[str, Path]:
     start_here_body = _start_here_body_html()
     verify_cmd = (
         "@echo off\nsetlocal\ncd /d %~dp0\n"
-        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" -VerifyOnly\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0.\" -VerifyOnly\n"
     )
     repair_cmd = (
         "@echo off\nsetlocal\ncd /d %~dp0\n"
-        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0\" -Repair\n"
+        "powershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0scripts\\bootstrap-windows-launcher.ps1\" -RepoRoot \"%~dp0.\" -Repair\n"
     )
     launchers = {
         "START_MAINE_FAMILY_LAW_LLM.cmd": start_cmd,
@@ -1373,23 +1373,16 @@ def load_case_search_records(case_root: Path) -> list[dict[str, Any]]:
 
 
 def answer_case_question(case_root: Path, question: str, role: str = "court") -> dict[str, Any]:
-    indexed_matches = search_local_content_index(case_root, question)
+    """Answer from private records without converting a match into a legal conclusion."""
+
+    indexed_matches = search_local_content_index(case_root, question, limit=40)
+    search_summary = summarize_local_search(question, indexed_matches)
     if indexed_matches:
-        evidence_ids = [str(row["evidence_id"]) for row in indexed_matches]
-        return {
-            "direct_answer": f"The corpus shows source-backed records relevant to: {question}.",
-            "evidence_relied_on": [str(row.get("snippet") or "") for row in indexed_matches],
-            "source_type": ", ".join(sorted({str(row.get("source_type") or "") for row in indexed_matches})),
-            "timeline_anchors": [],
-            "contradictions_gaps": ["Review the original source and full context before drawing conclusions."],
-            "confidence": "medium",
-            "what_this_does_not_prove": "A text match does not establish a disputed fact or replace official records.",
-            "recommended_official_verification": ["Open the cited original source and verify the official record where applicable."],
-            "evidence_ids_hashes_packet_paths": [
-                {"evidence_id": row["evidence_id"], "source_hash": "", "packet_path": row.get("source_locator", "")}
-                for row in indexed_matches
-            ],
-            "citations": [
+        citations = []
+        for row in indexed_matches:
+            page_number = int(row.get("page_number") or 0)
+            locator = str(row.get("source_locator") or "")
+            citations.append(
                 {
                     "source_id": row["evidence_id"],
                     "title": row.get("title") or row["evidence_id"],
@@ -1398,122 +1391,64 @@ def answer_case_question(case_root: Path, question: str, role: str = "court") ->
                         "id": row["evidence_id"],
                         "title": row.get("title") or row["evidence_id"],
                         "source_type": row.get("source_type", ""),
-                        "source_locator": row.get("source_locator", ""),
+                        "source_locator": locator,
                         "parent_evidence_id": row.get("parent_evidence_id", ""),
+                        "page_number": page_number,
                         "parser_status": row.get("parser_status", ""),
                         "ocr_status": row.get("ocr_status", ""),
+                        "ocr_derived": bool(row.get("ocr_derived")),
                         "issue_lanes": row.get("issue_lanes", ""),
                         "exact_content_match": bool(row.get("exact_content_match")),
+                        "match_type": row.get("match_type", ""),
+                        "matched_terms": row.get("matched_terms", []),
+                        "source_lane": "private_record",
+                        "official": False,
+                        "proposition": "Shows where the requested words appear in a selected private record; it does not establish a legal conclusion.",
                     },
+                }
+            )
+        return {
+            "direct_answer": "The corpus shows local content matches in the selected matter.",
+            "response_kind": "local_search_results",
+            "search_summary": search_summary,
+            "evidence_relied_on": [str(row.get("snippet") or "") for row in indexed_matches],
+            "source_type": ", ".join(sorted({str(row.get("source_type") or "") for row in indexed_matches})),
+            "timeline_anchors": [],
+            "contradictions_gaps": ["Review the surrounding text and original document before relying on a match."],
+            "confidence": "high" if search_summary["exact_phrase"] or search_summary["exact_token"] else "medium",
+            "what_this_does_not_prove": "A search match does not prove a disputed event, intent, contempt, interference, or any other legal conclusion.",
+            "recommended_official_verification": ["Open the original record and verify the full context."],
+            "evidence_ids_hashes_packet_paths": [
+                {
+                    "evidence_id": row["evidence_id"],
+                    "source_hash": "",
+                    "packet_path": row.get("source_locator", ""),
+                    "page_number": int(row.get("page_number") or 0),
                 }
                 for row in indexed_matches
             ],
+            "citations": citations,
             "not_legal_advice": True,
         }
+
     records = load_case_search_records(case_root)
-    lowered = question.lower()
-    stopwords = {
-        "the",
-        "and",
-        "for",
-        "with",
-        "about",
-        "what",
-        "does",
-        "show",
-        "tell",
-        "me",
-        "this",
-        "that",
-        "into",
-        "from",
-        "have",
-        "will",
-        "would",
-        "could",
-        "should",
-        "incident",
-        "unrelated",
-        "space",
-        "alien",
-    }
-    tokens = [token.strip(".,?!:;()[]{}\"'") for token in lowered.split()]
-    meaningful_tokens = [token for token in tokens if len(token) >= 4 and token not in stopwords]
-    scored: list[tuple[int, Mapping[str, Any]]] = []
-    for row in records:
-        haystack = " ".join(
-            [
-                str(row.get("text_excerpt", "")),
-                str(row.get("source_path", "")),
-                ", ".join(row.get("issue_lanes", [])),
-            ]
-        ).lower()
-        unique_tokens = set(meaningful_tokens)
-        matched_tokens = {
-            token for token in unique_tokens if token in haystack
-        }
-        required_matches = 1 if len(unique_tokens) == 1 else 2
-        coverage = (
-            len(matched_tokens) / len(unique_tokens)
-            if unique_tokens
-            else 0.0
-        )
-        if (
-            len(matched_tokens) >= required_matches
-            and coverage >= 0.50
-        ):
-            scored.append((len(matched_tokens), row))
-    scored.sort(key=lambda item: item[0], reverse=True)
-    if not scored:
-        return {
-            "direct_answer": "not found in the indexed corpus.",
-            "evidence_relied_on": [],
-            "source_type": "not_found",
-            "timeline_anchors": [],
-            "contradictions_gaps": ["No indexed corpus match was found."],
-            "confidence": "low",
-            "what_this_does_not_prove": "The absence of a match does not prove the event did not occur.",
-            "recommended_official_verification": ["Check official records, native files, and unindexed sources."],
-            "evidence_ids_hashes_packet_paths": [],
-            "not_legal_advice": True,
-        }
-    top_rows = [row for _, row in scored[:3]]
-    evidence_ids = [row["evidence_id"] for row in top_rows]
     return {
-        "direct_answer": f"The corpus shows source-backed records relevant to: {question}.",
-        "evidence_relied_on": [row["text_excerpt"][:180] for row in top_rows],
-        "source_type": ", ".join(sorted({str(row["source_type"]) for row in top_rows})),
-        "timeline_anchors": [row["date_created_if_available"] or row["date_modified"] for row in top_rows],
-        "contradictions_gaps": ["Some facts may still require official verification."],
-        "confidence": "medium",
-        "what_this_does_not_prove": "The corpus distinguishes filings, emails, and orders; it does not convert any one source into an adjudicated fact.",
-        "recommended_official_verification": ["Verify the official docket, certified records, and original native files."],
-        "evidence_ids_hashes_packet_paths": [
-            {
-                "evidence_id": row["evidence_id"],
-                "source_hash": row["source_hash"],
-                "packet_path": str(row.get("detail_page_relpath") or row.get("external_copy_relpath") or ""),
-            }
-            for row in top_rows
+        "direct_answer": "not found in the indexed corpus.",
+        "response_kind": "local_search_results",
+        "search_summary": search_summary,
+        "evidence_relied_on": [],
+        "source_type": "not_found",
+        "timeline_anchors": [],
+        "contradictions_gaps": ["No indexed content match was found."],
+        "confidence": "low",
+        "what_this_does_not_prove": "The absence of a search match does not prove the event did not occur or the record does not exist.",
+        "recommended_official_verification": [
+            "Check that the correct matter is selected.",
+            "Review unreadable, encrypted, unsupported, and not-yet-OCRed files.",
         ],
-        "citations": [
-            {
-                "source_id": row["evidence_id"],
-                "title": row.get("subject") or row.get("title") or row["evidence_id"],
-                "snippet": row["text_excerpt"][:240],
-                "metadata": {
-                    "id": row["evidence_id"],
-                    "title": row.get("subject") or row.get("title") or row["evidence_id"],
-                    "source_type": row.get("source_type", ""),
-                    "source_hash": row.get("source_hash", ""),
-                    "issue_lanes": ", ".join(row.get("issue_lanes", [])),
-                    "detail_page_relpath": row.get("detail_page_relpath", ""),
-                    "external_copy_relpath": row.get("external_copy_relpath", ""),
-                    "source_path": row.get("source_path", ""),
-                },
-            }
-            for row in top_rows
-        ],
+        "evidence_ids_hashes_packet_paths": [],
+        "citations": [],
+        "indexed_record_count": len(records),
         "not_legal_advice": True,
     }
 

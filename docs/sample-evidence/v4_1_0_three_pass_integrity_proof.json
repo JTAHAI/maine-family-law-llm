@@ -1,0 +1,59 @@
+{
+  "archive_note": "Final archive SHA-256 and archive-level validation are recorded in the external handoff proof and checksum file.",
+  "build_number": 19,
+  "features": {
+    "atomic_runtime_state": true,
+    "draft_bypass_clause_neutralization": true,
+    "draft_private_record_authority_separation": true,
+    "exact_reference_failure_class": true,
+    "prior_embedded_release_manifest_replaced": true,
+    "privacy_safe_runtime_health": true,
+    "retrieval_confidence_diagnostics": true,
+    "stale_pid_termination_protection": true
+  },
+  "focaf": {
+    "expected": 103,
+    "hash_mismatches": 0,
+    "missing": 0,
+    "resolved": 103,
+    "status": "pass"
+  },
+  "generated_date": "2026-07-19",
+  "package_version": "4.1.0.0",
+  "passes": [
+    {
+      "name": "retrieval_failure_confidence_integrity",
+      "status": "complete",
+      "version": "3.9.0"
+    },
+    {
+      "name": "drafting_review_integrity",
+      "status": "complete",
+      "version": "4.0.0"
+    },
+    {
+      "name": "runtime_local_service_resilience",
+      "status": "complete",
+      "version": "4.1.0"
+    }
+  ],
+  "release_boundary": {
+    "attorney_reviewed_legal_accuracy_certified": false,
+    "live_official_authority_freshness_certified": false,
+    "msix_built": false,
+    "negative_treatment_certified": false,
+    "production_legal_ga": false,
+    "wack_run": false
+  },
+  "schema_version": "v4_1_0_three_pass_integrity_proof_v1",
+  "tests": {
+    "assertion_failures_remaining": 0,
+    "collected": 686,
+    "execution_basis": "All collected tests accounted for across deterministic file batches; expensive full-GA tests run individually.",
+    "monolithic_full_suite_completed": false,
+    "new_regressions_passed": 10,
+    "passed": 685,
+    "skipped": 1
+  },
+  "version": "4.1.0"
+}

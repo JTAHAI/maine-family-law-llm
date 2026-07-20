@@ -23,8 +23,6 @@ DEFAULT_DIR_NAMES = {
     "build",
     "dist",
     ".eggs",
-    # A generated nested portable/review snapshot, never source of truth.
-    "ME_FM_LLM",
 }
 
 DEFAULT_FILE_NAMES = {
@@ -52,7 +50,7 @@ ROOT_GENERATED_JSON_NAMES = {
     "source_sbom.json",
 }
 
-VENV_DIR_NAMES = {".venv", ".venv-store-build", "venv", "env", "ME_FM_LLM_venv"}
+VENV_DIR_NAMES = {".venv", "venv", "env", "ME_FM_LLM_venv"}
 TESTS_COPIED_REPO_NAMES = {
     ".dockerignore",
     ".github",
@@ -109,19 +107,15 @@ def clean(repo_root: Path, *, include_venv: bool = False) -> list[str]:
         parts = set(rel.parts)
         if ".git" in parts:
             continue
-        # The Store build environment used to be created inside the repository.
-        # It is always disposable and must never make a source checkout fail the
-        # strict public-repository doctor.
-        if not include_venv and any(part in (VENV_DIR_NAMES - {".venv-store-build"}) for part in parts):
+        is_venv_dir = path.name in VENV_DIR_NAMES or path.name.startswith(".venv-")
+        if not include_venv and (any(part in VENV_DIR_NAMES for part in parts) or any(part.startswith(".venv-") for part in parts)):
             continue
         should_remove = False
         if path.is_dir() and path.name in DEFAULT_DIR_NAMES:
             should_remove = True
         if path.is_dir() and path.name.endswith(".egg-info"):
             should_remove = True
-        if include_venv and path.is_dir() and path.name in VENV_DIR_NAMES:
-            should_remove = True
-        if path.is_dir() and path.name == ".venv-store-build":
+        if include_venv and path.is_dir() and is_venv_dir:
             should_remove = True
         if path.is_file() and path.name in DEFAULT_FILE_NAMES:
             should_remove = True

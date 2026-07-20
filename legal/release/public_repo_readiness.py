@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -10,9 +11,6 @@ from typing import Any
 from legal.release.release_manifest import ReleaseManifest
 
 
-PUBLIC_FOCAF_RESOURCE_PREFIX = "src/maine_family_law_llm/resources/focaf/"
-
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -20,6 +18,15 @@ def _utc_now() -> str:
 def _load_policy(project_root: Path) -> dict[str, Any]:
     return json.loads((project_root / "configs" / "maine_public_release_policy.json").read_text(encoding="utf-8"))
 
+
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 SECRET_VALUE_RE = re.compile(
     r"(?i)(?:api[_-]?key|secret[_-]?key|client[_-]?secret|password|token)\s*[:=]\s*['\"][^'\"]{12,}['\"]"
@@ -106,6 +113,44 @@ class PublicRepoReadinessAuditor:
             files.append(path)
         return files
 
+    def _public_binary_inventory(self, root_rel: str) -> dict[str, str]:
+        inventory_path = self.project_root / root_rel / "focaf_inventory.json"
+        if not inventory_path.is_file():
+            return {}
+        try:
+            payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return {
+            str(row.get("original_filename") or ""): str(row.get("source_hash") or "").lower()
+            for row in payload.get("documents", [])
+            if str(row.get("original_filename") or "") and str(row.get("source_hash") or "")
+        }
+
+    def _allowed_public_binary(self, rel: str, path: Path) -> bool:
+        suffixes = {str(value).lower() for value in self.policy.get("allowed_public_binary_suffixes", [])}
+        if path.suffix.lower() not in suffixes:
+            return False
+        rel_path = Path(rel)
+        for root_rel in self.policy.get("allowed_public_binary_roots", []):
+            root_path = Path(str(root_rel))
+            try:
+                within = rel_path.relative_to(root_path)
+            except ValueError:
+                continue
+            if len(within.parts) != 1:
+                return False
+            expected = self._public_binary_inventory(str(root_rel)).get(within.name, "")
+            if not expected:
+                return False
+            try:
+                if path.read_bytes()[:5] != b"%PDF-":
+                    return False
+                return _sha256(path).lower() == expected
+            except OSError:
+                return False
+        return False
+
     def audit(self) -> PublicRepoReadinessReport:
         findings: list[PublicReleaseFinding] = []
         files = self._iter_files()
@@ -140,9 +185,7 @@ class PublicRepoReadinessAuditor:
             path = Path(rel)
             if any(part in blocked_paths for part in path.parts):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private path present"))
-            if path.suffix.lower() in blocked_suffixes and not (
-                rel.startswith(PUBLIC_FOCAF_RESOURCE_PREFIX) and path.suffix.lower() == ".pdf"
-            ):
+            if path.suffix.lower() in blocked_suffixes and not self._allowed_public_binary(rel, self.project_root / rel):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private/binary suffix present"))
 
         text_suffixes = {".py", ".ps1", ".sh", ".md", ".json", ".jsonl", ".yaml", ".yml", ".toml"}

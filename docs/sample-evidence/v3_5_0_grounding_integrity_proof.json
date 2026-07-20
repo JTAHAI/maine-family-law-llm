@@ -1,0 +1,106 @@
+{
+  "schema": "maine_family_law_llm.v3_5_0_grounding_integrity_proof.v1",
+  "generated_at": "2026-07-19T17:23:27.914272+00:00",
+  "product_version": "3.5.0",
+  "package_version": "3.5.0.0",
+  "ui_version": "3.5.0-family-justice-chat-b13",
+  "ui_pass_marker": "v3.5.0-grounding-integrity",
+  "release_scope": "clean_source_repository",
+  "production_legal_ga": false,
+  "windows_msix_build": "not_run_linux_source_pass",
+  "wack": "not_run_requires_windows_elevated_environment",
+  "features": {
+    "grounding_integrity_contract": true,
+    "source_backed_distinct_from_currentness_verified": true,
+    "authority_and_freshness_source_card_metadata": true,
+    "direct_record_search_both_lane_fix": true,
+    "date_event_role_and_urgency_flags": true,
+    "prompt_override_retrieval_sanitization": true,
+    "vague_sanitized_prompt_fail_closed": true,
+    "unknown_answer_style_fail_closed": true
+  },
+  "validation": {
+    "tests_collected": 667,
+    "tests_passed": 666,
+    "tests_skipped": 1,
+    "skip_reason": "PowerShell parser unavailable on Linux runner",
+    "new_v350_tests": "9 passed",
+    "python_compilation": "pass",
+    "javascript_syntax": "pass",
+    "repository_doctor": "pass",
+    "release_artifact_audit": "pass_zero_blockers",
+    "public_source_readiness": "pass_zero_findings",
+    "focaf_assets": {
+      "status": "pass",
+      "expected": 103,
+      "resolved": 103,
+      "missing": 0,
+      "hash_mismatches": 0
+    },
+    "public_source_checked_files": 1297,
+    "release_artifact_blockers": 0,
+    "production_legal_ready": false
+  },
+  "synthetic_smoke": {
+    "seed_legal_answer": {
+      "source_card_count": 2,
+      "grounded": true,
+      "current_law_verified": false,
+      "current_law_status": "not_verified_from_local_source_bundle",
+      "needs_currentness_verification_count": 2,
+      "answer_contract": "family_answer_v3_5"
+    },
+    "date_routing": {
+      "task": "served_papers",
+      "attention_level": "urgent_deadline",
+      "critical_dates": [
+        {
+          "kind": "service_date",
+          "raw": "yesterday",
+          "normalized_date": "2026-07-18",
+          "normalization_basis": "relative_to_local_reference_date",
+          "confidence": 0.86,
+          "days_from_reference": -1,
+          "review_flags": [
+            "relative_date_calculated_locally"
+          ]
+        },
+        {
+          "kind": "hearing_date",
+          "raw": "tomorrow",
+          "normalized_date": "2026-07-20",
+          "normalization_basis": "relative_to_local_reference_date",
+          "confidence": 0.86,
+          "days_from_reference": 1,
+          "review_flags": [
+            "relative_date_calculated_locally",
+            "listed_event_date_within_three_days"
+          ]
+        }
+      ]
+    },
+    "override_only_prompt": {
+      "failure_class": "substantive_question_required_after_prompt_sanitization",
+      "source_card_count": 0,
+      "retrieval_query_sanitized": true,
+      "security_warning_count": 1
+    },
+    "legitimate_question_after_override": {
+      "failure_class": "none",
+      "source_card_count": 2,
+      "retrieval_query_sanitized": true
+    }
+  },
+  "data_boundaries": {
+    "private_matter_data_in_proof": false,
+    "network_used_for_smoke": false,
+    "shared_model_training": false,
+    "runtime_databases_packaged": false
+  },
+  "limitations": [
+    "Bundled seed fixtures are not a live official-authority freshness build.",
+    "Current-law verification remains false unless every retrieved legal card carries an explicit verified-current status.",
+    "No attorney-reviewed legal correctness claim is made by this source-level proof.",
+    "The Windows MSIX must be rebuilt, signed, and WACK-tested on Windows."
+  ]
+}

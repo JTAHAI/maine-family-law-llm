@@ -898,6 +898,15 @@ summary:focus-visible, [tabindex]:focus-visible {
   outline-offset: 2px;
 }
 
+.record-results { display: grid; gap: 10px; }
+.record-result-card { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.84); }
+.record-result-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.record-result-head p { margin: 4px 0 0; }
+.record-result-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.record-match-details { margin-top: 8px; }
+.record-match-details summary { cursor: pointer; font-weight: 700; }
+@media (max-width: 720px) { .record-result-head { display: grid; } .record-result-actions { justify-content: flex-start; } }
+
 .app-shell {
   width: min(1680px, calc(100vw - 16px));
   height: calc(100vh - 16px);
@@ -1288,4 +1297,51 @@ body[data-drawer="open"] .evidence-drawer { transform: translateX(0); }
 @media (forced-colors: active) {
   .topbar-popover, .privacy-grid section, .shortcut-grid div, .build-facts div { border: 2px solid CanvasText; }
   .civic-tooltip::after { border: 2px solid CanvasText; background: Canvas; color: CanvasText; }
+}
+
+/* v3.1.2 local OCR choice: the action must remain obvious near My records. */
+.ocr-primary-action {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ocr-primary-action[hidden] { display: none !important; }
+.ocr-primary-action .primary-action { width: 100%; min-height: 46px; }
+.ocr-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.ocr-detail-grid section {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,.82);
+}
+.ocr-detail-grid strong { display: block; margin-bottom: 5px; }
+.ocr-detail-grid span { color: var(--muted); line-height: 1.45; }
+.ocr-overlay-actions { flex-wrap: wrap; }
+.ocr-overlay-actions button { min-height: 44px; }
+@media (max-width: 720px), (min-resolution: 192dpi) {
+  .ocr-detail-grid { grid-template-columns: 1fr; }
+  .ocr-overlay-actions { display: grid; grid-template-columns: 1fr; }
+  .ocr-overlay-actions button { width: 100%; }
+}
+@media (forced-colors: active) {
+  .ocr-detail-grid section { border: 2px solid CanvasText; }
+}
+
+/* v3.3 conversation reliability and deadline clarity */
+.intake-summary {
+  border-inline-start: 4px solid currentColor;
+}
+.intake-summary h3 {
+  margin-bottom: 0.35rem;
+}
+.intake-heard {
+  margin-top: 0;
+}
+.source-card-meta span {
+  overflow-wrap: anywhere;
 }

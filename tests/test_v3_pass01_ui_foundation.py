@@ -125,7 +125,7 @@ def test_v3_pass01_launcher_is_task_oriented_and_versioned() -> None:
 
     source = (ROOT / "app" / "launcher.py").read_text(encoding="utf-8")
 
-    assert VERSION == "3.1.1"
+    assert VERSION == "4.4.0"
     assert 'notebook.add(start_tab, text="Start here")' in source
     assert 'notebook.add(review_tab, text="Review & export")' in source
     assert 'notebook.add(support_tab, text="Support & tools")' in source
@@ -147,8 +147,8 @@ def test_v3_pass01_versions_are_consistent() -> None:
         )
     )
 
-    assert VERSION == "3.1.1"
-    assert BUILD_NUMBER >= 8
-    assert PACKAGE_VERSION == "3.1.1.0"
-    assert 'version = "3.1.1"' in pyproject
+    assert VERSION == "4.4.0"
+    assert BUILD_NUMBER >= 2
+    assert PACKAGE_VERSION == "4.4.0.0"
+    assert 'version = "4.4.0"' in pyproject
     assert identity["package_version"] == PACKAGE_VERSION

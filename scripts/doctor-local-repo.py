@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -70,6 +71,49 @@ ALLOWED_TEXT_FILES = {
 
 VENV_DIR_NAMES = {"venv", ".venv", "ME_FM_LLM_venv", "env"}
 
+APPROVED_PUBLIC_PDF_ROOTS = (
+    Path("src/maine_family_law_llm/resources/focaf"),
+    Path("maine_family_law_llm/resources/focaf"),
+)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _is_approved_public_pdf(repo_root: Path, path: Path) -> bool:
+    """Allow only hash-pinned FOCAF public printables, never arbitrary PDFs."""
+
+    if path.suffix.lower() != ".pdf":
+        return False
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return False
+    for root_rel in APPROVED_PUBLIC_PDF_ROOTS:
+        try:
+            within = rel.relative_to(root_rel)
+        except ValueError:
+            continue
+        if len(within.parts) != 1:
+            return False
+        inventory_path = repo_root / root_rel / "focaf_inventory.json"
+        try:
+            payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+            expected = {
+                str(row.get("original_filename") or ""): str(row.get("source_hash") or "").lower()
+                for row in payload.get("documents", [])
+            }.get(within.name, "")
+            return bool(expected) and path.read_bytes()[:5] == b"%PDF-" and _sha256(path).lower() == expected
+        except (OSError, json.JSONDecodeError):
+            return False
+    return False
+
+
 TESTS_ALLOWED_TOP_LEVEL_FILES = {"conftest.py", "__init__.py"}
 TESTS_ALLOWED_TOP_LEVEL_PREFIXES = ("test_",)
 
@@ -103,17 +147,9 @@ TESTS_FORBIDDEN_TOP_LEVEL_NAMES = {
     "scripts",
 }
 
-PUBLIC_FOCAF_RESOURCE_PREFIX = ("src", "maine_family_law_llm", "resources", "focaf")
-
 
 def _is_under_ignored_path(rel: Path) -> bool:
     return any(part == ".git" for part in rel.parts)
-
-
-def _is_bundled_public_focaf_pdf(rel: Path) -> bool:
-    """Permit only the reviewed public PDF resources shipped with the app."""
-
-    return rel.parts[:4] == PUBLIC_FOCAF_RESOURCE_PREFIX and rel.suffix.lower() == ".pdf"
 
 
 def _remove_transient_cache_artifacts(repo_root: Path) -> None:
@@ -192,7 +228,9 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         ):
             forbidden.append(rel.as_posix())
             continue
-        if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES and not _is_bundled_public_focaf_pdf(rel):
+        if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
+            if path.suffix.lower() == ".pdf" and _is_approved_public_pdf(repo_root, path):
+                continue
             forbidden.append(rel.as_posix())
             continue
         if (

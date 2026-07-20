@@ -35,7 +35,10 @@ def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
 
 
 def _run_smoke_workflow(output_path: Path | None = None) -> dict[str, object]:
-    context = configure_runtime_environment(build_runtime_context(mode="store"))
+    # The frozen MSIX defaults to Store mode.  Source launchers intentionally
+    # pass MFL_RUNTIME_MODE=source so their loopback state cannot collide with
+    # an installed package.
+    context = configure_runtime_environment(build_runtime_context())
     service = ensure_local_service(context)
     smoke_case_root = context.writable_root / "smoke" / "example_case_build"
     if smoke_case_root.exists():

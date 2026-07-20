@@ -6,6 +6,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -14,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from .runtime_support import RuntimeContext, append_runtime_log, configure_runtime_environment
-from maine_family_law_llm.version import VERSION
 
 DEFAULT_PORT_CANDIDATES = (8000, 8011, 8012, 8013)
 
@@ -37,16 +37,53 @@ def _load_state(context: RuntimeContext) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
         return {}
+    if not isinstance(loaded, dict):
+        return {}
+    try:
+        port = int(loaded.get("port", 0) or 0)
+        pid = int(loaded.get("pid", 0) or 0)
+    except (TypeError, ValueError):
+        return {}
+    url = str(loaded.get("url") or "")
+    if port and not (1 <= port <= 65535):
+        return {}
+    if pid < 0:
+        return {}
+    if url and url != _service_url(port):
+        return {}
+    return {**loaded, "port": port, "pid": pid}
 
 
 def _write_state(context: RuntimeContext, payload: dict[str, Any]) -> Path:
     path = _state_file(context)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    return path
+    data = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=str(path.parent),
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+            temp_path = Path(handle.name)
+        try:
+            temp_path.chmod(0o600)
+        except OSError:
+            pass
+        os.replace(temp_path, path)
+        temp_path = None
+        return path
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 def _service_url(port: int) -> str:
@@ -57,25 +94,13 @@ def _health_url(port: int) -> str:
     return f"http://127.0.0.1:{port}/api/health"
 
 
-def _health_payload(port: int, timeout: float = 1.5) -> dict[str, Any] | None:
+def _ping_health(port: int, timeout: float = 1.5) -> bool:
     request = urllib.request.Request(_health_url(port), method="GET")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            if response.status != 200:
-                return None
-            payload = json.loads(response.read().decode("utf-8"))
-            return payload if isinstance(payload, dict) else None
-    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
-        return None
-
-
-def _ping_health(port: int, timeout: float = 1.5) -> bool:
-    return _health_payload(port, timeout=timeout) is not None
-
-
-def _service_matches_runtime_version(port: int, timeout: float = 1.5) -> bool:
-    payload = _health_payload(port, timeout=timeout)
-    return bool(payload and payload.get("status") == "ok" and payload.get("version") == VERSION)
+            return response.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False
 
 
 def _port_is_free(port: int) -> bool:
@@ -130,7 +155,7 @@ def ensure_local_service(context: RuntimeContext) -> LocalServiceStatus:
     state = _load_state(context)
     prior_port = int(state.get("port", 0) or 0)
     prior_pid = int(state.get("pid", 0) or 0) or None
-    if prior_port and _service_matches_runtime_version(prior_port):
+    if prior_port and _ping_health(prior_port):
         return LocalServiceStatus(url=_service_url(prior_port), port=prior_port, pid=prior_pid, started_now=False, healthy=True)
 
     for port in _candidate_ports(context):
@@ -168,14 +193,20 @@ def stop_local_service(context: RuntimeContext) -> bool:
     state = _load_state(context)
     pid = int(state.get("pid", 0) or 0)
     port = int(state.get("port", 0) or 0)
-    if pid <= 0:
+    if pid <= 0 or port <= 0:
+        _state_file(context).unlink(missing_ok=True)
+        return False
+    # A stale PID may have been reused by an unrelated process. Never terminate
+    # it unless the saved loopback service still answers the app health check.
+    if not _ping_health(port):
+        _state_file(context).unlink(missing_ok=True)
         return False
     try:
         if os.name == "nt":
             subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], check=False, capture_output=True, text=True, timeout=15)
         else:
             os.kill(pid, signal.SIGTERM)
-        if port and _wait_for_service(port, timeout_seconds=2):
+        if _wait_for_service(port, timeout_seconds=2):
             return False
     finally:
         try:
@@ -204,3 +235,4 @@ def run_local_service(port: int, context: RuntimeContext) -> int:
         log_config=None,
     )
     return 0
+

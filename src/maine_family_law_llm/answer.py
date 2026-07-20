@@ -64,8 +64,16 @@ def compose_answer(
         matter_context=matter_context,
     )
     if library_answer is not None:
+        # Preserve the raw composer contract for API/export clients.  The v3
+        # family answer contract removes this appendix before the browser
+        # renders source cards, so ordinary chat does not show duplicated raw
+        # metadata.
+        body = library_answer.text
+        body += "\n\nSource freshness note: Check the effective date and version label on each source card before relying on this information."
+        body += "\n\n" + DISCLAIMER
+        body += "\n\n" + render_citation_appendix(library_answer.citations)
         return ComposedAnswer(
-            answer=library_answer.text,
+            answer=body,
             citations=library_answer.citations,
             grounded=True,
             metadata={
@@ -75,6 +83,7 @@ def compose_answer(
                 "answer_style": answer_style,
                 "missing_information": missing_information_for_item(library_answer.item),
                 "follow_up_questions": follow_up_questions_for_item(library_answer.item),
+                "recommended_next_steps": list(library_answer.item.next_steps),
                 "reviewer_handoff_ready": True,
             },
         )

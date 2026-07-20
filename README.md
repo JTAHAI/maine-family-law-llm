@@ -1,4 +1,4 @@
-﻿<!-- SEO-INTRO-START -->
+<!-- SEO-INTRO-START -->
 # Maine Family Law LLM
 
 Open-source Maine family law AI workbench for legal research, court-form guidance, document review, evidence mapping, citation checking, and review-required drafting.
@@ -75,11 +75,12 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 
 ## Current release truth
 
+- Current source release: **v4.4.0**; Microsoft Store package target: **4.4.0.0**. The MSIX must still be rebuilt, signed, and WACK-tested on Windows.
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The Windows installer package can copy the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, create shortcuts, install missing prerequisites, and skip the ones already present.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
-- The local browser workbench serves the constitutional modern chat UI and should show `v3` in the footer after a fresh start.
+- The local browser workbench currently serves the v4.4.0 Windows OCR and corpus-command UI with safety-first intake, source/currentness separation, session-isolated continuity, direct indexed-corpus inventory/search commands, and explicit local OCR prerequisite controls.
 - The default local browser entry point is `http://127.0.0.1:8000/`.
 - The workbench is local-first, source-backed, review-required, and not legal advice.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
@@ -94,6 +95,8 @@ If you are helping a parent, caregiver, GAL, or reviewer who does not want to to
 2. Extract it.
 3. Double-click `INSTALL_MAINE_FAMILY_LAW_LLM.cmd` from the installer package, or `START_MAINE_FAMILY_LAW_LLM.cmd` from a normal checkout.
 4. Let the launcher install missing prerequisites. It reuses Python if it already exists and skips anything already present.
+   - When scanned pages need OCR, the workbench offers **Install OCR prerequisites**, a manual Tesseract install page, and **Recheck local OCR**. Installation requires an explicit click; matter records are not read or uploaded by the installer.
+   - The app bundles its PDF page renderer, so scanned-PDF OCR requires Tesseract but does not require a separate Poppler or MuPDF installation.
 5. Choose one of these launcher paths:
    - `Create New Case Corpus` if you need to build a new matter from source folders.
    - `Open Existing Case Corpus` if somebody already built the case workspace and you only need the LLM/search surfaces.
@@ -129,7 +132,6 @@ The launcher now includes built-in guide buttons for:
 - Outlook desktop, Outlook on the web, Hotmail, and Outlook.com
 - iPhone, Android, screenshots, photos, and attachments
 - import formats, privacy, hashing, and chain-of-custody basics
-- optional FOCAF family resources and download-library links that open separately in the default browser without sending matter details or search terms
 
 Primary nontechnical docs:
 
@@ -139,7 +141,6 @@ Primary nontechnical docs:
 - [`docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html`](docs/HOW_TO_EXPORT_FROM_OUTLOOK_AND_HOTMAIL.html)
 - [`docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html`](docs/HOW_TO_EXPORT_FROM_IPHONE_AND_ANDROID.html)
 - [`docs/SYSTEM_REQUIREMENTS.html`](docs/SYSTEM_REQUIREMENTS.html)
-- [`docs/LOCAL_CORPUS_IMPORT.md`](docs/LOCAL_CORPUS_IMPORT.md)
 
 ## Recommended system requirements
 

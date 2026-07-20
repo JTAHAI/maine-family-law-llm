@@ -1,7 +1,7 @@
 # v3.0.0 Pass 02 — Constitutional bar completion
 
-Product version: **3.0.0**
-Build: **3**
+Product version: **3.0.0**  
+Build: **3**  
 MSIX target: **3.0.0.3**
 
 ## What changed

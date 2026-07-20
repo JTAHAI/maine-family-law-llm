@@ -16,17 +16,18 @@ test -f legal/corpus/source_snapshotter.py
 OUT="${1:-/tmp/maine-family-law-llm-post-ga-test-readiness-release.zip}"
 rm -f "$OUT"
 
-zip -r "$OUT" . \
-  -x "*.db" "*.sqlite" "*.sqlite3" "*.faiss" "*.bin" "*.pt" "*.pth" "*.safetensors" "*.onnx" \
-  -x ".env" "*/.env" \
-  -x "runtime/*" "uploads/*" "vectorstores/*" "corpora/*" \
-  -x "official_authority_store/*" "parsed_authority_store/*" "matter_store/*" "eval_store/*" \
-  -x "embedding_store/*" "audit_store/*" "model_registry/*" ".local_data/*" \
-  -x "__pycache__/*" "*/__pycache__/*" ".pytest_cache/*" ".ruff_cache/*" ".venv/*" "node_modules/*" "dist/*" "build/*" "*.egg-info/*" "*/.egg-info/*" \
-  -x "*.local.json" "smoke_evidence*.json" "source_sbom.json" "source_release_lock.json" \
-  -x "enterprise_local_hardening_evidence.json" "enterprise_local_build_plan.json" \
-  -x "enterprise_preflight_report.json" "offline_validation_pack_report.json" "public_release_readiness.json" "release_provenance.json" \
-  -x ".git/*"
+# Deterministic builder exclusions include: *.db *.sqlite *.sqlite3 *.faiss *.bin *.pt *.pth *.safetensors *.onnx,
+# .env, runtime/*, uploads/*, vectorstores/*, corpora/*, official_authority_store/*,
+# parsed_authority_store/*, matter_store/*, eval_store/*, embedding_store/*, audit_store/*,
+# model_registry/*, .local_data/*, __pycache__/*, .pytest_cache/*, .ruff_cache/*,
+# .venv/*, node_modules/*, dist/*, build/*, *.egg-info/*, smoke_evidence*.json,
+# source_sbom.json, source_release_lock.json, enterprise_local_hardening_evidence.json,
+# enterprise_local_build_plan.json, enterprise_preflight_report.json,
+# offline_validation_pack_report.json, public_release_readiness.json, release_provenance.json, .git/*.
+PYTHONDONTWRITEBYTECODE=1 python scripts/build-deterministic-source-release.py \
+  --repo-root "$ROOT" \
+  --output "$OUT" \
+  --archive-root ME_FM_LLM >/tmp/maine-family-law-llm-deterministic-source-release.json
 
 PYTHONDONTWRITEBYTECODE=1 python scripts/audit-source-zip-contents.py "$OUT" >/tmp/maine-family-law-llm-source-zip-content-audit.json
 

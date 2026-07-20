@@ -1,25 +1,64 @@
-## v3.1.1 - Store runtime retrieval repair
+## v4.4.0 — Windows OCR setup and corpus-command reliability
 
-- Fixed the Maine-law chat lane for the read-only Microsoft Store package: bundled fixtures now stay in memory and never create a cache in the package install directory.
-- Fixed focus handling before dialogs and the evidence drawer are hidden from assistive technology.
-- Product version is `3.1.1`; target Microsoft Store MSIX version is `3.1.1.0`.
+- Fixes the Windows launcher path-normalization defect that could raise `Illegal characters in path` from `GetFullPath`.
+- Adds an explicit one-click Tesseract installer through Windows Package Manager, a manual-install link, progress/status polling, and a local recheck action. Matter records are not read or uploaded by the installer.
+- Bundles `pypdfium2` as the scanned-PDF renderer so PDF OCR no longer depends on a separately installed Poppler or MuPDF executable.
+- Routes corpus inventory commands and PDF-specific record searches directly to the selected private matter, with actual inventory counts and source cards instead of generic legal chat.
+- Product version: 4.4.0. Microsoft Store package target: 4.4.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
 
-## v3.1.0 - Local printables and explicit private-index consent
+## v4.1.0 — Three-pass retrieval, drafting, and runtime integrity hardening
 
-- Added 103 bundled public FOCAF family-printable PDFs with 739 pages, hash-checked original bytes, page-level extracted text, and local content search. They are visibly labeled as non-authority family resources and remain separate from Maine authority and private matter records.
-- Added a Printables drawer, local original-PDF open/print actions, chat suggestions, and Ctrl+K resource commands.
-- Added an affirmative local inventory consent dialog, a separate optional OCR decision, an offline network boundary for private parsing, direct-record-search compact results, and visible derived-index review, rebuild, and delete controls.
-- Product version is `3.1.0`; target Microsoft Store MSIX version is `3.1.0.0`.
+- **3.9 retrieval integrity:** recognizes exact Maine statute, rule, case, and form references; reports exact-reference misses separately; exposes lexical coverage, matched terms, source diversity, official-source counts, duplicate suppression, and conservative confidence warnings.
+- **4.0 drafting integrity:** separates private records from legal authority, refuses private-record-only legal drafting, neutralizes review/source bypass clauses, returns structured working-outline sections, and emits an explicit draft-integrity blocker report. Drafts remain review-required and never filing-ready.
+- **4.1 runtime resilience:** adds privacy-safe component health checks, package/version alignment checks, full bundled FOCAF hash verification, atomic local service-state writes, malformed-state rejection, protection against terminating a reused PID from stale state, and replacement of prior embedded source manifests so each ZIP has exactly one current manifest.
+- Product version: 4.1.0. Microsoft Store package target: 4.1.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
 
-## v3.0.0 - Microsoft Store release candidate
+## v3.8.0 — Three-pass hardening: input integrity, claim support, and deterministic release
 
-- Made the local chat the primary workspace with a closed-by-default Evidence & tools drawer.
-- Added the `family_answer_v3` response contract: clear next steps, missing information, child-centered considerations, human-help routing, and separately labeled Maine-law and private-record source lanes.
-- Added a visible Maine law / My records / Both segmented selector, an optional Child Impact Lens, request cancel control, clear-draft control, and confirmed clear-visible-conversation control.
-- Reworked onboarding around what a family needs today while keeping role selection as a secondary setting.
-- Kept the permanent constitutional identity, Ctrl+K command palette, Ctrl+J local Justice Lens, local-only assets, focus restoration, and Windows launcher quoting protections.
-- Store package identity remains `TAHAIWebServices.MaineFamilyLawLLM`; the v3 release-candidate package target is `3.0.0.5`.
-- This remains local-first legal information, not legal advice or a substitute for emergency services, a court, or qualified local professional help.
+- **3.6 input/session integrity:** removes invisible Unicode direction/control characters and null bytes, bounds all public text surfaces, rejects malformed local session/search IDs, and emits count-only integrity reports without echoing rejected raw input.
+- **3.7 claim-to-source integrity:** extracts candidate legal claims, runs conservative lexical support checks against legal source cards, blocks stale/jurisdiction/current-law mismatches, and never marks the result filing-ready.
+- **3.8 privacy/release integrity:** defaults source-card clipboard handoffs to redacted projections, omits private excerpts and absolute paths, confirms full private exports, and builds deterministic full-source ZIPs with fixed metadata and an embedded SHA-256 file manifest.
+- Source ZIP auditing now permits only bundled public FOCAF PDFs in approved resource paths while blocking arbitrary/private PDFs.
+- Product version: 3.8.0. Microsoft Store package target: 3.8.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
+
+## v3.5.0 — Grounding integrity and current-law transparency
+
+- Source-backed no longer means currentness verified. Every answer now reports source scope, legal/private lane counts, authority strength, freshness status, and whether all retrieved legal cards have an explicit currentness audit.
+- Bundled seed fixtures are visibly marked as needing live official-source verification.
+- Direct record searches from Both finalize in the private-record lane, common override/review-bypass phrases are detected and removed from retrieval queries, and vague sanitized prompts fail closed.
+- Date parsing now recognizes phrases such as “court is tomorrow” as a hearing date and emits machine-readable urgency review flags.
+- Product version: 3.5.0. Microsoft Store package target: 3.5.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
+
+## v3.4.0 — Safe continuity, correct source follow-ups, and untrusted-content defense
+
+- Fixed a browser runtime defect in reviewer handoff rendering.
+- Source follow-ups now use server-side session state, including lane filters and arbitrary card selection, without rerunning retrieval.
+- Explicit short follow-ups may reuse only safe structured routing labels; raw question text and sensitive case identifiers are not retained in the continuity anchor.
+- Prompt or document text that looks like an instruction override is marked as untrusted content and cannot change source, privacy, safety, or review rules.
+- Date normalization now discloses inferred years and locally calculated relative dates.
+- Background OCR errors and remaining public request surfaces are bounded and sanitized.
+- Product version: 3.4.0. Microsoft Store package target: 3.4.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
+
+## v3.3.0 — Conversation reliability, deadline clarity, and session privacy
+
+- Made intake routing safety-first: immediate and child-safety language now outranks served-paper, hearing, and routine legal-task routing.
+- Added negation-aware matching so phrases such as “not served,” “no hearing,” “no immediate danger,” and “no weapon” do not create false urgency signals, while “I am not safe” still routes to safety.
+- Added structured service-date, hearing-date, and possible response/filing-deadline extraction with transparent local normalization, attention levels, routing reasons, requested-action signals, and explicit verification warnings.
+- Generalized “show/open the source cards” follow-ups across Maine-law, private-record, and combined answers; added first/second/third card selection without rerunning retrieval.
+- Added fail-closed session isolation, stale search-ID rejection, out-of-range source-card handling, 30-minute bounded in-memory expiry, and no shared fallback session for private snippets.
+- New chat now rotates the local session ID and clears short-lived server source state without writing conversation state to disk.
+- Hardened local API responses with no-store headers, cross-origin isolation headers, request IDs, bounded chat inputs, and sanitized 500 responses that do not expose exception text or client paths.
+- Product version: 3.3.0. Microsoft Store package target: 3.3.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
+
+## v3.2.0 — Intake understanding and evidence-grounded chat
+
+- Added deterministic, plain-language intake understanding for served papers, hearings, order clarification, safety, support, modification/enforcement, record search, and evidence organization.
+- Added page-level local parsing and FTS5 retrieval for PDFs, EML/MBOX bodies and attachments, ZIP members, and supported text records, with explicit native-text/OCR provenance.
+- Added compact exact-content search answers, stable source-card follow-ups, separated Maine-law/private-record lanes, and neutral handling of interference, obstruction, alienation, and contempt terminology.
+- Replaced repeated generic chat boilerplate with task-specific next steps, gathering lists, missing-information prompts, and an optional child-impact lens.
+- Preserved the local-only privacy boundary: private source bytes, extracted text, OCR output, indexes, locators, and hashes are never packaged or transmitted.
+- Preserved 103 hash-pinned FOCAF public printables as non-authority family resources and taught release audits to allow only those validated PDFs while continuing to block arbitrary/private PDFs.
+- Microsoft Store target: 3.2.0.0. Windows MSIX rebuild, signing, and WACK remain separate Windows release steps.
 
 ## v2.09.2 — Microsoft Store local-chat hotfix and compact routing
 

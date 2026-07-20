@@ -3,7 +3,7 @@ param(
   [int]$Port = 8000,
   [ValidateSet("LocalWorkbench", "Enterprise")]
   [string]$ApiMode = "LocalWorkbench",
-  [string]$VenvPath = "D:\dev\ME_FM_LLM_venv",
+  [string]$VenvPath = "",
   [switch]$OpenBrowser
 )
 
@@ -13,6 +13,13 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $repo
 $env:PYTHONDONTWRITEBYTECODE = "1"
+
+# Keep the environment beside the checkout unless an operator explicitly
+# chooses another location.  A release ZIP must not depend on a developer's
+# old drive letter or unrelated checkout.
+if (-not $VenvPath) {
+  $VenvPath = Join-Path $repo ".venv"
+}
 
 powershell -ExecutionPolicy Bypass -File .\REPAIR_LOCAL_REPO.ps1 -RepoRoot $repo
 

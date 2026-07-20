@@ -97,13 +97,6 @@ def _remove_bytecode_artifacts(project_root: Path) -> None:
             path.unlink()
         except FileNotFoundError:
             pass
-    # Source-preflight is intentionally allowed to remove only known generated
-    # roots. This keeps a prior test/package run from turning a clean source
-    # checkout into a false push blocker.
-    for name in ("dist", "build", ".venv-store-build", "ME_FM_LLM"):
-        path = project_root / name
-        if path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
 
 
 def _doctor_check(project_root: Path) -> PrePushCheck:

@@ -1,0 +1,133 @@
+{
+  "build_number": 10,
+  "chat_samples": {
+    "immediate_safety": {
+      "answer_excerpt": "What this means:\n- Safety comes before routine case planning. I cannot determine from chat exactly what is happening, contact anyone for you, or create legal protection. Use immediate local help when danger may be present, and avoid taking steps that could increase risk.\n\nWhat to do right now:\n- If anyone is in immediate danger, call 911 or seek qualified local emergency help now.\n\nYour next three steps:\n- Move to a safer place when you can do so safely.\n- Use official protection-from-abuse or crisis resources rather than relying on chat alone.\n- Preserve messages, orders, and incident details without confronting anyone to collect evidence.\n\nWhat to gather:\n- Any current protection order or safety plan.\n- Dates, messages, and records already available without increasing risk.\n\nWhen to get human help:\n- Contact emergency services, a qualified advocate, lawyer, or other appropriate local p",
+      "failure_class": "none",
+      "intake": {
+        "follow_up_questions": [],
+        "interpretation_note": "This is a routing summary, not a legal conclusion. Review the original papers and source cards.",
+        "issues": [],
+        "procedural_posture": "unknown",
+        "task": "immediate_safety",
+        "urgency_flags": [
+          "immediate_safety"
+        ],
+        "user_goal": "Address immediate safety before routine case planning."
+      },
+      "question": "Someone may be unsafe",
+      "response_kind": "family_answer",
+      "source_card_count": 0
+    },
+    "neutral_interference": {
+      "answer_excerpt": "What this means:\n- Words such as interference, obstruction, alienation, or contempt are not self-proving legal findings. Start with the exact current order, then describe each event neutrally by date, identify the record that supports it, and note any effect on the child or schedule. A qualified reviewer can then assess whether the issue belongs in enforcement, contempt, modification, safety relief, or no court filing at all. If you meant to search your own files, switch to My records and search the exact term rather than asking the law lane to infer what the records contain.\n\nSafety note: Do not involve the child as a messenger, investigator, witness-gatherer, or decision-maker.\n\nSource freshness note: Check the effective date and version label on each source card before relying on this information.\n\nWhat to do right now:\n- Start with the exact current order language and a dated descrip",
+      "failure_class": "none",
+      "intake": {
+        "follow_up_questions": [
+          "Do you have the current signed order, and what exact paragraph is causing the problem?",
+          "What happened, on what dates, and what record supports each event?"
+        ],
+        "interpretation_note": "This is a routing summary, not a legal conclusion. Review the original papers and source cards.",
+        "issues": [
+          "parent_child_contact_interference"
+        ],
+        "procedural_posture": "unknown",
+        "task": "enforce_order",
+        "urgency_flags": [],
+        "user_goal": "Separate the order language, alleged events, proof, and possible procedural routes."
+      },
+      "question": "Find the latest parental interferrence guidance",
+      "response_kind": "family_answer",
+      "source_card_count": 1
+    },
+    "order_clarification": {
+      "answer_excerpt": "What this means:\n- If order language is confusing, do not guess or self-help your way around it. Organize the exact order text, the disputed sentence, what each person thinks it means, and any immediate deadline or safety issue. The workbench can make a reviewer handoff checklist, but only the court or qualified legal review can resolve legal meaning.\n\nSource freshness note: Check the effective date and version label on each source card before relying on this information.\n\nWhat to do right now:\n- Work from the signed order itself and identify the exact paragraph you are trying to understand.\n\nYour next three steps:\n- Quote the exact confusing language and identify the page/paragraph.\n- List the practical problem: exchange time, location, decision-making, support, or restriction.\n- Ask counsel/reviewer whether clarification, enforcement, modification, or another procedure is appropriate.\n",
+      "failure_class": "none",
+      "intake": {
+        "follow_up_questions": [],
+        "interpretation_note": "This is a routing summary, not a legal conclusion. Review the original papers and source cards.",
+        "issues": [
+          "contact_schedule"
+        ],
+        "procedural_posture": "unknown",
+        "task": "understand_order",
+        "urgency_flags": [],
+        "user_goal": "Explain the order in plain language while preserving the exact text for review."
+      },
+      "question": "What does my order mean when it says reasonable contact?",
+      "response_kind": "family_answer",
+      "source_card_count": 2
+    },
+    "served_papers": {
+      "answer_excerpt": "What this means:\n- Start by reading the papers carefully and identifying the court, docket number, case type, deadlines, scheduled events, and what the other party is asking for. The workbench can help organize the documents and point to official court-process and forms sources, but it cannot decide your legal response or deadline strategy.\n\nSource freshness note: Check the effective date and version label on each source card before relying on this information.\n\nWhat to do right now:\n- Read every page and mark the court, docket number, hearing date, response date, and what the other party is asking for.\n- Keep the envelope, service paperwork, and complete set together; do not write on the originals.\n\nYour next three steps:\n- Write down every date on the papers and any scheduled court event.\n- Identify whether the case is divorce, parental rights, parentage, protection from abuse, support",
+      "failure_class": "none",
+      "intake": {
+        "follow_up_questions": [
+          "What date were you served, and what hearing or response date appears on the papers?",
+          "What type of case do the papers identify: divorce, parental rights, parentage, support, or protection from abuse?",
+          "Is there a hearing, service date, or filing deadline shown on an official paper?"
+        ],
+        "interpretation_note": "This is a routing summary, not a legal conclusion. Review the original papers and source cards.",
+        "issues": [],
+        "procedural_posture": "initial_complaint",
+        "task": "served_papers",
+        "urgency_flags": [
+          "served_papers"
+        ],
+        "user_goal": "Understand the papers, preserve deadlines, and identify the first safe steps."
+      },
+      "question": "I was served with family court papers. What should I do first?",
+      "response_kind": "family_answer",
+      "source_card_count": 3
+    }
+  },
+  "focaf_printables": {
+    "asset_audit": {
+      "expected": 103,
+      "hash_mismatches": [],
+      "missing": [],
+      "resolved": 103,
+      "status": "pass"
+    },
+    "authority_status": "not_legal_authority",
+    "chunks": 1092,
+    "documents": 103,
+    "medication_query_top_results": [
+      "Focaf Belongings Medication Transfer Sheet",
+      "Focaf Handoff Exchange Notes Pad"
+    ],
+    "native_text_documents": 0,
+    "pages": 739,
+    "served_query_top_results": [
+      "Before You Call Or File Public",
+      "Court Day Bag Public",
+      "Focaf Parent Quick Start Pack"
+    ]
+  },
+  "generated_at": "2026-07-19T14:29:54.507581+00:00",
+  "implementation": {
+    "answer_contract": "family_answer_v3_2",
+    "intake_parser": "deterministic_local_v2",
+    "legal_and_record_lanes_separated": true,
+    "ocr": "explicit local opt-in; native extraction first; page provenance preserved",
+    "private_data_transmission": false,
+    "private_record_match_is_legal_conclusion": false,
+    "private_search": "page/member-aware local SQLite FTS5",
+    "source_card_followup": "session-scoped prior-result reuse"
+  },
+  "msix_target": "3.2.0.0",
+  "product_version": "3.2.0",
+  "schema": "maine_family_law_llm.v3_2_0_chat_intake_proof.v1",
+  "ui_version": "3.2.0-family-justice-chat-b10",
+  "validation": {
+    "focused_tests": "38 passed",
+    "full_tests": "638 passed, 1 skipped (639 collected)",
+    "javascript_syntax": "pass",
+    "local_doctor": "pass",
+    "public_repo_readiness": "pass; production_legal_ready remains false",
+    "python_compile": "pass",
+    "release_artifact_audit": "pass; 0 blocked paths",
+    "wack": "not run; Windows elevation required",
+    "windows_msix_build": "not run in Linux; target 3.2.0.0"
+  }
+}

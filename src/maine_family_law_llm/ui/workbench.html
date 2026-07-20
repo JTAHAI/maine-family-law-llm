@@ -188,7 +188,11 @@
 <button class="secondary" id="refresh-corpus-button" title="Refresh the installed corpus list from disk." type="button">Refresh corpora</button>
 </div>
 <div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div>
-<div class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div>
+<div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div>
+<div class="ocr-primary-action" id="ocr-primary-action" hidden="">
+<button class="primary-action" id="ocr-action-button" title="Review scanned pages and choose whether to run OCR entirely on this computer." type="button">OCR scanned pages locally</button>
+<div class="field-hint">OCR is never automatic. It requires a separate choice and never uploads the selected records or recognized text.</div>
+</div>
 <div class="row" style="margin-top:10px">
 <button class="secondary" id="review-inventory-button" title="Review the local inventory status for the selected matter. No source files are opened by this action." type="button">Review inventory</button>
 <button class="secondary" id="rebuild-index-button" title="Rebuilds only the local derived search index for a previously authorized matter. Original source documents remain unchanged." type="button">Rebuild local index</button>
@@ -355,6 +359,29 @@
 <div aria-live="polite" class="command-results-status" id="command-results-status"></div>
 <div aria-label="Available commands" aria-orientation="vertical" class="command-list" id="command-list" role="listbox"></div>
 <div class="command-palette-footer"><span>↑ ↓ move</span><span>Enter run</span><span>Esc close</span><button class="secondary compact-action" id="close-command-palette" type="button">Close</button></div>
+</div>
+</div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="ocr-overlay">
+<div aria-labelledby="ocr-title" aria-modal="true" class="overlay-card compact-overlay-card" role="dialog">
+<div class="overlay-kicker">Local searchable inventory</div>
+<h3 id="ocr-title">Some pages need local OCR</h3>
+<p id="ocr-disclosure">OCR will analyze scanned or image-only pages on this computer and add recognized text to your local search index. OCR text may contain mistakes. Nothing is uploaded or transmitted.</p>
+<div aria-live="polite" class="status-strip" id="ocr-choice-status">Checking the selected matter for scanned pages and local OCR availability…</div>
+<div class="ocr-detail-grid" id="ocr-detail-grid">
+<section><strong>Candidate pages</strong><span id="ocr-candidate-count">Checking…</span></section>
+<section><strong>Local engine</strong><span id="ocr-engine-status">Checking…</span></section>
+<section><strong>Privacy boundary</strong><span>File reading, page rendering, OCR, indexing, and snippets stay on this computer.</span></section>
+<section><strong>Accuracy</strong><span>OCR-derived text is labeled and should be checked against the original page image.</span></section>
+</div>
+<div class="overlay-actions ocr-overlay-actions">
+<button class="primary-action" id="start-ocr-button" type="button">OCR scanned pages locally</button>
+<button class="primary-action" hidden id="install-ocr-prerequisites-button" type="button">Install OCR prerequisites</button>
+<button class="secondary" hidden id="open-ocr-install-page-button" type="button">Open manual install page</button>
+<button class="secondary" hidden id="recheck-ocr-button" type="button">Recheck local OCR</button>
+<button class="secondary" id="decline-ocr-button" type="button">Keep them unsearchable for now</button>
+<button class="secondary" id="cancel-ocr-choice-button" type="button">Cancel</button>
+</div>
+<div class="overlay-meta" id="ocr-install-disclosure">OCR will not start until you activate the affirmative button. Installing prerequisites may connect to Windows Package Manager, but matter records are not read or uploaded.</div>
 </div>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="privacy-overlay">

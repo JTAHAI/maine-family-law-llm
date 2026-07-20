@@ -11,15 +11,19 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repo = [System.IO.Path]::GetFullPath($RepoRoot)
+$python = if ($PythonExe) { $PythonExe } else { (Get-Command python).Source }
+if (-not (Test-Path -LiteralPath $python)) {
+  throw "python_not_found:$python"
+}
 Set-Location -LiteralPath $repo
 $env:PYTHONDONTWRITEBYTECODE = "1"
 $sep = [System.IO.Path]::PathSeparator
 $env:PYTHONPATH = "$repo\src$sep$repo"
 
-python .\scripts\doctor-local-repo.py --repo-root $repo --json
+& $python .\scripts\doctor-local-repo.py --repo-root $repo --json
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not $SkipTests) {
-  python -m pytest -q
+  & $python -m pytest -q
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
@@ -37,7 +41,6 @@ try {
   $client.Close()
 }
 
-$python = if ($PythonExe) { $PythonExe } else { (Get-Command python).Source }
 $appTarget = if ($ApiMode -eq "Enterprise") { "app.api.main:app" } else { "maine_family_law_llm.api:app" }
 $argsList = @("-m", "uvicorn", $appTarget, "--host", "127.0.0.1", "--port", [string]$Port)
 $proc = Start-Process -FilePath $python -ArgumentList $argsList -WorkingDirectory $repo -WindowStyle Hidden -PassThru

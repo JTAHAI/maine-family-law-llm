@@ -16,7 +16,7 @@
     {
       "blockers": [],
       "details": {
-        "checked_files": 981,
+        "checked_files": 1306,
         "github_ci_present": true,
         "only_one_txt_file": true,
         "production_legal_ready": false,
@@ -29,9 +29,9 @@
     {
       "blockers": [],
       "details": {
-        "expected_heading": "v2.07.0",
-        "package_version": "2.07.0",
-        "pyproject_version": "2.07.0"
+        "expected_heading": "v3.8.0",
+        "package_version": "3.8.0",
+        "pyproject_version": "3.8.0"
       },
       "name": "version_consistency",
       "status": "pass",
@@ -91,10 +91,10 @@
       "summary": "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
     }
   ],
-  "generated_at": "2026-06-16T22:02:52.640438+00:00",
+  "generated_at": "2026-07-20T01:06:24.192597+00:00",
   "interpretation": "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.",
   "production_legal_ready": false,
-  "project_root": "D:\\dev\\maine-family-law-llm_git",
+  "project_root": "/mnt/data/mfl_v350_work/maine-family-law-llm_v3.5.0",
   "safe_to_push": true,
   "schema": "maine_family_law_llm.public_source_pre_push_gate.v2",
   "status": "pass"

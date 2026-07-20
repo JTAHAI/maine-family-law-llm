@@ -56,13 +56,21 @@ PROHIBITED_SUFFIXES = {
     ".onnx",
     ".safetensors",
     ".gguf",
-    ".pdf",
+}
+
+ALLOWED_PDF_PREFIXES = {
+    "src/maine_family_law_llm/resources/focaf/",
+    "maine_family_law_llm/resources/focaf/",
 }
 
 
 def _strip_archive_root(name: str) -> str:
     parts = Path(name).parts
-    if len(parts) > 1 and parts[0] == "ME_FM_LLM":
+    if len(parts) > 1 and (
+        parts[0] == "ME_FM_LLM"
+        or parts[0].startswith("ME_FM_LLM_v")
+        or parts[0].startswith("maine-family-law-llm_v")
+    ):
         return "/".join(parts[1:])
     return name.rstrip("/")
 
@@ -81,7 +89,8 @@ def audit(zip_path: Path) -> dict:
             continue
         parts = set(Path(path).parts)
         suffix = Path(path).suffix.lower()
-        if parts & PROHIBITED_PARTS or suffix in PROHIBITED_SUFFIXES:
+        allowed_public_pdf = suffix == ".pdf" and any(path.startswith(prefix) for prefix in ALLOWED_PDF_PREFIXES)
+        if parts & PROHIBITED_PARTS or suffix in PROHIBITED_SUFFIXES or (suffix == ".pdf" and not allowed_public_pdf):
             prohibited.append(path)
     blockers.extend(f"prohibited_release_zip_entry:{path}" for path in prohibited[:50])
 
@@ -93,6 +102,7 @@ def audit(zip_path: Path) -> dict:
         "required_count": len(REQUIRED_RELEASE_PATHS),
         "missing_required_paths": missing,
         "prohibited_entry_count": len(prohibited),
+        "allowed_public_pdf_count": sum(1 for path in normalized if Path(path).suffix.lower() == ".pdf" and any(path.startswith(prefix) for prefix in ALLOWED_PDF_PREFIXES)),
         "blockers": blockers,
     }
 

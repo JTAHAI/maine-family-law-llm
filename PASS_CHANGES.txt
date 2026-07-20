@@ -1,19 +1,16 @@
-v3.1.1 / Microsoft Store MSIX build 3.1.1.0: fixed read-only packaged Maine-law retrieval and overlay focus handling.
+Maine Family Law LLM v4.4.0
 
-- added the bundled public FOCAF printable library: 103 hash-checked PDFs, 739 pages, page-level extracted text, local searchable chunks, original-PDF open/print actions, and non-authority labels
-- added explicit local inventory consent, separate optional local OCR choice, offline socket/DNS boundary, compact direct-record search behavior, and visible index review/rebuild/delete controls
-- retained the public-source rule: bundled FOCAF resources are public family printables, not private matter data or legal authority
+- Pass 4.2: fixed Windows launcher repository-path normalization and the trailing-quote GetFullPath failure; added explicit one-click Tesseract installation with manual-link fallback and post-install recheck.
+- Pass 4.3: added corpus-inventory chat commands and PDF-scoped private-record searches so commands such as "find PDF re: contempt" and "list what is in my indexed corpus" bypass generic Maine-law chat.
+- Pass 4.4: bundled a Python PDF renderer for scanned-PDF OCR, added visible prerequisite controls and inventory rendering, and preserved local-only/privacy disclosures.
+- Product version 4.4.0; Microsoft Store manifest target 4.4.0.0 with required zero revision.
 
-v3.0.0 Pass 04 / release candidate build 5
+Maine Family Law LLM v4.1.0
 
-- completed the slim constitutional identity bar
-- added local privacy, matter, help, commands and new-chat top-bar affordances
-- added grouped and expanded Ctrl+K command coverage
-- added privacy and keyboard-shortcut dialogs
-- added privacy-safe civic build-card easter egg
-- kept Ctrl+J Constitution experience
-- added the structured family answer contract, source lanes, child-impact lens, modern segmented composer, cancel and privacy-clear controls
-- updated need-first onboarding and source-safe citation display
-- stabilized the composer control row so source lanes, Child Impact Lens, and Send cannot collapse into a narrow column
-- simplified the visible chat footer version label to v3
-- MSIX target 3.0.0.5
+Current completed implementation pass number: 51
+
+- Pass 3.9: added citation-aware retrieval diagnostics, exact-reference failure classes, confidence levels, match coverage, source diversity, and duplicate suppression.
+- Pass 4.0: added source-scope-aware working drafts, private-record/legal-authority separation, prompt-bypass neutralization, structured outline sections, and explicit drafting blockers.
+- Pass 4.1: added privacy-safe runtime health checks, package/version/asset self-audits, atomic state writes, malformed state rejection, stale-PID termination protection, and single-manifest deterministic release rebuilding.
+- Product version 4.1.0; Microsoft Store manifest target 4.1.0.0 with required zero revision.
+- Source remains review-required and does not claim current-law certification, legal entailment, filing readiness, completed WACK, attorney review, pilot signoff, or production legal GA.

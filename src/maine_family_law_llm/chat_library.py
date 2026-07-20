@@ -13,6 +13,7 @@ import re
 from typing import Any
 
 from .cite import render_citation_appendix
+from .intake_understanding import normalize_intake_text
 from .retrieve import SearchResult
 
 
@@ -141,7 +142,7 @@ CHAT_LIBRARY: tuple[ChatLibraryItem, ...] = (
             "What can I do if the other parent is not following the order?",
             "How do I enforce a Maine family order?",
         ),
-        ("enforce", "contempt", "not following", "violating", "order", "parent"),
+        ("enforce", "contempt", "not following", "violating", "order", "parent", "interference", "obstruction", "withholding contact", "disparagement", "contact refusal"),
         "If an existing family order is not being followed, the issue is usually enforcement, contempt, or a related post-judgment motion. The workbench should not tell you to withhold contact or support on your own. It should help you organize the order language, the alleged violation, dates, proof, and the proper Maine court process to review.",
         ("changing or enforcing", "family order", "motion process"),
         (
@@ -149,6 +150,36 @@ CHAT_LIBRARY: tuple[ChatLibraryItem, ...] = (
             "Create a date-by-date log of what happened.",
             "Keep evidence separate from conclusions.",
         ),
+    ),
+    _item(
+        "parent_contact_interference_neutral_triage",
+        "parent",
+        "post_judgment",
+        "How should I sort claims of interference, obstruction, or denied contact?",
+        (
+            "What does parental interference mean in a Maine family case?",
+            "How should I document obstruction or denied parent-child contact?",
+            "Could blocked contact be contempt?",
+        ),
+        (
+            "parental interference",
+            "interference",
+            "obstruction",
+            "blocked contact",
+            "denied contact",
+            "withholding contact",
+            "contact refusal",
+            "disparagement",
+            "contempt",
+        ),
+        "Words such as interference, obstruction, alienation, or contempt are not self-proving legal findings. Start with the exact current order, then describe each event neutrally by date, identify the record that supports it, and note any effect on the child or schedule. A qualified reviewer can then assess whether the issue belongs in enforcement, contempt, modification, safety relief, or no court filing at all. If you meant to search your own files, switch to My records and search the exact term rather than asking the law lane to infer what the records contain.",
+        ("1653", "changing or enforcing", "family order", "motion process", "contact"),
+        (
+            "Quote the exact order provision governing contact, exchanges, or communication.",
+            "Build a date-ordered incident list that separates observed facts, source records, and conclusions.",
+            "Ask for legal review before labeling conduct contempt, interference, or alienation or choosing a filing.",
+        ),
+        "Do not involve the child as a messenger, investigator, witness-gatherer, or decision-maker.",
     ),
     _item(
         "parent_child_support",
@@ -741,7 +772,7 @@ CHAT_LIBRARY: tuple[ChatLibraryItem, ...] = (
             "How do I document missed exchanges?",
             "What proof do I need if parenting time is denied?",
         ),
-        ("missed exchange", "denied contact", "no show", "late", "exchange", "violating order"),
+        ("missed exchange", "denied contact", "no show", "late", "exchange", "violating order", "interference", "obstruction", "blocked contact", "contact refusal"),
         "For missed exchanges or denied contact, start with the exact current order language, then create a date-by-date log of what happened and what proof exists. The workbench should keep this in enforcement/post-judgment review mode and avoid telling a parent to self-help or violate another part of the order.",
         ("changing or enforcing", "family order", "motion process", "contact"),
         (
@@ -2575,7 +2606,7 @@ def expand_query_for_library(question: str) -> str:
         hints.append("parental rights responsibilities contact best interest 1653")
     if any(term in text for term in ("caregiver", "grandparent", "guardian", "relative")):
         hints.append("family matter court forms parental rights child")
-    if any(term in text for term in ("modify", "change", "enforce", "contempt", "post judgment", "post-judgment")):
+    if any(term in text for term in ("modify", "change", "enforce", "contempt", "post judgment", "post-judgment", "interference", "obstruction", "blocked contact", "denied contact", "contact refusal")):
         hints.append("changing or enforcing order motion process family matter")
     if any(term in text for term in ("support", "affidavit", "income", "pay", "lost job", "new job")):
         hints.append("child support FM-050 support enforcement guidelines court forms")
@@ -2647,7 +2678,7 @@ def expand_query_for_library(question: str) -> str:
 
 
 def match_chat_library(question: str) -> ChatLibraryItem | None:
-    text = _normalize(question)
+    text = _normalize(normalize_intake_text(question))
     forced = _route_override(text)
     if forced is not None:
         return forced
@@ -2682,6 +2713,24 @@ def _route_override(text: str) -> ChatLibraryItem | None:
     def has_any(*terms: str) -> bool:
         return any(term in text for term in terms)
 
+    # A request to understand the wording of an existing order must not be
+    # swallowed by broad contact/enforcement vocabulary.  Clarification comes
+    # before any inference that the user is alleging noncompliance.
+    if has_any(
+        "what does my order mean",
+        "what does the order mean",
+        "help me understand my order",
+        "understand the order",
+        "understand my order",
+        "order language",
+        "confusing order",
+        "unclear order",
+        "reasonable contact",
+    ):
+        return _item_by_id("parent_order_language_confusing")
+
+    if has_any("parental interference", "interference", "obstruction", "blocked contact", "denied contact", "withholding contact", "contact refusal", "parental alienation", "disparagement"):
+        return _item_by_id("parent_contact_interference_neutral_triage") or _item_by_id("parent_enforce_order")
     if has_any("what is a gal", "gal role", "gal report", "guardian ad litem"):
         return _item_by_id("parent_gal_role_report_questions") or _item_by_id("parent_gal_involved_questions")
     if has_any("appeal deadline", "deadline to appeal", "how long to appeal", "notice of appeal", "file an appeal"):
@@ -2722,6 +2771,8 @@ def compose_library_answer(
     answer_style: str = "plain_language",
     matter_context: str = "",
 ) -> LibraryAnswer | None:
+    """Compose a concise core answer; source cards and contract sections render elsewhere."""
+
     item = match_chat_library(question + " " + matter_context)
     if item is None:
         return None
@@ -2729,121 +2780,36 @@ def compose_library_answer(
     if not citations:
         return None
 
-    lines: list[str] = []
-    heading = f"{item.title}"
+    lines: list[str] = [item.answer.strip()]
     if answer_style == "checklist":
-        lines.append(f"Checklist: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Next steps:")
-        for step in item.next_steps:
-            lines.append(f"[ ] {step}")
-    elif answer_style == "source_first":
-        lines.append("Source-backed answer")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Why these sources matter:")
-        for result in citations:
-            lines.append(f"- {result.title}: {result.snippet}")
-        lines.append("")
-        lines.append("Next steps:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
+        lines.extend(["", "Useful checklist:"])
+        lines.extend(f"[ ] {step}" for step in item.next_steps[:4])
     elif answer_style == "intake":
-        lines.append(f"Intake triage: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Intake questions to ask next:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
-        lines.append("- What documents, deadlines, hearings, and safety issues are missing from the file?")
-        lines.append("- Which legal/procedure claims still need source-card verification?")
+        lines.extend(["", "Questions that would sharpen the next answer:"])
+        lines.extend(f"- {step}" for step in item.next_steps[:3])
     elif answer_style == "professional_boundary":
-        lines.append(f"Professional-boundary note: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Boundary guardrails:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
+        lines.extend(["", "Professional boundaries:"])
+        lines.extend(f"- {step}" for step in item.next_steps[:3])
         lines.append("- Keep role, consent, confidentiality, and court authority separate.")
-        lines.append("- Do not upload private clinical or matter records unless an approved local workflow is configured.")
     elif answer_style == "questions_to_ask":
-        lines.append(f"Questions to ask next: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Ask a lawyer / qualified reviewer:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
-        lines.append("- What deadlines, service issues, safety issues, or source gaps should be handled first?")
-        lines.append("- What should not be filed or relied on until reviewed?")
-        lines.append("")
-        lines.append("Ask a court clerk only about logistics:")
-        lines.append("- Where are the current official forms and instructions?")
-        lines.append("- What copies, fees, filing method, service instructions, or hearing logistics apply?")
-        lines.append("- Clerks cannot choose claims, predict outcomes, or give legal strategy.")
+        lines.extend(["", "Questions for a lawyer or qualified reviewer:"])
+        lines.extend(f"- {step}" for step in item.next_steps[:3])
+        lines.extend(
+            [
+                "- What deadline, service, safety, or source gap should be handled first?",
+                "",
+                "A court clerk can usually help only with logistics such as current forms, fees, filing method, service instructions, and hearing access.",
+            ]
+        )
     elif answer_style == "missing_information":
-        lines.append(f"Missing-information checklist: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Information still needed before anyone should rely on this:")
-        for value in missing_information_for_item(item):
-            lines.append(f"[ ] {value}")
-        lines.append("")
-        lines.append("Role-specific follow-up questions:")
-        for question_text in follow_up_questions_for_item(item):
-            lines.append(f"- {question_text}")
-        lines.append("")
-        lines.append("Source-card handoff:")
-        for result in citations:
-            lines.append(f"- {result.title} — {result.citation or result.metadata.get('citation_hint', 'source card')}")
-    elif answer_style == "source_card_table":
-        lines.append(f"Source-card review: {heading}")
-        lines.append("")
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Source-card audit table:")
-        lines.append("| Source | Type | Citation hint | Why it matters |")
-        lines.append("| --- | --- | --- | --- |")
-        for result in citations:
-            meta = result.metadata
-            lines.append(
-                "| "
-                + result.title.replace("|", "/")
-                + " | "
-                + str(meta.get("source_type", "source")).replace("|", "/")
-                + " | "
-                + str(meta.get("citation_hint", result.citation)).replace("|", "/")
-                + " | "
-                + result.snippet.replace("|", "/")[:140]
-                + " |"
-            )
-        lines.append("")
-        lines.append("Next steps:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
-    else:
-        lines.append(item.answer)
-        lines.append("")
-        lines.append("Practical next steps:")
-        for step in item.next_steps:
-            lines.append(f"- {step}")
-    if any(result.metadata.get("effective_date") or result.metadata.get("version_label") for result in citations):
-        lines.append("")
-        lines.append("Source freshness note: Check the effective date and version label on each source card before relying on this information.")
+        lines.extend(["", "Key information still needed:"])
+        lines.extend(f"[ ] {value}" for value in missing_information_for_item(item)[:5])
+    elif answer_style in {"source_first", "source_card_table"}:
+        lines.extend(["", "Open the source cards to inspect the exact official passages, dates, and authority status."])
+
     if item.safety_note:
-        lines.append("")
-        lines.append(f"Safety note: {item.safety_note}")
-    lines.append("")
-    lines.append(DISCLAIMER)
-    lines.append("")
-    lines.append(render_citation_appendix(citations))
-    return LibraryAnswer(item=item, text="\n".join(lines), citations=citations)
+        lines.extend(["", f"Safety note: {item.safety_note}"])
+    return LibraryAnswer(item=item, text="\n".join(lines).strip(), citations=citations)
 
 
 GENERIC_PROMPT_TOKENS = {

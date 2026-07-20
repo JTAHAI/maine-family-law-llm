@@ -9,7 +9,8 @@ param(
   [string]$PackageVersion = "",
   [string]$CertificatePfxPath = "",
   [string]$CertificatePassword = "",
-  [switch]$UseDevIdentity
+  [switch]$UseDevIdentity,
+  [switch]$Unsigned
 )
 
 Set-StrictMode -Version Latest
@@ -49,7 +50,7 @@ function Convert-ToPackageVersion([string]$VersionText) {
     $normalizedParts += "0"
   }
   if ($normalizedParts[3] -ne "0") {
-    throw "Microsoft Store requires the MSIX revision component to be zero (for example, 3.1.0.0)."
+    throw "Package version revision must be zero for this Store release."
   }
   return ($normalizedParts -join ".")
 }
@@ -150,7 +151,7 @@ $manifestPath = Join-Path $packageRoot "AppxManifest.xml"
 $priConfig = Join-Path $RepoRoot "store\msix\priconfig.xml"
 $makeAppx = Resolve-SdkTool "makeappx.exe"
 $makePri = Resolve-SdkTool "makepri.exe"
-$signTool = Resolve-SdkTool "signtool.exe"
+$signTool = if ($Unsigned) { $null } else { Resolve-SdkTool "signtool.exe" }
 
 & (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot -OutputRoot $OutputRoot
 & (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
@@ -185,17 +186,21 @@ if (Test-Path -LiteralPath $msixPath) {
 }
 & $makeAppx pack /d $packageRoot /p $msixPath /o | Out-Null
 
-if (-not $CertificatePfxPath) {
-  if (-not $CertificatePassword) {
-    $CertificatePassword = New-EphemeralCertificatePassword
+$certificateCerPath = ""
+if (-not $Unsigned) {
+  if (-not $CertificatePfxPath) {
+    if (-not $CertificatePassword) {
+      $CertificatePassword = New-EphemeralCertificatePassword
+    }
+    $certInfo = Ensure-DevCertificate $Publisher $msixRoot $CertificatePassword
+    $CertificatePfxPath = $certInfo.pfx
+    $certificateCerPath = $certInfo.cer
+  } else {
+    $certificateCerPath = ""
   }
-  $certInfo = Ensure-DevCertificate $Publisher $msixRoot $CertificatePassword
-  $CertificatePfxPath = $certInfo.pfx
-  $certificateCerPath = $certInfo.cer
-} else {
-  $certificateCerPath = ""
+  & $signTool sign /fd SHA256 /f $CertificatePfxPath /p $CertificatePassword $msixPath | Out-Null
+
 }
-& $signTool sign /fd SHA256 /f $CertificatePfxPath /p $CertificatePassword $msixPath | Out-Null
 
 python (Join-Path $RepoRoot "scripts\audit_store_package.py") `
   --stage-root $packageRoot `
@@ -208,12 +213,14 @@ $smokePath = Join-Path $evidenceRoot "store-build-smoke.json"
 $smoke = Get-Content -Path $smokePath -Raw | ConvertFrom-Json
 $packageManifest = Get-Content -Path (Join-Path $evidenceRoot "package-file-manifest.json") -Raw | ConvertFrom-Json
 $privateAudit = Get-Content -Path (Join-Path $evidenceRoot "private-data-audit.json") -Raw | ConvertFrom-Json
-$gitCommit = (git -C $RepoRoot rev-parse HEAD).Trim()
-$storeBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
-if (-not (Test-Path -LiteralPath $storeBuildPython)) {
-  throw "Store build virtual environment was not created at $storeBuildPython"
+$gitCommit = "unavailable"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+  $candidateCommit = (& git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
+  if ($LASTEXITCODE -eq 0 -and $candidateCommit) {
+    $gitCommit = $candidateCommit
+  }
 }
-$runtimeDeps = & $storeBuildPython -c "import importlib.metadata as m, json; print(json.dumps({n:m.version(n) for n in ['fastapi','uvicorn','httpx','pypdf']}))"
+$runtimeDeps = python -c "import importlib.metadata as m, json; print(json.dumps({n:m.version(n) for n in ['fastapi','uvicorn','httpx','pypdf','pypdfium2']}))"
 $wackFolder = Join-Path $evidenceRoot "wack"
 New-Item -ItemType Directory -Force -Path $wackFolder | Out-Null
 $smoke | Add-Member -NotePropertyName git_commit -NotePropertyValue $gitCommit -Force

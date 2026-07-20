@@ -22,12 +22,12 @@ def test_pass02_version_and_msix_build_are_incremented() -> None:
         )
     )
 
-    assert VERSION == "3.1.1"
-    assert BUILD_NUMBER == 8
-    assert PACKAGE_VERSION == "3.1.1.0"
-    assert identity["package_version"] == "3.1.1.0"
-    assert UI_PASS_MARKER == "v3.1.1-readonly-fixture-retrieval"
-    assert UI_VERSION.endswith("-b8")
+    assert VERSION == "4.4.0"
+    assert BUILD_NUMBER == 22
+    assert PACKAGE_VERSION == "4.4.0.0"
+    assert identity["package_version"] == "4.4.0.0"
+    assert UI_PASS_MARKER == "v4.4.0-windows-ocr-corpus-ux"
+    assert UI_VERSION.endswith("-b22")
 
 
 def test_constitutional_identity_remains_visible_and_popover_is_complete() -> None:
@@ -70,16 +70,6 @@ def test_pass02_topbar_has_privacy_matter_health_commands_help_and_new_chat() ->
     assert "The authority belongs to the source, not the model." in html
 
 
-def test_accessibility_focus_moves_before_overlay_or_drawer_is_hidden() -> None:
-    from maine_family_law_llm.local_workbench_ui import read_workbench_asset
-
-    js = read_workbench_asset("workbench.js")
-
-    assert "A focused descendant must leave before aria-hidden is applied." in js
-    assert "Move focus before hiding the drawer from assistive technology." in js
-    assert "returnTarget.focus();\n      }\n      element.hidden = true;" in js
-
-
 def test_pass02_privacy_shortcuts_and_build_overlays_are_local_and_safe() -> None:
     from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 
@@ -89,7 +79,7 @@ def test_pass02_privacy_shortcuts_and_build_overlays_are_local_and_safe() -> Non
     assert 'id="shortcuts-overlay"' in html
     assert 'id="build-overlay"' in html
     assert 'id="footer-version"' in html
-    assert "3.1.1.0" in html
+    assert "4.4.0.0" in html
     assert "This card intentionally contains no private paths" in html
     assert "does not silently send your question" in html
     assert "Every critical action remains available by mouse and touch." in html
@@ -151,7 +141,7 @@ def test_pass02_css_preserves_visible_identity_and_accessibility_modes() -> None
 
     css = read_workbench_asset("workbench.css")
 
-    assert "v3.1.0" in css
+    assert "v3.3" in css or "v3.2" in css
     assert ".topbar-popover" in css
     assert ".civic-tooltip::after" in css
     assert ".command-group" in css

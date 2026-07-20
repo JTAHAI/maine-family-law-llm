@@ -8,6 +8,8 @@ paths or external data/evidence roots instead of living at the repo root.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +60,47 @@ PROHIBITED_SUFFIXES = {
     ".pdf",
 }
 
+
+APPROVED_PUBLIC_PDF_ROOTS = (
+    Path("src/maine_family_law_llm/resources/focaf"),
+    Path("maine_family_law_llm/resources/focaf"),
+)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _is_approved_public_pdf(root: Path, path: Path) -> bool:
+    if path.suffix.lower() != ".pdf":
+        return False
+    try:
+        rel = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    for root_rel in APPROVED_PUBLIC_PDF_ROOTS:
+        try:
+            within = rel.relative_to(root_rel)
+        except ValueError:
+            continue
+        if len(within.parts) != 1:
+            return False
+        inventory_path = root / root_rel / "focaf_inventory.json"
+        try:
+            payload = json.loads(inventory_path.read_text(encoding="utf-8"))
+            expected = {
+                str(row.get("original_filename") or ""): str(row.get("source_hash") or "").lower()
+                for row in payload.get("documents", [])
+            }.get(within.name, "")
+            return bool(expected) and path.read_bytes()[:5] == b"%PDF-" and _sha256(path).lower() == expected
+        except (OSError, json.JSONDecodeError):
+            return False
+    return False
+
 IGNORED_TREE_PARTS = {
     ".git",
     ".pytest_cache",
@@ -70,8 +113,6 @@ IGNORED_TREE_PARTS = {
     "build",
     "node_modules",
 }
-
-PUBLIC_FOCAF_RESOURCE_PREFIX = ("src", "maine_family_law_llm", "resources", "focaf")
 
 
 @dataclass(frozen=True)
@@ -93,11 +134,9 @@ class ReleaseArtifactAudit:
             if path.is_dir() and path.name in PROHIBITED_RELEASE_DIR_NAMES:
                 blockers.append({"path": rel_posix, "reason": "external_artifact_directory_in_repo"})
                 continue
-            if (
-                path.is_file()
-                and path.suffix.lower() in PROHIBITED_SUFFIXES
-                and not (rel.parts[:4] == PUBLIC_FOCAF_RESOURCE_PREFIX and path.suffix.lower() == ".pdf")
-            ):
+            if path.is_file() and path.suffix.lower() in PROHIBITED_SUFFIXES:
+                if path.suffix.lower() == ".pdf" and _is_approved_public_pdf(root, path):
+                    continue
                 blockers.append({"path": rel_posix, "reason": "prohibited_release_file_type"})
                 continue
             if (

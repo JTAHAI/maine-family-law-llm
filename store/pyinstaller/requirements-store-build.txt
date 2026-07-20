@@ -4,4 +4,5 @@ fastapi==0.116.1
 uvicorn==0.35.0
 httpx==0.28.1
 pypdf==5.9.0
+pypdfium2==5.11.0
 Pillow==12.1.0

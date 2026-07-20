@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+<title id="title">Establish Justice Constitution facsimile</title>
+<desc id="desc">A stylized parchment image of the Constitution preamble with establish Justice enlarged and highlighted.</desc>
+<defs>
+  <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9f0d8"/><stop offset=".5" stop-color="#efe0bb"/><stop offset="1" stop-color="#ddc99a"/></linearGradient>
+  <filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#18202a" flood-opacity=".24"/></filter>
+  <filter id="grain"><feTurbulence baseFrequency=".8" numOctaves="2" stitchTiles="stitch" type="fractalNoise" result="noise"/><feColorMatrix in="noise" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .055 0"/><feBlend in="SourceGraphic" mode="multiply"/></filter>
+</defs>
+<rect x="48" y="42" width="1104" height="536" rx="20" fill="url(#paper)" stroke="#8f7446" stroke-width="3" filter="url(#shadow)"/>
+<g filter="url(#grain)" fill="#342b20">
+  <text x="105" y="150" font-family="Georgia,serif" font-size="72" font-weight="700">We the People</text>
+  <text x="108" y="205" font-family="Georgia,serif" font-size="27">of the United States, in Order to form a more perfect Union,</text>
+  <rect x="98" y="234" width="1004" height="116" rx="10" fill="#fff8e8" stroke="#0d5c73" stroke-width="3"/>
+  <text x="600" y="307" text-anchor="middle" font-family="Georgia,serif" font-size="64" font-weight="700">... establish Justice ...</text>
+  <text x="108" y="408" font-family="Georgia,serif" font-size="25">insure domestic Tranquility, provide for the common defence,</text>
+  <text x="108" y="451" font-family="Georgia,serif" font-size="25">promote the general Welfare, and secure the Blessings of Liberty</text>
+  <text x="108" y="494" font-family="Georgia,serif" font-size="25">to ourselves and our Posterity, do ordain and establish this Constitution.</text>
+  <path d="M102 528 C320 548 715 536 1095 526" fill="none" stroke="#8f7446" stroke-width="2"/>
+</g>
+</svg>

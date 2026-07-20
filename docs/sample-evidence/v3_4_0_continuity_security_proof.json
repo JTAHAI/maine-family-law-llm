@@ -1,0 +1,146 @@
+{
+  "api_boundary_smoke": {
+    "health_payload": {
+      "mode": "local-workbench",
+      "status": "ok",
+      "version": "3.4.0"
+    },
+    "health_status_code": 200,
+    "security_headers": {
+      "cache-control": "no-store, max-age=0",
+      "cross-origin-opener-policy": "same-origin",
+      "cross-origin-resource-policy": "same-origin",
+      "pragma": "no-cache",
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-request-id": "9dc9fe4f140c4081adfbe32b85523233"
+    }
+  },
+  "archive_validation": {
+    "archive_file_count": 1291,
+    "blocked_runtime_or_model_entries": 0,
+    "bundled_pdf_entry_count": 206,
+    "extracted_focaf_asset_audit": "103/103 resolved; zero missing; zero hash mismatches",
+    "extracted_local_doctor": "pass",
+    "extracted_public_repo_readiness": "pass; zero findings",
+    "extracted_release_artifact_audit": "pass; zero blockers",
+    "extracted_release_smoke": "61 passed",
+    "javascript_syntax_from_extracted_zip": "pass",
+    "zip_integrity": "pass"
+  },
+  "build_number": 12,
+  "continuity_smoke": {
+    "anchor_contains_dates": false,
+    "anchor_contains_docket_or_court": false,
+    "anchor_contains_safety_flags": false,
+    "anchor_normalized_text": "",
+    "context_inherited": true,
+    "continuation_requested": true,
+    "continuity_reason": "The short follow-up explicitly referred to the prior turn. Only structured routing labels were reused; no prior dates, docket numbers, court names, safety flags, or raw question text were inherited.",
+    "inherited_task": "served_papers",
+    "initial_search_id_present": true,
+    "raw_question_stored": false
+  },
+  "date_normalization_smoke": {
+    "critical_dates": [
+      {
+        "confidence": 0.68,
+        "kind": "response_or_filing_deadline",
+        "normalization_basis": "year_inferred_from_reference_date",
+        "normalized_date": "2026-08-03",
+        "raw": "August 3"
+      },
+      {
+        "confidence": 0.76,
+        "kind": "hearing_date",
+        "normalization_basis": "relative_to_local_reference_date",
+        "normalized_date": "2026-08-02",
+        "raw": "in 2 weeks"
+      }
+    ],
+    "interpretation_note": "This is a routing summary, not a legal or factual conclusion. Review the original papers, dates, and source cards."
+  },
+  "focaf_printables": {
+    "asset_audit": {
+      "expected": 103,
+      "hash_mismatches": [],
+      "missing": [],
+      "resolved": 103,
+      "resource_roots": [
+        "src/maine_family_law_llm/resources/focaf"
+      ],
+      "status": "pass"
+    },
+    "authority_status": "not_legal_authority"
+  },
+  "generated_at": "2026-07-19T16:22:30.364950+00:00",
+  "implementation": {
+    "answer_contract": "family_answer_v3_4",
+    "browser_handoff_runtime_fix": true,
+    "browser_source_followups_use_server": true,
+    "continuity_memory": "sanitized structured routing anchor only; no raw prior question",
+    "current_turn_safety_recomputed": true,
+    "date_extraction_is_deadline_calculation": false,
+    "ocr_exception_text_returned_to_client": false,
+    "prompt_and_source_instruction_scanning": true,
+    "public_result_limit_max": 20,
+    "relative_and_inferred_date_basis_visible": true,
+    "source_selection": "session-scoped, lane-aware, ordinal 1-24 and last-card, no retrieval rerun",
+    "source_text_trust_boundary": "retrieved text is untrusted data, never app instruction",
+    "stale_source_reopening_blocked": true
+  },
+  "instruction_boundary_smoke": {
+    "instruction_like_source_card_count": 1,
+    "prompt_findings": [
+      "direct_prompt_injection:ignore_previous_instructions",
+      "direct_prompt_injection:reveal_system_prompt"
+    ],
+    "review_required": true,
+    "security_warning_count": 2,
+    "source_instruction_flag": true,
+    "source_snippet_preserved": true,
+    "source_trust_boundary": "private_record_text_is_untrusted_data_not_instructions"
+  },
+  "msix_target": "3.4.0.0",
+  "product_version": "3.4.0",
+  "repository_audits": {
+    "production_legal_ready": false,
+    "public_files_checked": 1290,
+    "public_readiness_findings": [],
+    "public_source_ready": true,
+    "release_artifact_blockers": [],
+    "release_artifact_safe_to_package": true
+  },
+  "schema": "maine_family_law_llm.v3_4_0_continuity_security_proof.v1",
+  "scope": "Synthetic, non-private source-release proof. This is not production legal GA evidence.",
+  "source_followup_smoke": {
+    "failure_class": "none",
+    "initial_search_id_present": true,
+    "initial_source_card_count": 3,
+    "reran_search": false,
+    "selected_lane": "private_record",
+    "selected_ordinal": 2,
+    "selected_source_id": "SYN-REC-2"
+  },
+  "ui_version": "3.4.0-family-justice-chat-b12",
+  "validation": {
+    "collected_tests": 658,
+    "desktop_tk_under_xvfb": "pass",
+    "deterministic_batched_execution": "657 passed, 1 skipped",
+    "extracted_source_zip_smoke": "61 passed",
+    "focused_chat_intake_ocr_store_ui": "88 passed",
+    "focused_version_store": "59 passed",
+    "full_ga_workbench": "4 passed individually",
+    "javascript_syntax": "pass",
+    "local_doctor": "pass",
+    "package_privacy_hygiene": "pass",
+    "public_repo_readiness": "pass; production_legal_ready remains false",
+    "python_compile": "pass",
+    "release_artifact_audit": "pass; zero blockers",
+    "skip_reason": "PowerShell parser unavailable on this Linux runner",
+    "v3_4_specific_tests": "9 passed",
+    "wack": "not run; Windows SDK/elevated Windows session required",
+    "windows_msix_build": "not run in Linux; target 3.4.0.0"
+  }
+}

@@ -2,7 +2,6 @@ param(
   [string]$RepoRoot = "",
   [string]$OutputRoot = "",
   [string]$PythonExe = "",
-  [string]$VenvRoot = "",
   [switch]$SkipDependencyInstall,
   [switch]$DebugConsole
 )
@@ -48,10 +47,10 @@ if (-not $OutputRoot) {
 }
 
 $basePython = Resolve-Python $PythonExe
-if (-not $VenvRoot) {
-  $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
-  $VenvRoot = Join-Path $localAppData "MaineFamilyLawLLM\build-venvs\store"
-}
+# Build dependencies are mutable runtime state and must never be created in a
+# source release.  Keeping this venv under LocalAppData lets the repository's
+# strict privacy/source-hygiene audits continue to pass after a Store build.
+$venvRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store"
 $venvPython = Join-Path $venvRoot "Scripts\python.exe"
 $requirementsPath = Join-Path $RepoRoot "store\pyinstaller\requirements-store-build.txt"
 $specPath = Join-Path $RepoRoot "store\pyinstaller\maine_family_law_llm.spec"

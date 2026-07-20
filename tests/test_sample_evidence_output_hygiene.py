@@ -33,6 +33,7 @@ ALLOWED_POLICY_SCRIPTS = {
     "audit-release-artifacts.py",
     "package-release.sh",
     "package-release.ps1",
+    "build-deterministic-source-release.py",
 }
 
 

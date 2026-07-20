@@ -37,8 +37,8 @@ def test_api_ask_uses_active_case_corpus_when_one_is_selected(tmp_path, monkeypa
 
     assert payload["corpus_mode"] == "active_case_corpus"
     assert payload["active_case_label"] == "Matter API"
-    assert "active_case_root" not in payload
-    assert str(built["case_root"].resolve()) not in str(payload)
+    assert "active_case_root" not in payload  # browser/API provenance must not expose absolute local paths
+    assert all(str(built["case_root"].resolve()) not in str(row) for row in payload["citations"])
     assert payload["citations"]
     assert payload["source_card_count"] >= 1
 

@@ -57,9 +57,12 @@ def build_runtime_context(mode: str | None = None) -> RuntimeContext:
     local_root = _local_appdata_root() / "MaineFamilyLawLLM"
     writable_root = local_root if resolved_mode == "store" else root
     logs_root = local_root / "logs"
-    runtime_data_root = local_root / "runtime_data"
+    # A source launcher and an installed MSIX can run at the same time.  They
+    # must not share API state or a writable corpus location: otherwise the
+    # Store smoke test can attach to a source-process loopback service.
+    runtime_data_root = local_root / "runtime_data" / resolved_mode
     case_library_path = local_root / "case_library.json"
-    api_state_path = local_root / "state" / "local_api.json"
+    api_state_path = local_root / "state" / f"local_api-{resolved_mode}.json"
     first_run_marker = local_root / "state" / "first_run_complete.json"
     return RuntimeContext(
         mode=resolved_mode,

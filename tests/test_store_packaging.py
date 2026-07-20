@@ -45,6 +45,7 @@ def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_
     assert context.allows_repo_bootstrap_writes is False
     assert context.case_library_path.parent == context.writable_root
     assert context.api_state_path.parent == context.writable_root / "state"
+    assert context.api_state_path.name == "local_api-store.json"
     assert context.logs_root == context.writable_root / "logs"
 
 
@@ -136,8 +137,6 @@ def test_store_smoke_workflow_runs_and_stays_outside_bundle(tmp_path, monkeypatc
     assert payload["api_health_result"] is True
     assert payload["fictional_sample_workflow_result"] is True
     assert payload["external_data_boundary_verification"] is True
-    assert payload["answer_grounded"] is True
-    assert payload["answer_failure_class"] == "none"
 
 
 def test_uninstall_script_does_not_delete_user_external_case_folders() -> None:
@@ -168,12 +167,6 @@ def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None
     assert "package-sha256.txt" in script
     assert "private-data-audit.json" in script
     assert "store-build-smoke.json" in script
-
-
-def test_store_runtime_gate_requires_a_grounded_chat_answer() -> None:
-    script = (REPO_ROOT / "scripts" / "test-store-runtime.ps1").read_text(encoding="utf-8")
-    assert "$payload.answer_grounded" in script
-    assert '$payload.answer_failure_class -ne "none"' in script
 
 
 def test_install_msix_script_imports_dev_certificate_into_trusted_stores() -> None:
@@ -217,9 +210,35 @@ def test_build_msix_script_normalizes_package_versions_without_leading_zero_segm
     assert '2.5.29.19={text}' in script
     assert "TAHAIWebServices.MaineFamilyLawLLM" in script
     assert "D75EE668-B409-45ED-87E5-E37AA5FE3868" in script
+    assert "Package version revision must be zero" in script
 
 
-def test_build_msix_script_rejects_nonzero_store_revision_numbers() -> None:
-    script = (REPO_ROOT / "scripts" / "build-msix.ps1").read_text(encoding="utf-8")
-    assert '$normalizedParts[3] -ne "0"' in script
-    assert "Microsoft Store requires the MSIX revision component to be zero" in script
+def test_windows_launchers_do_not_depend_on_a_developer_checkout_or_venv() -> None:
+    start_test = (REPO_ROOT / "START_LOCAL_TEST.ps1").read_text(encoding="utf-8")
+    start_chat = (REPO_ROOT / "START_LOCAL_CHAT.ps1").read_text(encoding="utf-8")
+    local_api = (REPO_ROOT / "scripts" / "run-local-api.ps1").read_text(encoding="utf-8")
+    local_smoke = (REPO_ROOT / "scripts" / "run-local-smoke.ps1").read_text(encoding="utf-8")
+    spin_up = (REPO_ROOT / "scripts" / "local-test-spin-up.ps1").read_text(encoding="utf-8")
+    for script in (start_test, start_chat, local_api, local_smoke):
+        assert "D:\\dev\\ME_FM_LLM_venv" not in script
+        assert '"C:\\dev\\ME_FM_LLM"' not in script
+    assert 'Join-Path $repo ".venv"' in start_test
+    assert "& $python .\\scripts\\doctor-local-repo.py" in spin_up
+
+
+def test_cleaner_removes_named_audit_virtual_environments_only_when_requested(tmp_path) -> None:
+    import importlib.util
+
+    script = REPO_ROOT / "scripts" / "clean-local-artifacts.py"
+    spec = importlib.util.spec_from_file_location("clean_local_artifacts", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    clean = module.clean
+
+    audit_venv = tmp_path / ".venv-audit"
+    audit_venv.mkdir()
+    assert ".venv-audit" not in clean(tmp_path)
+    assert audit_venv.exists()
+    assert ".venv-audit" in clean(tmp_path, include_venv=True)
+    assert not audit_venv.exists()

@@ -1,0 +1,59 @@
+{
+  "archive_note": "The final archive SHA-256 and archive-level validation are recorded in the external handoff proof and checksum file.",
+  "build_number": 16,
+  "focaf": {
+    "expected": 103,
+    "hash_mismatches": 0,
+    "missing": 0,
+    "resolved": 103,
+    "status": "pass"
+  },
+  "generated_date": "2026-07-19",
+  "package_version": "3.8.0.0",
+  "passes": [
+    {
+      "name": "input_session_integrity",
+      "status": "complete",
+      "version": "3.6.0"
+    },
+    {
+      "name": "claim_to_source_support_integrity",
+      "status": "complete",
+      "version": "3.7.0"
+    },
+    {
+      "name": "privacy_safe_handoff_deterministic_packaging",
+      "status": "complete",
+      "version": "3.8.0"
+    }
+  ],
+  "release_boundary": {
+    "attorney_reviewed_legal_accuracy_certified": false,
+    "live_official_authority_freshness_certified": false,
+    "msix_built": false,
+    "production_legal_ga": false,
+    "wack_run": false
+  },
+  "repository_audits": {
+    "checked_public_files": 1306,
+    "local_doctor": "pass",
+    "public_findings": 0,
+    "public_repo_readiness": "pass",
+    "public_source_preflight": "pass",
+    "release_artifact_audit": "pass",
+    "release_blockers": 0
+  },
+  "schema_version": "v3_8_0_three_pass_hardening_proof_v1",
+  "static_validation": {
+    "javascript_syntax": "pass",
+    "python_compile": "pass"
+  },
+  "tests": {
+    "collected": 676,
+    "focused_security_integrity_passed": 58,
+    "limitation": "Several intentionally expensive evidence/full-GA tests exceeded the command ceiling; completed deterministic groups showed no assertion failures.",
+    "monolithic_full_suite_completed": false,
+    "new_regressions_passed": 9
+  },
+  "version": "3.8.0"
+}

@@ -38,6 +38,8 @@ def classify_prompt(prompt: str) -> SafetyResult:
             True,
             ("route_to_emergency_resources",),
         )
+    if any(term in text for term in ("child is unsafe", "child safety", "neglect", "abuse of my child", "danger to my child", "child was hurt")):
+        return SafetyResult("child_safety", True, True, True, True, ("child_safety_redirect", "official_resources_only"))
     if any(term in text for term in ("domestic violence", "protection from abuse", "pfa", "restraining order", "abuse")):
         return SafetyResult(
             "domestic_violence_or_protection_from_abuse",
@@ -47,8 +49,6 @@ def classify_prompt(prompt: str) -> SafetyResult:
             True,
             ("use_safety_language", "official_resources_only"),
         )
-    if any(term in text for term in ("child is unsafe", "child safety", "neglect", "abuse of my child", "danger to my child")):
-        return SafetyResult("child_safety", True, True, True, True, ("child_safety_redirect",))
     if any(term in text for term in ("draft", "file", "filing", "form", "summons", "complaint", "motion")):
         return SafetyResult("form_or_filing", True, True, False, False, ("not_filing_ready",))
     if any(term in text for term in ("should i", "can i", "do i have to", "what should i do", "best strategy", "how do i")):

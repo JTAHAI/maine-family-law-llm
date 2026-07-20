@@ -67,7 +67,14 @@
     "smoke_evidence_post_ga_enterprise_hardening.json",
     "smoke_evidence_public_supply_chain_hardening.json",
     "source_release_lock.json",
-    "source_sbom.json"
+    "source_sbom.json",
+    "v3_2_0_chat_intake_proof.json",
+    "v3_3_0_conversation_reliability_proof.json",
+    "v3_4_0_continuity_security_proof.json",
+    "v3_5_0_grounding_integrity_proof.json",
+    "v3_8_0_three_pass_hardening_proof.json",
+    "v4_1_0_three_pass_integrity_proof.json",
+    "v4_4_0_windows_ocr_corpus_ux_proof.json"
   ],
   "production_legal_ga": false,
   "root_json_artifacts_allowed": false,

@@ -1,4 +1,18 @@
 {
+  "allowed_public_binary_roots": [
+    "src/maine_family_law_llm/resources/focaf",
+    "maine_family_law_llm/resources/focaf"
+  ],
+  "allowed_public_binary_suffixes": [
+    ".pdf"
+  ],
+  "allowed_text_files": [
+    "PASS_CHANGES.txt",
+    "store/listing/features.txt",
+    "store/listing/search-terms.txt",
+    "store/listing/short-description.txt",
+    "store/pyinstaller/requirements-store-build.txt"
+  ],
   "blocked_paths": [
     ".git",
     ".env",
@@ -30,6 +44,7 @@
     ".doc",
     ".docx"
   ],
+  "public_binary_rule": "Only bundled public FOCAF PDFs listed in focaf_inventory.json with matching SHA-256 are allowed; private/user documents remain blocked.",
   "public_release_status": "not_yet_published",
   "public_repo_name": "ME_FM_LLM",
   "release_rule": "Public GitHub release can be source-code-ready while production legal-data readiness remains blocked until real external data, attorney-reviewed evals, live metrics, security/pilot evidence, and signoffs are attached.",
@@ -59,12 +74,5 @@
     "SUPPORT.md"
   ],
   "single_text_file_allowed": "PASS_CHANGES.txt",
-  "version": "post-ga-public-release-4-store-text-assets",
-  "allowed_text_files": [
-    "PASS_CHANGES.txt",
-    "store/listing/features.txt",
-    "store/listing/search-terms.txt",
-    "store/listing/short-description.txt",
-    "store/pyinstaller/requirements-store-build.txt"
-  ]
+  "version": "post-ga-public-release-4-store-text-assets"
 }

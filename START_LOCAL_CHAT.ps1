@@ -1,6 +1,6 @@
 param(
   [int]$Port = 8000,
-  [string]$VenvPath = "D:\dev\ME_FM_LLM_venv",
+  [string]$VenvPath = "",
   [switch]$NoBrowser
 )
 

@@ -33,7 +33,6 @@ from maine_family_law_llm.case_workspace import (
     read_case_ingest_history,
     read_case_source_roots,
 )
-from maine_family_law_llm.local_corpus_index import local_ocr_choice
 from maine_family_law_llm.version import APP_DISPLAY_NAME, GITHUB_REPOSITORY_URL, STORE_MISSION_TAGLINE, VERSION
 
 ACTION_SPECS = (
@@ -806,92 +805,6 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.wait_window(wizard)
         return wizard.result
 
-    def _confirm_local_inventory_consent(self) -> bool:
-        """Require an affirmative, accessible choice before reading selected files."""
-
-        dialog = tk.Toplevel(self)
-        dialog.title("Build a local searchable inventory?")
-        dialog.transient(self)
-        dialog.grab_set()
-        dialog.resizable(False, False)
-        decision = tk.BooleanVar(value=False)
-        frame = ttk.Frame(dialog, padding=18)
-        frame.pack(fill="both", expand=True)
-        ttk.Label(
-            frame,
-            text="The app will read the files you selected on this computer and create a local search index so chat can search inside them. Nothing is uploaded or transmitted.",
-            wraplength=620,
-            justify="left",
-        ).pack(anchor="w")
-        ttk.Label(
-            frame,
-            text="Original source files remain unchanged. You can cancel without granting permission.",
-            wraplength=620,
-            justify="left",
-            style="Muted.TLabel",
-        ).pack(anchor="w", pady=(10, 0))
-        actions = ttk.Frame(frame)
-        actions.pack(fill="x", pady=(16, 0))
-
-        def close(approved: bool) -> None:
-            decision.set(approved)
-            dialog.destroy()
-
-        scan = ttk.Button(actions, text="Scan and inventory locally", command=lambda: close(True), style="Primary.TButton")
-        cancel = ttk.Button(actions, text="Cancel", command=lambda: close(False))
-        scan.pack(side="left")
-        cancel.pack(side="right")
-        dialog.protocol("WM_DELETE_WINDOW", lambda: close(False))
-        dialog.bind("<Escape>", lambda _event: close(False))
-        dialog.bind("<Tab>", lambda event: (scan.focus_set() if event.widget is cancel else cancel.focus_set(), "break")[1])
-        cancel.focus_set()
-        self.wait_window(dialog)
-        return bool(decision.get())
-
-    def _offer_local_ocr_choice(self, case_root: Path) -> None:
-        result = local_ocr_choice(case_root, approved=False)
-        if result["status"] == "not_needed":
-            self.status_var.set(str(result["message"]))
-            return
-        dialog = tk.Toplevel(self)
-        dialog.title("Some pages need local OCR")
-        dialog.transient(self)
-        dialog.grab_set()
-        frame = ttk.Frame(dialog, padding=18)
-        frame.pack(fill="both", expand=True)
-        ttk.Label(
-            frame,
-            text="OCR will analyze scanned or image-only pages on this computer and add recognized text to your local search index. OCR text may contain mistakes. Nothing is uploaded or transmitted.",
-            wraplength=620,
-            justify="left",
-        ).pack(anchor="w")
-        ttk.Label(frame, text=f"OCR candidates: {result['candidates']}", style="Muted.TLabel").pack(anchor="w", pady=(10, 0))
-        candidate_text = "\n".join(
-            f"- {row['source_locator']}" + (f" ({row['page_count']} page(s))" if row.get("page_count") else "")
-            for row in result.get("candidate_files", [])[:8]
-        )
-        if candidate_text:
-            ttk.Label(frame, text=candidate_text, wraplength=620, justify="left", style="Muted.TLabel").pack(anchor="w", pady=(8, 0))
-        actions = ttk.Frame(frame)
-        actions.pack(fill="x", pady=(16, 0))
-
-        def close(choice: str) -> None:
-            dialog.destroy()
-            outcome = local_ocr_choice(case_root, approved=choice == "ocr")
-            self.status_var.set(str(outcome["message"]))
-
-        ocr_button = ttk.Button(actions, text="OCR scanned pages locally", command=lambda: close("ocr"), style="Primary.TButton")
-        keep_button = ttk.Button(actions, text="Keep them unsearchable for now", command=lambda: close("keep"))
-        cancel_button = ttk.Button(actions, text="Cancel", command=lambda: close("cancel"))
-        ocr_button.pack(side="left")
-        keep_button.pack(side="left", padx=(8, 0))
-        cancel_button.pack(side="right")
-        dialog.protocol("WM_DELETE_WINDOW", lambda: close("cancel"))
-        dialog.bind("<Escape>", lambda _event: close("cancel"))
-        buttons = (ocr_button, keep_button, cancel_button)
-        dialog.bind("<Tab>", lambda event: (buttons[(buttons.index(event.widget) + 1) % len(buttons)].focus_set() if event.widget in buttons else ocr_button.focus_set(), "break")[1])
-        cancel_button.focus_set()
-
     def _set_case_build_controls_enabled(self, enabled: bool) -> None:
         state = "normal" if enabled else "disabled"
         for method_name in ("create_new_case", "import_more_evidence"):
@@ -979,9 +892,6 @@ class MaineFamilyLawLauncher(tk.Tk):
         )
         if plan is None:
             return
-        if not self._confirm_local_inventory_consent():
-            self.status_var.set("Local inventory was cancelled. No selected source files were read.")
-            return
 
         def _worker() -> object:
             return build_new_case_from_sources(
@@ -1005,7 +915,6 @@ class MaineFamilyLawLauncher(tk.Tk):
                 build_result.case_root,
                 f"Built case corpus at {build_result.case_root} from {len(plan.source_roots)} source path(s).",
             )
-            self._offer_local_ocr_choice(build_result.case_root)
 
         self._run_case_build_async(
             action_label="Create New Case Corpus",
@@ -1040,9 +949,6 @@ class MaineFamilyLawLauncher(tk.Tk):
         )
         if plan is None:
             return
-        if not self._confirm_local_inventory_consent():
-            self.status_var.set("Local inventory was cancelled. No selected source files were read.")
-            return
 
         def _worker() -> object:
             return import_case_from_sources(
@@ -1072,7 +978,6 @@ class MaineFamilyLawLauncher(tk.Tk):
                     f"The new case now remembers {len(cumulative_sources)} cumulative source root(s)."
                 ),
             )
-            self._offer_local_ocr_choice(build_result.case_root)
 
         self._run_case_build_async(
             action_label="Reopen Intake / Add More Evidence",

@@ -1,0 +1,96 @@
+{
+  "archive": {
+    "approved_public_pdf_entries": 206,
+    "deterministic_rebuild": "byte_identical",
+    "embedded_release_manifests": 1,
+    "prohibited_entries": 0,
+    "source_files_in_manifest": 1306,
+    "source_zip_policy": "pass",
+    "zip_entries_including_manifest": 1307
+  },
+  "audits": {
+    "focaf_runtime_assets": {
+      "expected": 103,
+      "hash_mismatches": 0,
+      "missing": 0,
+      "resolved": 103,
+      "status": "pass"
+    },
+    "javascript_syntax": "pass",
+    "public_source_readiness": {
+      "checked_files": 1307,
+      "checked_files_before_release_docs": 1303,
+      "findings": 0,
+      "status": "pass"
+    },
+    "python_compilation": "pass",
+    "release_artifact_audit": {
+      "blockers": 0,
+      "status": "pass"
+    },
+    "repository_doctor": "pass"
+  },
+  "build_number": 22,
+  "package_version": "4.4.0.0",
+  "passes": [
+    {
+      "evidence": [
+        "launcher path normalization hardened",
+        "checked-in and generated launchers use %~dp0.",
+        "explicit allowlisted winget Tesseract install",
+        "manual install and recheck fallbacks"
+      ],
+      "name": "windows_startup_and_ocr_prerequisites",
+      "pass": "4.2",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "corpus inventory command returns actual selected-matter metrics",
+        "PDF-scoped record search excludes non-PDF records",
+        "private record search does not substitute generic Maine-law chat"
+      ],
+      "name": "corpus_command_routing",
+      "pass": "4.3",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "pypdfium2 bundled in source and Store runtime",
+        "one-click/manual/recheck controls visible",
+        "matter records not read or uploaded by prerequisite installer"
+      ],
+      "name": "local_scanned_pdf_ocr_and_ui",
+      "pass": "4.4",
+      "status": "pass"
+    }
+  ],
+  "privacy": {
+    "ocr_opt_in": true,
+    "original_records_modified": false,
+    "prerequisite_installer_reads_matter_records": false,
+    "prerequisite_installer_uploads_matter_records": false,
+    "private_records_separate_from_legal_authority": true
+  },
+  "product_version": "4.4.0",
+  "production_legal_ga": false,
+  "release_limits": [
+    "signed Windows MSIX not built in Linux environment",
+    "WACK not run",
+    "live official-source freshness certification not claimed",
+    "attorney-reviewed legal GA metrics and institutional signoffs not claimed"
+  ],
+  "schema": "maine_family_law_llm.v4_4_0_windows_ocr_corpus_ux_proof.v1",
+  "signed_msix_built": false,
+  "status": "pass",
+  "tests": {
+    "collected": 693,
+    "exact_extracted_zip_focused_passed": 107,
+    "execution": "deterministic_file_groups_and_individual_expensive_tests",
+    "failed": 0,
+    "new_v440_regressions": 7,
+    "passed": 692,
+    "skipped": 1
+  },
+  "wack_run": false
+}

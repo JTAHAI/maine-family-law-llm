@@ -14,7 +14,16 @@ $ErrorActionPreference = "Stop"
 function Get-RepoRoot {
   param([string]$ExplicitRepoRoot)
   if ($ExplicitRepoRoot) {
-    return [System.IO.Path]::GetFullPath($ExplicitRepoRoot)
+    $cleanRoot = $ExplicitRepoRoot.Trim()
+    $cleanRoot = $cleanRoot.Trim([char[]]@([char]34, [char]39))
+    $cleanRoot = [Environment]::ExpandEnvironmentVariables($cleanRoot)
+    if ($cleanRoot.IndexOf([char]0) -ge 0 -or $cleanRoot.Contains("`r") -or $cleanRoot.Contains("`n")) {
+      throw "The repository path contains unsupported control characters."
+    }
+    if (-not $cleanRoot) {
+      throw "The repository path is empty after normalization."
+    }
+    return [System.IO.Path]::GetFullPath($cleanRoot)
   }
   return [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }

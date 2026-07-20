@@ -174,7 +174,7 @@ class ClaimSupportVerifier:
             )
 
         statuses = {status.lower() for status in (authority_statuses or [])}
-        if statuses & {"stale", "stale_unknown", "overruled_or_negative_treatment_unknown"}:
+        if statuses & {"stale", "stale_unknown", "stale_or_superseded", "overruled_or_negative_treatment_unknown"}:
             return ClaimSupportResult(
                 claim=claim,
                 status="stale",
@@ -222,7 +222,7 @@ class ClaimSupportVerifier:
                 source_trace=_source_trace(source_id_list, best_index, best_terms),
                 message="similar evidence appears to contradict the claim polarity",
             )
-        if best_overlap >= 0.72:
+        if best_overlap >= 0.65:
             status: ClaimSupportStatus = "supported"
             supported = True
         elif best_overlap >= 0.38:

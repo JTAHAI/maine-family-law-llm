@@ -11,7 +11,9 @@ def test_best_interest_question_returns_factor_list() -> None:
     assert "19-A M.R.S. § 1653(3)" in answer
     assert "A. The age of the child." in answer
     assert "S. Whether allocation of some or all parental rights" in answer
-    assert "Citation appendix:" in answer
+    assert "Citation appendix:" not in answer
+    assert payload["structured_answer"]["maine_law_sources"]
+    assert payload["source_card_count"] == len(payload["citations"])
     assert payload["citations"]
 
 
