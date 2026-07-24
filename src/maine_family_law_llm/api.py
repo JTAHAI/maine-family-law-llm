@@ -8,7 +8,7 @@ import re
 import threading
 import time
 import uuid
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from legal.product.family_justice_workbench_v205 import build_workbench_packet
@@ -179,7 +179,8 @@ if FastAPI is not None:
         """Return progress without exposing a matter path or document contents."""
 
         public = {key: value for key, value in state.items() if key not in {"cancel_event", "source_locator"}}
-        current_file = Path(str(state.get("source_locator") or "")).name
+        source_locator = str(state.get("source_locator") or "")
+        current_file = PureWindowsPath(source_locator).name if "\\" in source_locator else Path(source_locator).name
         if current_file:
             public["current_file"] = current_file[:160]
         now = time.time()
@@ -638,13 +639,14 @@ if FastAPI is not None:
             "constitutional_chat_shell_v3": True,
             "chat_panel_primary_layout": True,
             "split_ui_assets": True,
-            "evidence_drawer_default_closed": True,
+            "evidence_drawer_default_closed": False,
             "command_palette_shortcut": "Ctrl+K",
             "justice_easter_egg_shortcut": "Ctrl+J",
             "constitutional_bar_pass02": True,
             "privacy_overlay": True,
             "keyboard_shortcuts_overlay": True,
             "command_palette_grouped": True,
+            "record_drilldown_chat_cards_v450": True,
             "brand_kit": "assets/brand/focaf_family_law_llm_brand_kit",
             "appeals_test_question": "What court handles appeals?",
             "workbench_url": "/",
@@ -738,8 +740,6 @@ if FastAPI is not None:
                     + " derived from local OCR and should be checked against the page image."
                 )
             answer_text = "\n".join(lines)
-        if snippets and not direct_search:
-            answer_text += "\n\nRelevant record slices:\n" + "\n".join(f"- {snippet}" for snippet in snippets)
         result = {
             "question": payload.question,
             "answer_style": payload.answer_style,
@@ -772,9 +772,10 @@ if FastAPI is not None:
                 "intake": _parse_payload_intake(payload).to_dict(),
             },
         }
-        if direct_search:
-            result["record_groups"] = _group_record_cards(case_root, list(result["citations"]))
-            result["search_summary"] = dict(result["search_summary"]) | {"unique_document_count": len(result["record_groups"])}
+        # Always group record cards for private-corpus responses so the UI can render
+        # clickable drill-down cards instead of repeating raw snippet text.
+        result["record_groups"] = _group_record_cards(case_root, list(result["citations"]))
+        result["search_summary"] = dict(result["search_summary"]) | {"unique_document_count": len(result["record_groups"])}
         result["family_printables"] = suggest_printables(payload.question) if not direct_search else []
         return _finalize_family_response(result, payload) if finalize else result
 

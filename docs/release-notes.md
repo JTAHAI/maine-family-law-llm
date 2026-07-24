@@ -1,3 +1,22 @@
+## v5.0.0 — Premium family-justice workbench
+
+- Rebuilt the local-first interface to match the approved premium desktop design.
+- The desktop layout now keeps chat, research shortcuts, and Evidence & tools visible together.
+- Role, answer style, topic, focus context, privacy, active matter, source lanes, Child Impact Lens, corpus status, OCR status, source cards, and record drill-down controls are easier to reach.
+- Existing legal and private-record source boundaries remain unchanged.
+- Product version: 5.0.0. Microsoft Store package target: 5.0.0.0. Windows MSIX packaging remains a separate Windows release step.
+
+## v4.5.0 — Private-record chat cards and drill-down security
+
+- Replaced plain-text "Relevant record slices" with grouped, deduplicated clickable drill-down cards in chat responses.
+- Cards group by source document, attachment/member, page, and normalized snippet; show safe filename, document type, match count, page list, and a short snippet.
+- Added working Open PDF, Open at page N, and Show all matches actions rendered directly in the chat answer via opaque one-time tokens.
+- Implemented secure `/api/records/open/{token}` endpoint: rejects forged, stale, cross-corpus, missing-file, traversal, and hash-mismatch requests; never emits file:// URLs.
+- ZIP member, email attachment, PDF, and non-PDF preview opening all work without exposing absolute paths.
+- Removed generic legal boilerplate from records-only searches; a text match is not a legal conclusion.
+- Added comprehensive regression tests: card rendering, clickable links, duplicate collapse, correct file/page opening.
+- Product version: 4.5.0. Microsoft Store package target: 4.5.0.0.
+
 ## v4.4.0 — Windows OCR setup and corpus-command reliability
 
 - Fixes the Windows launcher path-normalization defect that could raise `Illegal characters in path` from `GetFullPath`.
@@ -284,3 +303,8 @@ The source repository still does not package external legal corpora, parsed auth
 - Added source-backed appeals fixtures and source cards for Maine Judicial Branch appeals and Maine Rules of Appellate Procedure.
 - Added `/api/runtime-diagnostics` and visible UI diagnostics so stale local servers/builds are obvious.
 - Added v1.84 regression tests and refreshed chat-library evidence.
+
+
+### Responsive UX hardening
+
+The v5.0.0 workbench now uses three intentional responsive modes: full desktop, compact desktop, and overlay drawer. Live resizing preserves explicit drawer preference, avoids horizontal page overflow, and keeps the evidence panel, keyboard focus, ARIA state, composer, and source lanes usable down to phone-sized windows.

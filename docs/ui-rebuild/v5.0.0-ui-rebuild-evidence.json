@@ -1,0 +1,41 @@
+{
+  "schema": "maine_family_law_llm.v500_ui_rebuild_evidence.v1",
+  "generated_at": "2026-07-24T21:49:07.898502+00:00",
+  "version": "5.0.0",
+  "package_version": "5.0.0.0",
+  "scope": "premium family-justice workbench UI rebuild",
+  "msix_built": false,
+  "mcp_integrations_added": false,
+  "tests": {
+    "focused_regression": {
+      "passed": 278,
+      "failed": 0,
+      "skipped": 1
+    },
+    "total_focused_passed": 278
+  },
+  "static_checks": {
+    "javascript_syntax": "pass",
+    "python_compile": "pass",
+    "html_parse": "pass",
+    "css_brace_balance": "pass",
+    "git_diff_check": "pass",
+    "responsive_browser_audit": "pass",
+    "horizontal_overflow": "pass"
+  },
+  "runtime_smoke": {
+    "health_status": "ok",
+    "runtime_version": "5.0.0",
+    "runtime_package_version": "5.0.0.0",
+    "local_ui_assets": "pass",
+    "bundled_source_registry": "pass",
+    "bundled_focaf_assets": "pass",
+    "network_used": false,
+    "review_required": true
+  },
+  "screenshots": {
+    "distribution": "release_artifacts_not_committed",
+    "desktop_artifact": "Maine-Family-Law-LLM-v5.0.0-polished-after.png",
+    "mobile_artifact": "Maine-Family-Law-LLM-v5.0.0-polished-mobile.png"
+  }
+}

@@ -40,7 +40,7 @@ def test_v3_pass01_uses_split_local_ui_assets() -> None:
     assert "openJustice" in js
     assert "setDrawerOpen" in js
     assert "drawerReturnFocus" in js
-    assert "closeDrawerButton?.focus()" in js
+    assert "closeDrawerButton?.focus({preventScroll: true})" in js
     assert "returnTarget.focus()" in js
     assert "sessionStorage.getItem('mfl-welcome-dismissed')" not in js
 
@@ -115,7 +115,7 @@ def test_v3_pass01_local_api_serves_ui_assets_and_diagnostics() -> None:
     diagnostics = runtime_diagnostics()
     assert diagnostics["constitutional_chat_shell_v3"] is True
     assert diagnostics["split_ui_assets"] is True
-    assert diagnostics["evidence_drawer_default_closed"] is True
+    assert diagnostics["evidence_drawer_default_closed"] is False
     assert diagnostics["command_palette_shortcut"] == "Ctrl+K"
     assert diagnostics["justice_easter_egg_shortcut"] == "Ctrl+J"
 
@@ -125,7 +125,7 @@ def test_v3_pass01_launcher_is_task_oriented_and_versioned() -> None:
 
     source = (ROOT / "app" / "launcher.py").read_text(encoding="utf-8")
 
-    assert VERSION == "4.4.0"
+    assert VERSION == "5.0.0"
     assert 'notebook.add(start_tab, text="Start here")' in source
     assert 'notebook.add(review_tab, text="Review & export")' in source
     assert 'notebook.add(support_tab, text="Support & tools")' in source
@@ -147,8 +147,8 @@ def test_v3_pass01_versions_are_consistent() -> None:
         )
     )
 
-    assert VERSION == "4.4.0"
-    assert BUILD_NUMBER >= 2
-    assert PACKAGE_VERSION == "4.4.0.0"
-    assert 'version = "4.4.0"' in pyproject
+    assert VERSION == "5.0.0"
+    assert BUILD_NUMBER >= 24
+    assert PACKAGE_VERSION == "5.0.0.0"
+    assert 'version = "5.0.0"' in pyproject
     assert identity["package_version"] == PACKAGE_VERSION

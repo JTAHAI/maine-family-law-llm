@@ -1,5 +1,28 @@
 # Changelog
 
+## 5.0.0 - Premium family-justice workbench UI
+
+- Rebuilt the desktop workbench around a modern three-column layout matching the approved v5 design: primary chat, persistent research shortcuts, and an integrated Evidence & tools panel.
+- Added a deep-navy FOCAF identity header, local-only status, top-level role/style/topic/context controls, matter access, and a clearer source-lane composer.
+- Preserved local corpus, OCR, legal-source, private-record drill-down, reviewer handoff, printables, privacy, keyboard, and transcript workflows.
+- Made the Evidence panel desktop-persistent by default while retaining a dismissible mobile drawer.
+- Added responsive layout, accessible focus states, clearer typography, compact record/source cards, and v5 UI regression coverage.
+- Hardened responsive resizing across full desktop, compact desktop, tablet, phone, and short-window layouts with no horizontal page overflow.
+- Added a resize-aware drawer state machine that preserves explicit user preference, prevents the evidence panel from covering chat after a breakpoint change, and keeps focus/ARIA state synchronized.
+- Added dynamic viewport sizing, mobile control consolidation, reduced-motion and forced-colors support, and short-height composer compaction.
+- Bumped product version to 5.0.0 and Microsoft Store package target to 5.0.0.0.
+
+## 4.5.0 - Private-record chat cards, clickable drill-down, and record open security
+
+- Replaced plain-text "Relevant record slices" with grouped, deduplicated clickable drill-down cards in chat responses.
+- Cards group by source document, attachment/member, page, and normalized snippet; show safe filename, document type, match count, page list, and a short snippet.
+- Added working Open PDF, Open at page N, and Show all matches actions rendered directly inside chat responses using opaque one-time tokens.
+- Implemented secure loopback `/api/records/open/{token}` endpoint: rejects forged, stale, cross-corpus, missing-file, traversal, and hash-mismatch requests.
+- Verified ZIP member, email attachment, PDF, and non-PDF preview opening without exposing absolute paths or using file:// URLs.
+- Removed generic legal boilerplate from records-only searches; a text match is never treated as a legal conclusion.
+- Added comprehensive regression tests: card rendering, clickable links, duplicate collapse, correct file/page opening.
+- Bumped version to 4.5.0 / 4.5.0.0.
+
 ## 4.4.0 - Windows startup, one-click OCR prerequisites, and corpus-command reliability
 
 - Fixed the Windows launcher path quoting defect that could raise `Illegal characters in path` from `.NET GetFullPath()`, including generated Start, Verify, and Repair launchers.

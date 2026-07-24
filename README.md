@@ -75,12 +75,12 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 
 ## Current release truth
 
-- Current source release: **v4.4.0**; Microsoft Store package target: **4.4.0.0**. The MSIX must still be rebuilt, signed, and WACK-tested on Windows.
+- Current source release: **v5.0.0**; Microsoft Store package target: **5.0.0.0**. This source release contains the approved premium workbench UI; the MSIX must still be rebuilt, signed, and WACK-tested on Windows.
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The Windows installer package can copy the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, create shortcuts, install missing prerequisites, and skip the ones already present.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
-- The local browser workbench currently serves the v4.4.0 Windows OCR and corpus-command UI with safety-first intake, source/currentness separation, session-isolated continuity, direct indexed-corpus inventory/search commands, and explicit local OCR prerequisite controls.
+- The local browser workbench now serves the v5.0.0 premium family-justice UI with a three-column desktop workbench, persistent research shortcuts, integrated Evidence & tools, clickable private-record drill-down cards, safety-first intake, source/currentness separation, session-isolated continuity, and local OCR/corpus controls.
 - The default local browser entry point is `http://127.0.0.1:8000/`.
 - The workbench is local-first, source-backed, review-required, and not legal advice.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
@@ -260,7 +260,7 @@ See `docs/enterprise-release-control-v206.md`.
 
 ### FOCAF branded local workbench
 
-The local browser workbench now includes the FOCAF Maine Family Law LLM brand kit as repo assets under `assets/brand/focaf_family_law_llm_brand_kit/`. When `START_LOCAL_CHAT.ps1` runs, the FastAPI app serves those files from `/brand-assets`, including the logo mark, horizontal lockup, favicon, theme CSS, design tokens, and social-card artwork. The page footer should show `UI v1.86 classic desktop FOCAF workbench` after a fresh restart and hard refresh.
+The local browser workbench now includes the FOCAF Maine Family Law LLM brand kit as repo assets under `assets/brand/focaf_family_law_llm_brand_kit/`. When `START_LOCAL_CHAT.ps1` runs, the FastAPI app serves those files from `/brand-assets`, including the logo mark, horizontal lockup, favicon, theme CSS, design tokens, and social-card artwork. The page footer should show `v5.0.0` after a fresh restart and hard refresh, with the Local-only, source-cited, review-required, and not-legal-advice status strip visible.
 
 
 Run one command and use the browser chat screen:

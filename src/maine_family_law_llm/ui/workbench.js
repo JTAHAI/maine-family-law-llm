@@ -94,6 +94,15 @@
     const closeConstitutionalPopoverButton = document.getElementById('close-constitutional-popover');
     const localStatusCopy = document.getElementById('local-status-copy');
     const commandResultsStatus = document.getElementById('command-results-status');
+    const drawerActiveCorpus = document.getElementById('drawer-active-corpus');
+    const drawerCorpusCount = document.getElementById('drawer-corpus-count');
+    const drawerOcrPercent = document.getElementById('drawer-ocr-percent');
+    const drawerOcrProgress = document.querySelector('.v5-progress i');
+    const drawerRefreshCorpus = document.getElementById('drawer-refresh-corpus');
+    const quickNewCorpus = document.getElementById('quick-new-corpus');
+    const quickOpenWorkspace = document.getElementById('quick-open-workspace');
+    const quickExportChat = document.getElementById('quick-export-chat');
+    const openAllStarters = document.getElementById('open-all-starters');
     window.__MFL_WORKBENCH_UI_VERSION = window.__MFL_WORKBENCH_UI_VERSION || document.getElementById('focaf-brand-shell')?.dataset.uiVersion || 'unknown';
     const startupParams = new URLSearchParams(window.location.search);
     function createLocalSessionId() {
@@ -216,6 +225,7 @@
 
       sessionSummary.textContent = parts.filter(Boolean).join(' · ');
       if (activeMatterLabel) activeMatterLabel.textContent = corpusLabel;
+      if (drawerActiveCorpus) drawerActiveCorpus.textContent = corpusLabel;
       const matterLabel = `Open matter setup. Current matter: ${corpusLabel}`;
       matterShortcutButton?.setAttribute('aria-label', matterLabel);
       matterButton?.setAttribute('aria-label', matterLabel);
@@ -311,8 +321,8 @@
       }).join('')}</section>`;
     }
 
-    function bindRecordOpenActions() {
-      answer.querySelectorAll('[data-open-record], [data-open-record-page]').forEach((button) => button.addEventListener('click', () => {
+    function bindRecordOpenActions(container = answer) {
+      container.querySelectorAll('[data-open-record], [data-open-record-page]').forEach((button) => button.addEventListener('click', () => {
         const token = button.dataset.openRecord || button.dataset.openRecordPage || '';
         const page = Number(button.dataset.page || 0);
         if (!/^[a-f0-9]{64}$/i.test(token)) return;
@@ -609,6 +619,11 @@
       } else {
         corpusStatus.textContent = 'No private case corpus is active yet. The general Maine-law workbench remains available.';
       }
+      if (drawerActiveCorpus) drawerActiveCorpus.textContent = activeCaseId ? (payload.active_case_label || 'Selected matter') : 'General Maine law';
+      if (drawerCorpusCount) {
+        const active = cases.find((item) => item.case_id === activeCaseId);
+        drawerCorpusCount.textContent = active ? `${Number(active.indexed_records || 0).toLocaleString()} indexed · ${Number(active.pdf_pages || 0).toLocaleString()} pages` : 'No private corpus selected';
+      }
     }
 
     async function loadCorpusLibrary() {
@@ -659,6 +674,8 @@
       const elapsed = formatOcrDuration(status.elapsed_seconds);
       const secondsSinceUpdate = Math.max(0, Math.floor(Number(status.seconds_since_update ?? (status.last_progress_at ? Date.now() / 1000 - Number(status.last_progress_at) : 0))));
       const percent = total ? Math.min(100, Math.round((docs / total) * 100)) : 0;
+      if (drawerOcrPercent) drawerOcrPercent.textContent = `${percent}%`;
+      if (drawerOcrProgress) drawerOcrProgress.style.width = `${percent}%`;
       const phaseLabels = {queued: 'Local OCR is queued', running: 'Local OCR is running', cancelling: 'Local OCR is cancelling', cancelled: 'Local OCR was cancelled', completed: 'Local OCR is completed', completed_with_warnings: 'Local OCR completed with warnings', failed: 'Local OCR failed', stalled: 'Local OCR is stalled'};
       const phaseLabel = phaseLabels[phase] || `Local OCR is ${phase}`;
       const documentsRemaining = Math.max(0, total - docs);
@@ -713,6 +730,9 @@
           }
         }
         const payload = await fetchJson('/api/corpus-inventory');
+        if (drawerCorpusCount && payload.status === 'ok') drawerCorpusCount.textContent = `${Number(payload.records || 0).toLocaleString()} records · ${Number(payload.searchable_records || 0).toLocaleString()} searchable`;
+        if (drawerOcrPercent && payload.status === 'ok' && !Number(payload.ocr_candidate_records ?? payload.ocr_candidates ?? 0)) drawerOcrPercent.textContent = '100%';
+        if (drawerOcrProgress && payload.status === 'ok' && !Number(payload.ocr_candidate_records ?? payload.ocr_candidates ?? 0)) drawerOcrProgress.style.width = '100%';
         if (payload.status !== 'ok') {
           inventoryStatus.textContent = 'Local inventory: Not indexed. Use the desktop intake wizard to choose files and grant permission before they are read.';
           setOcrPrimaryAction({visible: false});
@@ -938,20 +958,31 @@
       }
     }
 
-    function addMessage(role, text) {
+    function renderChatSourceSummary(payload) {
+      if (!payload || typeof payload !== 'object') return '';
+      const sources = Array.isArray(payload.citations) ? payload.citations : [];
+      const legalCount = sources.filter((item) => String(item?.metadata?.source_lane || 'legal_authority') !== 'private_record').length;
+      const recordCount = sources.filter((item) => String(item?.metadata?.source_lane || '') === 'private_record').length;
+      const externalCount = Number(payload.external_source_count || 0);
+      if (!legalCount && !recordCount && !externalCount) return '';
+      return `<div class="chat-source-summary"><div><strong>Sources</strong><button class="inline-source-link" data-chat-open-evidence="all" type="button">View all sources</button></div><div class="chat-source-lanes"><button data-chat-open-evidence="law" type="button"><span aria-hidden="true">⚖</span> Maine law <strong>${legalCount}</strong></button><button data-chat-open-evidence="records" type="button"><span aria-hidden="true">▰</span> My records <strong>${recordCount}</strong></button><button data-chat-open-evidence="external" type="button"><span aria-hidden="true">◎</span> External <strong>${externalCount}</strong></button></div></div>`;
+    }
+
+    function addMessage(role, text, payload = null) {
       const at = new Date().toISOString();
       messages.push({role, text, at});
-      transcript.innerHTML = messages.map((msg) => {
-        const speaker = msg.role === 'user' ? 'You' : 'Maine Family Law LLM';
-        const bubbleClass = msg.role === 'user' ? 'user-bubble' : 'assistant-bubble';
-        return `<div class="message ${escapeHtml(msg.role)}">
-          <div class="message-bubble ${bubbleClass}"><strong>${speaker}</strong><div>${escapeHtml(msg.text)}</div></div>
-          <div class="message-time">${formatLocalTime(msg.at)}</div>
-        </div>`;
-      }).join('');
-      if (chatScroll) {
-        chatScroll.scrollTop = chatScroll.scrollHeight;
-      }
+      const speaker = role === 'user' ? 'You' : 'Maine Family Law LLM';
+      const bubbleClass = role === 'user' ? 'user-bubble' : 'assistant-bubble';
+      const content = role === 'assistant'
+        ? `${renderParagraphBlocks(text)}${payload?.direct_record_search ? renderRecordGroups(payload.record_groups) : ''}${renderChatSourceSummary(payload)}`
+        : `<p>${escapeHtml(text)}</p>`;
+      const wrapper = document.createElement('div');
+      wrapper.className = `message ${role}`;
+      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div><div class="message-content">${content}</div></div>`;
+      transcript.appendChild(wrapper);
+      wrapper.querySelectorAll('[data-chat-open-evidence]').forEach((button) => button.addEventListener('click', () => setDrawerOpen(true, 'evidence')));
+      if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
+      if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
     }
 
     function resetSession({preserveContext} = {preserveContext: false}) {
@@ -1014,7 +1045,7 @@
         });
         const responseText = payload.answer || JSON.stringify(payload, null, 2);
         renderLatestAnswer(payload);
-        addMessage('assistant', responseText);
+        addMessage('assistant', responseText, payload);
         lastPayload = payload;
         lastHandoffSources = payload.handoff_safe_source_cards || [];
         downloadJsonButton.style.display = '';
@@ -1307,26 +1338,74 @@
       await navigator.clipboard.writeText(url.toString());
       showToast('Privacy-safe settings link copied. Questions, context, records, and local paths were not included.');
     });
-    let drawerReturnFocus = null;
+    drawerRefreshCorpus?.addEventListener('click', async () => { await loadCorpusLibrary(); showToast('Corpus status refreshed.'); });
+    openAllStarters?.addEventListener('click', () => setDrawerOpen(true, 'starters'));
+    quickNewCorpus?.addEventListener('click', () => { setDrawerOpen(true, 'setup'); showToast('Use the desktop launcher to create a new local case corpus.'); });
+    quickOpenWorkspace?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
+    quickExportChat?.addEventListener('click', () => downloadButton?.click());
 
-    function setDrawerOpen(open, panel = '') {
+    let drawerReturnFocus = null;
+    let drawerUserPreference = null;
+    let responsiveLayoutMode = '';
+    const inlineDrawerQuery = window.matchMedia('(min-width: 960px)');
+    const fullWorkbenchQuery = window.matchMedia('(min-width: 1360px)');
+
+    function currentResponsiveLayoutMode() {
+      if (fullWorkbenchQuery.matches) return 'full';
+      if (inlineDrawerQuery.matches) return 'compact';
+      return 'overlay';
+    }
+
+    function setDrawerOpen(open, panel = '', options = {}) {
+      const {manageFocus = true, userInitiated = false} = options;
       const wasOpen = document.body.dataset.drawer === 'open';
-      if (open && !wasOpen) drawerReturnFocus = document.activeElement;
-      if (!open && wasOpen) {
+      if (userInitiated) drawerUserPreference = Boolean(open);
+      if (open && !wasOpen && manageFocus) drawerReturnFocus = document.activeElement;
+      if (!open && wasOpen && manageFocus) {
         const returnTarget = drawerReturnFocus || focusModeButton;
         // Move focus before hiding the drawer from assistive technology.
         if (returnTarget && typeof returnTarget.focus === 'function') {
-          returnTarget.focus();
+          returnTarget.focus({preventScroll: true});
         }
         drawerReturnFocus = null;
       }
       document.body.dataset.drawer = open ? 'open' : 'closed';
-      evidenceDrawer?.setAttribute('aria-hidden', open ? 'false' : 'true');
+      const overlayMode = currentResponsiveLayoutMode() === 'overlay';
+      document.body.classList.toggle('drawer-modal-open', Boolean(open && overlayMode));
+      if (evidenceDrawer) {
+        evidenceDrawer.hidden = !open;
+        evidenceDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
       focusModeButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (drawerBackdrop) drawerBackdrop.hidden = !open;
+      if (drawerBackdrop) drawerBackdrop.hidden = !(open && overlayMode);
       if (open && panel) selectDrawerTab(panel);
-      if (open) {
-        window.setTimeout(() => closeDrawerButton?.focus(), 40);
+      if (open && overlayMode && manageFocus) {
+        window.setTimeout(() => closeDrawerButton?.focus({preventScroll: true}), 40);
+      }
+    }
+
+    function syncResponsiveLayout({initial = false} = {}) {
+      const nextMode = currentResponsiveLayoutMode();
+      const modeChanged = nextMode !== responsiveLayoutMode;
+      responsiveLayoutMode = nextMode;
+      document.body.dataset.layout = nextMode;
+
+      if (initial) {
+        setDrawerOpen(nextMode !== 'overlay', 'evidence', {manageFocus: false});
+        return;
+      }
+      if (!modeChanged) {
+        const open = document.body.dataset.drawer === 'open';
+        document.body.classList.toggle('drawer-modal-open', open && nextMode === 'overlay');
+        if (drawerBackdrop) drawerBackdrop.hidden = !(open && nextMode === 'overlay');
+        return;
+      }
+      if (nextMode === 'overlay') {
+        // Never let a desktop-open drawer suddenly cover the chat after a resize.
+        setDrawerOpen(false, '', {manageFocus: false});
+      } else {
+        // Restore an explicit user preference; otherwise desktop layouts open by default.
+        setDrawerOpen(drawerUserPreference !== false, 'evidence', {manageFocus: false});
       }
     }
 
@@ -1341,9 +1420,9 @@
       });
     }
 
-    focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open'));
-    closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false));
-    drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false));
+    focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
+    closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
+    drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     document.querySelectorAll('[data-drawer-tab]').forEach((button) => {
       button.addEventListener('click', () => selectDrawerTab(button.dataset.drawerTab || 'setup'));
     });
@@ -1463,14 +1542,14 @@
       const online = payload.status === 'ok';
       health.className = online ? 'health-indicator status-ok' : 'health-indicator status-bad';
       const copy = health.querySelector('.health-copy');
-      if (copy) copy.textContent = online ? 'local' : 'offline';
+      if (copy) copy.textContent = online ? 'Local only' : 'Offline';
       health.title = online ? 'Local-only API is online.' : 'Local-only API status is unknown.';
       health.setAttribute('aria-label', online ? 'Local-only service online. Open privacy status.' : 'Local-only service status unknown. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = online ? 'Local service online' : 'Local service status unknown';
     }).catch(() => {
       health.className = 'health-indicator status-bad';
       const copy = health.querySelector('.health-copy');
-      if (copy) copy.textContent = 'offline';
+      if (copy) copy.textContent = 'Offline';
       health.title = 'Local-only API is offline.';
       health.setAttribute('aria-label', 'Local-only service offline. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = 'Local service offline';
@@ -1781,8 +1860,20 @@
       }
     });
 
-    selectDrawerTab('setup');
-    document.body.dataset.drawer = 'closed';
+    selectDrawerTab('evidence');
+    syncResponsiveLayout({initial: true});
+    const scheduleResponsiveSync = (() => {
+      let frame = 0;
+      return () => {
+        window.cancelAnimationFrame(frame);
+        frame = window.requestAnimationFrame(() => syncResponsiveLayout());
+      };
+    })();
+    [inlineDrawerQuery, fullWorkbenchQuery].forEach((query) => {
+      if (typeof query.addEventListener === 'function') query.addEventListener('change', scheduleResponsiveSync);
+      else if (typeof query.addListener === 'function') query.addListener(scheduleResponsiveSync);
+    });
+    window.addEventListener('resize', scheduleResponsiveSync, {passive: true});
     renderCommands();
 
-    // v3.0 pass02 marker: constitutional_bar, mission_popover_close, local_privacy_popover, evidence_drawer, grouped_ctrl_k_command_palette, ctrl_j_justice_key, privacy_overlay, shortcuts_overlay, civic_build_card
+    // v5.0 premium workbench marker: constitutional_bar, mission_popover_close, local_privacy_popover, evidence_drawer, grouped_ctrl_k_command_palette, ctrl_j_justice_key, privacy_overlay, shortcuts_overlay, civic_build_card

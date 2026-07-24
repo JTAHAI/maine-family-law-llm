@@ -92,6 +92,12 @@ if (-not (Test-Path -LiteralPath $collectedRoot)) {
 }
 Copy-Item -Path (Join-Path $collectedRoot "*") -Destination $runtimeRoot -Recurse -Force
 
+# Remove __pycache__ directories from the frozen runtime so the store-package
+# audit does not block on embedded bytecode-cache files.
+Get-ChildItem -Path $runtimeRoot -Recurse -Filter "__pycache__" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+  Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 $runtimeExe = Join-Path $runtimeRoot "MaineFamilyLawLLM.exe"
 if (-not (Test-Path -LiteralPath $runtimeExe)) {
   throw "Frozen runtime executable missing at $runtimeExe"

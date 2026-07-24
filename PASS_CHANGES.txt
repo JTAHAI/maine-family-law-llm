@@ -1,16 +1,12 @@
-Maine Family Law LLM v4.4.0
+Maine Family Law LLM v5.0.0
 
-- Pass 4.2: fixed Windows launcher repository-path normalization and the trailing-quote GetFullPath failure; added explicit one-click Tesseract installation with manual-link fallback and post-install recheck.
-- Pass 4.3: added corpus-inventory chat commands and PDF-scoped private-record searches so commands such as "find PDF re: contempt" and "list what is in my indexed corpus" bypass generic Maine-law chat.
-- Pass 4.4: bundled a Python PDF renderer for scanned-PDF OCR, added visible prerequisite controls and inventory rendering, and preserved local-only/privacy disclosures.
-- Product version 4.4.0; Microsoft Store manifest target 4.4.0.0 with required zero revision.
+Premium family-justice workbench UI release.
 
-Maine Family Law LLM v4.1.0
-
-Current completed implementation pass number: 51
-
-- Pass 3.9: added citation-aware retrieval diagnostics, exact-reference failure classes, confidence levels, match coverage, source diversity, and duplicate suppression.
-- Pass 4.0: added source-scope-aware working drafts, private-record/legal-authority separation, prompt-bypass neutralization, structured outline sections, and explicit drafting blockers.
-- Pass 4.1: added privacy-safe runtime health checks, package/version/asset self-audits, atomic state writes, malformed state rejection, stale-PID termination protection, and single-manifest deterministic release rebuilding.
-- Product version 4.1.0; Microsoft Store manifest target 4.1.0.0 with required zero revision.
-- Source remains review-required and does not claim current-law certification, legal entailment, filing readiness, completed WACK, attorney review, pilot signoff, or production legal GA.
+- Product version 5.0.0; Microsoft Store manifest target 5.0.0.0.
+- Approved three-column desktop layout implemented.
+- Existing local-first, OCR, corpus, clickable record-card, source-lane, privacy, and review workflows preserved.
+- MSIX build intentionally deferred for the user to run on Windows.
+- Responsive UX hardened for 1440/1366/1280/1100/1024/900/768/600/390-width layouts.
+- Evidence drawer now changes safely between inline and overlay modes during live resize.
+- Mobile controls collapse to Privacy, Matter, and Evidence & tools while Conversation settings retains full role/style/topic access.
+- Reduced-motion, forced-colors, dynamic viewport, short-height, focus, and ARIA behavior hardened.

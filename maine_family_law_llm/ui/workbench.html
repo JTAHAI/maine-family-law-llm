@@ -1,268 +1,149 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Maine Family Law LLM - Constitutional Workbench</title>
+<title>Maine Family Law LLM - Family Justice Workbench</title>
 <link href="/brand-assets/assets/favicon/favicon.svg" rel="icon" type="image/svg+xml"/>
 <link href="/brand-assets/assets/favicon/favicon.ico" rel="icon" sizes="any"/>
 <link href="/brand-assets/assets/favicon/apple-touch-icon.png" rel="apple-touch-icon"/>
 <link href="/brand-assets/assets/favicon/site.webmanifest" rel="manifest"/>
-<meta content="#1f2933" name="theme-color"/>
+<meta content="#06152f" name="theme-color"/>
 <meta content="focaf_family_law_llm_brand_kit" name="brand-kit"/>
 <link href="/brand-assets/css/tokens.css" rel="stylesheet"/>
-<link href="/brand-assets/css/focaf-family-law-llm-theme.css" rel="stylesheet"/><link href="/ui-assets/workbench.css?v={{UI_VERSION}}" rel="stylesheet"/>
+<link href="/brand-assets/css/focaf-family-law-llm-theme.css" rel="stylesheet"/>
+<link href="/ui-assets/workbench.css?v={{UI_VERSION}}" rel="stylesheet"/>
 </head>
-<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}">
-<div class="app-shell" data-brand-assets="/brand-assets" data-ui-generation="v3-pass02" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
+<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}" data-drawer="open" data-layout="full">
+<div class="app-shell v5-workbench" data-brand-assets="/brand-assets" data-ui-generation="v5-premium-workbench" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
 <header class="hero-banner constitutional-bar" data-brand-kit-mounted="expected" id="focaf-brand-hero">
-<div class="constitutional-identity-wrap">
-<button aria-controls="constitutional-popover" aria-describedby="constitutional-popover" aria-expanded="false" class="constitutional-identity" id="constitutional-identity" type="button">
-<span class="eyebrow">WE THE PEOPLE</span>
-<span class="justice-line">... establish JUSTICE ...</span>
-</button>
-<div aria-label="Public justice statement" class="constitutional-popover" hidden="" id="constitutional-popover" role="dialog">
-<button aria-label="Close public justice statement" class="popover-close" id="close-constitutional-popover" type="button">×</button>
-<strong>Public justice</strong>
-<span>Justice does not belong to one institution or one profession, it belongs to the People which these institutions of government are meant to serve; it is Public.</span>
-</div>
-</div>
-<button aria-label="Open matter setup. Current matter: General Maine law" class="constitutional-context civic-tooltip" data-tooltip="The authority belongs to the source, not the model." id="matter-shortcut-button" type="button">
-<img alt="" aria-hidden="true" src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg"/>
-<div>
-<strong>Maine Family Law LLM</strong>
-<span id="active-matter-label">General Maine law</span>
-</div>
-</button>
-<div class="constitutional-actions">
-<div class="topbar-popover-wrap">
-<button aria-controls="local-status-popover" aria-expanded="false" class="health-indicator compact-action civic-tooltip" data-tooltip="Your family’s matter stays on this device." id="health" type="button">
-<span aria-hidden="true" class="health-dot"></span><span class="health-copy">checking</span>
-</button>
-<div aria-label="Local privacy status" class="topbar-popover local-status-popover" hidden="" id="local-status-popover" role="dialog">
-<button aria-label="Close local privacy status" class="popover-close" id="close-local-status-popover" type="button">×</button>
-<strong>Local-first workspace</strong>
-<p>Your family’s matter stays on this device. Opening an external official-source link may use your internet connection, but the chat does not silently upload your matter.</p>
-<div class="local-status-line"><span aria-hidden="true" class="health-dot"></span><span id="local-status-copy">Checking the local service…</span></div>
-</div>
-</div>
-<button class="compact-action civic-action" id="privacy-button" title="Open privacy information" type="button"><span aria-hidden="true" class="action-glyph">◇</span><span class="action-label">Privacy</span></button>
-<button class="compact-action civic-action" id="matter-button" title="Choose the active matter" type="button"><span aria-hidden="true" class="action-glyph">▤</span><span class="action-label">Matter</span></button>
-<button class="compact-action command-hint" id="command-palette-button" title="Open the command palette" type="button">
-<span class="action-label">Commands</span><kbd>Ctrl K</kbd>
-</button>
-<button class="compact-action civic-action" id="help-button" type="button"><span aria-hidden="true" class="action-glyph">?</span><span class="action-label">Help</span></button>
-<button class="compact-action civic-action" id="new-chat-button" type="button"><span aria-hidden="true" class="action-glyph">＋</span><span class="action-label">New chat</span></button>
-</div>
+  <div class="v5-brand-lockup">
+    <button aria-controls="constitutional-popover" aria-describedby="constitutional-popover" aria-expanded="false" class="constitutional-identity v5-brand-mark" id="constitutional-identity" type="button">
+      <img alt="" aria-hidden="true" src="/brand-assets/assets/logo/focaf-family-law-llm-mark.svg"/>
+      <span class="sr-only eyebrow">WE THE PEOPLE</span>
+      <span class="sr-only justice-line">... establish JUSTICE ...</span>
+    </button>
+    <div class="v5-brand-copy">
+      <h1>Maine Family Law LLM</h1>
+      <strong>FOR OUR CHILDREN &amp; FAMILIES</strong>
+      <span>Source-backed research workbench for FOCAF</span>
+    </div>
+    <div aria-label="Public justice statement" class="constitutional-popover" hidden="" id="constitutional-popover" role="dialog">
+      <button aria-label="Close public justice statement" class="popover-close" id="close-constitutional-popover" type="button">×</button>
+      <strong>Public justice</strong>
+      <span>Justice does not belong to one institution or one profession, it belongs to the People which these institutions of government are meant to serve; it is Public.</span>
+    </div>
+  </div>
+  <div class="v5-header-status">
+    <div class="topbar-popover-wrap">
+      <button aria-controls="local-status-popover" aria-expanded="false" class="health-indicator compact-action civic-tooltip" data-tooltip="Your family’s matter stays on this device." id="health" type="button">
+        <span aria-hidden="true" class="health-dot"></span><span class="health-copy">Local only</span>
+      </button>
+      <div aria-label="Local privacy status" class="topbar-popover local-status-popover" hidden="" id="local-status-popover" role="dialog">
+        <button aria-label="Close local privacy status" class="popover-close" id="close-local-status-popover" type="button">×</button>
+        <strong>Local-first workspace</strong>
+        <p>Your family’s matter stays on this device. External official-source links are separate actions; the chat does not silently upload your matter.</p>
+        <div class="local-status-line"><span aria-hidden="true" class="health-dot"></span><span id="local-status-copy">Checking the local service…</span></div>
+      </div>
+    </div>
+    <span>Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span>
+  </div>
+  <button aria-label="Open matter setup. Current matter: General Maine law" class="constitutional-context v5-focaf-lockup civic-tooltip" data-tooltip="The authority belongs to the source, not the model." id="matter-shortcut-button" type="button">
+    <span aria-hidden="true" class="focaf-people-icon"><i></i><i></i></span>
+    <span><strong>FOCAF</strong><small>Maine’s Child First<br/>Legal Community</small></span>
+  </button>
 </header>
-<div class="main-stage">
+
+<section aria-label="Conversation controls" class="v5-control-bar">
+  <div class="v5-control-field"><label for="audience">Role</label><select id="audience" title="Choose the audience lane."><option value="parent">Parent</option><option value="lawyer">Lawyer / advocate</option><option value="caregiver">Caregiver / relative</option><option value="counselor">Counselor</option><option value="therapist">Therapist / clinician</option></select></div>
+  <div class="v5-control-field"><label for="answer-style">Answer style</label><select id="answer-style" title="Choose the answer format."><option value="plain_language">Plain language</option><option value="checklist">Checklist</option><option value="source_first">Source-first</option><option value="intake">Intake triage</option><option value="professional_boundary">Professional boundary</option><option value="source_card_table">Source-card table</option><option value="questions_to_ask">Questions to ask</option><option value="missing_information">Missing information</option></select></div>
+  <div class="v5-control-field"><label for="topic-filter">Topic filter</label><select id="topic-filter" title="Filter starter prompts and packs."><option value="all">All topics</option></select></div>
+  <div class="v5-control-field v5-focus-field"><label for="matter-context">Focus context</label><input id="matter-context" placeholder="e.g., parental rights, PFA, support…" title="Optional short issue framing."/></div>
+  <button class="compact-action command-hint v5-command-button" id="command-palette-button" title="Open the command palette" type="button"><span aria-hidden="true">⌕</span><span class="action-label">Search / Command</span><kbd>Ctrl K</kbd></button>
+  <button class="compact-action civic-action" id="privacy-button" title="Open privacy information" type="button"><span aria-hidden="true" class="action-glyph">⌾</span><span class="action-label">Privacy</span></button>
+  <button class="compact-action civic-action v5-matter-button" id="matter-button" title="Choose the active matter" type="button"><span aria-hidden="true" class="action-glyph">▣</span><span><small>Matter</small><strong id="active-matter-label">General Maine law</strong></span></button>
+  <button aria-controls="evidence-drawer" aria-expanded="true" class="primary-action compact-action v5-evidence-button" id="focus-mode-button" type="button"><span aria-hidden="true">▣</span> Evidence &amp; tools</button>
+  <button class="compact-action civic-action v5-icon-button" id="help-button" title="Help" type="button"><span aria-hidden="true" class="action-glyph">?</span><span class="sr-only action-label">Help</span></button>
+  <button class="compact-action civic-action v5-icon-button" id="new-chat-button" title="New chat" type="button"><span aria-hidden="true" class="action-glyph">＋</span><span class="sr-only action-label">New chat</span></button>
+</section>
+
+<div class="main-stage v5-main-stage">
 <section aria-labelledby="chat-heading" class="chat-panel panel" data-chat-layout="primary">
-<div class="chat-header">
-<div class="chat-heading-copy">
-<div class="section-kicker">Family justice chat</div>
-<h2 id="chat-heading">What do you need help with today?</h2>
-<p class="chat-subtitle">Ask in ordinary language. Maine-law research and private matter records stay in separate source lanes.</p>
-</div>
-<div class="header-actions">
-<button class="secondary compact-action" id="welcome-button" type="button">Conversation settings</button>
-<button class="secondary compact-action" id="copy-link-button" title="Copy a privacy-safe link containing only display settings" type="button">Copy settings link</button>
-<button aria-controls="evidence-drawer" aria-expanded="false" class="primary-action compact-action" id="focus-mode-button" type="button">Evidence &amp; tools</button>
-</div>
-</div>
-<div aria-label="Research chat messages" class="chat-scroll">
-<div class="chat-seed">
-<div aria-hidden="true" class="chat-seed-icon">AI</div>
-<div class="message-bubble assistant-bubble welcome-bubble">
-<strong>Maine Family Law LLM</strong>
-<p>Tell me what happened or what you are trying to understand. I will show the next useful steps, separate Maine-law support from your records, and say when the available sources do not establish an answer.</p>
-<div aria-label="Common starting points" class="starter-actions">
-<button class="starter-chip example" data-example="I was served with family court papers. What should I do first?">I was served</button>
-<button class="starter-chip example" data-example="What if I need protection from abuse?">Someone may be unsafe</button>
-<button class="starter-chip example" data-example="How do I organize evidence for family court?">Organize records</button>
-<button class="starter-chip" id="more-starters-button" type="button">More starting points</button>
-</div>
-<div aria-live="polite" class="session-summary" id="session-summary">Maine law · Parent · Plain language · General Maine law · Local-only</div>
-</div>
-</div>
-<div aria-label="Conversation transcript" aria-live="polite" class="transcript" id="transcript"></div>
-</div>
-<div class="composer" data-fixed-composer="true">
-<label class="sr-only" for="question">Question</label>
-<div class="composer-row">
-<textarea id="question" placeholder="Describe what happened, paste a short passage, or ask a Maine family-law question…" rows="2"></textarea>
-<div class="composer-controls">
-<label class="sr-only" for="search-mode">Search mode</label>
-<div aria-label="Search source lane" class="search-mode-segmented" role="radiogroup">
-<button aria-checked="true" class="search-mode-option is-selected" data-search-mode="maine_law" role="radio" type="button">Maine law</button>
-<button aria-checked="false" class="search-mode-option" data-search-mode="my_records" role="radio" type="button">My records</button>
-<button aria-checked="false" class="search-mode-option" data-search-mode="both" role="radio" type="button">Both</button>
-</div>
-<select class="sr-only" id="search-mode" title="Choose whether to research Maine law, search the active matter, or analyze both separately.">
-<option value="maine_law">Maine law</option><option value="my_records">My records</option><option value="both">Both</option>
-</select>
-<label class="child-impact-toggle" title="Adds a neutral child-centered planning lens without making custody predictions."><input id="child-impact-lens" type="checkbox"/> Child Impact Lens</label>
-<div class="composer-submit-actions"><button class="secondary compact-action" disabled="" hidden="" id="stop-button" type="button">Stop</button><button class="primary-action" id="ask-button">Send</button></div>
-</div>
-</div>
-<div class="composer-toolbar">
-<div class="composer-meta">Press <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for a new line · <strong>Ctrl+K</strong> for commands</div>
-<div class="composer-actions">
-<button class="secondary compact-action" id="copy-button">Copy answer</button>
-<details class="more-menu">
-<summary>More</summary>
-<div class="more-menu-popover">
-<button class="secondary" id="clear-draft-button" type="button">Clear draft</button>
-<button class="secondary" id="clear-button" type="button">Clear visible conversation</button>
-<button class="secondary" id="download-button" type="button">Save transcript</button>
-<button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button>
-</div>
-</details>
-</div>
-</div>
-</div>
+  <div class="chat-header">
+    <div class="chat-heading-copy v5-chat-title"><span aria-hidden="true" class="chat-seed-icon">AI</span><div><div class="section-kicker">Maine Family Law LLM</div><h2 id="chat-heading">Family justice chat</h2></div></div>
+    <div class="header-actions"><button class="secondary compact-action" id="welcome-button" type="button">Conversation settings</button><button class="secondary compact-action" id="copy-link-button" title="Copy a privacy-safe settings link" type="button">Copy settings link</button></div>
+  </div>
+  <div aria-label="Research chat messages" class="chat-scroll">
+    <div class="chat-seed">
+      <div aria-hidden="true" class="chat-seed-icon">AI</div>
+      <div class="message-bubble assistant-bubble welcome-bubble">
+        <strong>Maine Family Law LLM</strong>
+        <p>Hi, I’m your Maine family-law research assistant. I can help you understand Maine law, review your private records when available, and show the next useful steps. Everything stays on your device.</p>
+        <div aria-label="Common starting points" class="starter-actions">
+          <button class="starter-chip example" data-example="I was served with family court papers. What should I do first?">I was served</button>
+          <button class="starter-chip example" data-example="What if I need protection from abuse?">Someone may be unsafe</button>
+          <button class="starter-chip example" data-example="How do I organize evidence for family court?">Organize records</button>
+          <button class="starter-chip" id="more-starters-button" type="button">More starting points</button>
+        </div>
+        <div aria-live="polite" class="session-summary" id="session-summary">Maine law · Parent · Plain language · General Maine law · Local-only</div>
+      </div>
+    </div>
+    <div aria-label="Conversation transcript" aria-live="polite" class="transcript" id="transcript"></div>
+  </div>
+  <div class="composer" data-fixed-composer="true">
+    <label class="sr-only" for="question">Question</label>
+    <textarea id="question" placeholder="Describe what happened, paste a short passage, or ask a Maine family-law question…" rows="2"></textarea>
+    <div class="composer-controls">
+      <label class="sr-only" for="search-mode">Search mode</label>
+      <div aria-label="Search source lane" class="search-mode-segmented" role="radiogroup"><button aria-checked="true" class="search-mode-option is-selected" data-search-mode="maine_law" role="radio" type="button">Maine law</button><button aria-checked="false" class="search-mode-option" data-search-mode="my_records" role="radio" type="button">My records</button><button aria-checked="false" class="search-mode-option" data-search-mode="both" role="radio" type="button">Both</button></div>
+      <select class="sr-only" id="search-mode" title="Choose the source lane."><option value="maine_law">Maine law</option><option value="my_records">My records</option><option value="both">Both</option></select>
+      <label class="child-impact-toggle" title="Adds a neutral child-centered planning lens without making custody predictions."><span class="switch"><input id="child-impact-lens" type="checkbox"/><i></i></span> Child Impact Lens <span aria-hidden="true">ⓘ</span></label>
+      <div class="composer-submit-actions"><button class="secondary compact-action" disabled="" hidden="" id="stop-button" type="button">Stop</button><button class="primary-action" id="ask-button"><span aria-hidden="true">➤</span><span>Send<small>Shift+Enter</small></span></button></div>
+    </div>
+    <div class="composer-toolbar">
+      <div class="composer-actions"><button class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
+      <div class="composer-meta">Press <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for a new line · <strong>Ctrl+K</strong> for commands</div>
+    </div>
+  </div>
 </section>
-<aside aria-hidden="true" aria-label="Research controls and evidence" class="right-rail evidence-drawer" id="evidence-drawer" tabindex="-1">
-<div class="drawer-header">
-<div>
-<div class="section-kicker">Evidence drawer</div>
-<h2>Sources, matter and review tools</h2>
-</div>
-<button aria-label="Close evidence drawer" class="compact-action" id="close-drawer-button" type="button">Close</button>
-</div>
-<div aria-label="Evidence drawer sections" class="drawer-tabs" role="tablist">
-<button aria-selected="true" class="drawer-tab is-active" data-drawer-tab="setup" role="tab" type="button">Setup</button>
-<button aria-selected="false" class="drawer-tab" data-drawer-tab="evidence" role="tab" type="button">Evidence</button>
-<button aria-selected="false" class="drawer-tab" data-drawer-tab="review" role="tab" type="button">Review</button>
-<button aria-selected="false" class="drawer-tab" data-drawer-tab="starters" role="tab" type="button">Starters</button>
-<button aria-selected="false" class="drawer-tab" data-drawer-tab="printables" role="tab" type="button">Printables</button>
-</div>
-<section class="rail-panel controls-panel" data-drawer-panel="setup">
-<div class="rail-title">Session controls</div>
-<div class="control-grid">
-<div>
-<label for="audience">Role</label>
-<select id="audience" title="Choose the audience lane. This adjusts starter prompts and the tone of the grounded answer.">
-<option value="parent">Parent</option>
-<option value="lawyer">Lawyer / advocate</option>
-<option value="caregiver">Caregiver / relative</option>
-<option value="counselor">Counselor</option>
-<option value="therapist">Therapist / clinician</option>
-</select>
-</div>
-<div>
-<label for="answer-style">Answer style</label>
-<select id="answer-style" title="Switch between plain-language, checklist, source-first, intake, or reviewer-oriented formats.">
-<option value="plain_language">Plain language</option>
-<option value="checklist">Checklist</option>
-<option value="source_first">Source-first</option>
-<option value="intake">Intake triage</option>
-<option value="professional_boundary">Professional boundary</option>
-<option value="source_card_table">Source-card table</option>
-<option value="questions_to_ask">Questions to ask</option>
-<option value="missing_information">Missing information</option>
-</select>
-</div>
-<div>
-<label for="topic-filter">Topic filter</label>
-<select id="topic-filter" title="Filter the question library and prompt packs by topic.">
-<option value="all">All topics</option>
-</select>
-</div>
-<div>
-<label for="matter-context">Focus context</label>
-<input id="matter-context" placeholder="Parental rights, appeal, PFA, support..." title="Optional matter context that gets sent with the question and displayed as a context chip."/>
-<div class="field-hint">Use this for short issue framing like parenting time, safety concerns, appeal timing, or support questions.</div>
-</div>
-</div>
-<button class="secondary rail-action" id="sources-button" title="Load the currently available source list into the source-card rail.">Load source list</button>
-</section>
-<section class="rail-panel" data-drawer-panel="setup">
-<div class="rail-title">Corpus library</div>
-<label for="corpus-select">Active case corpus</label>
-<select id="corpus-select" title="Switch between saved family or client corpora without reinstalling the workbench.">
-<option value="">General Maine law workbench only</option>
-</select>
-<div class="row" style="margin-top:10px">
-<button class="secondary" id="activate-corpus-button" title="Activate the highlighted family or client corpus for this chat session." type="button">Use selected corpus</button>
-<button class="secondary" id="refresh-corpus-button" title="Refresh the installed corpus list from disk." type="button">Refresh corpora</button>
-</div>
-<div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div>
-<div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div>
-<div class="ocr-primary-action" id="ocr-primary-action" hidden="">
-<button class="primary-action" id="ocr-action-button" title="Review scanned pages and choose whether to run OCR entirely on this computer." type="button">OCR scanned pages locally</button>
-<div class="field-hint">OCR is never automatic. It requires a separate choice and never uploads the selected records or recognized text.</div>
-</div>
-<div class="row" style="margin-top:10px">
-<button class="secondary" id="review-inventory-button" title="Review the local inventory status for the selected matter. No source files are opened by this action." type="button">Review inventory</button>
-<button class="secondary" id="rebuild-index-button" title="Rebuilds only the local derived search index for a previously authorized matter. Original source documents remain unchanged." type="button">Rebuild local index</button>
-<button class="secondary" id="delete-index-button" title="Deletes only the derived local search index. It never deletes your original source documents." type="button">Delete local index</button>
-</div>
-<div class="field-hint">To add records, open the desktop launcher and choose <strong>Reopen Intake / Add More Evidence</strong>. The importer hashes originals read-only, builds local search text, and keeps each matter separate.</div>
-<div class="external-resource-links" aria-label="Optional family resources">
-<a href="https://focaf.jtforme.com/" rel="noreferrer noopener" target="_blank" title="Opens the optional FOCAF family resources site in your default browser. No case details are sent.">FOCAF family resources</a>
-<a href="https://focaf.jtforme.com/download-library/" rel="noreferrer noopener" target="_blank" title="Opens the optional FOCAF download library in your default browser. No case details are sent.">FOCAF download library</a>
-</div>
-</section>
-<section class="rail-panel" data-drawer-panel="printables" hidden="">
-<div class="rail-title">Family printables</div>
-<p class="muted">Optional FOCAF family resources. They are not legal authority, official court forms, or proof of disputed facts.</p>
-<label for="printable-search">Search printables</label>
-<div class="row"><input id="printable-search" placeholder="court day, school update, calm message..." title="Search the actual extracted content of the bundled public printable PDFs."/><button class="secondary" id="printable-search-button" type="button">Search</button></div>
-<div class="library-list" id="printable-results" style="margin-top:10px">Search the local printable library by situation, title, county, or page text.</div>
-</section>
-<section class="rail-panel" data-drawer-panel="evidence" hidden="">
-<div class="rail-title">Answer details</div>
-<div class="badges" id="answer-badges"><span class="badge">waiting</span></div>
-<div aria-live="polite" class="answer" id="answer">Ask a question to test the local source-grounded workbench.</div>
-</section>
-<section class="rail-panel" data-drawer-panel="evidence" hidden="">
-<div class="rail-title">Source cards</div>
-<div class="muted" id="source-cards">No source cards yet.</div>
-<div class="muted" id="source-inspector">Select "Inspect source" on a source card to view full local metadata.</div>
-<button class="secondary" id="copy-sources-bottom" style="margin-top:10px" title="Copy the latest source-card set as JSON for reviewer handoff or audit." type="button">Copy source cards</button>
-</section>
-<section class="rail-panel" data-drawer-panel="review" hidden="">
-<div class="rail-title">Reviewer handoff</div>
-<div aria-live="polite" class="answer" id="handoff-panel">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div>
-<div class="status-strip" data-runtime-diagnostics="loading" id="runtime-diagnostics">Runtime diagnostics loading. Expected UI: {{UI_FOOTER_LABEL}}.</div>
-</section>
-<section class="rail-panel" data-drawer-panel="starters" hidden="">
-<div class="rail-title">Prompt packs</div>
-<label for="prompt-pack-select">Starter pack</label>
-<select id="prompt-pack-select" title="Swap between role-specific starter prompt packs.">
-<option value="auto">Best pack for selected role</option>
-</select>
-<div class="library-list" id="prompt-pack-list" style="margin-top:10px">Loading starter prompt packs...</div>
-</section>
-<section class="rail-panel" data-drawer-panel="starters" hidden="">
-<div class="rail-title">Prompt shortcuts</div>
-<div class="examples">
-<button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best-interest factors</button>
-<button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best-interest prep</button>
-<button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary</button>
-<button class="secondary example" data-example="What should I gather for child support?">Child support checklist</button>
-<button class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing</button>
-<button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers</button>
-<button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence</button>
-<button class="secondary example" data-example="What court handles appeals?">Appeals routing</button>
-</div>
-</section>
-<section class="rail-panel" data-drawer-panel="starters" hidden="">
-<div class="rail-title">Question library</div>
-<div class="mini-grid">
-<div>
-<label for="library-search">Search starter questions</label>
-<input id="library-search" placeholder="evidence, served papers, therapist, child support" title="Search starter questions by phrase or issue."/>
-</div>
-<div>
-<label for="library-topic-search">Quick topic</label>
-<input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal" title="Filter starter questions by a quick topic hint."/>
-</div>
-</div>
-<div class="library-list" id="library-list" style="margin-top:10px">Loading question library...</div>
-</section>
-</aside><button aria-label="Close evidence drawer" class="drawer-backdrop" hidden="" id="drawer-backdrop" type="button"></button>
+
+<aside aria-label="Workbench shortcuts" class="workbench-rail">
+  <section class="rail-panel v5-status-card"><div class="rail-title">Status</div><div class="v5-local-status"><span aria-hidden="true">⬟</span><div><strong>Local only</strong><small>All records stay on this device.</small></div></div></section>
+  <section class="rail-panel v5-shortcut-card"><div class="rail-title"><span aria-hidden="true">✦</span> Prompt shortcuts</div><div class="examples v5-action-list">
+    <button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best interest factors <span>›</span></button>
+    <button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best interest prep <span>›</span></button>
+    <button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary <span>›</span></button>
+    <button class="secondary example" data-example="What should I gather for child support?">Child support checklist <span>›</span></button>
+    <button class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing <span>›</span></button>
+    <button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers <span>›</span></button>
+    <button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence <span>›</span></button>
+    <button class="secondary example" data-example="What should a counselor include in a careful court-related letter?">Counselor court letter <span>›</span></button>
+  </div></section>
+  <section class="rail-panel v5-question-card"><div class="rail-title"><span aria-hidden="true">?</span> Question starters</div><div class="v5-action-list">
+    <button class="secondary example" data-example="What is a parenting plan?">What is a parenting plan? <span>›</span></button>
+    <button class="secondary example" data-example="How is child support calculated in Maine?">How is child support calculated? <span>›</span></button>
+    <button class="secondary example" data-example="What is a guardian ad litem and what is their role?">What is a GAL and their role? <span>›</span></button>
+    <button class="secondary example" data-example="Can I move with my child under Maine law?">Can I move with my child? <span>›</span></button>
+    <button class="secondary example" data-example="How do I file an appeal in a Maine family matter?">How do I file an appeal? <span>›</span></button>
+    <button class="secondary example" data-example="What court handles family-law appeals in Maine?">What court handles appeals? <span>›</span></button>
+  </div></section>
+  <section class="rail-panel v5-starter-card"><div class="rail-title"><span aria-hidden="true">▰</span> Starter packs</div><label class="sr-only" for="prompt-pack-select">Starter pack</label><select class="sr-only" id="prompt-pack-select"><option value="auto">Best pack for selected role</option></select><div class="library-list v5-pack-list" id="prompt-pack-list">Loading starter packs…</div><button class="v5-text-link" id="open-all-starters" type="button">Browse all packs</button></section>
+  <section class="rail-panel v5-quick-actions"><div class="rail-title"><span aria-hidden="true">ϟ</span> Quick actions</div><button id="quick-new-corpus" type="button">▱ Create new case corpus</button><button id="quick-open-workspace" type="button">▢ Open case workspace</button><button id="quick-export-chat" type="button">⇩ Export chat / transcript</button></section>
+</aside>
+
+<aside aria-hidden="false" aria-label="Research controls and evidence" class="right-rail evidence-drawer" id="evidence-drawer" role="complementary" tabindex="-1">
+  <div class="drawer-header"><div><div class="section-kicker">Evidence &amp; tools</div><h2>Private matter workbench</h2></div><button aria-label="Close evidence drawer" class="compact-action" id="close-drawer-button" type="button">Close</button></div>
+  <div aria-label="Evidence drawer sections" class="drawer-tabs" role="tablist"><button aria-selected="false" class="drawer-tab" data-drawer-tab="setup" role="tab" type="button">Setup</button><button aria-selected="true" class="drawer-tab is-active" data-drawer-tab="evidence" role="tab" type="button">Evidence</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="review" role="tab" type="button">Review</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="starters" role="tab" type="button">Starters</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="printables" role="tab" type="button">Printables</button></div>
+  <div class="drawer-scroll">
+    <section class="rail-panel v5-corpus-card" data-drawer-panel="setup" hidden><div class="rail-title">Corpus library</div><label for="corpus-select">Active case corpus</label><select id="corpus-select" title="Switch between saved family or client corpora."><option value="">General Maine law workbench only</option></select><div class="row"><button class="primary-action" id="activate-corpus-button" type="button">Use selected corpus</button><button class="secondary" id="refresh-corpus-button" type="button">Refresh corpora</button></div><div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div><div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div><div class="ocr-primary-action" id="ocr-primary-action" hidden><button class="primary-action" id="ocr-action-button" type="button">OCR scanned pages locally</button><div class="field-hint">OCR is never automatic and never uploads selected records.</div></div><div class="row"><button class="secondary" id="review-inventory-button" type="button">Review inventory</button><button class="secondary" id="rebuild-index-button" type="button">Rebuild local index</button><button class="secondary" id="delete-index-button" type="button">Delete local index</button></div><button class="secondary rail-action" id="sources-button" type="button">Load source list</button><div class="external-resource-links"><a href="https://focaf.jtforme.com/" rel="noreferrer noopener" target="_blank">FOCAF family resources</a><a href="https://focaf.jtforme.com/download-library/" rel="noreferrer noopener" target="_blank">FOCAF download library</a></div></section>
+    <section class="rail-panel v5-evidence-summary" data-drawer-panel="evidence"><div class="rail-title">Corpus status</div><div class="v5-corpus-summary"><div><small>Active corpus</small><strong id="drawer-active-corpus">General Maine law</strong><span id="drawer-corpus-count">No private corpus selected</span></div><span class="v5-ready-badge">Local</span></div><div class="v5-progress-label"><span>OCR progress</span><strong id="drawer-ocr-percent">—</strong></div><div class="v5-progress"><i></i></div><button class="secondary v5-refresh-button" id="drawer-refresh-corpus" type="button">↻ Refresh corpus</button></section>
+    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" id="source-inspector">Select “Inspect source” on a source card to view full local metadata.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
+    <section class="rail-panel" data-drawer-panel="review" hidden><div class="rail-title">Reviewer handoff</div><div aria-live="polite" class="answer" id="handoff-panel">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div class="status-strip" data-runtime-diagnostics="loading" id="runtime-diagnostics">Runtime diagnostics loading. Expected UI: {{UI_FOOTER_LABEL}}.</div></section>
+    <section class="rail-panel" data-drawer-panel="starters" hidden><div class="rail-title">Question library</div><div class="mini-grid"><div><label for="library-search">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support"/></div><div><label for="library-topic-search">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal"/></div></div><div class="library-list" id="library-list">Loading question library…</div></section>
+    <section class="rail-panel" data-drawer-panel="printables" hidden><div class="rail-title">Family printables</div><p class="muted">Optional FOCAF family resources. They are not legal authority, official court forms, or proof of disputed facts.</p><label for="printable-search">Search printables</label><div class="row"><input id="printable-search" placeholder="court day, school update, calm message…"/><button class="secondary" id="printable-search-button" type="button">Search</button></div><div class="library-list" id="printable-results">Search the local printable library by situation, title, county, or page text.</div></section>
+  </div>
+</aside>
+<button aria-label="Close evidence drawer" class="drawer-backdrop" hidden="" id="drawer-backdrop" type="button"></button>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="welcome-overlay">
 <div aria-labelledby="welcome-title" aria-modal="true" class="overlay-card" role="dialog">
@@ -375,10 +256,13 @@
 </div>
 <div class="overlay-actions ocr-overlay-actions">
 <button class="primary-action" id="start-ocr-button" type="button">OCR scanned pages locally</button>
+<button class="primary-action" hidden id="install-ocr-prerequisites-button" type="button">Install OCR prerequisites</button>
+<button class="secondary" hidden id="open-ocr-install-page-button" type="button">Open manual install page</button>
+<button class="secondary" hidden id="recheck-ocr-button" type="button">Recheck local OCR</button>
 <button class="secondary" id="decline-ocr-button" type="button">Keep them unsearchable for now</button>
 <button class="secondary" id="cancel-ocr-choice-button" type="button">Cancel</button>
 </div>
-<div class="overlay-meta">OCR will not start until you activate the affirmative button.</div>
+<div class="overlay-meta" id="ocr-install-disclosure">OCR will not start until you activate the affirmative button. Installing prerequisites may connect to Windows Package Manager, but matter records are not read or uploaded.</div>
 </div>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="privacy-overlay">
@@ -441,21 +325,15 @@
 </div>
 </div>
 <div aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
-<div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · {{UI_FOOTER_LABEL}} · /api/question-topics · /api/missing-information-prompts · /api/runtime-diagnostics · /api/corpus-library · /api/activate-corpus · fetch('/ask') · fetchJson · non-JSON response · data-source-card · answer-callout · section-nav · source-card-badges · source-snippet · Open source link · Reviewer handoff copied. · Grounded answer ready. · renderBadges · renderLatestAnswer · renderParagraphBlocks · renderHandoff · renderPromptPacks · renderQuestionLibrary(libraryItems) · loadPromptPacks · inspectSource · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg · welcome role chooser · evidence drawer · Copy query link · Focus mode · Help &amp; tips · Choose how you want to begin · class="hero-banner" · class="right-rail" · Prompt shortcuts · Prompt packs · Source cards · Latest answer · Reviewer handoff · html, body { overflow: hidden; chat-scroll { overflow: auto; · populateTopicFilter · Latest payload metadata: · Latest source cards: · data-copy-source · source_card_table · enter_submit_clears_input · reviewer_handoff · Copy reviewer handoff JSON · local_chat_transcript_v3 · /api/starter-prompt-packs · data-pack-prompt · questions_to_ask · data-inspect-source · libraryItems · /api/question-library</div>
+<div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · {{UI_FOOTER_LABEL}} · /api/question-topics · /api/missing-information-prompts · /api/runtime-diagnostics · /api/corpus-library · /api/activate-corpus · fetch('/ask') · fetchJson · non-JSON response · data-source-card · answer-callout · section-nav · source-card-badges · source-snippet · Open source link · Reviewer handoff copied. · Grounded answer ready. · renderBadges · renderLatestAnswer · renderParagraphBlocks · renderHandoff · renderPromptPacks · renderQuestionLibrary(libraryItems) · loadPromptPacks · inspectSource · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg · welcome role chooser · evidence drawer · Copy query link · Focus mode · Help &amp; tips · Choose how you want to begin · class="hero-banner" · class="right-rail" · Prompt shortcuts · Prompt packs · Source cards · Latest answer · Reviewer handoff · html, body { overflow: hidden; chat-scroll { overflow: auto; · populateTopicFilter · Latest payload metadata: · Latest source cards: · data-copy-source · source_card_table · enter_submit_clears_input · reviewer_handoff · Copy reviewer handoff JSON · local_chat_transcript_v3 · /api/starter-prompt-packs · data-pack-prompt · questions_to_ask · data-inspect-source · libraryItems · /api/question-library · premium-workbench · evidence-inventory · clickable-record-cards · class="app-shell" · class="hero-banner" · class="main-stage" · class="right-rail" · Prompt packs · Source cards · Latest answer · data-example="What court handles appeals?"</div>
 <div class="sr-only" id="viewport-proof">viewport proof pending</div>
 <img alt="Maine Family Law LLM horizontal logo compatibility asset" class="sr-only" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg"/>
-<div class="footerbar">
-<button class="footer-privacy" id="footer-privacy-button" title="Your family’s matter stays on this device." type="button">Local-only</button>
-<span>Source-cited when found · Review required · Not legal advice</span>
-<button aria-label="Version {{UI_FOOTER_LABEL}}. Triple-click for a local build card." class="footer-version" data-build="{{BUILD_NUMBER}}" id="footer-version" type="button">{{UI_FOOTER_LABEL}}.</button>
-</div>
+<div class="footerbar"><button class="footer-privacy" id="footer-privacy-button" title="Your family’s matter stays on this device." type="button">⬟ Local-only</button><span>Source-cited when found&nbsp;&nbsp;•&nbsp;&nbsp;Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span><span class="footer-spacer"></span><span>Your data never leaves this device</span><button aria-label="Version {{UI_FOOTER_LABEL}}. Triple-click for a local build card." class="footer-version" data-build="{{BUILD_NUMBER}}" id="footer-version" type="button">{{UI_FOOTER_LABEL}}</button></div>
 </div>
 <script>window.__MFL_WORKBENCH_UI_VERSION = '{{UI_VERSION}}';
 // compatibility: question.addEventListener('keydown'); event.key === 'Enter' && !event.shiftKey; event.preventDefault(); ask();
 // syncContextBar; openOverlay(welcomeOverlay); document.body.dataset.focusMode; currentQuestionOrFallback;
 // Reviewer handoff copied.; Grounded answer ready.; renderLatestAnswer; renderParagraphBlocks; renderHandoff; renderBadges; renderPromptPacks; inspectSource;
 // join('\n\n'); ].join('\n'); `[${msg.at}] ${msg.role.toUpperCase()}\n${msg.text}`;
-
 // const text = question.value.trim(); addMessage('user', text); question.value = ''; question.dataset.lastSubmitCleared = 'true';
-</script><script defer="" src="/ui-assets/workbench.js?v={{UI_VERSION}}"></script></body>
-</html>
+</script><script defer="" src="/ui-assets/workbench.js?v={{UI_VERSION}}"></script></body></html>

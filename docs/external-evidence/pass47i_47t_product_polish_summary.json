@@ -41,7 +41,7 @@
     "schema": "maine_family_law_llm.conversation_quality_regression_v1",
     "status": "pass"
   },
-  "conversation_quality_regression_path": "docs\\external-evidence\\pass47r_conversation_quality_regression.json",
+  "conversation_quality_regression_path": "docs/external-evidence/pass47r_conversation_quality_regression.json",
   "does_not_reduce_true_ga_count": true,
   "emails_sent": false,
   "evidence_basis": [
@@ -53,7 +53,7 @@
     "true GA passes 48-51 remain open"
   ],
   "ga_shipped": false,
-  "generated_at": "2026-07-20T16:45:16.202167+00:00",
+  "generated_at": "2026-07-24T21:43:23.787966+00:00",
   "legal_signoff": false,
   "no_private_data_packaged": true,
   "outreach_complete": false,
@@ -796,5 +796,5 @@
     "schema": "maine_family_law_llm.user_journey_eval_report.v1",
     "status": "pass"
   },
-  "user_journey_eval_report_path": "docs\\external-evidence\\pass47p_user_journey_eval_report.json"
+  "user_journey_eval_report_path": "docs/external-evidence/pass47p_user_journey_eval_report.json"
 }

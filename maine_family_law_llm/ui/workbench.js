@@ -42,6 +42,9 @@
     const ocrCandidateCount = document.getElementById('ocr-candidate-count');
     const ocrEngineStatus = document.getElementById('ocr-engine-status');
     const startOcrButton = document.getElementById('start-ocr-button');
+    const installOcrPrerequisitesButton = document.getElementById('install-ocr-prerequisites-button');
+    const openOcrInstallPageButton = document.getElementById('open-ocr-install-page-button');
+    const recheckOcrButton = document.getElementById('recheck-ocr-button');
     const declineOcrButton = document.getElementById('decline-ocr-button');
     const cancelOcrChoiceButton = document.getElementById('cancel-ocr-choice-button');
     const reviewInventoryButton = document.getElementById('review-inventory-button');
@@ -91,25 +94,51 @@
     const closeConstitutionalPopoverButton = document.getElementById('close-constitutional-popover');
     const localStatusCopy = document.getElementById('local-status-copy');
     const commandResultsStatus = document.getElementById('command-results-status');
+    const drawerActiveCorpus = document.getElementById('drawer-active-corpus');
+    const drawerCorpusCount = document.getElementById('drawer-corpus-count');
+    const drawerOcrPercent = document.getElementById('drawer-ocr-percent');
+    const drawerOcrProgress = document.querySelector('.v5-progress i');
+    const drawerRefreshCorpus = document.getElementById('drawer-refresh-corpus');
+    const quickNewCorpus = document.getElementById('quick-new-corpus');
+    const quickOpenWorkspace = document.getElementById('quick-open-workspace');
+    const quickExportChat = document.getElementById('quick-export-chat');
+    const openAllStarters = document.getElementById('open-all-starters');
     window.__MFL_WORKBENCH_UI_VERSION = window.__MFL_WORKBENCH_UI_VERSION || document.getElementById('focaf-brand-shell')?.dataset.uiVersion || 'unknown';
     const startupParams = new URLSearchParams(window.location.search);
-    const localSessionId = (window.crypto && typeof window.crypto.randomUUID === 'function')
-      ? window.crypto.randomUUID()
-      : `mfl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    function createLocalSessionId() {
+      return (window.crypto && typeof window.crypto.randomUUID === 'function')
+        ? window.crypto.randomUUID()
+        : `mfl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+    let localSessionId = createLocalSessionId();
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
     let lastPayload = null;
     let lastSources = [];
+    let lastHandoffSources = [];
     let sending = false;
     let activeRequestController = null;
     let toastTimer = 0;
     let ocrPollTimer = 0;
+    let ocrInstallPollTimer = 0;
     let ocrJobRunning = false;
+    let ocrManualInstallUrl = 'https://tesseract-ocr.github.io/tessdoc/Downloads.html';
     const overlayReturnFocus = new WeakMap();
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
+    }
+
+    function hasPrivateRecordSources() {
+      return lastSources.some((item) => String(item?.metadata?.source_lane || 'legal_authority') === 'private_record');
+    }
+
+    function confirmFullLocalExport() {
+      const mode = String(lastPayload?.search_mode || lastPayload?.metadata?.search_mode || '').toLowerCase();
+      const mayContainPrivateMatterContent = hasPrivateRecordSources() || mode === 'my_records' || mode === 'both';
+      if (!mayContainPrivateMatterContent) return true;
+      return window.confirm('This full local export includes private-record excerpts and may include sensitive information. Continue only if you intend to store or share the complete local transcript securely.');
     }
 
     function formatLocalTime(value) {
@@ -149,8 +178,9 @@
         payload = {};
       }
       if (!res.ok) {
-        const message = payload.message || payload.detail || payload.recovery_hint || res.statusText || 'request failed';
-        throw new Error(message);
+        const detail = payload && typeof payload.detail === 'object' ? payload.detail : null;
+        const message = payload.message || detail?.message || payload.detail || payload.recovery_hint || res.statusText || 'request failed';
+        throw new Error(String(message));
       }
       return payload;
     }
@@ -195,6 +225,7 @@
 
       sessionSummary.textContent = parts.filter(Boolean).join(' · ');
       if (activeMatterLabel) activeMatterLabel.textContent = corpusLabel;
+      if (drawerActiveCorpus) drawerActiveCorpus.textContent = corpusLabel;
       const matterLabel = `Open matter setup. Current matter: ${corpusLabel}`;
       matterShortcutButton?.setAttribute('aria-label', matterLabel);
       matterButton?.setAttribute('aria-label', matterLabel);
@@ -247,24 +278,84 @@
       return `<section class="answer-section ${className}"><h3>${escapeHtml(title)}</h3><ul class="answer-list">${rows.map((row) => `<li>${escapeHtml(row)}</li>`).join('')}</ul></section>`;
     }
 
+    function renderCriticalDates(items) {
+      const rows = Array.isArray(items) ? items.filter((item) => item && item.raw) : [];
+      if (!rows.length) return '';
+      const labels = {
+        service_date: 'Service date',
+        hearing_date: 'Hearing or court date',
+        response_or_filing_deadline: 'Possible response or filing deadline',
+        mentioned_date: 'Date mentioned'
+      };
+      return `<section class="answer-section deadline-summary"><h3>Dates and deadlines I heard</h3><ul class="answer-list">${rows.map((item) => {
+        const label = labels[item.kind] || String(item.kind || 'Date').replaceAll('_', ' ');
+        const normalized = item.normalized_date ? ` · normalized locally as ${item.normalized_date}` : '';
+        const basis = item.normalization_basis === 'year_inferred_from_reference_date'
+          ? ' · year inferred from the local date'
+          : (item.normalization_basis === 'relative_to_local_reference_date' ? ' · calculated from the local date' : '');
+        const reviewFlags = Array.isArray(item.review_flags) && item.review_flags.length
+          ? ` · review: ${item.review_flags.map((value) => String(value).replaceAll('_', ' ')).join(', ')}`
+          : '';
+        return `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(item.raw)}${escapeHtml(normalized)}${escapeHtml(basis)}${escapeHtml(reviewFlags)}</li>`;
+      }).join('')}</ul><p class="muted">Confirm every date against the complete official paper or docket. This extraction is not a deadline calculation.</p></section>`;
+    }
+
     function renderPrintableSuggestions(items) {
       const rows = Array.isArray(items) ? items : [];
       if (!rows.length) return '';
       return `<section class="answer-section printable-suggestions"><h3>Helpful family printables</h3><p class="muted">Optional family resources, not legal authority or official court forms.</p>${rows.map((item) => `<article class="printable-suggestion"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.why_relevant || item.description || '')}</p><div class="row"><span class="badge">${escapeHtml(item.category || 'family printable')}</span><span class="badge">${escapeHtml(item.page_count || 0)} pages</span><button class="secondary compact-action" data-open-printable="${escapeHtml(item.document_id)}" type="button">Open or print locally</button></div></article>`).join('')}</section>`;
     }
 
+    function renderRecordGroups(groups) {
+      const rows = Array.isArray(groups) ? groups : [];
+      if (!rows.length) return '<p class="muted">No unique indexed documents matched this search.</p>';
+      return `<section class="answer-section record-results" aria-label="Matching local records"><h3>Matching local records</h3>${rows.map((group, index) => {
+        const pages = Array.isArray(group.pages) ? group.pages.filter((page) => Number(page) > 0).sort((a, b) => Number(a) - Number(b)) : [];
+        const snippets = Array.isArray(group.snippets) ? group.snippets.slice(0, 12) : [];
+        const token = escapeHtml(String(group.source_token || ''));
+        const basename = escapeHtml(String(group.basename || 'Record'));
+        const documentType = escapeHtml(String(group.document_type || 'record').replaceAll('_', ' '));
+        const matches = Number(group.match_count || 0);
+        const detailId = `record-matches-${index}`;
+        return `<article class="record-result-card"><div class="record-result-head"><div><strong>${basename}</strong><p class="muted">${documentType} · ${matches} matching ${matches === 1 ? 'row' : 'rows'}${pages.length ? ` · pages ${escapeHtml(pages.join(', '))}` : ''}</p></div><div class="record-result-actions"><button class="secondary compact-action" data-open-record="${token}" type="button" aria-label="Open PDF for ${basename}">Open PDF</button>${pages.slice(0, 6).map((page) => `<button class="secondary compact-action" data-open-record-page="${token}" data-page="${escapeHtml(page)}" type="button" aria-label="Open ${basename} at page ${escapeHtml(page)}">Open at page ${escapeHtml(page)}</button>`).join('')}</div></div><details id="${detailId}" class="record-match-details"><summary>Show all matches in this document</summary><ul class="answer-list">${snippets.map((snippet) => `<li>${escapeHtml(String(snippet))}</li>`).join('')}</ul></details></article>`;
+      }).join('')}</section>`;
+    }
+
+    function bindRecordOpenActions(container = answer) {
+      container.querySelectorAll('[data-open-record], [data-open-record-page]').forEach((button) => button.addEventListener('click', () => {
+        const token = button.dataset.openRecord || button.dataset.openRecordPage || '';
+        const page = Number(button.dataset.page || 0);
+        if (!/^[a-f0-9]{64}$/i.test(token)) return;
+        const suffix = page > 0 ? `#page=${encodeURIComponent(String(page))}` : '';
+        window.open(`/api/records/open/${encodeURIComponent(token)}?page=${encodeURIComponent(String(page || 0))}${suffix}`, '_blank', 'noopener,noreferrer');
+      }));
+    }
+
     function renderLatestAnswer(payload) {
+      if (payload?.response_kind === 'corpus_inventory') {
+        const summary = payload.inventory_summary || {};
+        const sourceTypes = Object.entries(summary.source_types || {}).map(([key, value]) => `${key}: ${value}`).join(' · ');
+        const parserStatuses = Object.entries(summary.parser_statuses || {}).map(([key, value]) => `${key}: ${value}`).join(' · ');
+        answer.innerHTML = `<div class="answer-body corpus-inventory-result">
+          <section class="answer-section"><h3>Indexed corpus inventory</h3>${renderParagraphBlocks(String(payload.answer || 'Inventory loaded.'))}</section>
+          <section class="answer-section"><h3>Inventory breakdown</h3><p><strong>Top-level records:</strong> ${escapeHtml(summary.top_level_records || 0)} · <strong>Total index rows:</strong> ${escapeHtml(summary.records || 0)} · <strong>Searchable records:</strong> ${escapeHtml(summary.searchable_records || 0)}</p><p><strong>Source types:</strong> ${escapeHtml(sourceTypes || 'none')}</p><p><strong>Parser status:</strong> ${escapeHtml(parserStatuses || 'none')}</p><p><strong>OCR candidates:</strong> ${escapeHtml(summary.ocr_candidate_documents || 0)} document(s), ${escapeHtml(summary.ocr_candidate_pages || 0)} page(s)</p><p><button class="inline-source-link" data-open-evidence="records" type="button">Open first ${escapeHtml(payload.source_card_count || 0)} indexed record cards</button></p><p class="muted">This is an inventory of the selected private matter, not a Maine-law answer.</p></section>
+        </div>`;
+        answer.querySelector('[data-open-evidence]')?.addEventListener('click', () => setDrawerOpen(true, 'evidence'));
+        return;
+      }
       if (payload?.direct_record_search) {
         const summary = payload.search_summary || {};
         const target = summary.search_target || payload?.intake?.search_target || payload?.question || '';
+        const uniqueDocuments = Number(summary.unique_document_count || (payload.record_groups || []).length || summary.document_count || 0);
         const countLine = summary.result_count !== undefined
-          ? `${summary.result_count} result${summary.result_count === 1 ? '' : 's'}${summary.document_count ? ` across ${summary.document_count} document${summary.document_count === 1 ? '' : 's'}` : ''}${summary.page_count ? ` and ${summary.page_count} page${summary.page_count === 1 ? '' : 's'}` : ''}`
+          ? `${summary.result_count} matching index ${summary.result_count === 1 ? 'row' : 'rows'} across ${uniqueDocuments} unique ${uniqueDocuments === 1 ? 'document' : 'documents'}`
           : `${payload.source_card_count || 0} source card(s)`;
         answer.innerHTML = `<div class="answer-body compact-search-result">
           <section class="answer-section"><h3>Local record search</h3><p class="intake-heard"><strong>Searched for:</strong> ${escapeHtml(target)}</p>${renderParagraphBlocks(String(payload.answer || 'Search completed.'))}</section>
-          <section class="answer-section source-lane-summary"><p><strong>Results:</strong> ${escapeHtml(countLine)}. <button class="inline-source-link" data-open-evidence="records" type="button">Open source cards</button></p><p class="muted">Private matter records only. No Maine-law search was substituted, and a text match is not a legal conclusion.</p></section>
+          <section class="answer-section source-lane-summary"><p><strong>Results:</strong> ${escapeHtml(countLine)}.</p><p class="muted">Private matter records only. No Maine-law search was substituted, and a text match is not a legal conclusion.</p></section>
+          ${renderRecordGroups(payload.record_groups)}
         </div>`;
-        answer.querySelector('[data-open-evidence]')?.addEventListener('click', () => setDrawerOpen(true, 'evidence'));
+        bindRecordOpenActions();
         return;
       }
       const structured = payload?.structured_answer || null;
@@ -276,14 +367,37 @@
         const intakeDetails = [
           intake.procedural_posture && intake.procedural_posture !== 'unknown' ? `Stage: ${intake.procedural_posture.replaceAll('_', ' ')}` : '',
           Array.isArray(intake.issues) && intake.issues.length ? `Issues: ${intake.issues.slice(0, 3).map((value) => value.replaceAll('_', ' ')).join(', ')}` : '',
-          Array.isArray(intake.dates_mentioned) && intake.dates_mentioned.length ? `Dates heard: ${intake.dates_mentioned.slice(0, 3).join(', ')}` : ''
+          Array.isArray(intake.requested_actions) && intake.requested_actions.length ? `Requested action: ${intake.requested_actions.slice(0, 2).map((value) => value.replaceAll('_', ' ')).join(', ')}` : '',
+          intake.attention_level && intake.attention_level !== 'routine' ? `Attention: ${intake.attention_level.replaceAll('_', ' ')}` : ''
         ].filter(Boolean).join(' · ');
         const intakeBlock = structured.intake_label
-          ? `<section class="answer-section intake-summary"><h3>What I heard</h3><p><strong>${escapeHtml(structured.intake_label)}</strong>${intake.user_goal ? ` — ${escapeHtml(intake.user_goal)}` : ''}</p>${intakeDetails ? `<p class="muted">${escapeHtml(intakeDetails)}</p>` : ''}<p class="muted">Routing summary only—not a finding of fact or law.</p></section>`
+          ? `<section class="answer-section intake-summary"><h3>What I heard</h3><p><strong>${escapeHtml(structured.intake_label)}</strong>${intake.user_goal ? ` — ${escapeHtml(intake.user_goal)}` : ''}</p>${intakeDetails ? `<p class="muted">${escapeHtml(intakeDetails)}</p>` : ''}${intake.context_inherited ? `<p class="status-warn"><strong>Conversation continuity used:</strong> ${escapeHtml(intake.continuity_reason || 'Only structured routing labels from the prior turn were reused.')}</p>` : ''}<p class="muted">Routing summary only—not a finding of fact or law.</p></section>`
           : '';
+        const securityWarnings = payload?.security_warnings || payload?.metadata?.security_warnings || [];
+        const securityBlock = securityWarnings.length
+          ? `<section class="answer-section security-warning"><h3>Untrusted instruction warning</h3><ul class="answer-list">${securityWarnings.map((row) => `<li>${escapeHtml(row)}</li>`).join('')}</ul></section>`
+          : '';
+        const groundingIntegrity = structured.grounding_integrity || payload?.grounding_integrity || payload?.metadata?.grounding_integrity || {};
+        const retrievalDiagnostics = payload?.retrieval_diagnostics || payload?.metadata?.retrieval_diagnostics || {};
+        const retrievalConfidence = payload?.retrieval_confidence || payload?.metadata?.retrieval_confidence || retrievalDiagnostics.confidence || '';
+        const retrievalSection = retrievalDiagnostics.schema_version
+          ? `<section class="answer-section retrieval-integrity"><h3>Retrieval quality</h3><p><strong>Confidence:</strong> ${escapeHtml(String(retrievalConfidence || 'not assessed').replaceAll('_', ' '))} · ${escapeHtml(retrievalDiagnostics.distinct_source_count || 0)} distinct source(s) · ${escapeHtml(retrievalDiagnostics.official_result_count || 0)} official result(s)</p>${retrievalDiagnostics.recognized_references?.length ? `<p><strong>Recognized reference:</strong> ${escapeHtml(retrievalDiagnostics.recognized_references.map((row) => row.display).join(', '))}</p>` : ''}<p class="muted">${escapeHtml(retrievalDiagnostics.review_warning || 'Retrieval rank is a source-discovery aid, not a legal correctness or currentness determination.')}</p></section>`
+          : '';
+        const supportIntegrity = structured.answer_support_integrity || payload?.answer_support_integrity || payload?.metadata?.answer_support_integrity || {};
+        const supportBlockers = Array.isArray(supportIntegrity.blockers) ? supportIntegrity.blockers : [];
+        const supportWarnings = Array.isArray(supportIntegrity.warnings) ? supportIntegrity.warnings : [];
+        const supportSection = Number(supportIntegrity.candidate_legal_claim_count || 0)
+          ? `<section class="answer-section claim-support-review"><h3>Claim-to-source review</h3><p><strong>Status:</strong> ${escapeHtml(String(supportIntegrity.status || 'review required').replaceAll('_', ' '))} · ${escapeHtml(supportIntegrity.candidate_legal_claim_count || 0)} candidate legal claim(s) checked</p>${supportBlockers.length ? `<strong>Blockers</strong><ul class="answer-list">${supportBlockers.map((row) => `<li>${escapeHtml(String(row).replaceAll('_', ' '))}</li>`).join('')}</ul>` : ''}${supportWarnings.length ? `<ul class="answer-list">${supportWarnings.map((row) => `<li>${escapeHtml(row)}</li>`).join('')}</ul>` : ''}<p class="muted">This lexical check is a review aid, not a legal-entailment or filing-readiness certification.</p></section>`
+          : '';
+        const freshnessWarnings = Array.isArray(groundingIntegrity.warnings) ? groundingIntegrity.warnings : [];
+        const currentLawStatus = String(groundingIntegrity.current_law_status || 'not assessed').replaceAll('_', ' ');
         answer.innerHTML = `<div class="answer-body structured-answer">
           ${intakeBlock}
+          ${securityBlock}
+          ${renderCriticalDates(structured.critical_dates || intake.critical_dates)}
           <section id="answer-section-main" class="answer-section"><h3>What this means</h3>${renderParagraphBlocks(structured.what_this_means)}</section>
+          ${retrievalSection}
+          ${supportSection}
           ${renderStructuredSection('What to do right now', structured.what_to_do_right_now, safety.immediate_safety_concern ? 'safety-answer' : '')}
           ${renderStructuredSection('Your next three steps', structured.next_three_steps)}
           ${renderStructuredSection('What to gather', structured.what_to_gather)}
@@ -293,7 +407,9 @@
           <section id="answer-section-grounding" class="answer-section source-lane-summary"><h3>Where this information came from</h3>
             <p><strong>Maine-law research:</strong> ${structured.lane_grounding?.legal_authority ? 'source-backed' : 'not established by a retrieved legal source'} · <button class="inline-source-link" data-open-evidence="law" type="button">${lawSources.length} Law source${lawSources.length === 1 ? '' : 's'}</button></p>
             <p><strong>Matter records:</strong> ${structured.lane_grounding?.private_record ? 'source-backed' : 'not established by a selected matter record'} · <button class="inline-source-link" data-open-evidence="records" type="button">${recordSources.length} Record source${recordSources.length === 1 ? '' : 's'}</button></p>
-            <p class="muted">Private records can support facts about a matter, not statements of law. Legal sources can support law, not disputed family facts.</p>
+            <p><strong>Current-law status:</strong> ${escapeHtml(currentLawStatus)}${groundingIntegrity.current_law_verified ? ' · verified for all retrieved legal cards' : ' · live official-source review still required'}</p>
+            ${freshnessWarnings.length ? `<ul class="answer-list">${freshnessWarnings.map((row) => `<li>${escapeHtml(row)}</li>`).join('')}</ul>` : ''}
+            <p class="muted">Private records can support facts about a matter, not statements of law. Legal sources can support law, not disputed family facts. Source presence alone is not claim verification or filing readiness.</p>
           </section>
           ${renderPrintableSuggestions(payload.family_printables)}
           ${renderStructuredSection('When to get human help', structured.when_to_get_human_help)}
@@ -356,14 +472,21 @@
       if (payload.source_card_count !== undefined) badges.push(`<span class="badge">${escapeHtml(payload.source_card_count)} source cards</span>`);
       if (payload.corpus_mode === 'active_case_corpus') badges.push('<span class="badge good">active case corpus</span>');
       if (payload.active_case_label) badges.push(`<span class="badge">${escapeHtml(payload.active_case_label)}</span>`);
+      if ((payload.security_warnings || payload?.metadata?.security_warnings || []).length) badges.push('<span class="badge warn">untrusted instructions flagged</span>');
+      const retrievalConfidence = payload?.retrieval_confidence || payload?.metadata?.retrieval_confidence || payload?.retrieval_diagnostics?.confidence || payload?.metadata?.retrieval_diagnostics?.confidence;
+      if (retrievalConfidence) badges.push(`<span class="badge ${retrievalConfidence === 'low' ? 'warn' : ''}">retrieval ${escapeHtml(retrievalConfidence)}</span>`);
+      const groundingIntegrity = payload?.grounding_integrity || payload?.structured_answer?.grounding_integrity || payload?.metadata?.grounding_integrity || {};
+      if (groundingIntegrity.legal_source_count > 0) badges.push(`<span class="badge ${groundingIntegrity.current_law_verified ? 'good' : 'warn'}">${groundingIntegrity.current_law_verified ? 'currentness verified' : 'verify current law'}</span>`);
+      if (payload?.structured_answer?.intake?.context_inherited) badges.push('<span class="badge">safe continuity used</span>');
       answerBadges.innerHTML = badges.join('');
       syncContextBar();
     }
 
     function renderHandoff(payload) {
+      const structured = payload?.structured_answer || {};
       const metadata = payload?.metadata || {};
-      const missing = metadata.missing_information || [];
-      const followups = metadata.follow_up_questions || [];
+      const missing = structured.what_may_be_missing || metadata.missing_information || [];
+      const followups = structured.suggested_questions || metadata.follow_up_questions || [];
       const handoff = {
         review_required: payload?.review_required !== false,
         matched_library_id: metadata.matched_library_id || null,
@@ -398,7 +521,9 @@
 
     function renderSources(items) {
       if (!items || !items.length) {
+        lastSources = [];
         sourceCards.innerHTML = '<span class="muted">No source cards returned.</span>';
+        lastHandoffSources = [];
         return;
       }
       lastSources = items || [];
@@ -419,10 +544,14 @@
         const matchType = meta.match_type || item.match_type || '';
         const matchedTerms = meta.matched_terms || item.matched_terms || [];
         const ocrDerived = Boolean(meta.ocr_derived || item.ocr_derived || meta.ocr_status === 'ocr_completed');
+        const instructionLike = Boolean(meta.instruction_like_text_detected);
+        const freshnessStatus = String(meta.freshness_status || (lane === 'private_record' ? 'not applicable' : 'needs currentness verification')).replaceAll('_', ' ');
         const badges = [
           `<span class="badge ${lane === 'private_record' ? 'warn' : 'good'}">${escapeHtml(lane === 'private_record' ? 'Record' : 'Law')}</span>`,
           `<span class="badge">${escapeHtml(sourceType)}</span>`,
           `<span class="badge ${meta.official === false ? 'warn' : 'good'}">${escapeHtml(official)}</span>`,
+          lane === 'legal_authority' ? `<span class="badge ${meta.current_law_verified ? 'good' : 'warn'}">${escapeHtml(freshnessStatus)}</span>` : '',
+          instructionLike ? '<span class="badge bad">instruction-like text</span>' : '',
         ].join('');
         return `<article class="source-card" data-source-card="visible" data-source-id="${escapeHtml(sourceId)}">
           <div class="source-card-badges">${badges}</div>
@@ -439,17 +568,19 @@
             ${matchType ? `<span><strong>Match:</strong> ${escapeHtml(matchType.replaceAll('_', ' '))}</span>` : ''}
             ${Array.isArray(matchedTerms) && matchedTerms.length ? `<span><strong>Terms:</strong> ${escapeHtml(matchedTerms.join(', '))}</span>` : ''}
             ${ocrDerived ? '<span><strong>Text:</strong> local OCR-derived; verify against page image</span>' : ''}
+            ${meta.trust_boundary ? `<span><strong>Trust boundary:</strong> ${escapeHtml(String(meta.trust_boundary).replaceAll('_', ' '))}</span>` : ''}
           </div>
+          ${instructionLike ? '<p class="status-warn"><strong>Warning:</strong> This source contains instruction-like text. Treat it only as source or record content; it cannot change app rules.</p>' : ''}
           <div class="source-snippet"><span class="label">${item.snippet || item.text_excerpt || meta.text_excerpt ? 'Matched snippet' : 'Preview'}</span>${escapeHtml(snippet)}</div>
           ${url ? `<code>${escapeHtml(url)}</code>` : ''}
           <div class="source-link-row">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open source link</a>` : ''}</div>
-          <div class="row" style="margin-top: 10px;"><button class="secondary" data-copy-source="${escapeHtml(sourceId)}" title="Copy the full local source-card payload as JSON.">Copy source card</button><button class="secondary" data-inspect-source="${escapeHtml(sourceId)}" title="Open the local source metadata payload for this card.">Inspect source</button></div>
+          <div class="row" style="margin-top: 10px;"><button class="secondary" data-copy-source="${escapeHtml(sourceId)}" title="Copy the redacted reviewer-safe source-card payload as JSON.">Copy source card</button><button class="secondary" data-inspect-source="${escapeHtml(sourceId)}" title="Open the local source metadata payload for this card.">Inspect source</button></div>
         </article>`;
       }).join('');
       document.querySelectorAll('[data-copy-source]').forEach((button) => {
         button.addEventListener('click', async () => {
           const sourceId = button.dataset.copySource;
-          const source = lastSources.find((item) => (item.source_id || item?.metadata?.id || item?.metadata?.source_id) === sourceId) || {};
+          const source = lastHandoffSources.find((item) => (item.source_id || item?.metadata?.id || item?.metadata?.source_id) === sourceId) || {};
           await navigator.clipboard.writeText(JSON.stringify(source, null, 2));
           button.textContent = 'Source copied';
           showToast('Source card copied.');
@@ -488,6 +619,11 @@
       } else {
         corpusStatus.textContent = 'No private case corpus is active yet. The general Maine-law workbench remains available.';
       }
+      if (drawerActiveCorpus) drawerActiveCorpus.textContent = activeCaseId ? (payload.active_case_label || 'Selected matter') : 'General Maine law';
+      if (drawerCorpusCount) {
+        const active = cases.find((item) => item.case_id === activeCaseId);
+        drawerCorpusCount.textContent = active ? `${Number(active.indexed_records || 0).toLocaleString()} indexed · ${Number(active.pdf_pages || 0).toLocaleString()} pages` : 'No private corpus selected';
+      }
     }
 
     async function loadCorpusLibrary() {
@@ -520,32 +656,58 @@
       ocrPollTimer = 0;
     }
 
+    function formatOcrDuration(seconds) {
+      const value = Math.max(0, Number(seconds || 0));
+      const hours = Math.floor(value / 3600);
+      const minutes = Math.floor((value % 3600) / 60);
+      const remainder = Math.floor(value % 60);
+      return [hours, minutes, remainder].map((part) => String(part).padStart(2, '0')).join(':');
+    }
+
+    function renderOcrProgress(status) {
+      const phase = String(status.display_status || status.status || 'queued');
+      const docs = Number(status.processed_documents ?? status.current ?? 0);
+      const total = Number(status.total || 0);
+      const pages = Number(status.processed_pages || 0);
+      const candidatePages = Number(status.candidate_pages || 0);
+      const currentFile = String(status.current_file || 'Preparing the next local file').slice(0, 160);
+      const elapsed = formatOcrDuration(status.elapsed_seconds);
+      const secondsSinceUpdate = Math.max(0, Math.floor(Number(status.seconds_since_update ?? (status.last_progress_at ? Date.now() / 1000 - Number(status.last_progress_at) : 0))));
+      const percent = total ? Math.min(100, Math.round((docs / total) * 100)) : 0;
+      if (drawerOcrPercent) drawerOcrPercent.textContent = `${percent}%`;
+      if (drawerOcrProgress) drawerOcrProgress.style.width = `${percent}%`;
+      const phaseLabels = {queued: 'Local OCR is queued', running: 'Local OCR is running', cancelling: 'Local OCR is cancelling', cancelled: 'Local OCR was cancelled', completed: 'Local OCR is completed', completed_with_warnings: 'Local OCR completed with warnings', failed: 'Local OCR failed', stalled: 'Local OCR is stalled'};
+      const phaseLabel = phaseLabels[phase] || `Local OCR is ${phase}`;
+      const documentsRemaining = Math.max(0, total - docs);
+      const pagesRemaining = Math.max(0, candidatePages - pages);
+      inventoryStatus.innerHTML = `<strong>${escapeHtml(phaseLabel)}</strong><br><br>Documents: ${escapeHtml(docs.toLocaleString())} of ${escapeHtml(total.toLocaleString())} completed · ${escapeHtml(documentsRemaining.toLocaleString())} remaining<br><br>Pages: ${escapeHtml(pages.toLocaleString())} of ${escapeHtml(candidatePages.toLocaleString())} completed · ${escapeHtml(pagesRemaining.toLocaleString())} remaining<br><br>Current file: ${escapeHtml(currentFile)}<br><br>Elapsed: ${escapeHtml(elapsed)} · Last update: ${escapeHtml(secondsSinceUpdate.toLocaleString())} seconds ago<br><br><progress value="${percent}" max="100" aria-label="Local OCR progress">${percent}%</progress> ${percent}%<br><br><span class="muted">Large collections may take several minutes or longer. OCR remains entirely on this computer.</span>${status.stalled ? '<br><span class="status-warn">No progress update has been received for 60 seconds. The current file may still be processing; you can wait or cancel.</span>' : ''}`;
+    }
+
     async function pollOcrStatus() {
       stopOcrPolling();
       try {
         const status = await fetchJson('/api/corpus-ocr/status');
         if (['queued', 'running', 'cancelling'].includes(status.status)) {
-          const current = Number(status.current || 0);
-          const total = Number(status.total || 0);
-          const pageCount = Number(status.candidate_pages || 0);
-          inventoryStatus.textContent = `Local OCR running entirely on this computer · record ${current.toLocaleString()} of ${total.toLocaleString()}${pageCount ? ` · ${pageCount.toLocaleString()} candidate page(s)` : ''}.`;
+          renderOcrProgress(status);
           setOcrPrimaryAction({visible: true, label: 'Cancel local OCR', running: true});
           ocrPollTimer = window.setTimeout(pollOcrStatus, 900);
           return;
         }
         if (status.status === 'completed' || status.status === 'completed_with_warnings') {
+          renderOcrProgress(status);
           showToast(status.status === 'completed' ? 'Local OCR completed.' : 'Local OCR completed with warnings.');
           setOcrPrimaryAction({visible: false});
           await loadInventoryStatus(false);
           return;
         }
         if (status.status === 'cancelled') {
+          renderOcrProgress(status);
           showToast('Local OCR stopped. Completed pages remain indexed locally.');
           await loadInventoryStatus(false);
           return;
         }
         if (status.status === 'failed') {
-          inventoryStatus.textContent = `Local OCR failed: ${status.error || 'unknown local error'}`;
+          renderOcrProgress(status);
           setOcrPrimaryAction({visible: true, label: 'Review local OCR options', running: false});
           return;
         }
@@ -561,15 +723,16 @@
         if (checkJob) {
           const job = await fetchJson('/api/corpus-ocr/status').catch(() => null);
           if (job && ['queued', 'running', 'cancelling'].includes(job.status)) {
-            const current = Number(job.current || 0);
-            const total = Number(job.total || 0);
-            inventoryStatus.textContent = `Local OCR running entirely on this computer · record ${current.toLocaleString()} of ${total.toLocaleString()}.`;
+            renderOcrProgress(job);
             setOcrPrimaryAction({visible: true, label: 'Cancel local OCR', running: true});
             ocrPollTimer = window.setTimeout(pollOcrStatus, 900);
             return;
           }
         }
         const payload = await fetchJson('/api/corpus-inventory');
+        if (drawerCorpusCount && payload.status === 'ok') drawerCorpusCount.textContent = `${Number(payload.records || 0).toLocaleString()} records · ${Number(payload.searchable_records || 0).toLocaleString()} searchable`;
+        if (drawerOcrPercent && payload.status === 'ok' && !Number(payload.ocr_candidate_records ?? payload.ocr_candidates ?? 0)) drawerOcrPercent.textContent = '100%';
+        if (drawerOcrProgress && payload.status === 'ok' && !Number(payload.ocr_candidate_records ?? payload.ocr_candidates ?? 0)) drawerOcrProgress.style.width = '100%';
         if (payload.status !== 'ok') {
           inventoryStatus.textContent = 'Local inventory: Not indexed. Use the desktop intake wizard to choose files and grant permission before they are read.';
           setOcrPrimaryAction({visible: false});
@@ -596,6 +759,57 @@
       }
     }
 
+    function setOcrPrerequisiteActions({missing = false, oneClick = false, running = false} = {}) {
+      if (startOcrButton) startOcrButton.hidden = missing;
+      if (installOcrPrerequisitesButton) {
+        installOcrPrerequisitesButton.hidden = !missing || !oneClick;
+        installOcrPrerequisitesButton.disabled = running;
+        installOcrPrerequisitesButton.textContent = running ? 'Installing OCR prerequisites…' : 'Install OCR prerequisites';
+      }
+      if (openOcrInstallPageButton) openOcrInstallPageButton.hidden = !missing;
+      if (recheckOcrButton) {
+        recheckOcrButton.hidden = !missing;
+        recheckOcrButton.disabled = running;
+      }
+    }
+
+    async function pollOcrPrerequisiteInstall() {
+      window.clearTimeout(ocrInstallPollTimer);
+      try {
+        const status = await fetchJson('/api/corpus-ocr/prerequisites/status');
+        const prerequisites = status.prerequisites || {};
+        if (prerequisites.manual_install_url) ocrManualInstallUrl = prerequisites.manual_install_url;
+        if (status.running) {
+          ocrChoiceStatus.textContent = status.message || 'Installing Tesseract through Windows Package Manager…';
+          setOcrPrerequisiteActions({missing: true, oneClick: true, running: true});
+          ocrInstallPollTimer = window.setTimeout(pollOcrPrerequisiteInstall, 1000);
+          return;
+        }
+        showToast(status.installed ? 'OCR prerequisites installed. Rechecking local OCR.' : (status.message || 'OCR prerequisite installation finished.'));
+        await openOcrChoice();
+      } catch (err) {
+        ocrChoiceStatus.textContent = `Could not check the OCR installer: ${err.message}`;
+        setOcrPrerequisiteActions({missing: true, oneClick: false, running: false});
+      }
+    }
+
+    async function installOcrPrerequisites() {
+      if (!window.confirm('Install Tesseract locally through Windows Package Manager? This may connect to the package source, but it will not read or upload matter records.')) return;
+      setOcrPrerequisiteActions({missing: true, oneClick: true, running: true});
+      ocrChoiceStatus.textContent = 'Starting the local OCR prerequisite installer…';
+      try {
+        await fetchJson('/api/corpus-ocr/prerequisites/install', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({approved: true}),
+        });
+        ocrInstallPollTimer = window.setTimeout(pollOcrPrerequisiteInstall, 500);
+      } catch (err) {
+        ocrChoiceStatus.textContent = `One-click OCR installation did not start: ${err.message}`;
+        setOcrPrerequisiteActions({missing: true, oneClick: false, running: false});
+      }
+    }
+
     async function openOcrChoice() {
       if (ocrJobRunning) {
         await cancelLocalOcr();
@@ -608,44 +822,50 @@
       startOcrButton.disabled = true;
       startOcrButton.dataset.mode = 'start';
       startOcrButton.textContent = 'OCR scanned pages locally';
+      setOcrPrerequisiteActions({missing: false});
       openOverlay(ocrOverlay);
       try {
-        const payload = await fetchJson('/api/corpus-ocr/candidates');
+        const [payload, prerequisiteStatus] = await Promise.all([
+          fetchJson('/api/corpus-ocr/candidates'),
+          fetchJson('/api/corpus-ocr/prerequisites').catch(() => ({})),
+        ]);
         const candidatePages = Number(payload.candidate_pages || payload.candidates || 0);
         const engine = payload.engine || {};
+        const prerequisites = prerequisiteStatus.prerequisites || prerequisiteStatus || {};
+        if (prerequisites.manual_install_url) ocrManualInstallUrl = prerequisites.manual_install_url;
         ocrCandidateCount.textContent = candidatePages ? `${candidatePages.toLocaleString()} scanned or image-only page(s)` : 'No OCR candidates';
         if (!candidatePages) {
           ocrChoiceStatus.textContent = 'All detected pages already contain searchable text. OCR is not needed.';
           ocrEngineStatus.textContent = engine.tesseract_version || 'Not needed';
           startOcrButton.disabled = true;
+          setOcrPrerequisiteActions({missing: false});
           return;
         }
         if (!engine.available) {
-          ocrChoiceStatus.textContent = 'Local OCR is not installed. Install Tesseract on this computer, then use Retry local OCR setup. Nothing will be uploaded.';
-          ocrEngineStatus.textContent = 'Tesseract not detected locally';
-          startOcrButton.disabled = false;
-          startOcrButton.dataset.mode = 'retry';
-          startOcrButton.textContent = 'Retry local OCR setup';
+          const oneClick = Boolean(prerequisites.one_click_available);
+          ocrChoiceStatus.textContent = oneClick
+            ? 'Tesseract is not installed. Use Install OCR prerequisites for a one-click local setup, or open the manual install page. Matter records are not read or uploaded by the installer.'
+            : 'Tesseract is not installed. Open the manual install page, complete the local installation, then choose Recheck local OCR. Matter records are not uploaded.';
+          ocrEngineStatus.textContent = `Tesseract not detected locally · ${engine.bundled_pdf_renderer ? 'bundled PDF renderer ready' : 'PDF renderer needs repair'}`;
+          startOcrButton.disabled = true;
+          setOcrPrerequisiteActions({missing: true, oneClick, running: Boolean(prerequisiteStatus.running)});
           return;
         }
-        const pdfNote = engine.pdf_ocr_available ? 'PDF and image OCR ready' : 'Image OCR ready; scanned PDFs also require local pdftoppm or mutool';
+        setOcrPrerequisiteActions({missing: false});
+        const pdfNote = engine.pdf_ocr_available ? 'PDF and image OCR ready' : 'Image OCR ready; PDF renderer needs repair';
         ocrEngineStatus.textContent = `${engine.tesseract_version || 'Tesseract detected'} · ${pdfNote}`;
         ocrChoiceStatus.textContent = 'Ready to OCR only the pages that lack usable native text. Processing and the resulting index remain local.';
-        startOcrButton.disabled = false;
+        startOcrButton.hidden = false;
+        startOcrButton.disabled = !engine.pdf_ocr_available && candidatePages > 0;
       } catch (err) {
         ocrChoiceStatus.textContent = `Could not inspect local OCR candidates: ${err.message}`;
         ocrEngineStatus.textContent = 'Status unavailable';
-        startOcrButton.disabled = false;
-        startOcrButton.dataset.mode = 'retry';
-        startOcrButton.textContent = 'Retry local OCR setup';
+        startOcrButton.disabled = true;
+        setOcrPrerequisiteActions({missing: true, oneClick: false, running: false});
       }
     }
 
     async function startLocalOcr() {
-      if (startOcrButton.dataset.mode === 'retry') {
-        await openOcrChoice();
-        return;
-      }
       startOcrButton.disabled = true;
       ocrChoiceStatus.textContent = 'Starting local OCR. No document bytes or recognized text will leave this computer…';
       try {
@@ -656,7 +876,7 @@
         });
         closeOverlay(ocrOverlay);
         setOcrPrimaryAction({visible: true, label: 'Cancel local OCR', running: true});
-        inventoryStatus.textContent = `Local OCR queued entirely on this computer · ${Number(payload.total || 0).toLocaleString()} record(s).`;
+        renderOcrProgress(payload);
         ocrPollTimer = window.setTimeout(pollOcrStatus, 250);
       } catch (err) {
         ocrChoiceStatus.textContent = `Local OCR did not start: ${err.message}`;
@@ -682,7 +902,7 @@
     async function cancelLocalOcr() {
       try {
         await fetchJson('/api/corpus-ocr/cancel', {method: 'POST'});
-        inventoryStatus.textContent = 'Stopping local OCR after the current page…';
+        renderOcrProgress({status: 'cancelling', current_file: 'Finishing the current local page', local_only: true});
         setOcrPrimaryAction({visible: true, label: 'Stopping local OCR…', running: true});
         ocrPollTimer = window.setTimeout(pollOcrStatus, 350);
       } catch (err) {
@@ -738,20 +958,31 @@
       }
     }
 
-    function addMessage(role, text) {
+    function renderChatSourceSummary(payload) {
+      if (!payload || typeof payload !== 'object') return '';
+      const sources = Array.isArray(payload.citations) ? payload.citations : [];
+      const legalCount = sources.filter((item) => String(item?.metadata?.source_lane || 'legal_authority') !== 'private_record').length;
+      const recordCount = sources.filter((item) => String(item?.metadata?.source_lane || '') === 'private_record').length;
+      const externalCount = Number(payload.external_source_count || 0);
+      if (!legalCount && !recordCount && !externalCount) return '';
+      return `<div class="chat-source-summary"><div><strong>Sources</strong><button class="inline-source-link" data-chat-open-evidence="all" type="button">View all sources</button></div><div class="chat-source-lanes"><button data-chat-open-evidence="law" type="button"><span aria-hidden="true">⚖</span> Maine law <strong>${legalCount}</strong></button><button data-chat-open-evidence="records" type="button"><span aria-hidden="true">▰</span> My records <strong>${recordCount}</strong></button><button data-chat-open-evidence="external" type="button"><span aria-hidden="true">◎</span> External <strong>${externalCount}</strong></button></div></div>`;
+    }
+
+    function addMessage(role, text, payload = null) {
       const at = new Date().toISOString();
       messages.push({role, text, at});
-      transcript.innerHTML = messages.map((msg) => {
-        const speaker = msg.role === 'user' ? 'You' : 'Maine Family Law LLM';
-        const bubbleClass = msg.role === 'user' ? 'user-bubble' : 'assistant-bubble';
-        return `<div class="message ${escapeHtml(msg.role)}">
-          <div class="message-bubble ${bubbleClass}"><strong>${speaker}</strong><div>${escapeHtml(msg.text)}</div></div>
-          <div class="message-time">${formatLocalTime(msg.at)}</div>
-        </div>`;
-      }).join('');
-      if (chatScroll) {
-        chatScroll.scrollTop = chatScroll.scrollHeight;
-      }
+      const speaker = role === 'user' ? 'You' : 'Maine Family Law LLM';
+      const bubbleClass = role === 'user' ? 'user-bubble' : 'assistant-bubble';
+      const content = role === 'assistant'
+        ? `${renderParagraphBlocks(text)}${payload?.direct_record_search ? renderRecordGroups(payload.record_groups) : ''}${renderChatSourceSummary(payload)}`
+        : `<p>${escapeHtml(text)}</p>`;
+      const wrapper = document.createElement('div');
+      wrapper.className = `message ${role}`;
+      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div><div class="message-content">${content}</div></div>`;
+      transcript.appendChild(wrapper);
+      wrapper.querySelectorAll('[data-chat-open-evidence]').forEach((button) => button.addEventListener('click', () => setDrawerOpen(true, 'evidence')));
+      if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
+      if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
     }
 
     function resetSession({preserveContext} = {preserveContext: false}) {
@@ -768,6 +999,7 @@
       handoffPanel.textContent = 'Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.';
       lastPayload = null;
       lastSources = [];
+      lastHandoffSources = [];
       downloadJsonButton.style.display = 'none';
       syncContextBar();
     }
@@ -783,29 +1015,6 @@
       const text = question.value.trim();
       if (!text) {
         answer.textContent = 'Type a Maine family-law question first.';
-        return;
-      }
-      if (isSourceCardFollowUp(text) && lastSources.length) {
-        addMessage('user', text);
-        question.value = '';
-        question.style.height = '';
-        question.dataset.lastSubmitCleared = 'true';
-        renderSources(lastSources);
-        setDrawerOpen(true, 'evidence');
-        const count = lastSources.length;
-        const reply = `${count} source card${count === 1 ? '' : 's'} from your last search are open in the Evidence drawer.`;
-        answer.innerHTML = `<div class="answer-body compact-search-result"><section class="answer-section"><h3>Source cards from your last search</h3><p>${escapeHtml(reply)}</p><p class="muted">No new corpus search was run. These cards remain scoped to the active matter and current local session.</p></section></div>`;
-        addMessage('assistant', reply);
-        showToast(`${count} source card${count === 1 ? '' : 's'} opened.`);
-        return;
-      }
-      if (isSourceCardFollowUp(text) && !lastSources.length) {
-        addMessage('user', text);
-        question.value = '';
-        question.style.height = '';
-        const reply = 'I do not have a recent search result to open. Search your records first, or open the Evidence drawer to browse indexed sources.';
-        answer.innerHTML = `<div class="answer-body compact-search-result"><section class="answer-section"><h3>No recent source-card set</h3><p>${escapeHtml(reply)}</p></section></div>`;
-        addMessage('assistant', reply);
         return;
       }
       sending = true;
@@ -836,13 +1045,22 @@
         });
         const responseText = payload.answer || JSON.stringify(payload, null, 2);
         renderLatestAnswer(payload);
-        addMessage('assistant', responseText);
+        addMessage('assistant', responseText, payload);
         lastPayload = payload;
+        lastHandoffSources = payload.handoff_safe_source_cards || [];
         downloadJsonButton.style.display = '';
         renderBadges(payload);
         renderHandoff(payload);
         renderSources(payload.citations || []);
-        showToast(payload.grounded ? 'Grounded answer ready.' : 'Answer returned with review-needed flags.');
+        if (payload.response_kind === 'source_card_followup') {
+          setDrawerOpen(true, 'evidence');
+          const sourceFollowupToast = payload.failure_class === 'no_recent_search_result'
+            ? 'I do not have a recent search result to open.'
+            : 'Prior source cards opened. No new corpus search was run.';
+          showToast(sourceFollowupToast);
+        } else {
+          showToast(payload.grounded ? 'Grounded answer ready.' : 'Answer returned with review-needed flags.');
+        }
       } catch (err) {
         if (err.name === 'AbortError') {
           answer.innerHTML = '<div class="answer-body"><div class="answer-callout">The request was stopped. Your draft and conversation remain local.</div></div>';
@@ -1017,8 +1235,20 @@
     });
     askButton.addEventListener('click', ask);
     stopButton?.addEventListener('click', () => activeRequestController?.abort());
-    newChatButton?.addEventListener('click', () => {
+    newChatButton?.addEventListener('click', async () => {
+      const previousSessionId = localSessionId;
+      localSessionId = createLocalSessionId();
       resetSession({preserveContext: true});
+      try {
+        await fetchJson('/api/session/clear', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({session_id: previousSessionId})
+        });
+      } catch (_err) {
+        // The new random session ID already prevents stale source reuse. The
+        // server also expires any unreachable in-memory state after 30 minutes.
+      }
       showToast('Started a fresh chat.');
     });
     copyButton.addEventListener('click', async () => {
@@ -1028,12 +1258,13 @@
       setTimeout(() => { copyButton.textContent = 'Copy answer'; }, 1100);
     });
     copySourcesButton?.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(JSON.stringify(lastSources || [], null, 2));
+      await navigator.clipboard.writeText(JSON.stringify(lastHandoffSources || [], null, 2));
       copySourcesButton.textContent = 'Source cards copied';
-      showToast('Source cards copied.');
+      showToast('Redacted reviewer-safe source cards copied.');
       setTimeout(() => { copySourcesButton.textContent = 'Copy source cards'; }, 1100);
     });
     downloadButton.addEventListener('click', () => {
+      if (!confirmFullLocalExport()) return;
       const content = [
         'Maine Family Law LLM local transcript',
         'Review required. Not legal advice.',
@@ -1043,7 +1274,7 @@
         'Latest payload metadata:',
         JSON.stringify(lastPayload || {}, null, 2),
         '',
-        'Latest source cards:',
+        'Latest source cards (full local export):',
         JSON.stringify(lastSources || [], null, 2)
       ].join('\n');
       const blob = new Blob([content || answer.textContent || 'No transcript yet.'], {type: 'text/plain'});
@@ -1056,6 +1287,7 @@
       showToast('Transcript saved.');
     });
     downloadJsonButton.addEventListener('click', () => {
+      if (!confirmFullLocalExport()) return;
       const payload = {
         schema_version: 'local_chat_transcript_v3',
         generated_at: new Date().toISOString(),
@@ -1064,6 +1296,7 @@
         messages,
         latest_payload: lastPayload || null,
         latest_source_cards: lastSources || [],
+        reviewer_safe_source_cards: lastHandoffSources || [],
         reviewer_handoff: lastPayload ? {
           review_required: lastPayload.review_required !== false,
           answer_style: lastPayload.answer_style || lastPayload?.metadata?.answer_style || null,
@@ -1105,26 +1338,74 @@
       await navigator.clipboard.writeText(url.toString());
       showToast('Privacy-safe settings link copied. Questions, context, records, and local paths were not included.');
     });
-    let drawerReturnFocus = null;
+    drawerRefreshCorpus?.addEventListener('click', async () => { await loadCorpusLibrary(); showToast('Corpus status refreshed.'); });
+    openAllStarters?.addEventListener('click', () => setDrawerOpen(true, 'starters'));
+    quickNewCorpus?.addEventListener('click', () => { setDrawerOpen(true, 'setup'); showToast('Use the desktop launcher to create a new local case corpus.'); });
+    quickOpenWorkspace?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
+    quickExportChat?.addEventListener('click', () => downloadButton?.click());
 
-    function setDrawerOpen(open, panel = '') {
+    let drawerReturnFocus = null;
+    let drawerUserPreference = null;
+    let responsiveLayoutMode = '';
+    const inlineDrawerQuery = window.matchMedia('(min-width: 960px)');
+    const fullWorkbenchQuery = window.matchMedia('(min-width: 1360px)');
+
+    function currentResponsiveLayoutMode() {
+      if (fullWorkbenchQuery.matches) return 'full';
+      if (inlineDrawerQuery.matches) return 'compact';
+      return 'overlay';
+    }
+
+    function setDrawerOpen(open, panel = '', options = {}) {
+      const {manageFocus = true, userInitiated = false} = options;
       const wasOpen = document.body.dataset.drawer === 'open';
-      if (open && !wasOpen) drawerReturnFocus = document.activeElement;
-      if (!open && wasOpen) {
+      if (userInitiated) drawerUserPreference = Boolean(open);
+      if (open && !wasOpen && manageFocus) drawerReturnFocus = document.activeElement;
+      if (!open && wasOpen && manageFocus) {
         const returnTarget = drawerReturnFocus || focusModeButton;
         // Move focus before hiding the drawer from assistive technology.
         if (returnTarget && typeof returnTarget.focus === 'function') {
-          returnTarget.focus();
+          returnTarget.focus({preventScroll: true});
         }
         drawerReturnFocus = null;
       }
       document.body.dataset.drawer = open ? 'open' : 'closed';
-      evidenceDrawer?.setAttribute('aria-hidden', open ? 'false' : 'true');
+      const overlayMode = currentResponsiveLayoutMode() === 'overlay';
+      document.body.classList.toggle('drawer-modal-open', Boolean(open && overlayMode));
+      if (evidenceDrawer) {
+        evidenceDrawer.hidden = !open;
+        evidenceDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
       focusModeButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (drawerBackdrop) drawerBackdrop.hidden = !open;
+      if (drawerBackdrop) drawerBackdrop.hidden = !(open && overlayMode);
       if (open && panel) selectDrawerTab(panel);
-      if (open) {
-        window.setTimeout(() => closeDrawerButton?.focus(), 40);
+      if (open && overlayMode && manageFocus) {
+        window.setTimeout(() => closeDrawerButton?.focus({preventScroll: true}), 40);
+      }
+    }
+
+    function syncResponsiveLayout({initial = false} = {}) {
+      const nextMode = currentResponsiveLayoutMode();
+      const modeChanged = nextMode !== responsiveLayoutMode;
+      responsiveLayoutMode = nextMode;
+      document.body.dataset.layout = nextMode;
+
+      if (initial) {
+        setDrawerOpen(nextMode !== 'overlay', 'evidence', {manageFocus: false});
+        return;
+      }
+      if (!modeChanged) {
+        const open = document.body.dataset.drawer === 'open';
+        document.body.classList.toggle('drawer-modal-open', open && nextMode === 'overlay');
+        if (drawerBackdrop) drawerBackdrop.hidden = !(open && nextMode === 'overlay');
+        return;
+      }
+      if (nextMode === 'overlay') {
+        // Never let a desktop-open drawer suddenly cover the chat after a resize.
+        setDrawerOpen(false, '', {manageFocus: false});
+      } else {
+        // Restore an explicit user preference; otherwise desktop layouts open by default.
+        setDrawerOpen(drawerUserPreference !== false, 'evidence', {manageFocus: false});
       }
     }
 
@@ -1139,9 +1420,9 @@
       });
     }
 
-    focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open'));
-    closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false));
-    drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false));
+    focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
+    closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
+    drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     document.querySelectorAll('[data-drawer-tab]').forEach((button) => {
       button.addEventListener('click', () => selectDrawerTab(button.dataset.drawerTab || 'setup'));
     });
@@ -1150,6 +1431,9 @@
     printableSearch?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchFamilyPrintables(); } });
     ocrActionButton?.addEventListener('click', openOcrChoice);
     startOcrButton?.addEventListener('click', startLocalOcr);
+    installOcrPrerequisitesButton?.addEventListener('click', installOcrPrerequisites);
+    openOcrInstallPageButton?.addEventListener('click', () => window.open(ocrManualInstallUrl, '_blank', 'noopener,noreferrer'));
+    recheckOcrButton?.addEventListener('click', openOcrChoice);
     declineOcrButton?.addEventListener('click', declineLocalOcr);
     cancelOcrChoiceButton?.addEventListener('click', () => closeOverlay(ocrOverlay));
     reviewInventoryButton?.addEventListener('click', async () => { await loadInventoryStatus(); showToast('Local inventory status refreshed.'); });
@@ -1258,14 +1542,14 @@
       const online = payload.status === 'ok';
       health.className = online ? 'health-indicator status-ok' : 'health-indicator status-bad';
       const copy = health.querySelector('.health-copy');
-      if (copy) copy.textContent = online ? 'local' : 'offline';
+      if (copy) copy.textContent = online ? 'Local only' : 'Offline';
       health.title = online ? 'Local-only API is online.' : 'Local-only API status is unknown.';
       health.setAttribute('aria-label', online ? 'Local-only service online. Open privacy status.' : 'Local-only service status unknown. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = online ? 'Local service online' : 'Local service status unknown';
     }).catch(() => {
       health.className = 'health-indicator status-bad';
       const copy = health.querySelector('.health-copy');
-      if (copy) copy.textContent = 'offline';
+      if (copy) copy.textContent = 'Offline';
       health.title = 'Local-only API is offline.';
       health.setAttribute('aria-label', 'Local-only service offline. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = 'Local service offline';
@@ -1576,8 +1860,20 @@
       }
     });
 
-    selectDrawerTab('setup');
-    document.body.dataset.drawer = 'closed';
+    selectDrawerTab('evidence');
+    syncResponsiveLayout({initial: true});
+    const scheduleResponsiveSync = (() => {
+      let frame = 0;
+      return () => {
+        window.cancelAnimationFrame(frame);
+        frame = window.requestAnimationFrame(() => syncResponsiveLayout());
+      };
+    })();
+    [inlineDrawerQuery, fullWorkbenchQuery].forEach((query) => {
+      if (typeof query.addEventListener === 'function') query.addEventListener('change', scheduleResponsiveSync);
+      else if (typeof query.addListener === 'function') query.addListener(scheduleResponsiveSync);
+    });
+    window.addEventListener('resize', scheduleResponsiveSync, {passive: true});
     renderCommands();
 
-    // v3.0 pass02 marker: constitutional_bar, mission_popover_close, local_privacy_popover, evidence_drawer, grouped_ctrl_k_command_palette, ctrl_j_justice_key, privacy_overlay, shortcuts_overlay, civic_build_card
+    // v5.0 premium workbench marker: constitutional_bar, mission_popover_close, local_privacy_popover, evidence_drawer, grouped_ctrl_k_command_palette, ctrl_j_justice_key, privacy_overlay, shortcuts_overlay, civic_build_card
