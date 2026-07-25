@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 VERSION = "5.0.0"
-BUILD_NUMBER = 25
+BUILD_NUMBER = 26
 # Microsoft Store accepts a four-part MSIX version, but the revision component
 # must remain zero. Keep the product version in the first three components.
 PACKAGE_VERSION = f"{VERSION}.0"

@@ -16,18 +16,17 @@ def test_pass02_version_and_msix_build_are_incremented() -> None:
         VERSION,
     )
 
-    identity = json.loads(
-        (ROOT / "store" / "msix" / "identity.local.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    identity_path = ROOT / "store" / "msix" / "identity.local.json"
+    if not identity_path.is_file():
+        identity_path = ROOT / "store" / "msix" / "identity.example.json"
+    identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
     assert VERSION == "5.0.0"
-    assert BUILD_NUMBER == 25
+    assert BUILD_NUMBER == 26
     assert PACKAGE_VERSION == "5.0.0.0"
     assert identity["package_version"] == "5.0.0.0"
     assert UI_PASS_MARKER == "v5.0.0-premium-family-justice-workbench"
-    assert UI_VERSION.endswith("-b25")
+    assert UI_VERSION.endswith("-b26")
 
 
 def test_constitutional_identity_remains_visible_and_popover_is_complete() -> None:

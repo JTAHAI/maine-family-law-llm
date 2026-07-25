@@ -141,11 +141,10 @@ def test_v3_pass01_versions_are_consistent() -> None:
     from maine_family_law_llm.version import BUILD_NUMBER, PACKAGE_VERSION, VERSION
 
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    identity = json.loads(
-        (ROOT / "store" / "msix" / "identity.local.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    identity_path = ROOT / "store" / "msix" / "identity.local.json"
+    if not identity_path.is_file():
+        identity_path = ROOT / "store" / "msix" / "identity.example.json"
+    identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
     assert VERSION == "5.0.0"
     assert BUILD_NUMBER >= 24

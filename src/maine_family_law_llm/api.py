@@ -321,6 +321,7 @@ if FastAPI is not None:
             seen.add(key)
             group_id = f"{parent}\0{member}"
             card = grouped.setdefault(group_id, {
+                "source_id": parent,
                 "source_token": _record_open_token(case_root, parent, str(meta.get("source_locator") or "")),
                 "basename": _safe_record_basename(citation),
                 "document_type": str(meta.get("source_type") or "record"),

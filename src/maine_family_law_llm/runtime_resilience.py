@@ -29,12 +29,22 @@ def runtime_health_snapshot() -> dict[str, Any]:
         version_values["pyproject"] = f"{pyproject['project']['version']}.0"
     except Exception:
         version_values["pyproject"] = "unreadable"
-    for name in ("identity.example.json", "identity.local.json"):
+    identity_example = root / "store" / "msix" / "identity.example.json"
+    try:
+        payload = json.loads(identity_example.read_text(encoding="utf-8"))
+        version_values["identity.example.json"] = str(payload.get("package_version") or "")
+    except Exception:
+        version_values["identity.example.json"] = "unreadable"
+    # identity.local.json is operator-specific and intentionally omitted from clean
+    # source ZIPs. Validate it when present, but do not degrade a clean checkout
+    # merely because the optional local identity file has not been created yet.
+    identity_local = root / "store" / "msix" / "identity.local.json"
+    if identity_local.is_file():
         try:
-            payload = json.loads((root / "store" / "msix" / name).read_text(encoding="utf-8"))
-            version_values[name] = str(payload.get("package_version") or "")
+            payload = json.loads(identity_local.read_text(encoding="utf-8"))
+            version_values["identity.local.json"] = str(payload.get("package_version") or "")
         except Exception:
-            version_values[name] = "unreadable"
+            version_values["identity.local.json"] = "unreadable"
     version_ok = all(value == PACKAGE_VERSION for value in version_values.values())
     checks.append(
         {

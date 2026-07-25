@@ -36,14 +36,14 @@
   </div>
   <div class="v5-header-status">
     <div class="topbar-popover-wrap">
-      <button aria-controls="local-status-popover" aria-expanded="false" class="health-indicator compact-action civic-tooltip" data-tooltip="Your family’s matter stays on this device." id="health" type="button">
+      <button aria-controls="local-status-popover" aria-expanded="false" class="health-indicator compact-action civic-tooltip" data-tooltip="Your family’s matter stays on this device." data-tooltip-edge="right" id="health" type="button">
         <span aria-hidden="true" class="health-dot"></span><span class="health-copy">Local only</span>
       </button>
       <div aria-label="Local privacy status" class="topbar-popover local-status-popover" hidden="" id="local-status-popover" role="dialog">
         <button aria-label="Close local privacy status" class="popover-close" id="close-local-status-popover" type="button">×</button>
         <strong>Local-first workspace</strong>
         <p>Your family’s matter stays on this device. External official-source links are separate actions; the chat does not silently upload your matter.</p>
-        <div class="local-status-line"><span aria-hidden="true" class="health-dot"></span><span id="local-status-copy">Checking the local service…</span></div>
+        <div class="local-status-line"><span aria-hidden="true" class="health-dot" id="local-status-dot"></span><span id="local-status-copy">Checking the local service…</span></div>
       </div>
     </div>
     <span>Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span>
@@ -137,13 +137,19 @@
   <div class="drawer-scroll">
     <section class="rail-panel v5-corpus-card" data-drawer-panel="setup" hidden><div class="rail-title">Corpus library</div><label for="corpus-select">Active case corpus</label><select id="corpus-select" title="Switch between saved family or client corpora."><option value="">General Maine law workbench only</option></select><div class="row"><button class="primary-action" id="activate-corpus-button" type="button">Use selected corpus</button><button class="secondary" id="refresh-corpus-button" type="button">Refresh corpora</button></div><div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div><div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div><div class="ocr-primary-action" id="ocr-primary-action" hidden><button class="primary-action" id="ocr-action-button" type="button">OCR scanned pages locally</button><div class="field-hint">OCR is never automatic and never uploads selected records.</div></div><div class="row"><button class="secondary" id="review-inventory-button" type="button">Review inventory</button><button class="secondary" id="rebuild-index-button" type="button">Rebuild local index</button><button class="secondary" id="delete-index-button" type="button">Delete local index</button></div><button class="secondary rail-action" id="sources-button" type="button">Load source list</button><div class="external-resource-links"><a href="https://focaf.jtforme.com/" rel="noreferrer noopener" target="_blank">FOCAF family resources</a><a href="https://focaf.jtforme.com/download-library/" rel="noreferrer noopener" target="_blank">FOCAF download library</a></div></section>
     <section class="rail-panel v5-evidence-summary" data-drawer-panel="evidence"><div class="rail-title">Corpus status</div><div class="v5-corpus-summary"><div><small>Active corpus</small><strong id="drawer-active-corpus">General Maine law</strong><span id="drawer-corpus-count">No private corpus selected</span></div><span class="v5-ready-badge">Local</span></div><div class="v5-progress-label"><span>OCR progress</span><strong id="drawer-ocr-percent">—</strong></div><div class="v5-progress"><i></i></div><button class="secondary v5-refresh-button" id="drawer-refresh-corpus" type="button">↻ Refresh corpus</button></section>
-    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" id="source-inspector">Select “Inspect source” on a source card to view full local metadata.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
+    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" hidden id="source-inspector">Source details open in the preview flyout.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
     <section class="rail-panel" data-drawer-panel="review" hidden><div class="rail-title">Reviewer handoff</div><div aria-live="polite" class="answer" id="handoff-panel">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div class="status-strip" data-runtime-diagnostics="loading" id="runtime-diagnostics">Runtime diagnostics loading. Expected UI: {{UI_FOOTER_LABEL}}.</div></section>
     <section class="rail-panel" data-drawer-panel="starters" hidden><div class="rail-title">Question library</div><div class="mini-grid"><div><label for="library-search">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support"/></div><div><label for="library-topic-search">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal"/></div></div><div class="library-list" id="library-list">Loading question library…</div></section>
     <section class="rail-panel" data-drawer-panel="printables" hidden><div class="rail-title">Family printables</div><p class="muted">Optional FOCAF family resources. They are not legal authority, official court forms, or proof of disputed facts.</p><label for="printable-search">Search printables</label><div class="row"><input id="printable-search" placeholder="court day, school update, calm message…"/><button class="secondary" id="printable-search-button" type="button">Search</button></div><div class="library-list" id="printable-results">Search the local printable library by situation, title, county, or page text.</div></section>
   </div>
 </aside>
 <button aria-label="Close evidence drawer" class="drawer-backdrop" hidden="" id="drawer-backdrop" type="button"></button>
+<div aria-hidden="true" class="source-preview-flyout" hidden id="source-preview-flyout" role="dialog" aria-labelledby="source-preview-title">
+  <div class="source-preview-header"><div><span class="source-preview-kicker">Source preview</span><strong id="source-preview-title">Source details</strong></div><button aria-label="Close source preview" class="source-preview-close" id="source-preview-close" type="button">×</button></div>
+  <div class="source-preview-body" id="source-preview-body"></div>
+  <div class="source-preview-actions" id="source-preview-actions"></div>
+</div>
+<button aria-label="Close pinned source preview" class="source-preview-backdrop" hidden id="source-preview-backdrop" type="button"></button>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="welcome-overlay">
 <div aria-labelledby="welcome-title" aria-modal="true" class="overlay-card" role="dialog">
@@ -189,7 +195,7 @@
 <strong>Evidence review</strong>
 <span>Source cards should be the first stop after an answer. Use them to audit what the workbench actually relied on.</span>
 <ul>
-<li><strong>Inspect source</strong> opens the local metadata payload for that card.</li>
+<li><strong>Open original</strong> opens a private record through the secure local token route. <strong>Preview details</strong> opens the complete local source card in a scrollable flyout.</li>
 <li><strong>Copy source cards</strong> exports the current card set for a reviewer or file memo.</li>
 <li><strong>Load source list</strong> lets you inspect available sources even before asking.</li>
 </ul>

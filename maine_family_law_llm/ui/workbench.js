@@ -28,6 +28,12 @@
     const promptPackSelect = document.getElementById('prompt-pack-select');
     const promptPackList = document.getElementById('prompt-pack-list');
     const sourceInspector = document.getElementById('source-inspector');
+    const sourcePreviewFlyout = document.getElementById('source-preview-flyout');
+    const sourcePreviewTitle = document.getElementById('source-preview-title');
+    const sourcePreviewBody = document.getElementById('source-preview-body');
+    const sourcePreviewActions = document.getElementById('source-preview-actions');
+    const sourcePreviewClose = document.getElementById('source-preview-close');
+    const sourcePreviewBackdrop = document.getElementById('source-preview-backdrop');
     const handoffPanel = document.getElementById('handoff-panel');
     const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
     const corpusSelect = document.getElementById('corpus-select');
@@ -93,6 +99,7 @@
     const closeLocalStatusPopoverButton = document.getElementById('close-local-status-popover');
     const closeConstitutionalPopoverButton = document.getElementById('close-constitutional-popover');
     const localStatusCopy = document.getElementById('local-status-copy');
+    const localStatusDot = document.getElementById('local-status-dot');
     const commandResultsStatus = document.getElementById('command-results-status');
     const drawerActiveCorpus = document.getElementById('drawer-active-corpus');
     const drawerCorpusCount = document.getElementById('drawer-corpus-count');
@@ -117,6 +124,11 @@
     let lastPayload = null;
     let lastSources = [];
     let lastHandoffSources = [];
+    let sourcePreviewPinned = false;
+    let sourcePreviewOwner = null;
+    let sourcePreviewHideTimer = 0;
+    let sourcePreviewShowTimer = 0;
+    let sourcePreviewSuppressUntil = 0;
     let sending = false;
     let activeRequestController = null;
     let toastTimer = 0;
@@ -519,90 +531,261 @@
       });
     }
 
+    function sourceIdentity(item) {
+      const meta = item?.metadata || item || {};
+      return String(item?.source_id || item?.evidence_id || meta.source_id || meta.id || '');
+    }
+
+    function sourceBasename(item) {
+      const meta = item?.metadata || item || {};
+      const raw = String(meta.source_locator || meta.source_locator_basename || item?.title || meta.title || 'Source')
+        .split('!').pop().split('#page=', 1)[0].replaceAll('\\', '/');
+      return raw.split('/').pop() || 'Source';
+    }
+
+    function recordOpenBinding(item) {
+      const meta = item?.metadata || item || {};
+      if (String(meta.source_lane || '') !== 'private_record') return null;
+      const groups = Array.isArray(lastPayload?.record_groups) ? lastPayload.record_groups : [];
+      const sourceId = sourceIdentity(item);
+      const parentId = String(meta.parent_evidence_id || sourceId || '');
+      const basename = sourceBasename(item).toLowerCase();
+      return groups.find((group) => {
+        const groupId = String(group.source_id || '');
+        const groupName = String(group.basename || '').toLowerCase();
+        return (parentId && groupId === parentId) || (basename && groupName === basename);
+      }) || null;
+    }
+
+    function openRecordBinding(binding, page = 0) {
+      const token = String(binding?.source_token || '');
+      const safePage = Math.max(0, Number(page || 0));
+      if (!/^[a-f0-9]{64}$/i.test(token)) {
+        showToast('The secure local open token is not available for this card.');
+        return false;
+      }
+      const suffix = safePage > 0 ? `#page=${encodeURIComponent(String(safePage))}` : '';
+      window.open(`/api/records/open/${encodeURIComponent(token)}?page=${encodeURIComponent(String(safePage))}${suffix}`, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    function sourcePreviewMarkup(item, payload = null) {
+      const meta = item?.metadata || item || {};
+      const title = item?.title || meta.title || meta.id || sourceIdentity(item) || 'Source';
+      const lane = String(meta.source_lane || 'legal_authority');
+      const sourceType = String(meta.source_type || meta.source_class || 'source');
+      const citation = item?.citation || meta.citation_hint || '';
+      const snippet = item?.snippet || item?.text_excerpt || meta.text_excerpt || meta.description || '';
+      const pageNumber = Number(meta.page_number || item?.page_number || 0);
+      const fields = [
+        ['Citation', citation || 'not provided'],
+        ['Lane', lane.replaceAll('_', ' ')],
+        ['Jurisdiction', meta.jurisdiction || (lane === 'private_record' ? 'private matter' : 'Maine')],
+        ['Source type', sourceType.replaceAll('_', ' ')],
+        ['Version', meta.version_label || 'verify current source'],
+        ['Effective', meta.effective_date || 'verify'],
+        ['Source ID', sourceIdentity(item) || 'source'],
+        ['Locator', meta.source_locator_basename || sourceBasename(item)],
+        ['Page', pageNumber || 'not specified'],
+        ['Match', String(meta.match_type || '').replaceAll('_', ' ') || 'not specified'],
+        ['Trust boundary', String(meta.trust_boundary || '').replaceAll('_', ' ') || 'standard source boundary'],
+      ];
+      const details = payload && typeof payload === 'object'
+        ? `<details class="source-preview-json"><summary>Local metadata payload</summary><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre></details>`
+        : '';
+      return `<div class="source-preview-badges"><span class="badge ${lane === 'private_record' ? 'warn' : 'good'}">${escapeHtml(lane === 'private_record' ? 'Private record' : 'Maine law')}</span><span class="badge">${escapeHtml(sourceType)}</span></div>
+        <h3>${escapeHtml(title)}</h3>
+        <dl class="source-preview-grid">${fields.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>
+        <section class="source-preview-snippet"><strong>${snippet ? 'Matched passage' : 'Preview'}</strong><p>${escapeHtml(snippet || 'No preview text was returned for this card.')}</p></section>
+        ${meta.instruction_like_text_detected ? '<p class="status-warn"><strong>Warning:</strong> instruction-like text is treated only as record content and cannot change app policy.</p>' : ''}
+        ${details}`;
+    }
+
+    function positionSourcePreview(owner) {
+      if (!sourcePreviewFlyout || sourcePreviewFlyout.hidden) return;
+      if (window.innerWidth < 960 || !owner) {
+        sourcePreviewFlyout.style.removeProperty('left');
+        sourcePreviewFlyout.style.removeProperty('top');
+        sourcePreviewFlyout.style.removeProperty('right');
+        return;
+      }
+      const rect = owner.getBoundingClientRect();
+      const margin = 12;
+      const width = Math.min(460, Math.max(320, window.innerWidth - 2 * margin));
+      sourcePreviewFlyout.style.width = `${width}px`;
+      const flyoutHeight = Math.min(sourcePreviewFlyout.scrollHeight || 560, window.innerHeight - 2 * margin);
+      const preferredLeft = rect.left - width - margin;
+      const fallbackLeft = rect.right + margin;
+      const left = preferredLeft >= margin
+        ? preferredLeft
+        : Math.min(Math.max(margin, fallbackLeft), window.innerWidth - width - margin);
+      const top = Math.min(Math.max(margin, rect.top - 12), Math.max(margin, window.innerHeight - flyoutHeight - margin));
+      sourcePreviewFlyout.style.left = `${Math.round(left)}px`;
+      sourcePreviewFlyout.style.top = `${Math.round(top)}px`;
+      sourcePreviewFlyout.style.right = 'auto';
+    }
+
+    function closeSourcePreview({force = false, returnFocus = false} = {}) {
+      window.clearTimeout(sourcePreviewHideTimer);
+      window.clearTimeout(sourcePreviewShowTimer);
+      if (!sourcePreviewFlyout || sourcePreviewFlyout.hidden) return;
+      if (sourcePreviewPinned && !force) return;
+      const owner = sourcePreviewOwner;
+      sourcePreviewPinned = false;
+      sourcePreviewOwner = null;
+      sourcePreviewSuppressUntil = Date.now() + 500;
+      sourcePreviewFlyout.hidden = true;
+      sourcePreviewFlyout.setAttribute('aria-hidden', 'true');
+      sourcePreviewFlyout.classList.remove('is-pinned');
+      if (sourcePreviewBackdrop) sourcePreviewBackdrop.hidden = true;
+      if (returnFocus && owner && typeof owner.focus === 'function') owner.focus();
+    }
+
+    function showSourcePreview(item, owner, {pin = false, payload = null} = {}) {
+      if (!sourcePreviewFlyout || !sourcePreviewBody || !sourcePreviewActions) return;
+      if (!pin && Date.now() < sourcePreviewSuppressUntil) return;
+      window.clearTimeout(sourcePreviewHideTimer);
+      const meta = item?.metadata || item || {};
+      const title = item?.title || meta.title || sourceIdentity(item) || 'Source details';
+      const lane = String(meta.source_lane || 'legal_authority');
+      const binding = recordOpenBinding(item);
+      const pageNumber = Number(meta.page_number || item?.page_number || 0);
+      const url = String(meta.url || '');
+      sourcePreviewOwner = owner || sourcePreviewOwner;
+      sourcePreviewPinned = Boolean(pin);
+      sourcePreviewTitle.textContent = title;
+      sourcePreviewBody.innerHTML = sourcePreviewMarkup(item, payload);
+      sourcePreviewActions.innerHTML = `${lane === 'private_record' && binding ? `<button class="primary-action" data-preview-open-record type="button">Open original</button>${pageNumber > 0 ? '<button class="secondary" data-preview-open-page type="button">Open matching page</button>' : ''}` : ''}${lane !== 'private_record' && url ? `<a class="primary-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : ''}<button class="secondary" data-preview-copy type="button">Copy source card</button>`;
+      sourcePreviewFlyout.hidden = false;
+      sourcePreviewFlyout.setAttribute('aria-hidden', 'false');
+      sourcePreviewFlyout.classList.toggle('is-pinned', sourcePreviewPinned);
+      if (sourcePreviewBackdrop) sourcePreviewBackdrop.hidden = !sourcePreviewPinned;
+      positionSourcePreview(sourcePreviewOwner);
+      sourcePreviewActions.querySelector('[data-preview-open-record]')?.addEventListener('click', () => openRecordBinding(binding, 0));
+      sourcePreviewActions.querySelector('[data-preview-open-page]')?.addEventListener('click', () => openRecordBinding(binding, pageNumber));
+      sourcePreviewActions.querySelector('[data-preview-copy]')?.addEventListener('click', async (event) => {
+        const safe = lastHandoffSources.find((row) => sourceIdentity(row) === sourceIdentity(item)) || item;
+        await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
+        event.currentTarget.textContent = 'Copied';
+        showToast('Source card copied.');
+      });
+      if (sourcePreviewPinned) sourcePreviewClose?.focus();
+    }
+
+    function scheduleSourcePreview(item, owner) {
+      if (sourcePreviewPinned || Date.now() < sourcePreviewSuppressUntil) return;
+      window.clearTimeout(sourcePreviewShowTimer);
+      sourcePreviewShowTimer = window.setTimeout(() => showSourcePreview(item, owner), 170);
+    }
+
+    function scheduleSourcePreviewClose() {
+      window.clearTimeout(sourcePreviewHideTimer);
+      sourcePreviewHideTimer = window.setTimeout(() => {
+        const hovered = sourcePreviewFlyout?.matches(':hover') || sourcePreviewOwner?.matches(':hover');
+        const focused = sourcePreviewFlyout?.contains(document.activeElement) || sourcePreviewOwner?.contains(document.activeElement);
+        if (!hovered && !focused) closeSourcePreview();
+      }, 180);
+    }
+
     function renderSources(items) {
       if (!items || !items.length) {
         lastSources = [];
         sourceCards.innerHTML = '<span class="muted">No source cards returned.</span>';
         lastHandoffSources = [];
+        closeSourcePreview({force: true});
         return;
       }
       lastSources = items || [];
-      sourceCards.innerHTML = items.map((item) => {
+      sourceCards.innerHTML = items.map((item, index) => {
         const meta = item.metadata || item;
         const title = item.title || meta.title || meta.id || 'Source';
-        const url = meta.url || '';
         const sourceType = meta.source_type || meta.source_class || 'source';
         const lane = meta.source_lane || 'legal_authority';
-        const official = lane === 'private_record' ? 'private record' : (meta.official === false ? 'unofficial' : 'official/source-backed');
-        const snippet = item.snippet || item.text_excerpt || meta.text_excerpt || meta.description || meta.url || meta.id || '';
+        const snippet = item.snippet || item.text_excerpt || meta.text_excerpt || meta.description || '';
         const citation = item.citation || meta.citation_hint || '';
-        const version = meta.version_label || '';
-        const effective = meta.effective_date || '';
-        const sourceId = item.source_id || item.evidence_id || meta.source_id || meta.id || '';
-        const pageNumber = meta.page_number || item.page_number || 0;
-        const locator = meta.source_locator || item.source_locator || '';
-        const matchType = meta.match_type || item.match_type || '';
-        const matchedTerms = meta.matched_terms || item.matched_terms || [];
-        const ocrDerived = Boolean(meta.ocr_derived || item.ocr_derived || meta.ocr_status === 'ocr_completed');
-        const instructionLike = Boolean(meta.instruction_like_text_detected);
-        const freshnessStatus = String(meta.freshness_status || (lane === 'private_record' ? 'not applicable' : 'needs currentness verification')).replaceAll('_', ' ');
+        const sourceId = sourceIdentity(item);
+        const pageNumber = Number(meta.page_number || item.page_number || 0);
+        const url = meta.url || '';
+        const binding = recordOpenBinding(item);
+        const previewId = `source-preview-${index}`;
         const badges = [
           `<span class="badge ${lane === 'private_record' ? 'warn' : 'good'}">${escapeHtml(lane === 'private_record' ? 'Record' : 'Law')}</span>`,
           `<span class="badge">${escapeHtml(sourceType)}</span>`,
-          `<span class="badge ${meta.official === false ? 'warn' : 'good'}">${escapeHtml(official)}</span>`,
-          lane === 'legal_authority' ? `<span class="badge ${meta.current_law_verified ? 'good' : 'warn'}">${escapeHtml(freshnessStatus)}</span>` : '',
-          instructionLike ? '<span class="badge bad">instruction-like text</span>' : '',
+          meta.official === false ? '<span class="badge warn">unofficial</span>' : '',
         ].join('');
-        return `<article class="source-card" data-source-card="visible" data-source-id="${escapeHtml(sourceId)}">
+        const openAction = lane === 'private_record' && binding
+          ? `<button class="primary-action compact-action" data-open-source-record="${escapeHtml(sourceId)}" type="button">Open original</button>${pageNumber > 0 ? `<button class="secondary compact-action" data-open-source-page="${escapeHtml(sourceId)}" data-page="${escapeHtml(pageNumber)}" type="button">Open at page ${escapeHtml(pageNumber)}</button>` : ''}`
+          : (url ? `<a class="primary-action compact-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : '');
+        return `<article aria-controls="source-preview-flyout" class="source-card source-preview-anchor" data-source-card="visible" data-source-id="${escapeHtml(sourceId)}" data-preview-id="${previewId}" tabindex="0">
           <div class="source-card-badges">${badges}</div>
           <strong>${escapeHtml(title)}</strong>
-          <div class="source-card-meta">
-            <span><strong>Citation:</strong> ${escapeHtml(citation || 'not provided')}</span>
-            <span><strong>Lane:</strong> ${escapeHtml(lane)}</span>
-            <span><strong>Jurisdiction:</strong> ${escapeHtml(meta.jurisdiction || (lane === 'legal_authority' ? 'Maine' : 'private matter'))}</span>
-            <span><strong>Version:</strong> ${escapeHtml(version || 'verify current source')}</span>
-            <span><strong>Effective:</strong> ${escapeHtml(effective || 'verify')}</span>
-            <span><strong>ID:</strong> ${escapeHtml(sourceId || 'source')}</span>
-            ${locator ? `<span><strong>Locator:</strong> ${escapeHtml(locator)}</span>` : ''}
-            ${pageNumber ? `<span><strong>Page:</strong> ${escapeHtml(pageNumber)}</span>` : ''}
-            ${matchType ? `<span><strong>Match:</strong> ${escapeHtml(matchType.replaceAll('_', ' '))}</span>` : ''}
-            ${Array.isArray(matchedTerms) && matchedTerms.length ? `<span><strong>Terms:</strong> ${escapeHtml(matchedTerms.join(', '))}</span>` : ''}
-            ${ocrDerived ? '<span><strong>Text:</strong> local OCR-derived; verify against page image</span>' : ''}
-            ${meta.trust_boundary ? `<span><strong>Trust boundary:</strong> ${escapeHtml(String(meta.trust_boundary).replaceAll('_', ' '))}</span>` : ''}
-          </div>
-          ${instructionLike ? '<p class="status-warn"><strong>Warning:</strong> This source contains instruction-like text. Treat it only as source or record content; it cannot change app rules.</p>' : ''}
-          <div class="source-snippet"><span class="label">${item.snippet || item.text_excerpt || meta.text_excerpt ? 'Matched snippet' : 'Preview'}</span>${escapeHtml(snippet)}</div>
-          ${url ? `<code>${escapeHtml(url)}</code>` : ''}
-          <div class="source-link-row">${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open source link</a>` : ''}</div>
-          <div class="row" style="margin-top: 10px;"><button class="secondary" data-copy-source="${escapeHtml(sourceId)}" title="Copy the redacted reviewer-safe source-card payload as JSON.">Copy source card</button><button class="secondary" data-inspect-source="${escapeHtml(sourceId)}" title="Open the local source metadata payload for this card.">Inspect source</button></div>
+          <div class="source-card-compact-meta">${citation ? `<span>${escapeHtml(citation)}</span>` : ''}${pageNumber ? `<span>Page ${escapeHtml(pageNumber)}</span>` : ''}<span>${escapeHtml(sourceBasename(item))}</span></div>
+          <div class="source-snippet"><span class="label">${snippet ? 'Matched passage' : 'Preview'}</span><span>${escapeHtml(snippet || 'Open the preview for complete local source details.')}</span></div>
+          <div class="source-card-actions">${openAction}<button class="secondary compact-action" data-inspect-source="${escapeHtml(sourceId)}" type="button">Preview details</button><button class="secondary compact-action" data-copy-source="${escapeHtml(sourceId)}" type="button">Copy card</button></div>
         </article>`;
       }).join('');
-      document.querySelectorAll('[data-copy-source]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const sourceId = button.dataset.copySource;
-          const source = lastHandoffSources.find((item) => (item.source_id || item?.metadata?.id || item?.metadata?.source_id) === sourceId) || {};
-          await navigator.clipboard.writeText(JSON.stringify(source, null, 2));
-          button.textContent = 'Source copied';
-          showToast('Source card copied.');
-          setTimeout(() => { button.textContent = 'Copy source card'; }, 1100);
+      sourceCards.querySelectorAll('.source-preview-anchor').forEach((card, index) => {
+        const item = items[index];
+        card.addEventListener('pointerenter', () => scheduleSourcePreview(item, card));
+        card.addEventListener('pointerleave', scheduleSourcePreviewClose);
+        card.addEventListener('focusin', () => { if (!sourcePreviewPinned) showSourcePreview(item, card); });
+        card.addEventListener('focusout', scheduleSourcePreviewClose);
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('button, a')) return;
+          showSourcePreview(item, card, {pin: true});
         });
       });
-      document.querySelectorAll('[data-inspect-source]').forEach((button) => {
-        button.addEventListener('click', () => inspectSource(button.dataset.inspectSource));
+      sourceCards.querySelectorAll('[data-copy-source]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const sourceId = button.dataset.copySource;
+          const source = lastHandoffSources.find((item) => sourceIdentity(item) === sourceId) || lastSources.find((item) => sourceIdentity(item) === sourceId) || {};
+          await navigator.clipboard.writeText(JSON.stringify(source, null, 2));
+          button.textContent = 'Copied';
+          showToast('Source card copied.');
+          setTimeout(() => { button.textContent = 'Copy card'; }, 1100);
+        });
+      });
+      sourceCards.querySelectorAll('[data-inspect-source]').forEach((button) => {
+        button.addEventListener('click', () => inspectSource(button.dataset.inspectSource, {pin: true, owner: button.closest('.source-card')}));
+      });
+      sourceCards.querySelectorAll('[data-open-source-record], [data-open-source-page]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const sourceId = button.dataset.openSourceRecord || button.dataset.openSourcePage || '';
+          const item = lastSources.find((row) => sourceIdentity(row) === sourceId);
+          const binding = recordOpenBinding(item);
+          openRecordBinding(binding, Number(button.dataset.page || 0));
+        });
       });
     }
 
-    async function inspectSource(sourceId) {
+    async function inspectSource(sourceId, {pin = true, owner = null} = {}) {
       if (!sourceId) return;
-      sourceInspector.innerHTML = '<span class="muted">Loading source metadata...</span>';
+      const local = lastSources.find((item) => sourceIdentity(item) === sourceId) || {};
+      showSourcePreview(local, owner, {pin});
       try {
         const payload = await fetchJson(`/inspect-source/${encodeURIComponent(sourceId)}`);
-        sourceInspector.innerHTML = `<details open><summary>${escapeHtml(payload.title || payload.id || sourceId)}</summary><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre></details>`;
+        if (!sourcePreviewFlyout?.hidden && sourceIdentity(local) === sourceId) {
+          showSourcePreview(local, owner || sourcePreviewOwner, {pin: sourcePreviewPinned, payload});
+        }
       } catch (err) {
-        const local = lastSources.find((item) => (item.source_id || item?.metadata?.id || item?.metadata?.source_id) === sourceId) || {};
-        sourceInspector.innerHTML = `<details open><summary>${escapeHtml(sourceId)} local card</summary><pre>${escapeHtml(JSON.stringify(local, null, 2))}</pre><p class="status-warn">Full source metadata was not available: ${escapeHtml(err.message)}</p></details>`;
+        if (sourcePreviewBody && !sourcePreviewFlyout?.hidden) {
+          sourcePreviewBody.insertAdjacentHTML('beforeend', `<p class="status-warn">Full local metadata was not available: ${escapeHtml(err.message)}</p>`);
+        }
       }
     }
+
+    sourcePreviewFlyout?.addEventListener('pointerenter', () => window.clearTimeout(sourcePreviewHideTimer));
+    sourcePreviewFlyout?.addEventListener('pointerleave', scheduleSourcePreviewClose);
+    sourcePreviewClose?.addEventListener('click', () => closeSourcePreview({force: true, returnFocus: true}));
+    sourcePreviewBackdrop?.addEventListener('click', () => closeSourcePreview({force: true, returnFocus: true}));
+    window.addEventListener('resize', () => positionSourcePreview(sourcePreviewOwner));
+    document.addEventListener('scroll', () => positionSourcePreview(sourcePreviewOwner), true);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && sourcePreviewFlyout && !sourcePreviewFlyout.hidden) {
+        event.preventDefault();
+        closeSourcePreview({force: true, returnFocus: true});
+      }
+    });
 
     function renderCorpusLibrary(payload) {
       const cases = payload?.cases || [];
@@ -1546,6 +1729,7 @@
       health.title = online ? 'Local-only API is online.' : 'Local-only API status is unknown.';
       health.setAttribute('aria-label', online ? 'Local-only service online. Open privacy status.' : 'Local-only service status unknown. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = online ? 'Local service online' : 'Local service status unknown';
+      localStatusDot?.classList.toggle('is-offline', !online);
     }).catch(() => {
       health.className = 'health-indicator status-bad';
       const copy = health.querySelector('.health-copy');
@@ -1553,6 +1737,7 @@
       health.title = 'Local-only API is offline.';
       health.setAttribute('aria-label', 'Local-only service offline. Open privacy status.');
       if (localStatusCopy) localStatusCopy.textContent = 'Local service offline';
+      localStatusDot?.classList.add('is-offline');
     });
     if (viewportProof) {
       window.addEventListener('load', () => {

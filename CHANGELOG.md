@@ -1,5 +1,13 @@
 # Changelog
 
+### v5.0.0 build 26 - source preview and evidence UX hardening
+
+- Replaced ambiguous private-record “Inspect source” behavior with explicit secure **Open original** and **Open at page** actions.
+- Added hover/focus source-card previews and click-pinned, scrollable flyouts with keyboard/Escape support.
+- Removed nested scrollbars from starter packs and evidence summaries; the parent rail/drawer now owns scrolling.
+- Anchored the Local only/Offline tooltip to the viewport-safe edge so status text no longer clips.
+- Added source-card-to-record-token binding using opaque active-corpus tokens only.
+
 ## 5.0.0 - Premium family-justice workbench UI
 
 - Rebuilt the desktop workbench around a modern three-column layout matching the approved v5 design: primary chat, persistent research shortcuts, and an integrated Evidence & tools panel.

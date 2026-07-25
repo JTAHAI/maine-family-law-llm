@@ -85,7 +85,7 @@ def test_v450_version_and_store_package_advance() -> None:
     """Version constants must reflect the current release while retaining v4.5 drill-down behavior."""
     assert VERSION == "5.0.0"
     assert PACKAGE_VERSION == "5.0.0.0"
-    assert BUILD_NUMBER == 25
+    assert BUILD_NUMBER == 26
     assert UI_PASS_MARKER == "v5.0.0-premium-family-justice-workbench"
     identity = json.loads(
         (Path(__file__).parents[1] / "store" / "msix" / "identity.example.json").read_text(encoding="utf-8")

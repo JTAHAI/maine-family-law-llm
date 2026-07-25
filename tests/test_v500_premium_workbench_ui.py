@@ -14,10 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_v500_release_identity_and_store_version_are_aligned() -> None:
     assert VERSION == "5.0.0"
     assert PACKAGE_VERSION == "5.0.0.0"
-    assert BUILD_NUMBER == 25
+    assert BUILD_NUMBER == 26
     assert UI_PASS_MARKER == "v5.0.0-premium-family-justice-workbench"
-    assert UI_VERSION.endswith("-b25")
-    identity = json.loads((ROOT / "store/msix/identity.local.json").read_text(encoding="utf-8"))
+    assert UI_VERSION.endswith("-b26")
+    identity_path = ROOT / "store/msix/identity.local.json"
+    if not identity_path.is_file():
+        identity_path = ROOT / "store/msix/identity.example.json"
+    identity = json.loads(identity_path.read_text(encoding="utf-8"))
     assert identity["package_version"] == PACKAGE_VERSION
 
 
