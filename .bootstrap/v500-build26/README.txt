@@ -1,0 +1,1 @@
+One-time SHA-256-verified patch bootstrap for v5.0.0 build 26. The workflow removes this directory and itself after applying the product changes to main.

@@ -1,0 +1,63 @@
+name: Apply v5.0.0 build 26 source flyout hardening
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-v500-build26-source-flyout.yml'
+      - '.bootstrap/v500-build26/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-v500-build26-source-flyout
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/v500-build26/chunk-*.txt > /tmp/v500-build26.patch.gz.b64
+          base64 --decode /tmp/v500-build26.patch.gz.b64 > /tmp/v500-build26.patch.gz
+          gzip --decompress --stdout /tmp/v500-build26.patch.gz > /tmp/v500-build26.patch
+          actual="$(sha256sum /tmp/v500-build26.patch | awk '{print $1}')"
+          expected="ec4b1405583ef84597b9afe93199cdda0ba1419f1650eb35188031ee7a81bc30"
+          test "$actual" = "$expected"
+          git apply --check --binary /tmp/v500-build26.patch
+
+      - name: Apply product changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --binary --whitespace=nowarn /tmp/v500-build26.patch
+          node --check src/maine_family_law_llm/ui/workbench.js
+          python -m compileall -q src/maine_family_law_llm
+          find . -type d -name '__pycache__' -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+
+      - name: Remove one-time bootstrap files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .bootstrap/v500-build26
+          rm -f .github/workflows/apply-v500-build26-source-flyout.yml
+
+      - name: Commit final source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: harden source preview and evidence opening UX"
+          git push origin HEAD:main
