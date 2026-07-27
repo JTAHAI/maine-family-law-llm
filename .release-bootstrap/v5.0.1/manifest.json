@@ -1,0 +1,10 @@
+{
+  "release": "5.0.1",
+  "package_version": "5.0.1.0",
+  "base_commit": "dc7af324b42e142c8e8155a6f429ad28bf83901b",
+  "source_zip_sha256": "da446d5b2196d0dc70590e53ea299cdeb67e15a49c94e50d8aaabe60fc9a1caf",
+  "patch_sha256": "bedb69da47dcdecc9c0cf6ac77532c3101bb0b67ddc69043eba6babe792d39f8",
+  "patch_gzip_sha256": "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6",
+  "chunks": 6,
+  "purpose": "One-time verified bootstrap that publishes the complete v5.0.1 universal local source inspector release and removes itself."
+}

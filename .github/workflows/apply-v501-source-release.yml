@@ -1,0 +1,95 @@
+name: Apply v5.0.1 full source release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".release-bootstrap/v5.0.1/**"
+      - ".github/workflows/apply-v501-source-release.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-v501-source-release
+  cancel-in-progress: false
+
+jobs:
+  apply-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and verify release patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .release-bootstrap/v5.0.1/manifest.json
+          test "$(find .release-bootstrap/v5.0.1 -maxdepth 1 -name 'part-*.txt' | wc -l | tr -d ' ')" = "6"
+          cat .release-bootstrap/v5.0.1/part-*.txt > /tmp/v501.patch.gz.b64
+          base64 --decode /tmp/v501.patch.gz.b64 > /tmp/v501.patch.gz
+          echo "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6  /tmp/v501.patch.gz" | sha256sum --check --strict
+          gzip --decompress --stdout /tmp/v501.patch.gz > /tmp/v501.patch
+          echo "bedb69da47dcdecc9c0cf6ac77532c3101bb0b67ddc69043eba6babe792d39f8  /tmp/v501.patch" | sha256sum --check --strict
+          git apply --check /tmp/v501.patch
+
+      - name: Apply v5.0.1 source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --index /tmp/v501.patch
+
+      - name: Verify release identity and source mirrors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import re
+
+          version_text = Path("src/maine_family_law_llm/version.py").read_text(encoding="utf-8")
+          assert 'VERSION = "5.0.1"' in version_text
+          assert 'BUILD_NUMBER = 27' in version_text
+          assert 'PACKAGE_VERSION = f"{VERSION}.0"' in version_text
+
+          pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+          assert re.search(r'^version\s*=\s*"5\.0\.1"', pyproject, re.MULTILINE)
+
+          for identity_path in (
+              Path("store/msix/identity.example.json"),
+              Path("store/msix/identity.local.json"),
+          ):
+              identity = json.loads(identity_path.read_text(encoding="utf-8"))
+              assert identity["version"] == "5.0.1.0"
+
+          mirror_pairs = (
+              (Path("src/maine_family_law_llm/api.py"), Path("maine_family_law_llm/api.py")),
+              (Path("src/maine_family_law_llm/ui/workbench.css"), Path("maine_family_law_llm/ui/workbench.css")),
+              (Path("src/maine_family_law_llm/ui/workbench.html"), Path("maine_family_law_llm/ui/workbench.html")),
+              (Path("src/maine_family_law_llm/ui/workbench.js"), Path("maine_family_law_llm/ui/workbench.js")),
+          )
+          for left, right in mirror_pairs:
+              assert hashlib.sha256(left.read_bytes()).digest() == hashlib.sha256(right.read_bytes()).digest(), (left, right)
+          PY
+          python -m py_compile src/maine_family_law_llm/api.py maine_family_law_llm/api.py src/maine_family_law_llm/version.py
+          node --check src/maine_family_law_llm/ui/workbench.js
+          node --check maine_family_law_llm/ui/workbench.js
+
+      - name: Remove one-time bootstrap and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .release-bootstrap/v5.0.1
+          rm -f .github/workflows/apply-v501-source-release.yml
+          git add -A
+          git diff --cached --quiet && { echo "No release changes were staged"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "release: publish v5.0.1 universal local source inspector"
+          git push origin HEAD:main
