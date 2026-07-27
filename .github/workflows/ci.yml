@@ -62,6 +62,17 @@ jobs:
           echo "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6  /tmp/v501.patch.gz" | sha256sum --check --strict
           gzip --decompress --stdout /tmp/v501.patch.gz > /tmp/v501.patch
           echo "bedb69da47dcdecc9c0cf6ac77532c3101bb0b67ddc69043eba6babe792d39f8  /tmp/v501.patch" | sha256sum --check --strict
+
+          # The clean source ZIP intentionally omitted a few generated/local mirrors
+          # that may already exist in GitHub. Remove them before replaying the exact
+          # add-file portions of the verified patch.
+          git rm -f --ignore-unmatch -- \
+            docs/release-evidence/v5.0.1-universal-source-inspector-report.md \
+            docs/release-evidence/v5.0.1-universal-source-inspector-validation.json \
+            maine_family_law_llm/api.py \
+            store/msix/identity.local.json \
+            tests/test_v501_universal_local_source_inspector.py
+
           git apply --check /tmp/v501.patch
           git apply --index /tmp/v501.patch
 
