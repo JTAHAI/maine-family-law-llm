@@ -21,6 +21,7 @@ jobs:
       - name: Reconstruct and apply verified v5.0.1 patch
         shell: bash
         run: |
+          exec > >(tee /tmp/v501-final.log) 2>&1
           set -euxo pipefail
           cat \
             .release-bootstrap/v5.0.1/part-00.txt \
@@ -48,6 +49,14 @@ jobs:
           grep -F 'BUILD_NUMBER = 27' src/maine_family_law_llm/version.py
           grep -F 'version = "5.0.1"' pyproject.toml
           grep -F '"package_version": "5.0.1.0"' store/msix/identity.example.json
+
+      - name: Upload final diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v501-final-diagnostic
+          path: /tmp/v501-final.log
+          if-no-files-found: error
 
       - name: Remove bootstrap, commit, and push main
         shell: bash
