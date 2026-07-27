@@ -7,9 +7,15 @@ on:
     paths:
       - ".release-bootstrap/v5.0.1/**"
       - ".github/workflows/apply-v501-source-release.yml"
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: apply-v501-source-release
@@ -17,11 +23,17 @@ concurrency:
 
 jobs:
   apply-release:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.head.ref == 'v501-apply-trigger' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - name: Check out main
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Reconstruct and verify release patch
