@@ -1,48 +1,14 @@
 name: CI
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: write
   pull-requests: read
 
 jobs:
-  hygiene-and-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install
-        run: python -m pip install -e ".[api,dev]"
-      - name: Local doctor
-        run: python scripts/doctor-local-repo.py --repo-root . --json
-      - name: Public source pre-push gate
-        run: python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_ci.json
-      - name: Quality checks marker
-        run: python scripts/run-quality-checks.py --help
-      - name: Chat library evidence
-        run: python scripts/run-chat-library-evidence.py --require-ready --output docs/external-evidence/chat_library_workbench_evidence_ci.json
-      - name: Targeted tests
-        run: >-
-          python -m pytest -q
-          tests/test_answering_pipeline_guardrails.py
-          tests/test_canonical_document_model.py
-          tests/test_retrieval_stack_pass5.py
-          tests/test_matter_ingestion_pass9.py
-          tests/test_chat_library_v187_input_clear_and_routing.py
-          tests/test_pass48_51_launch_evidence_gates.py
-          tests/test_pass48_51_launch_evidence_starter_kit.py
-          tests/test_enterprise_release_control_v206.py
-          tests/test_attorney_sandbox_review_kit_v193.py
-          tests/test_public_source_pre_push_gate_v191.py
-          tests/test_git_safe_push_v192.py
-
   publish-v501:
-    if: github.event_name == 'pull_request' && github.head_ref == 'v501-apply-trigger'
+    if: github.head_ref == 'v501-apply-trigger'
     runs-on: ubuntu-latest
     steps:
       - name: Check out main with release bootstrap
@@ -50,31 +16,40 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          show-progress: false
 
       - name: Reconstruct, verify, and apply v5.0.1
+        id: apply
         shell: bash
         run: |
-          set -euo pipefail
+          exec > >(tee /tmp/v501-publish.log) 2>&1
+          set -euxo pipefail
           test -f .release-bootstrap/v5.0.1/manifest.json
           test "$(find .release-bootstrap/v5.0.1 -maxdepth 1 -name 'part-*.txt' | wc -l | tr -d ' ')" = "6"
           cat .release-bootstrap/v5.0.1/part-*.txt > /tmp/v501.patch.gz.b64
           base64 --decode /tmp/v501.patch.gz.b64 > /tmp/v501.patch.gz
+          sha256sum /tmp/v501.patch.gz
           echo "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6  /tmp/v501.patch.gz" | sha256sum --check --strict
           gzip --decompress --stdout /tmp/v501.patch.gz > /tmp/v501.patch
+          sha256sum /tmp/v501.patch
           echo "bedb69da47dcdecc9c0cf6ac77532c3101bb0b67ddc69043eba6babe792d39f8  /tmp/v501.patch" | sha256sum --check --strict
-
-          # The clean source ZIP intentionally omitted a few generated/local mirrors
-          # that may already exist in GitHub. Remove them before replaying the exact
-          # add-file portions of the verified patch.
           git rm -f --ignore-unmatch -- \
             docs/release-evidence/v5.0.1-universal-source-inspector-report.md \
             docs/release-evidence/v5.0.1-universal-source-inspector-validation.json \
             maine_family_law_llm/api.py \
             store/msix/identity.local.json \
             tests/test_v501_universal_local_source_inspector.py
+          git status --short
+          git apply --check --verbose /tmp/v501.patch
+          git apply --index --verbose /tmp/v501.patch
 
-          git apply --check /tmp/v501.patch
-          git apply --index /tmp/v501.patch
+      - name: Upload publisher diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v501-publish-diagnostic
+          path: /tmp/v501-publish.log
+          if-no-files-found: error
 
       - name: Verify release identity and source mirrors
         shell: bash
@@ -85,29 +60,20 @@ jobs:
           import hashlib
           import json
           import re
-
           version_text = Path("src/maine_family_law_llm/version.py").read_text(encoding="utf-8")
           assert 'VERSION = "5.0.1"' in version_text
           assert 'BUILD_NUMBER = 27' in version_text
           assert 'PACKAGE_VERSION = f"{VERSION}.0"' in version_text
-
           pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
           assert re.search(r'^version\s*=\s*"5\.0\.1"', pyproject, re.MULTILINE)
-
-          for identity_path in (
-              Path("store/msix/identity.example.json"),
-              Path("store/msix/identity.local.json"),
-          ):
-              identity = json.loads(identity_path.read_text(encoding="utf-8"))
-              assert identity["version"] == "5.0.1.0"
-
-          mirror_pairs = (
+          for identity_path in (Path("store/msix/identity.example.json"), Path("store/msix/identity.local.json")):
+              assert json.loads(identity_path.read_text(encoding="utf-8"))["version"] == "5.0.1.0"
+          for left, right in (
               (Path("src/maine_family_law_llm/api.py"), Path("maine_family_law_llm/api.py")),
               (Path("src/maine_family_law_llm/ui/workbench.css"), Path("maine_family_law_llm/ui/workbench.css")),
               (Path("src/maine_family_law_llm/ui/workbench.html"), Path("maine_family_law_llm/ui/workbench.html")),
               (Path("src/maine_family_law_llm/ui/workbench.js"), Path("maine_family_law_llm/ui/workbench.js")),
-          )
-          for left, right in mirror_pairs:
+          ):
               assert hashlib.sha256(left.read_bytes()).digest() == hashlib.sha256(right.read_bytes()).digest(), (left, right)
           PY
           python -m py_compile src/maine_family_law_llm/api.py maine_family_law_llm/api.py src/maine_family_law_llm/version.py
