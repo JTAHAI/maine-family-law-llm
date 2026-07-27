@@ -36,10 +36,8 @@ jobs:
             .release-bootstrap/v5.0.1/part-05.txt \
             > /tmp/v501.patch.gz.b64
           base64 --decode /tmp/v501.patch.gz.b64 > /tmp/v501.patch.gz
-          sha256sum /tmp/v501.patch.gz
           echo "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6  /tmp/v501.patch.gz" | sha256sum --check --strict
           gzip --decompress --stdout /tmp/v501.patch.gz > /tmp/v501.patch
-          sha256sum /tmp/v501.patch
           echo "bedb69da47dcdecc9c0cf6ac77532c3101bb0b67ddc69043eba6babe792d39f8  /tmp/v501.patch" | sha256sum --check --strict
           git rm -f --ignore-unmatch -- \
             docs/release-evidence/v5.0.1-universal-source-inspector-report.md \
@@ -47,7 +45,6 @@ jobs:
             maine_family_law_llm/api.py \
             store/msix/identity.local.json \
             tests/test_v501_universal_local_source_inspector.py
-          git status --short
           git apply --check --verbose /tmp/v501.patch
           git apply --index --verbose /tmp/v501.patch
 
@@ -75,7 +72,7 @@ jobs:
           pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
           assert re.search(r'^version\s*=\s*"5\.0\.1"', pyproject, re.MULTILINE)
           for identity_path in (Path("store/msix/identity.example.json"), Path("store/msix/identity.local.json")):
-              assert json.loads(identity_path.read_text(encoding="utf-8"))["version"] == "5.0.1.0"
+              assert json.loads(identity_path.read_text(encoding="utf-8"))["package_version"] == "5.0.1.0"
           for left, right in (
               (Path("src/maine_family_law_llm/api.py"), Path("maine_family_law_llm/api.py")),
               (Path("src/maine_family_law_llm/ui/workbench.css"), Path("maine_family_law_llm/ui/workbench.css")),
