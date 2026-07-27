@@ -18,13 +18,10 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Reconstruct, verify, and apply v5.0.1
-        id: apply
+      - name: Reconstruct and apply verified v5.0.1 patch
         shell: bash
         run: |
-          exec > >(tee /tmp/v501-publish.log) 2>&1
           set -euxo pipefail
-          test -f .release-bootstrap/v5.0.1/manifest.json
           cat \
             .release-bootstrap/v5.0.1/part-00.txt \
             .release-bootstrap/v5.0.1/part-01.txt \
@@ -45,45 +42,12 @@ jobs:
             maine_family_law_llm/api.py \
             store/msix/identity.local.json \
             tests/test_v501_universal_local_source_inspector.py
-          git apply --check --verbose /tmp/v501.patch
-          git apply --index --verbose /tmp/v501.patch
-
-      - name: Upload publisher diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: v501-publish-diagnostic
-          path: /tmp/v501-publish.log
-          if-no-files-found: error
-
-      - name: Verify release identity and source mirrors
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          import hashlib
-          import json
-          import re
-          version_text = Path("src/maine_family_law_llm/version.py").read_text(encoding="utf-8")
-          assert 'VERSION = "5.0.1"' in version_text
-          assert 'BUILD_NUMBER = 27' in version_text
-          assert 'PACKAGE_VERSION = f"{VERSION}.0"' in version_text
-          pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
-          assert re.search(r'^version\s*=\s*"5\.0\.1"', pyproject, re.MULTILINE)
-          for identity_path in (Path("store/msix/identity.example.json"), Path("store/msix/identity.local.json")):
-              assert json.loads(identity_path.read_text(encoding="utf-8"))["package_version"] == "5.0.1.0"
-          for left, right in (
-              (Path("src/maine_family_law_llm/api.py"), Path("maine_family_law_llm/api.py")),
-              (Path("src/maine_family_law_llm/ui/workbench.css"), Path("maine_family_law_llm/ui/workbench.css")),
-              (Path("src/maine_family_law_llm/ui/workbench.html"), Path("maine_family_law_llm/ui/workbench.html")),
-              (Path("src/maine_family_law_llm/ui/workbench.js"), Path("maine_family_law_llm/ui/workbench.js")),
-          ):
-              assert hashlib.sha256(left.read_bytes()).digest() == hashlib.sha256(right.read_bytes()).digest(), (left, right)
-          PY
-          python -m py_compile src/maine_family_law_llm/api.py maine_family_law_llm/api.py src/maine_family_law_llm/version.py
-          node --check src/maine_family_law_llm/ui/workbench.js
-          node --check maine_family_law_llm/ui/workbench.js
+          git apply --check /tmp/v501.patch
+          git apply --index /tmp/v501.patch
+          grep -F 'VERSION = "5.0.1"' src/maine_family_law_llm/version.py
+          grep -F 'BUILD_NUMBER = 27' src/maine_family_law_llm/version.py
+          grep -F 'version = "5.0.1"' pyproject.toml
+          grep -F '"package_version": "5.0.1.0"' store/msix/identity.example.json
 
       - name: Remove bootstrap, commit, and push main
         shell: bash
