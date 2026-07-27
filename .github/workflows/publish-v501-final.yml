@@ -1,0 +1,125 @@
+name: Publish v5.0.1 final source release
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    if: github.head_ref == 'v501-final-publisher'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Reconstruct and verify v5.0.1 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .release-bootstrap/v5.0.1/part-00.txt \
+            .release-bootstrap/v5.0.1/part-01.txt \
+            .release-bootstrap/v5.0.1/part-02.txt \
+            .release-bootstrap/v5.0.1/part-03.txt \
+            .release-bootstrap/v5.0.1/part-04a.txt \
+            .release-bootstrap/v5.0.1/part-04b.txt \
+            .release-bootstrap/v5.0.1/part-04c.txt \
+            .release-bootstrap/v5.0.1/part-05.txt \
+            > /tmp/v501.patch.gz.b64
+          echo "8c6cbbcbdd31e556313bd0e5427aa49c78d3bc418268072bf175db538ce15e30  /tmp/v501.patch.gz.b64" | sha256sum --check --strict
+          base64 --decode /tmp/v501.patch.gz.b64 > /tmp/v501.patch.gz
+          echo "c0a5ebadfdaf4aead0295676ca11d49d5c5a510f02640df9784947f81822a9fb  /tmp/v501.patch.gz" | sha256sum --check --strict
+          gzip --decompress --stdout /tmp/v501.patch.gz > /tmp/v501.patch
+          echo "212072da4692cd282873610acea01512ae3afb7279243e2215c747595064b9d1  /tmp/v501.patch" | sha256sum --check --strict
+
+      - name: Apply exact v5.0.1 source patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f --ignore-unmatch -- \
+            docs/release-evidence/v5.0.1-universal-source-inspector-report.md \
+            docs/release-evidence/v5.0.1-universal-source-inspector-validation.json \
+            maine_family_law_llm/api.py \
+            store/msix/identity.local.json \
+            tests/test_v501_universal_local_source_inspector.py
+          git apply --check /tmp/v501.patch
+          git apply --index /tmp/v501.patch
+          cp store/msix/identity.example.json store/msix/identity.local.json
+          git add -f store/msix/identity.local.json
+
+      - name: Verify release identity and syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import re
+
+          version_text = Path('src/maine_family_law_llm/version.py').read_text(encoding='utf-8')
+          assert 'VERSION = "5.0.1"' in version_text
+          assert 'BUILD_NUMBER = 27' in version_text
+          assert 'PACKAGE_VERSION = f"{VERSION}.0"' in version_text
+          pyproject = Path('pyproject.toml').read_text(encoding='utf-8')
+          assert re.search(r'^version\s*=\s*"5\.0\.1"', pyproject, re.MULTILINE)
+          for identity_path in (
+              Path('store/msix/identity.example.json'),
+              Path('store/msix/identity.local.json'),
+          ):
+              identity = json.loads(identity_path.read_text(encoding='utf-8'))
+              assert identity['package_version'] == '5.0.1.0'
+          for left, right in (
+              (Path('src/maine_family_law_llm/api.py'), Path('maine_family_law_llm/api.py')),
+              (Path('src/maine_family_law_llm/ui/workbench.css'), Path('maine_family_law_llm/ui/workbench.css')),
+              (Path('src/maine_family_law_llm/ui/workbench.html'), Path('maine_family_law_llm/ui/workbench.html')),
+              (Path('src/maine_family_law_llm/ui/workbench.js'), Path('maine_family_law_llm/ui/workbench.js')),
+          ):
+              assert hashlib.sha256(left.read_bytes()).digest() == hashlib.sha256(right.read_bytes()).digest(), (left, right)
+          PY
+          python -m py_compile \
+            src/maine_family_law_llm/api.py \
+            maine_family_law_llm/api.py \
+            src/maine_family_law_llm/version.py
+          node --check src/maine_family_law_llm/ui/workbench.js
+          node --check maine_family_law_llm/ui/workbench.js
+
+      - name: Remove temporary bootstrap and publish main
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .release-bootstrap .release-trigger
+          rm -f .github/workflows/apply-v501-source-release.yml
+          git add -A
+          git diff --cached --quiet && { echo 'No release changes were staged'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'release: publish v5.0.1 universal local source inspector'
+          git push origin HEAD:main
+
+      - name: Tag and publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          release_commit="$(git rev-parse origin/main)"
+          if ! git rev-parse -q --verify refs/tags/v5.0.1 >/dev/null; then
+            git tag -a v5.0.1 "$release_commit" -m 'Maine Family Law LLM v5.0.1'
+            git push origin v5.0.1
+          fi
+          if ! gh release view v5.0.1 >/dev/null 2>&1; then
+            gh release create v5.0.1 \
+              --target "$release_commit" \
+              --title 'Maine Family Law LLM v5.0.1' \
+              --notes $'Maine Family Law LLM v5.0.1 adds a universal local source inspector for PDFs, images, emails and attachments, Office documents, text, tables, ZIP members, audio, and video.\n\nIt also hardens secure Inspect, Open original, Open at page, and verified-copy workflows; adds responsive inspector UX; preserves active-corpus scoping and hash verification; and updates the Store package target to 5.0.1.0.\n\nPrivate matter data remains local to the user’s device.'
+          fi
