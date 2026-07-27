@@ -1,15 +1,21 @@
 cff-version: 1.2.0
 title: Maine Family Law LLM
-message: Cite this source repository by project name, version/commit, and URL. Do not cite this repository as legal authority.
+message: Cite this source repository by project name, version or commit, and repository URL. Do not cite this repository as legal authority.
 type: software
+version: 5.0.0
+date-released: 2026-07-26
 authors:
   - name: Maine Family Law LLM contributors
 license: other
-repository-code: https://github.com/REPLACE_WITH_OWNER/ME_FM_LLM
-abstract: Standalone Maine-family-law AI source-code framework with external official-source ingestion, retrieval, verification, review gates, and enterprise readiness controls.
+repository-code: https://github.com/JTAHAI/maine-family-law-llm
+url: https://github.com/JTAHAI/maine-family-law-llm
+abstract: Local-first Maine family-law legal-information workbench for source-grounded research, document review, evidence mapping, citation checking, corpus organization, and review-required drafting support.
 keywords:
   - Maine
   - family law
   - legal AI
+  - local-first software
   - retrieval augmented generation
   - citation verification
+  - evidence mapping
+  - access to justice
