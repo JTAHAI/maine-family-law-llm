@@ -25,8 +25,16 @@ jobs:
           exec > >(tee /tmp/v501-publish.log) 2>&1
           set -euxo pipefail
           test -f .release-bootstrap/v5.0.1/manifest.json
-          test "$(find .release-bootstrap/v5.0.1 -maxdepth 1 -name 'part-*.txt' | wc -l | tr -d ' ')" = "6"
-          cat .release-bootstrap/v5.0.1/part-*.txt > /tmp/v501.patch.gz.b64
+          cat \
+            .release-bootstrap/v5.0.1/part-00.txt \
+            .release-bootstrap/v5.0.1/part-01.txt \
+            .release-bootstrap/v5.0.1/part-02.txt \
+            .release-bootstrap/v5.0.1/part-03.txt \
+            .release-bootstrap/v5.0.1/part-04a.txt \
+            .release-bootstrap/v5.0.1/part-04b.txt \
+            .release-bootstrap/v5.0.1/part-04c.txt \
+            .release-bootstrap/v5.0.1/part-05.txt \
+            > /tmp/v501.patch.gz.b64
           base64 --decode /tmp/v501.patch.gz.b64 > /tmp/v501.patch.gz
           sha256sum /tmp/v501.patch.gz
           echo "8f981336bdba953f5d6863582a94cd4213556da4c9b31c1b7fcd82282460f0c6  /tmp/v501.patch.gz" | sha256sum --check --strict
