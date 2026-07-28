@@ -123,7 +123,7 @@ def main() -> int:
         sha_path = Path(args.sha_output)
         sha_path.parent.mkdir(parents=True, exist_ok=True)
         sha_path.write_text(f"{sha256_file(msix_path)}  {msix_path.name}\n", encoding="utf-8")
-    return 0
+    return 0 if audit["status"] == "pass" else 1
 
 
 if __name__ == "__main__":

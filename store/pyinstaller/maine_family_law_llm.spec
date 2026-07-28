@@ -53,11 +53,33 @@ datas += collect_flat_files(ROOT / "docs", destination="docs", names=STORE_DOCS)
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm", destination="src/maine_family_law_llm")
 # Collect ui assets without __pycache__ directories
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm" / "ui", destination="maine_family_law_llm/ui")
-for package_name in ("fastapi", "uvicorn", "httpx", "pypdf", "pypdfium2"):
+for package_name in (
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pypdf",
+    "pypdfium2",
+    "python-docx",
+    "defusedxml",
+    "docx-editor",
+):
     datas += copy_metadata(package_name)
 
 hiddenimports = ["sqlite3", "_sqlite3", "mailbox"]
-for package_name in ("app", "legal", "maine_family_law_llm", "fastapi", "starlette", "uvicorn", "httpx", "pydantic", "pypdfium2"):
+for package_name in (
+    "app",
+    "legal",
+    "maine_family_law_llm",
+    "fastapi",
+    "starlette",
+    "uvicorn",
+    "httpx",
+    "pydantic",
+    "pypdfium2",
+    "docx",
+    "docx_editor",
+    "defusedxml",
+):
     hiddenimports += collect_submodules(package_name)
 
 a = Analysis(

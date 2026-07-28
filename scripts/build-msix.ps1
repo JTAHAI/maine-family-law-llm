@@ -154,10 +154,22 @@ $makePri = Resolve-SdkTool "makepri.exe"
 $signTool = if ($Unsigned) { $null } else { Resolve-SdkTool "signtool.exe" }
 
 & (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot -OutputRoot $OutputRoot
-& (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
+
+$storeBuildPython = Join-Path `
+  ([Environment]::GetFolderPath("LocalApplicationData")) `
+  "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
+
+if (-not (Test-Path -LiteralPath $storeBuildPython)) {
+  throw "Store build Python was not created at $storeBuildPython"
+}
+
+& (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") `
+  -RepoRoot $RepoRoot `
+  -RuntimeRoot $runtimeRoot `
+  -EvidenceRoot $evidenceRoot
 
 New-Item -ItemType Directory -Force -Path $assetsRoot | Out-Null
-python (Join-Path $RepoRoot "scripts\generate_msix_assets.py") `
+& $storeBuildPython (Join-Path $RepoRoot "scripts\generate_msix_assets.py") `
   --brand-root (Join-Path $RepoRoot "assets\brand\focaf_family_law_llm_brand_kit") `
   --output-dir $assetsRoot `
   --inventory-path $assetInventory
@@ -202,17 +214,34 @@ if (-not $Unsigned) {
 
 }
 
-python (Join-Path $RepoRoot "scripts\audit_store_package.py") `
+& $storeBuildPython (Join-Path $RepoRoot "scripts\audit_store_package.py") `
   --stage-root $packageRoot `
   --manifest-output (Join-Path $evidenceRoot "package-file-manifest.json") `
   --audit-output (Join-Path $evidenceRoot "private-data-audit.json") `
   --sha-output (Join-Path $evidenceRoot "package-sha256.txt") `
   --msix-path $msixPath
 
+if ($LASTEXITCODE -ne 0) {
+  $failedAuditPath = Join-Path $evidenceRoot "private-data-audit.json"
+
+  if (Test-Path -LiteralPath $failedAuditPath) {
+    Write-Host "Private-data audit findings:" -ForegroundColor Red
+    Write-Host (Get-Content -LiteralPath $failedAuditPath -Raw)
+  }
+
+  throw "Store-package private-data audit failed."
+}
+
 $smokePath = Join-Path $evidenceRoot "store-build-smoke.json"
 $smoke = Get-Content -Path $smokePath -Raw | ConvertFrom-Json
 $packageManifest = Get-Content -Path (Join-Path $evidenceRoot "package-file-manifest.json") -Raw | ConvertFrom-Json
 $privateAudit = Get-Content -Path (Join-Path $evidenceRoot "private-data-audit.json") -Raw | ConvertFrom-Json
+
+if ($privateAudit.status -ne "pass") {
+  Write-Host ($privateAudit | ConvertTo-Json -Depth 8) -ForegroundColor Red
+  throw "Private-data audit did not pass."
+}
+
 $gitCommit = "unavailable"
 if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $RepoRoot ".git"))) {
   $candidateCommit = (& git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
@@ -220,7 +249,11 @@ if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath
     $gitCommit = $candidateCommit
   }
 }
-$runtimeDeps = python -c "import importlib.metadata as m, json; print(json.dumps({n:m.version(n) for n in ['fastapi','uvicorn','httpx','pypdf','pypdfium2']}))"
+$runtimeDeps = & $storeBuildPython -c "import importlib.metadata as m, json; names=['fastapi','starlette','uvicorn','httpx','pypdf','pypdfium2','python-docx','defusedxml','docx-editor']; print(json.dumps({n:m.version(n) for n in names}))"
+
+if ($LASTEXITCODE -ne 0) {
+  throw "Could not read dependency versions from the Store build environment."
+}
 $wackFolder = Join-Path $evidenceRoot "wack"
 New-Item -ItemType Directory -Force -Path $wackFolder | Out-Null
 $smoke | Add-Member -NotePropertyName git_commit -NotePropertyValue $gitCommit -Force
