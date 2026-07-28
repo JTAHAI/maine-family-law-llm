@@ -1,0 +1,110 @@
+{
+  "schema": "maine_family_law_llm.v5_1_0_workflow_knowledge_security_validation.v1",
+  "release": "5.1.0",
+  "package_version": "5.1.0.0",
+  "build_number": 28,
+  "generated_at": "2026-07-27T04:34:18.139452+00:00",
+  "status": "pass_with_disclosed_environment_limits",
+  "transplants": {
+    "mit_source": {
+      "project": "zeweihan/A-market-ecm-lawyer-plugin",
+      "license": "MIT",
+      "credit_retained": true,
+      "components": [
+        "workflow skill contracts",
+        "role separation",
+        "multi-label classification patterns",
+        "QC taxonomy",
+        "folder scanner",
+        "DOCX media extraction",
+        "data-only skill packaging"
+      ]
+    },
+    "apache_source": {
+      "project": "GoogleCloudPlatform/knowledge-catalog / Open Knowledge Format",
+      "license": "Apache-2.0",
+      "credit_retained": true,
+      "components": [
+        "Markdown knowledge bundles",
+        "strict frontmatter subset",
+        "path-derived concept IDs",
+        "indexes",
+        "SHA-256 manifests"
+      ]
+    },
+    "excluded": [
+      "AGPL AI Workdeck code",
+      "unlicensed public repository code",
+      "leaked proprietary source snapshots",
+      "credentialed business-data connectors",
+      "Google ADK/Gemini/BigQuery/cloud crawler code"
+    ]
+  },
+  "security_controls": [
+    "data-only skill manifests; no plugin import or execution",
+    "no automatic network access in transplanted features",
+    "read-only source inventory",
+    "symlink and path-containment rejection",
+    "bounded file, manifest, archive, and registry resources",
+    "safe DOCX archive extraction",
+    "deterministic data-only skill packaging",
+    "knowledge-bundle hash and manifest validation",
+    "draft/QC run separation",
+    "filing-ready remains false",
+    "offline dependency floors plus CI advisory audit"
+  ],
+  "dependency_floors": {
+    "pypdf": "6.14.2",
+    "pypdfium2": "5.12.1",
+    "fastapi": "0.139.2",
+    "starlette": "1.3.1",
+    "uvicorn": "0.51.0",
+    "httpx": "0.28.1",
+    "Pillow": "12.3.0",
+    "PyInstaller": "6.21.0"
+  },
+  "validation_runs": [
+    {
+      "name": "v5.1.0 feature and security tests",
+      "collected": 28,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "CI-targeted regression set",
+      "collected": 87,
+      "passed": 87,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "broad legacy batch 1",
+      "collected": 170,
+      "passed": 169,
+      "failed": 0,
+      "skipped": 1,
+      "skip_status": "intentional"
+    },
+    {
+      "name": "python compileall",
+      "status": "pass"
+    },
+    {
+      "name": "local repository doctor",
+      "status": "pass",
+      "safe_to_push": true
+    },
+    {
+      "name": "public source preflight",
+      "status": "pass",
+      "safe_to_push": true,
+      "production_legal_ready": false
+    }
+  ],
+  "limitations": [
+    "The monolithic 758-test invocation exceeded the execution ceiling and was replaced by bounded groups.",
+    "pip-audit is configured as a required CI/release gate but was not runnable in this offline build environment.",
+    "A passing source validation is not attorney review, real-matter pilot evidence, Store signing, WACK certification, or filing readiness."
+  ]
+}

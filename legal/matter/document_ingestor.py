@@ -14,6 +14,7 @@ from legal.data_boundaries.redaction import redact_private_identifiers
 from legal.data_boundaries.retention import retention_policy_for
 from legal.evidence.fact_to_evidence_mapper import FactToEvidenceMapper
 from legal.evidence.timeline_builder import TimelineBuilder
+from legal.matter.consistency_review import SourceText, find_cross_document_conflicts
 from legal.matter.document_classifier import RuleBasedDocumentClassifier
 from legal.matter.models import ExtractedFact, IntakeReport, Matter, MatterDocument
 
@@ -186,6 +187,19 @@ class MatterDocumentIngestor:
             timeline=timeline,
         )
 
+        document_labels = {
+            document.document_id: list(document.classification.labels) for document in documents
+        }
+        conflict_records = find_cross_document_conflicts(
+            SourceText(
+                document_id=document.document_id,
+                filename=document.filename,
+                text=document.redacted_text,
+            )
+            for document in documents
+            if document.redacted_text
+        )
+
         return IntakeReport(
             matter=matter,
             documents=documents,
@@ -196,6 +210,8 @@ class MatterDocumentIngestor:
             evidence_map=evidence_map,
             missing_record_checklist=missing_record_checklist,
             warnings=sorted(set(warnings)),
+            document_labels=document_labels,
+            cross_document_conflicts=[item.to_dict() for item in conflict_records],
         )
 
     def report_as_dict(self, report: IntakeReport) -> dict[str, Any]:

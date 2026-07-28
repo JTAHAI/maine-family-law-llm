@@ -1,5 +1,36 @@
 # Changelog
 
+## 5.2.0 - Answer-first evidence, guarded drafting, and tracked Word review
+
+- Moved answer-specific evidence into the large main chat response with clickable official links, secure private-record actions, page controls, previews, and copy actions; the evidence rail remains an optional persistent workspace.
+- Added an in-app Documents & Drafting workspace with main-chat **Save as draft**, private-record **Draft from record**, a large editor, revision history, structured line diffs, and TXT/Markdown/DOCX exports.
+- Added immutable first revisions, optimistic concurrency, one-use confirmation capabilities, explicit commit/delete confirmation, recoverable soft deletion, preserved imported originals, and a hash-chained local audit log.
+- Added guarded document API routes for create/list/read/propose/commit/reject/delete/restore/import/export and audit verification. All document content remains local and model output is review-required, not filing-ready.
+- Integrated the MIT-licensed `pablospe/docx-editor` engine for hash-anchored paragraph selection, tracked replacements/deletions/insertions/rewrites/comments, and new-copy-only Word output. Original Word records are never overwritten.
+- Credited Lê Minh Hiếu/Paparusi for the MIT-licensed document-workspace/action/revision architecture patterns and Pablo Speciale for `docx-editor`; corresponding MIT notices are retained under `licenses/`.
+- Hardened the loopback API against DNS rebinding/cross-origin requests, bounded request bodies and record-open cache growth, made capability-token storage thread-safe, and retained dependency/CVE gates. Product version is 5.2.0 and Store package target is 5.2.0.0.
+
+## 5.1.0 - Legal workflow contracts, matter consistency review, and portable knowledge bundles
+
+- Added a dependency-free declarative workflow-skill registry with strict JSON schemas, role separation, dependency validation, bounded manifest loading, and no executable skill loading.
+- Added read-only matter-folder inventory with symlink blocking, path containment, optional SHA-256 hashing, supported-format reporting, and resource limits.
+- Added conservative many-to-many record classification and cross-document hard-field conflict records with source locations and no automatic legal conclusion.
+- Added independent QC contracts with blocker/verify/evidence/authority/stale-law/contradiction/suggestion classes and a hard prohibition on same-run self-approval.
+- Added a security-hardened, Apache-2.0-compatible subset inspired by Open Knowledge Format: Markdown concepts, strict frontmatter, stable IDs, indexes, and SHA-256 manifests.
+- Added bounded DOCX media extraction and deterministic data-only workflow-skill packaging utilities.
+- Added explicit attribution to zeweihan and A-market-ecm-lawyer-plugin contributors, and to GoogleCloudPlatform/knowledge-catalog. No AGPL, unlicensed, leaked-source, cloud-agent, or credentialed connector code was incorporated.
+- The transplanted features add no executable plugin loader or automatic network access. Raised pypdf, pypdfium2, FastAPI, Starlette, Uvicorn, Pillow, and PyInstaller floors/pins to patched current releases; added an offline dependency floor gate, pip-audit CI, and Dependabot. Product version is 5.1.0, Store package target is 5.1.0.0, and UI build is 28.
+
+## 5.0.1 - Universal local source inspection and evidence UX hardening
+
+- Added a secure in-app document inspector for PDFs, images, email messages and attachments, office documents, text/HTML/RTF/JSON, CSV/TSV, ZIP members, and local audio/video.
+- Added page navigation for PDFs, image zoom controls, safe email header/body rendering, attachment drill-down, archive-member drill-down, table previews, and text extraction previews.
+- Private source cards now expose distinct Inspect, Open original, and Download verified copy actions.
+- Record capabilities are random, short-lived, active-corpus scoped, hash verified, and never reveal a filesystem path.
+- Active HTML, SVG, XML, and script-like files are never executed in the local app origin.
+- Improved focus trapping, Escape/backdrop close, focus return, responsive full-screen inspection, and resize behavior.
+- Product version is 5.0.1, Store package target is 5.0.1.0, and UI build is 27.
+
 ### v5.0.0 build 26 - source preview and evidence UX hardening
 
 - Replaced ambiguous private-record “Inspect source” behavior with explicit secure **Open original** and **Open at page** actions.

@@ -1,0 +1,17 @@
+{
+  "name": "maine-qc-independent-review",
+  "version": "1.0.0",
+  "title": "Independent legal-work-product QC",
+  "description": "Review a completed draft independently using blocker, verify, evidence-required, authority-required, stale-law-risk, contradicted, and suggestion issue classes. Do not silently replace the drafter's legal judgment.",
+  "module": "qc_review",
+  "user_role": "independent_qc",
+  "phases": ["quality_control", "human_review"],
+  "categories": ["quality_control", "human_review"],
+  "permissions": ["read_files", "write_derived_files"],
+  "dependencies": [{"name": "maine-draft-review-required", "optional": false}],
+  "output_contract": "qc_issue_report_v1",
+  "review_required": true,
+  "network_allowed": false,
+  "source_requirements": ["completed_draft", "draft_source_map"],
+  "metadata": {"same_agent_self_approval": false, "human_signoff_required": true}
+}

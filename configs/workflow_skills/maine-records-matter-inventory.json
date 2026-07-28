@@ -1,0 +1,17 @@
+{
+  "name": "maine-records-matter-inventory",
+  "version": "1.0.0",
+  "title": "Read-only matter file inventory",
+  "description": "Inventory selected matter files without moving, renaming, deleting, or executing them. Report supported formats, sizes, hashes when requested, symlink blocks, and unreadable entries.",
+  "module": "records_inventory",
+  "user_role": "matter_worker",
+  "phases": ["intake", "record_organization"],
+  "categories": ["file_inventory", "provenance"],
+  "permissions": ["read_files", "write_derived_files"],
+  "dependencies": [],
+  "output_contract": "matter_inventory_v1",
+  "review_required": true,
+  "network_allowed": false,
+  "source_requirements": ["user_selected_local_directory"],
+  "metadata": {"mutates_sources": false, "follows_symlinks": false}
+}

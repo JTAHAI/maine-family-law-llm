@@ -5,3 +5,6 @@ Maine Family Law LLM is a standalone source-code project for building Maine-fami
 The source code is intentionally separated from external legal corpora, private matter data, model weights, runtime stores, embeddings, and attorney-reviewed gold data. Official Maine and federal legal resources must be downloaded from their official sources into an external data root by the collection scripts.
 
 Attribution should include the project name, repository URL, version or commit, and a clear statement that outputs require attorney review and verified source evidence before legal use.
+
+
+Version 5.2.0 includes permissively licensed adaptations credited in `THIRD_PARTY_NOTICES.md`; corresponding license texts are retained under `licenses/`.

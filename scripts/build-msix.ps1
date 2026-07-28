@@ -214,7 +214,7 @@ $smoke = Get-Content -Path $smokePath -Raw | ConvertFrom-Json
 $packageManifest = Get-Content -Path (Join-Path $evidenceRoot "package-file-manifest.json") -Raw | ConvertFrom-Json
 $privateAudit = Get-Content -Path (Join-Path $evidenceRoot "private-data-audit.json") -Raw | ConvertFrom-Json
 $gitCommit = "unavailable"
-if (Get-Command git -ErrorAction SilentlyContinue) {
+if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath (Join-Path $RepoRoot ".git"))) {
   $candidateCommit = (& git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
   if ($LASTEXITCODE -eq 0 -and $candidateCommit) {
     $gitCommit = $candidateCommit

@@ -126,3 +126,41 @@ def test_source_zip_content_audit_accepts_current_release_zip_shape(tmp_path: Pa
     assert completed.returncode == 0, completed.stderr + completed.stdout
     payload = json.loads(completed.stdout)
     assert payload["status"] == "pass"
+
+
+def test_source_zip_content_audit_accepts_hyphenated_title_case_archive_root(tmp_path: Path) -> None:
+    import zipfile
+
+    required_paths = [
+        "openapi.json",
+        "docs/api-contract-test-report.json",
+        "docs/ui-completion-report.json",
+        "docs/model_registry_admission_report.json",
+        "docs/llm_injection_red_team_report.json",
+        "docs/enterprise-security-test-report.json",
+        "docs/governance-compliance-packet-report.json",
+        "docs/sre-reliability-report.json",
+        "configs/maine_true_ga_pass_tracker.json",
+        "configs/maine_ga_pass_evidence_requirements.json",
+    ]
+    zip_path = tmp_path / "source.zip"
+    archive_root = "Maine-Family-Law-LLM-v5.2.0"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for path in required_paths:
+            zf.writestr(f"{archive_root}/{path}", "{}")
+        zf.writestr(
+            f"{archive_root}/src/maine_family_law_llm/resources/focaf/approved-public.pdf",
+            b"%PDF-1.4\n",
+        )
+    completed = subprocess.run(
+        ["python", str(ROOT / "scripts" / "audit-source-zip-contents.py"), str(zip_path)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr + completed.stdout
+    payload = json.loads(completed.stdout)
+    assert payload["status"] == "pass"
+    assert payload["allowed_public_pdf_count"] == 1

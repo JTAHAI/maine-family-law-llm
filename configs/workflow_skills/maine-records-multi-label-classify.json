@@ -1,0 +1,17 @@
+{
+  "name": "maine-records-multi-label-classify",
+  "version": "1.0.0",
+  "title": "Many-to-many family-law record classification",
+  "description": "Assign one or more conservative matter labels to each record, expose low confidence and unreadable items, and never force a document into one exclusive folder.",
+  "module": "records_classification",
+  "user_role": "matter_worker",
+  "phases": ["record_organization"],
+  "categories": ["classification", "missing_records"],
+  "permissions": ["read_files", "write_derived_files"],
+  "dependencies": [{"name": "maine-records-matter-inventory", "optional": false}],
+  "output_contract": "multi_label_classification_v1",
+  "review_required": true,
+  "network_allowed": false,
+  "source_requirements": ["matter_inventory_v1"],
+  "metadata": {"single_label_required": false, "low_confidence_requires_review": true}
+}

@@ -22,8 +22,8 @@ FAILING_PRINTABLE_ID = (
 
 
 def test_version_is_store_compatible_v312() -> None:
-    assert VERSION == "5.0.0"
-    assert PACKAGE_VERSION == "5.0.0.0"
+    assert VERSION == "5.2.0"
+    assert PACKAGE_VERSION == "5.2.0.0"
 
 
 def test_all_bundled_printables_resolve_and_hash_match() -> None:

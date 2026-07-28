@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from legal.matter.models import DocumentClassification
+from legal.matter.multi_label_classifier import MultiLabelMatterClassifier
 
 
 DOCUMENT_RULES = [
@@ -20,6 +21,9 @@ CONFIDENTIALITY_TERMS = ("ssn", "social security", "date of birth", "dob", "medi
 
 
 class RuleBasedDocumentClassifier:
+    def __init__(self) -> None:
+        self.multi_label_classifier = MultiLabelMatterClassifier()
+
     def classify(self, text: str, filename: str = "") -> DocumentClassification:
         lowered = f"{filename}\n{text}".lower()
         for document_type, terms in DOCUMENT_RULES:
@@ -39,10 +43,19 @@ class RuleBasedDocumentClassifier:
         ]
         sealed_record_warnings = sorted(set(sealed_record_warnings))
 
+        label_result = self.multi_label_classifier.classify(
+            relative_path=filename or "unnamed-record",
+            text_excerpt=text,
+            readable=bool(text.strip()),
+        )
         return DocumentClassification(
             document_type=document_type,
             confidence=confidence,
             privilege_flags=sorted(set(privilege_flags)),
             confidentiality_flags=sorted(set(confidentiality_flags)),
             sealed_record_warnings=sealed_record_warnings,
+            labels=[item.label for item in label_result.labels],
+            label_confidence={item.label: item.confidence for item in label_result.labels},
+            classification_status=label_result.status,
+            review_reasons=list(label_result.review_reasons),
         )

@@ -1,0 +1,17 @@
+{
+  "name": "maine-draft-review-required",
+  "version": "1.0.0",
+  "title": "Source-bound review-required drafting",
+  "description": "Produce a working draft from verified legal authority and separately identified private-record support. Keep unsupported points and filing blockers explicit.",
+  "module": "drafting",
+  "user_role": "draft_worker",
+  "phases": ["drafting"],
+  "categories": ["drafting", "source_binding"],
+  "permissions": ["read_files", "write_derived_files"],
+  "dependencies": [{"name": "maine-records-consistency-review", "optional": true}],
+  "output_contract": "review_required_draft_v1",
+  "review_required": true,
+  "network_allowed": false,
+  "source_requirements": ["verified_legal_sources", "separate_private_record_support"],
+  "metadata": {"filing_ready_default": false}
+}

@@ -4,18 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "5.0.0"
+version = "5.2.0"
 description = "Standalone Maine family-law legal-information workbench upgraded into a universal local-first full-case corpus builder with privacy-filtered external releases, role packages, proof reports, and one-click launchers"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pypdf>=4.3", "pypdfium2>=4.30,<6"]
+dependencies = ["pypdf>=6.14.2,<7", "pypdfium2>=5.12.1,<6", "python-docx>=1.2.0,<2", "defusedxml>=0.7.1,<1", "docx-editor>=0.7.1,<0.8"]
 
 [project.scripts]
 mfl = "maine_family_law_llm.cli:main"
 
 [project.optional-dependencies]
-api = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.28"]
-dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.28"]
+api = ["fastapi>=0.139.2,<1", "starlette>=1.3.1,<2", "uvicorn>=0.51,<1", "httpx>=0.28.1,<1"]
+dev = ["pytest>=9,<10", "ruff>=0.14.14,<1", "httpx>=0.28.1,<1", "pip-audit==2.10.1"]
 
 [tool.setuptools.packages.find]
 where = [".", "src"]

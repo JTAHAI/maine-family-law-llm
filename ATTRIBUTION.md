@@ -64,3 +64,20 @@ Catalog version: `post-ga-enterprise-hardening-resource-catalog-v2-court-rules-r
 | `ecfr-title45-part302` | `federal_family_law` | `federal` | true | https://www.ecfr.gov/current/title-45/subtitle-B/chapter-III/part-302 |
 | `ecfr-title45-302-56-child-support-guidelines` | `federal_family_law` | `federal` | false | https://www.ecfr.gov/current/title-45/subtitle-B/chapter-III/part-302/section-302.56 |
 | `maine-dhhs-home-reference` | `maine_agency_reference` | `maine` | false | https://www.maine.gov/dhhs/ |
+
+## v5.1.0 permissive open-source adaptations
+
+The following projects informed or supplied permissively licensed components in v5.1.0:
+
+- **zeweihan/A-market-ecm-lawyer-plugin** — MIT License. Credited for the legal skill-contract architecture, role separation, many-to-many file classification pattern, QC triage concepts, folder scanner, DOCX embedded-media extractor, and skill-packaging convention. Maine-specific adaptations were rewritten and security-hardened. No Chinese ECM legal rule is represented as Maine authority.
+- **GoogleCloudPlatform/knowledge-catalog / Open Knowledge Format** — Apache License 2.0. Credited for the portable Markdown-plus-frontmatter knowledge-bundle concept, stable path-derived concept IDs, progressive indexes, and version-controllable graph-like source packs. The Maine implementation is a modified strict subset and does not include Google ADK, Gemini, BigQuery, cloud crawling, or external telemetry.
+
+Full notices and license copies are in `THIRD_PARTY_NOTICES.md` and `licenses/`.
+
+
+## v5.2.0 document handling and tracked Word editing
+
+- **Paparusi/legal-ai-agent** — MIT License, Copyright (c) 2026 Lê Minh Hiếu (Paparusi). Credited for document-workspace, structured action, revision-history, audit-schema, and inline-diff architecture patterns. The Maine implementation was independently rewritten and hardened; no Vietnamese legal rule, authentication code, unsafe Docker default, autonomous destructive permission, crawler, or billing/admin code was imported.
+- **pablospe/docx-editor** — MIT License, Copyright (c) 2026 Pablo Speciale. Used as the tracked Word editing engine for hash-anchored paragraph targeting, tracked changes, comments, and revision-aware new-copy output. Maine Family Law LLM adds explicit confirmation, path containment, file and operation limits, immutable originals, and review-required labeling.
+
+Full MIT license copies are retained in `licenses/` and the combined notices are in `THIRD_PARTY_NOTICES.md`.

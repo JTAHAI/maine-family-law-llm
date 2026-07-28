@@ -1,6 +1,14 @@
 """Enterprise security/governance foundation for Maine Family Law LLM."""
 
 from .audit_log import AuditEvent, InMemoryAuditLog
+from .dependency_floor import (
+    DependencyAuditReport,
+    DependencyFinding,
+    DependencyRule,
+    audit_dependency_floors,
+    installed_versions,
+    version_at_least,
+)
 from .enterprise_controls import (
     AnswerProvenanceRecord,
     AnswerProvenanceTrail,
@@ -32,6 +40,12 @@ __all__ = [
     "AnswerProvenanceTrail",
     "AuditEvent",
     "ControlCoverage",
+    "version_at_least",
+    "installed_versions",
+    "audit_dependency_floors",
+    "DependencyRule",
+    "DependencyFinding",
+    "DependencyAuditReport",
     "ExportEvent",
     "ImmutableExportLog",
     "InMemoryAuditLog",

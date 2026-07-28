@@ -36,6 +36,23 @@ Maine Family Law LLM is a standalone legal AI workbench focused on Maine family 
 - Maine eCourts record access
 - Maine court forms
 
+
+## v5.1 backend workflow and knowledge upgrades
+
+The v5.1 source release adds dependency-free, local-only backend components adapted from permissively licensed legal-tech projects:
+
+- a declarative workflow-skill registry with strict JSON validation and explicit role, phase, dependency, permission, source, and review contracts;
+- read-only matter-folder inventory with symlink blocking, path containment, optional SHA-256 hashing, and large-file reporting;
+- many-to-many family-law record labels that expose low-confidence and unreadable records instead of forcing a single classification;
+- conservative cross-document hard-field conflict records with source locations and no automatic legal conclusion;
+- independent QC contracts that prohibit the same run from drafting and approving its own work;
+- portable Markdown knowledge bundles with strict frontmatter, stable concept IDs, generated indexes, and SHA-256 manifests;
+- security-hardened local utilities for DOCX media extraction and deterministic data-only skill packaging.
+
+The transplanted features add no executable plugin loader, background service, shell-execution permission, credentialed connector, or automatic network access. Existing dependency floors were raised to current patched releases, with offline and CI advisory gates. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`docs/V5_1_0_WORKFLOW_KNOWLEDGE_TRANSPLANT.md`](docs/V5_1_0_WORKFLOW_KNOWLEDGE_TRANSPLANT.md).
+
+Dependency security review: [`docs/V5_1_0_DEPENDENCY_SECURITY_REVIEW.md`](docs/V5_1_0_DEPENDENCY_SECURITY_REVIEW.md). Run `python scripts/check-dependency-security.py --strict-optional` or `mfl security dependencies --strict-optional` before packaging.
+
 ## What the workbench can do
 
 - Answer Maine family-law questions with source cards
@@ -75,17 +92,35 @@ Standalone Maine family-law legal AI system for source-grounded research, drafti
 
 ## Current release truth
 
-- Current source release: **v5.0.0**; Microsoft Store package target: **5.0.0.0**. This source release contains the approved premium workbench UI; the MSIX must still be rebuilt, signed, and WACK-tested on Windows.
+- Current source release: **v5.2.0**; Microsoft Store package target: **5.2.0.0**. This source release contains the approved premium workbench UI; the MSIX must still be rebuilt, signed, and WACK-tested on Windows.
 - This repo now ships a reusable universal full-case corpus builder, not just a local chat demo.
 - Double-click `START_MAINE_FAMILY_LAW_LLM.cmd` to open the local launcher from a normal checkout or the portable distribution under `dist/windows_portable/`.
 - The Windows installer package can copy the app into `%LOCALAPPDATA%\Programs\MaineFamilyLawLLM`, create shortcuts, install missing prerequisites, and skip the ones already present.
 - The builder hashes sources read-only, builds a private forensic master, builds an external-safe legal-matter release, creates role packages, and exports USB-ready folders with verification manifests.
-- The local browser workbench now serves the v5.0.0 premium family-justice UI with a three-column desktop workbench, persistent research shortcuts, integrated Evidence & tools, clickable private-record drill-down cards, safety-first intake, source/currentness separation, session-isolated continuity, and local OCR/corpus controls.
+- The local browser workbench now serves the v5.2.0 premium family-justice UI with answer-specific source cards embedded directly in each assistant response, large centered source previews, secure private-record inspection, the optional Evidence & tools workspace, safety-first intake, source/currentness separation, session-isolated continuity, and local OCR/corpus controls.
+- Users can save any assistant response as a local draft, import a hash-verified private record into a protected working copy, review line-by-line proposed revisions, preserve revision history, recover soft-deleted drafts, and export TXT, Markdown, or review-required Word documents without overwriting evidence.
+- Imported DOCX records can be edited through the MIT-licensed `docx-editor` engine using hash-anchored paragraphs and Word tracked changes. Each operation creates a new review copy and requires an explicit user confirmation.
 - The default local browser entry point is `http://127.0.0.1:8000/`.
 - The workbench is local-first, source-backed, review-required, and not legal advice.
 - A plain source checkout now supports `import maine_family_law_llm...` without requiring an editable install first.
 - The sample builder output and USB export both live under `dist/example_case_template/` and are meant as fictional demonstration material only.
 - If older sections below mention earlier UI pass labels such as `v1.83` or `v1.86`, treat the footer/runtime diagnostics in the running app as the source of truth.
+
+## In-app document handling and drafting
+
+Open **Documents & drafting** from Quick actions, or choose **Save as draft** on an assistant answer. Private-record evidence cards also offer **Draft from record** when a secure active-corpus token is available.
+
+The workflow is deliberately review-gated:
+
+1. A new document receives an immutable first revision.
+2. Changes become a proposal, not an automatic overwrite.
+3. The main window shows a structured line-by-line diff.
+4. The user explicitly commits or rejects the proposal.
+5. Every mutation enters a local SHA-256 hash-chained audit log.
+6. Deletion is soft, separately confirmed, and recoverable.
+7. Exports remain marked review-required and not filing-ready.
+
+For imported Word records, the tracked-edit panel uses `pablospe/docx-editor` to target hash-anchored paragraphs and create a separate DOCX containing Word revisions or comments. The preserved original is never edited. See `docs/V5_2_0_DOCUMENT_WORKSPACE_AND_DOCX.md` and `THIRD_PARTY_NOTICES.md`.
 
 ## Nontechnical quick start
 
@@ -260,7 +295,7 @@ See `docs/enterprise-release-control-v206.md`.
 
 ### FOCAF branded local workbench
 
-The local browser workbench now includes the FOCAF Maine Family Law LLM brand kit as repo assets under `assets/brand/focaf_family_law_llm_brand_kit/`. When `START_LOCAL_CHAT.ps1` runs, the FastAPI app serves those files from `/brand-assets`, including the logo mark, horizontal lockup, favicon, theme CSS, design tokens, and social-card artwork. The page footer should show `v5.0.0` after a fresh restart and hard refresh, with the Local-only, source-cited, review-required, and not-legal-advice status strip visible.
+The local browser workbench now includes the FOCAF Maine Family Law LLM brand kit as repo assets under `assets/brand/focaf_family_law_llm_brand_kit/`. When `START_LOCAL_CHAT.ps1` runs, the FastAPI app serves those files from `/brand-assets`, including the logo mark, horizontal lockup, favicon, theme CSS, design tokens, and social-card artwork. The page footer should show `v5.2.0` after a fresh restart and hard refresh, with the Local-only, source-cited, review-required, and not-legal-advice status strip visible.
 
 
 Run one command and use the browser chat screen:

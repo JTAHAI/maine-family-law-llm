@@ -11,8 +11,8 @@ from maine_family_law_llm.runtime_resilience import runtime_health_snapshot
 
 
 def test_v500_build_26_keeps_store_version_stable() -> None:
-    assert BUILD_NUMBER == 26
-    assert PACKAGE_VERSION == "5.0.0.0"
+    assert BUILD_NUMBER == 29
+    assert PACKAGE_VERSION == "5.2.0.0"
 
 
 def test_source_preview_shell_and_right_edge_offline_tooltip_exist() -> None:
@@ -23,20 +23,21 @@ def test_source_preview_shell_and_right_edge_offline_tooltip_exist() -> None:
     assert 'id="source-preview-backdrop"' in html
     assert 'data-tooltip-edge="right"' in html
     assert 'id="local-status-dot"' in html
-    assert 'Preview details' in html
+    assert 'record-inspector' in html
 
 
 def test_source_cards_open_private_records_and_use_scrollable_flyout() -> None:
     js = read_workbench_asset("workbench.js")
     for marker in (
         "function recordOpenBinding(item)",
-        "function openRecordBinding(binding, page = 0)",
+        "function openRecordInspector(binding, page = 0, owner = null)",
+        "function openRecordOriginal(binding, page = 0",
         "function showSourcePreview(item, owner",
         "sourcePreviewSuppressUntil",
         "localStatusDot?.classList.add('is-offline')",
         "data-open-source-record",
         "Open original",
-        "Open at page",
+        "Inspect page",
         "/api/records/open/",
     ):
         assert marker in js

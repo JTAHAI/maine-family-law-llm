@@ -1,0 +1,37 @@
+{
+  "schema": "maine_family_law_llm.release_validation.v1",
+  "release": "5.0.1",
+  "package_version": "5.0.1.0",
+  "ui_build": 27,
+  "feature": "universal_local_source_inspector",
+  "validated_at": "2026-07-26",
+  "status": "pass_with_scope_note",
+  "validated_capabilities": [
+    "secure in-app PDF inspection with page navigation",
+    "image inspection with fit and zoom controls",
+    "safe EML header/body rendering and attachment drill-down",
+    "safe previews for TXT, Markdown, JSON, HTML, RTF, CSV, TSV, DOCX, XLSX and PPTX",
+    "ZIP member inspection using opaque active-corpus tokens",
+    "supported local audio and video playback",
+    "separate inspect, open-original and verified-download actions",
+    "random expiring active-corpus capabilities",
+    "source hash verification and path redaction",
+    "active-content containment for HTML, SVG, XML and script-like files",
+    "responsive desktop, compact, tablet and mobile inspector layout",
+    "keyboard focus trap, Escape/backdrop close and focus return",
+    "source and UI package mirror parity",
+    "OpenAPI endpoint publication"
+  ],
+  "tests": {
+    "focused_regression_tests_passed": 180,
+    "version_and_ui_regression_tests_passed": 137,
+    "additional_repository_batch": "first 50 alphabetically listed test modules passed with one environment-dependent skip",
+    "javascript_syntax": "pass",
+    "python_compilation": "pass",
+    "ui_asset_mirror_parity": "pass",
+    "api_asset_mirror_parity": "pass"
+  },
+  "scope_note": "The complete 210-module repository suite was not claimed as completed in this Linux container. One Tk launcher test requires a graphical display, and several enterprise data-product suites exceed the available execution window. Focused release, security, record-opening, UI, packaging, data-boundary and version suites passed.",
+  "msix": "not_built; build on the Windows release machine",
+  "private_data_included": false
+}

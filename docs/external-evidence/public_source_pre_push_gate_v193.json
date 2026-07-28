@@ -1,22 +1,36 @@
 {
-  "blockers": [],
+  "blockers": [
+    "maine_family_law_llm.egg-info",
+    "maine_family_law_llm.egg-info/SOURCES.txt",
+    "maine_family_law_llm.egg-info/dependency_links.txt",
+    "maine_family_law_llm.egg-info/entry_points.txt",
+    "maine_family_law_llm.egg-info/requires.txt",
+    "maine_family_law_llm.egg-info/top_level.txt"
+  ],
   "checks": [
     {
-      "blockers": [],
+      "blockers": [
+        "maine_family_law_llm.egg-info",
+        "maine_family_law_llm.egg-info/SOURCES.txt",
+        "maine_family_law_llm.egg-info/dependency_links.txt",
+        "maine_family_law_llm.egg-info/entry_points.txt",
+        "maine_family_law_llm.egg-info/requires.txt",
+        "maine_family_law_llm.egg-info/top_level.txt"
+      ],
       "details": {
-        "failure_class": "none",
-        "forbidden_count": 0,
-        "returncode": 0,
-        "safe_to_push": true
+        "failure_class": "repo_contamination_detected",
+        "forbidden_count": 6,
+        "returncode": 1,
+        "safe_to_push": false
       },
       "name": "local_doctor",
-      "status": "pass",
-      "summary": "local source tree hygiene is clean"
+      "status": "fail",
+      "summary": "local source tree hygiene found push blockers"
     },
     {
       "blockers": [],
       "details": {
-        "checked_files": 1306,
+        "checked_files": 1381,
         "github_ci_present": true,
         "only_one_txt_file": true,
         "production_legal_ready": false,
@@ -29,9 +43,9 @@
     {
       "blockers": [],
       "details": {
-        "expected_heading": "v3.8.0",
-        "package_version": "3.8.0",
-        "pyproject_version": "3.8.0"
+        "expected_heading": "v5.2.0",
+        "package_version": "5.2.0",
+        "pyproject_version": "5.2.0"
       },
       "name": "version_consistency",
       "status": "pass",
@@ -91,11 +105,11 @@
       "summary": "CI includes source hygiene, chat/UI, launch-gate, and pre-push checks"
     }
   ],
-  "generated_at": "2026-07-20T01:06:24.192597+00:00",
+  "generated_at": "2026-07-28T00:05:04.158111+00:00",
   "interpretation": "Safe-to-push means the public source tree is clean, push wrappers are no-op safe, and guardrails are present. It does not mean the legal product is GA-shipped; Passes 48-51 still require external attorney sandbox, limited real-matter pilot, release-candidate signoff, and GA shipment signoff evidence.",
   "production_legal_ready": false,
-  "project_root": "/mnt/data/mfl_v350_work/maine-family-law-llm_v3.5.0",
-  "safe_to_push": true,
+  "project_root": "D:\\dev\\Maine-Family-Law-LLM-v5.2.0",
+  "safe_to_push": false,
   "schema": "maine_family_law_llm.public_source_pre_push_gate.v2",
-  "status": "pass"
+  "status": "fail"
 }

@@ -11,6 +11,10 @@ class DocumentClassification:
     privilege_flags: list[str] = field(default_factory=list)
     confidentiality_flags: list[str] = field(default_factory=list)
     sealed_record_warnings: list[str] = field(default_factory=list)
+    labels: list[str] = field(default_factory=list)
+    label_confidence: dict[str, float] = field(default_factory=dict)
+    classification_status: str = "unclassified"
+    review_reasons: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -80,3 +84,5 @@ class IntakeReport:
     evidence_map: list[dict[str, Any]] = field(default_factory=list)
     missing_record_checklist: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    document_labels: dict[str, list[str]] = field(default_factory=dict)
+    cross_document_conflicts: list[dict[str, Any]] = field(default_factory=list)

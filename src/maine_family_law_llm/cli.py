@@ -7,6 +7,11 @@ import json
 from pathlib import Path
 import sys
 
+from legal.knowledge_bundle import validate_bundle
+from legal.matter.document_inventory import InventoryError, scan_matter_folder
+from legal.security.dependency_floor import audit_dependency_floors
+from legal.workflow_skills import SkillRegistry, SkillValidationError
+
 from .answer import compose_answer
 from .chat_library import expand_query_for_library
 from .corpus_build import (
@@ -74,6 +79,33 @@ def main(argv: list[str] | None = None) -> int:
     fetch_live_cmd.add_argument("--max-sources", type=int, default=None)
     sub.add_parser("doctor")
 
+    skills = sub.add_parser("skills")
+    skills_sub = skills.add_subparsers(dest="skills_command")
+    skills_list = skills_sub.add_parser("list")
+    skills_list.add_argument("--directory", default=None)
+    skills_validate = skills_sub.add_parser("validate")
+    skills_validate.add_argument("--directory", default=None)
+
+    matter = sub.add_parser("matter")
+    matter_sub = matter.add_subparsers(dest="matter_command")
+    matter_scan = matter_sub.add_parser("scan")
+    matter_scan.add_argument("folder")
+    matter_scan.add_argument("--no-recursive", action="store_true")
+    matter_scan.add_argument("--include-unsupported", action="store_true")
+    matter_scan.add_argument("--hash", action="store_true", dest="hash_files")
+
+    knowledge = sub.add_parser("knowledge")
+    knowledge_sub = knowledge.add_subparsers(dest="knowledge_command")
+    knowledge_validate = knowledge_sub.add_parser("validate")
+    knowledge_validate.add_argument("bundle")
+
+    security = sub.add_parser("security")
+    security_sub = security.add_subparsers(dest="security_command")
+    dependency_audit = security_sub.add_parser("dependencies")
+    dependency_audit.add_argument("--no-api", action="store_true")
+    dependency_audit.add_argument("--include-build", action="store_true")
+    dependency_audit.add_argument("--strict-optional", action="store_true")
+
     args = parser.parse_args(argv)
     try:
         if args.command == "sources":
@@ -90,6 +122,14 @@ def main(argv: list[str] | None = None) -> int:
             return _corpus(args)
         if args.command == "doctor":
             return _doctor()
+        if args.command == "skills":
+            return _skills(args)
+        if args.command == "matter":
+            return _matter(args)
+        if args.command == "knowledge":
+            return _knowledge(args)
+        if args.command == "security":
+            return _security(args)
         parser.print_help()
         return 2
     except ManifestValidationError as exc:
@@ -222,6 +262,81 @@ def _doctor() -> int:
     status = "pass" if not forbidden else "fail"
     print(json.dumps({"status": status, "forbidden_paths": forbidden, "repo": str(repo)}))
     return 0 if status == "pass" else 1
+
+
+def _default_skill_directory() -> Path:
+    return Path(__file__).resolve().parents[2] / "configs" / "workflow_skills"
+
+
+def _skills(args: argparse.Namespace) -> int:
+    directory = (
+        Path(args.directory).expanduser().resolve()
+        if getattr(args, "directory", None)
+        else _default_skill_directory()
+    )
+    try:
+        registry = SkillRegistry.from_directory(directory)
+    except (SkillValidationError, OSError) as exc:
+        print(json.dumps({"status": "fail", "error": str(exc), "directory": str(directory)}))
+        return 2
+    if args.skills_command == "list":
+        print(
+            json.dumps(
+                {
+                    "status": "pass",
+                    "directory": str(directory),
+                    "skills": [manifest.to_dict() for manifest in registry.list()],
+                },
+                indent=2,
+            )
+        )
+        return 0
+    if args.skills_command == "validate":
+        report = registry.validate_dependencies()
+        print(json.dumps(report.to_dict(), indent=2))
+        return 0 if report.status == "pass" else 1
+    return 2
+
+
+def _matter(args: argparse.Namespace) -> int:
+    if args.matter_command != "scan":
+        return 2
+    try:
+        report = scan_matter_folder(
+            Path(args.folder),
+            recursive=not args.no_recursive,
+            include_unsupported=bool(args.include_unsupported),
+            hash_files=bool(args.hash_files),
+        )
+    except (InventoryError, OSError) as exc:
+        print(json.dumps({"status": "fail", "error": str(exc)}))
+        return 2
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0
+
+
+def _knowledge(args: argparse.Namespace) -> int:
+    if args.knowledge_command != "validate":
+        return 2
+    try:
+        report = validate_bundle(Path(args.bundle))
+    except (OSError, ValueError) as exc:
+        print(json.dumps({"status": "fail", "error": str(exc)}))
+        return 2
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0 if report.status == "pass" else 1
+
+
+def _security(args: argparse.Namespace) -> int:
+    if args.security_command != "dependencies":
+        return 2
+    report = audit_dependency_floors(
+        include_api=not args.no_api,
+        include_build=bool(args.include_build),
+        strict_optional=bool(args.strict_optional),
+    )
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0 if report.status == "pass" else 1
 
 
 if __name__ == "__main__":

@@ -65,14 +65,25 @@ ALLOWED_PDF_PREFIXES = {
 
 
 def _strip_archive_root(name: str) -> str:
-    parts = Path(name).parts
-    if len(parts) > 1 and (
-        parts[0] == "ME_FM_LLM"
-        or parts[0].startswith("ME_FM_LLM_v")
-        or parts[0].startswith("maine-family-law-llm_v")
+    """Remove a recognized release directory without case-sensitive coupling.
+
+    Historical builders used both underscore and hyphen separators and changed
+    capitalization over time.  Audit the repository-relative path, not the
+    cosmetic name of the top-level folder in the ZIP.
+    """
+    clean = name.rstrip("/")
+    parts = Path(clean).parts
+    if len(parts) <= 1:
+        return clean
+    root = parts[0].casefold()
+    if (
+        root == "me_fm_llm"
+        or root.startswith("me_fm_llm_v")
+        or root.startswith("maine-family-law-llm_v")
+        or root.startswith("maine-family-law-llm-v")
     ):
         return "/".join(parts[1:])
-    return name.rstrip("/")
+    return clean
 
 
 def audit(zip_path: Path) -> dict:

@@ -1,12 +1,15 @@
-Maine Family Law LLM v5.0.0
+Maine Family Law LLM v5.2.0
 
-Premium family-justice workbench UI release.
+Answer-first evidence, protected document drafting, and tracked Word review
 
-- Product version 5.0.0; Microsoft Store manifest target 5.0.0.0.
-- Approved three-column desktop layout implemented.
-- Existing local-first, OCR, corpus, clickable record-card, source-lane, privacy, and review workflows preserved.
-- MSIX build intentionally deferred for the user to run on Windows.
-- Responsive UX hardened for 1440/1366/1280/1100/1024/900/768/600/390-width layouts.
-- Evidence drawer now changes safely between inline and overlay modes during live resize.
-- Mobile controls collapse to Privacy, Matter, and Evidence & tools while Conversation settings retains full role/style/topic access.
-- Reduced-motion, forced-colors, dynamic viewport, short-height, focus, and ARIA behavior hardened.
+- Product version 5.2.0; Microsoft Store manifest target 5.2.0.0.
+- Moved answer-specific evidence and clickable source actions into the large main chat response.
+- Added an in-app Documents & Drafting workspace with answer-to-draft and record-to-draft actions.
+- Added immutable first revisions, optimistic concurrency, line-by-line review, one-use confirmation capabilities, revision history, and a hash-chained local audit log.
+- Added two-phase recoverable soft deletion and fail-closed audit-chain enforcement.
+- Added review-required TXT, Markdown, and Word exports without overwriting imported evidence.
+- Added MIT-licensed docx-editor integration for hash-anchored paragraphs, tracked changes, comments, and new-copy-only Word output.
+- Added explicit credit and retained MIT notices for Lê Minh Hiếu/Paparusi and Pablo Speciale.
+- Hardened loopback Host/origin/body filtering, capability token concurrency, and bounded record-open caching.
+- Added no automatic network access, shell execution, executable plugin loader, or autonomous destructive document permission.
+- All output remains local-first, source-grounded, review-required, not filing-ready, and not legal advice.

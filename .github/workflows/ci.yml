@@ -15,6 +15,10 @@ jobs:
         run: python -m pip install -e ".[api,dev]"
       - name: Local doctor
         run: python scripts/doctor-local-repo.py --repo-root . --json
+      - name: Offline dependency floor gate
+        run: python scripts/check-dependency-security.py --strict-optional
+      - name: Current advisory audit
+        run: python -m pip_audit .
       - name: Public source pre-push gate
         run: python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_ci.json
       - name: Quality checks marker
@@ -35,3 +39,11 @@ jobs:
           tests/test_attorney_sandbox_review_kit_v193.py
           tests/test_public_source_pre_push_gate_v191.py
           tests/test_git_safe_push_v192.py
+          tests/test_v510_dependency_security.py
+          tests/test_v510_workflow_skill_registry.py
+          tests/test_v510_matter_inventory_and_classification.py
+          tests/test_v510_cross_document_consistency.py
+          tests/test_v510_independent_qc_contract.py
+          tests/test_v510_knowledge_bundle.py
+          tests/test_v510_docx_media_and_skill_package.py
+          tests/test_v510_ingestion_integration.py

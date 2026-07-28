@@ -137,7 +137,7 @@
   <div class="drawer-scroll">
     <section class="rail-panel v5-corpus-card" data-drawer-panel="setup" hidden><div class="rail-title">Corpus library</div><label for="corpus-select">Active case corpus</label><select id="corpus-select" title="Switch between saved family or client corpora."><option value="">General Maine law workbench only</option></select><div class="row"><button class="primary-action" id="activate-corpus-button" type="button">Use selected corpus</button><button class="secondary" id="refresh-corpus-button" type="button">Refresh corpora</button></div><div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div><div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div><div class="ocr-primary-action" id="ocr-primary-action" hidden><button class="primary-action" id="ocr-action-button" type="button">OCR scanned pages locally</button><div class="field-hint">OCR is never automatic and never uploads selected records.</div></div><div class="row"><button class="secondary" id="review-inventory-button" type="button">Review inventory</button><button class="secondary" id="rebuild-index-button" type="button">Rebuild local index</button><button class="secondary" id="delete-index-button" type="button">Delete local index</button></div><button class="secondary rail-action" id="sources-button" type="button">Load source list</button><div class="external-resource-links"><a href="https://focaf.jtforme.com/" rel="noreferrer noopener" target="_blank">FOCAF family resources</a><a href="https://focaf.jtforme.com/download-library/" rel="noreferrer noopener" target="_blank">FOCAF download library</a></div></section>
     <section class="rail-panel v5-evidence-summary" data-drawer-panel="evidence"><div class="rail-title">Corpus status</div><div class="v5-corpus-summary"><div><small>Active corpus</small><strong id="drawer-active-corpus">General Maine law</strong><span id="drawer-corpus-count">No private corpus selected</span></div><span class="v5-ready-badge">Local</span></div><div class="v5-progress-label"><span>OCR progress</span><strong id="drawer-ocr-percent">—</strong></div><div class="v5-progress"><i></i></div><button class="secondary v5-refresh-button" id="drawer-refresh-corpus" type="button">↻ Refresh corpus</button></section>
-    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" hidden id="source-inspector">Source details open in the preview flyout.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
+    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" hidden id="source-inspector">Source details open in the universal local document inspector.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
     <section class="rail-panel" data-drawer-panel="review" hidden><div class="rail-title">Reviewer handoff</div><div aria-live="polite" class="answer" id="handoff-panel">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div class="status-strip" data-runtime-diagnostics="loading" id="runtime-diagnostics">Runtime diagnostics loading. Expected UI: {{UI_FOOTER_LABEL}}.</div></section>
     <section class="rail-panel" data-drawer-panel="starters" hidden><div class="rail-title">Question library</div><div class="mini-grid"><div><label for="library-search">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support"/></div><div><label for="library-topic-search">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal"/></div></div><div class="library-list" id="library-list">Loading question library…</div></section>
     <section class="rail-panel" data-drawer-panel="printables" hidden><div class="rail-title">Family printables</div><p class="muted">Optional FOCAF family resources. They are not legal authority, official court forms, or proof of disputed facts.</p><label for="printable-search">Search printables</label><div class="row"><input id="printable-search" placeholder="court day, school update, calm message…"/><button class="secondary" id="printable-search-button" type="button">Search</button></div><div class="library-list" id="printable-results">Search the local printable library by situation, title, county, or page text.</div></section>
@@ -150,6 +150,91 @@
   <div class="source-preview-actions" id="source-preview-actions"></div>
 </div>
 <button aria-label="Close pinned source preview" class="source-preview-backdrop" hidden id="source-preview-backdrop" type="button"></button>
+<div aria-hidden="true" class="record-inspector-backdrop" hidden id="record-inspector-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="record-inspector-title" aria-modal="true" class="record-inspector" hidden id="record-inspector" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Verified local source</span><strong id="record-inspector-title">Document inspector</strong><span id="record-inspector-subtitle">Preparing secure local preview…</span></div>
+    <button aria-label="Close document inspector" class="source-preview-close" id="record-inspector-close" type="button">×</button>
+  </header>
+  <div class="record-inspector-toolbar">
+    <div class="record-inspector-badges" id="record-inspector-badges"></div>
+    <div class="record-inspector-page-controls" id="record-inspector-page-controls" hidden>
+      <button class="secondary compact-action" id="record-inspector-prev-page" type="button">← Previous</button>
+      <label for="record-inspector-page-input">Page</label>
+      <input id="record-inspector-page-input" inputmode="numeric" min="1" type="number" value="1"/>
+      <span id="record-inspector-page-count">of —</span>
+      <button class="secondary compact-action" id="record-inspector-next-page" type="button">Next →</button>
+    </div>
+    <div class="record-inspector-zoom-controls" id="record-inspector-zoom-controls" hidden>
+      <button class="secondary compact-action" id="record-inspector-zoom-out" type="button">−</button>
+      <button class="secondary compact-action" id="record-inspector-zoom-fit" type="button">Fit</button>
+      <button class="secondary compact-action" id="record-inspector-zoom-in" type="button">+</button>
+    </div>
+  </div>
+  <div class="record-inspector-layout">
+    <main aria-live="polite" class="record-inspector-viewer" id="record-inspector-viewer"><div class="record-inspector-loading">Loading verified local source…</div></main>
+    <aside class="record-inspector-details" id="record-inspector-details"></aside>
+  </div>
+  <footer class="record-inspector-actions">
+    <button class="primary-action" id="record-inspector-open-original" type="button">Open original</button>
+    <button class="secondary" id="record-inspector-download" type="button">Download verified copy</button>
+    <button class="secondary" id="record-inspector-copy-details" type="button">Copy safe details</button>
+    <span class="record-inspector-privacy">Local-only · hash verified · no filesystem path exposed</span>
+  </footer>
+</section>
+
+<div aria-hidden="true" class="document-workspace-backdrop" hidden id="document-workspace-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="document-workspace-title-heading" aria-modal="true" class="document-workspace-modal" hidden id="document-workspace" role="dialog">
+  <header class="document-workspace-header">
+    <div><span class="source-preview-kicker">Local document handling</span><strong id="document-workspace-title-heading">Documents &amp; drafting</strong><span>Draft, revise, review, and export without overwriting original evidence.</span></div>
+    <button aria-label="Close document workspace" class="source-preview-close" id="document-workspace-close" type="button">×</button>
+  </header>
+  <div class="document-workspace-safety"><strong>Review required.</strong> Drafts are not filing-ready. Imported records remain immutable; tracked Word edits always create a new copy.</div>
+  <div class="document-workspace-layout">
+    <aside class="document-workspace-library">
+      <div class="document-workspace-library-head"><strong>Your documents</strong><div><button class="secondary compact-action" id="document-workspace-refresh" type="button">Refresh</button><button class="primary-action compact-action" id="document-workspace-new" type="button">New</button></div></div>
+      <div aria-live="polite" class="document-workspace-list" id="document-workspace-list">Open a local matter to use drafting.</div>
+      <div class="document-workspace-audit" id="document-workspace-audit">Audit status not checked.</div>
+    </aside>
+    <main class="document-workspace-editor-pane">
+      <div class="document-workspace-fields">
+        <label>Title<input id="document-workspace-title" maxlength="240" placeholder="Document title"/></label>
+        <label>Type<select id="document-workspace-type"><option value="draft">Draft</option><option value="memo">Memo</option><option value="letter">Letter</option><option value="motion">Motion</option><option value="affidavit">Affidavit</option><option value="parenting_plan">Parenting plan</option><option value="court_form_notes">Court-form notes</option><option value="attorney_review_packet">Attorney review packet</option><option value="other">Other</option></select></label>
+      </div>
+      <div class="document-workspace-meta" id="document-workspace-meta">Create a draft or open an existing document.</div>
+      <label class="document-workspace-content-label" for="document-workspace-editor">Document text</label>
+      <textarea id="document-workspace-editor" placeholder="Draft here, or save an answer from the main chat…" spellcheck="true"></textarea>
+      <div class="document-workspace-actions">
+        <button class="primary-action" id="document-workspace-save-new" type="button">Save new draft</button>
+        <button class="primary-action" disabled id="document-workspace-propose" type="button">Propose revision</button>
+        <button class="secondary" disabled id="document-workspace-export-txt" type="button">Export TXT</button>
+        <button class="secondary" disabled id="document-workspace-export-md" type="button">Export Markdown</button>
+        <button class="secondary" disabled id="document-workspace-export-docx" type="button">Export Word</button>
+        <button class="secondary danger-action" disabled id="document-workspace-delete" type="button">Move to trash</button>
+        <button class="secondary" disabled hidden id="document-workspace-restore" type="button">Restore</button>
+      </div>
+      <div aria-live="polite" class="document-workspace-status" id="document-workspace-status">Ready.</div>
+    </main>
+    <aside class="document-workspace-review-pane">
+      <section class="document-review-card">
+        <div class="document-review-heading"><div><span>Revision review</span><strong id="document-workspace-review-title">No pending change</strong></div><span class="badge warn">Explicit approval</span></div>
+        <div class="document-workspace-diff" id="document-workspace-diff">Edit the document, then choose “Propose revision” to see every changed line before committing.</div>
+        <div class="document-review-actions"><button class="primary-action" disabled id="document-workspace-commit" type="button">Commit reviewed changes</button><button class="secondary" disabled id="document-workspace-reject" type="button">Reject proposal</button></div>
+      </section>
+      <section class="document-review-card"><div class="document-review-heading"><div><span>Revision history</span><strong>Append-only local record</strong></div></div><div class="document-workspace-history" id="document-workspace-history">No document selected.</div></section>
+      <section class="document-review-card document-word-tools">
+        <div class="document-review-heading"><div><span>Tracked Word editing</span><strong>New copy with Word revisions</strong></div><span class="badge" id="document-workspace-docx-status">Checking engine…</span></div>
+        <p>Available for imported DOCX records. Paragraph hashes prevent editing the wrong passage.</p>
+        <button class="secondary" disabled id="document-workspace-docx-load" type="button">Load Word paragraphs</button>
+        <label>Paragraph<select disabled id="document-workspace-docx-paragraph"><option value="">Load paragraphs first</option></select></label>
+        <div class="document-workspace-word-grid"><label>Action<select disabled id="document-workspace-docx-action"><option value="replace">Replace text</option><option value="delete">Delete text</option><option value="insert_after">Insert after text</option><option value="rewrite_paragraph">Rewrite paragraph</option><option value="add_comment">Add comment</option></select></label><label>Find / anchor<input disabled id="document-workspace-docx-find"/></label></div>
+        <label>Replacement, rewrite, insertion, or comment<textarea disabled id="document-workspace-docx-text" rows="4"></textarea></label>
+        <button class="primary-action" disabled id="document-workspace-docx-apply" type="button">Create tracked review copy</button>
+        <div class="document-workspace-word-result" id="document-workspace-docx-result">Original Word files are never overwritten.</div>
+      </section>
+    </aside>
+  </div>
+</section>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="welcome-overlay">
 <div aria-labelledby="welcome-title" aria-modal="true" class="overlay-card" role="dialog">
@@ -184,18 +269,19 @@
 <div class="help-grid">
 <section class="help-card">
 <strong>Chat-first flow</strong>
-<span>Use the main chat for the question, then open the Evidence &amp; tools drawer for source cards, role tuning, corpus switching, and reviewer handoff.</span>
+<span>Use the main chat for the question. Answer-specific source cards and evidence actions appear directly in the assistant response; the Evidence &amp; tools drawer remains available for corpus controls, broader review, and reviewer handoff.</span>
 <ul>
 <li><strong>Copy settings link</strong> preserves only role, style, topic, and search mode. It excludes questions, context, records, corpus paths, and local paths.</li>
-<li><strong>Evidence &amp; tools</strong> opens sources, matter controls, review details, and starter prompts only when you need them.</li>
+<li><strong>Evidence in chat</strong> shows the sources used for that answer, with official links, secure record inspection, page actions, previews, and copy controls.</li>
+<li><strong>Evidence &amp; tools</strong> remains an optional workspace for the full source inventory, matter controls, review details, and starter prompts.</li>
 <li><strong>New chat</strong> clears the transcript but keeps the active corpus and role.</li>
 </ul>
 </section>
 <section class="help-card">
 <strong>Evidence review</strong>
-<span>Source cards should be the first stop after an answer. Use them to audit what the workbench actually relied on.</span>
+<span>Source cards now appear inside the main answer so you can audit what the workbench relied on without hunting through the side rail.</span>
 <ul>
-<li><strong>Open original</strong> opens a private record through the secure local token route. <strong>Preview details</strong> opens the complete local source card in a scrollable flyout.</li>
+<li><strong>Inspect</strong> opens PDFs, emails, images, office documents, archives, and text records in the secure local inspector. <strong>Open original</strong> opens or downloads the verified source through the opaque-token route.</li>
 <li><strong>Copy source cards</strong> exports the current card set for a reviewer or file memo.</li>
 <li><strong>Load source list</strong> lets you inspect available sources even before asking.</li>
 </ul>

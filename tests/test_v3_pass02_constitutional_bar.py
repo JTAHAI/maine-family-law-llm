@@ -21,12 +21,12 @@ def test_pass02_version_and_msix_build_are_incremented() -> None:
         identity_path = ROOT / "store" / "msix" / "identity.example.json"
     identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
-    assert VERSION == "5.0.0"
-    assert BUILD_NUMBER == 26
-    assert PACKAGE_VERSION == "5.0.0.0"
-    assert identity["package_version"] == "5.0.0.0"
-    assert UI_PASS_MARKER == "v5.0.0-premium-family-justice-workbench"
-    assert UI_VERSION.endswith("-b26")
+    assert VERSION == "5.2.0"
+    assert BUILD_NUMBER == 29
+    assert PACKAGE_VERSION == "5.2.0.0"
+    assert identity["package_version"] == "5.2.0.0"
+    assert UI_PASS_MARKER == "v5.2.0-answer-first-evidence-security"
+    assert UI_VERSION.endswith("-b27")
 
 
 def test_constitutional_identity_remains_visible_and_popover_is_complete() -> None:
@@ -78,7 +78,7 @@ def test_pass02_privacy_shortcuts_and_build_overlays_are_local_and_safe() -> Non
     assert 'id="shortcuts-overlay"' in html
     assert 'id="build-overlay"' in html
     assert 'id="footer-version"' in html
-    assert "5.0.0.0" in html
+    assert "5.2.0.0" in html
     assert "This card intentionally contains no private paths" in html
     assert "does not silently send your question" in html
     assert "Every critical action remains available by mouse and touch." in html

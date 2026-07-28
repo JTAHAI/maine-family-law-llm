@@ -59,7 +59,7 @@
   "info": {
     "description": "Standalone Maine family-law legal AI API. All protected endpoints require role/tenant scope, emit audit headers, and return review-required outputs unless filing-ready gates pass.",
     "title": "Maine Family Law LLM",
-    "version": "1.16.0-pass43-pass45-security-compliance-sre"
+    "version": "5.1.0"
   },
   "openapi": "3.1.0",
   "paths": {

@@ -34,6 +34,26 @@
     const sourcePreviewActions = document.getElementById('source-preview-actions');
     const sourcePreviewClose = document.getElementById('source-preview-close');
     const sourcePreviewBackdrop = document.getElementById('source-preview-backdrop');
+    const recordInspector = document.getElementById('record-inspector');
+    const recordInspectorBackdrop = document.getElementById('record-inspector-backdrop');
+    const recordInspectorClose = document.getElementById('record-inspector-close');
+    const recordInspectorTitle = document.getElementById('record-inspector-title');
+    const recordInspectorSubtitle = document.getElementById('record-inspector-subtitle');
+    const recordInspectorBadges = document.getElementById('record-inspector-badges');
+    const recordInspectorViewer = document.getElementById('record-inspector-viewer');
+    const recordInspectorDetails = document.getElementById('record-inspector-details');
+    const recordInspectorPageControls = document.getElementById('record-inspector-page-controls');
+    const recordInspectorPageInput = document.getElementById('record-inspector-page-input');
+    const recordInspectorPageCount = document.getElementById('record-inspector-page-count');
+    const recordInspectorPrevPage = document.getElementById('record-inspector-prev-page');
+    const recordInspectorNextPage = document.getElementById('record-inspector-next-page');
+    const recordInspectorZoomControls = document.getElementById('record-inspector-zoom-controls');
+    const recordInspectorZoomIn = document.getElementById('record-inspector-zoom-in');
+    const recordInspectorZoomOut = document.getElementById('record-inspector-zoom-out');
+    const recordInspectorZoomFit = document.getElementById('record-inspector-zoom-fit');
+    const recordInspectorOpenOriginal = document.getElementById('record-inspector-open-original');
+    const recordInspectorDownload = document.getElementById('record-inspector-download');
+    const recordInspectorCopyDetails = document.getElementById('record-inspector-copy-details');
     const handoffPanel = document.getElementById('handoff-panel');
     const runtimeDiagnostics = document.getElementById('runtime-diagnostics');
     const corpusSelect = document.getElementById('corpus-select');
@@ -108,6 +128,38 @@
     const drawerRefreshCorpus = document.getElementById('drawer-refresh-corpus');
     const quickNewCorpus = document.getElementById('quick-new-corpus');
     const quickOpenWorkspace = document.getElementById('quick-open-workspace');
+    const documentWorkspace = document.getElementById('document-workspace');
+    const documentWorkspaceBackdrop = document.getElementById('document-workspace-backdrop');
+    const documentWorkspaceClose = document.getElementById('document-workspace-close');
+    const documentWorkspaceRefresh = document.getElementById('document-workspace-refresh');
+    const documentWorkspaceNew = document.getElementById('document-workspace-new');
+    const documentWorkspaceList = document.getElementById('document-workspace-list');
+    const documentWorkspaceAudit = document.getElementById('document-workspace-audit');
+    const documentWorkspaceTitle = document.getElementById('document-workspace-title');
+    const documentWorkspaceType = document.getElementById('document-workspace-type');
+    const documentWorkspaceEditor = document.getElementById('document-workspace-editor');
+    const documentWorkspaceMeta = document.getElementById('document-workspace-meta');
+    const documentWorkspaceStatus = document.getElementById('document-workspace-status');
+    const documentWorkspaceSaveNew = document.getElementById('document-workspace-save-new');
+    const documentWorkspacePropose = document.getElementById('document-workspace-propose');
+    const documentWorkspaceCommit = document.getElementById('document-workspace-commit');
+    const documentWorkspaceReject = document.getElementById('document-workspace-reject');
+    const documentWorkspaceDiff = document.getElementById('document-workspace-diff');
+    const documentWorkspaceReviewTitle = document.getElementById('document-workspace-review-title');
+    const documentWorkspaceHistory = document.getElementById('document-workspace-history');
+    const documentWorkspaceExportTxt = document.getElementById('document-workspace-export-txt');
+    const documentWorkspaceExportMd = document.getElementById('document-workspace-export-md');
+    const documentWorkspaceExportDocx = document.getElementById('document-workspace-export-docx');
+    const documentWorkspaceDelete = document.getElementById('document-workspace-delete');
+    const documentWorkspaceRestore = document.getElementById('document-workspace-restore');
+    const documentWorkspaceDocxStatus = document.getElementById('document-workspace-docx-status');
+    const documentWorkspaceDocxLoad = document.getElementById('document-workspace-docx-load');
+    const documentWorkspaceDocxParagraph = document.getElementById('document-workspace-docx-paragraph');
+    const documentWorkspaceDocxAction = document.getElementById('document-workspace-docx-action');
+    const documentWorkspaceDocxFind = document.getElementById('document-workspace-docx-find');
+    const documentWorkspaceDocxText = document.getElementById('document-workspace-docx-text');
+    const documentWorkspaceDocxApply = document.getElementById('document-workspace-docx-apply');
+    const documentWorkspaceDocxResult = document.getElementById('document-workspace-docx-result');
     const quickExportChat = document.getElementById('quick-export-chat');
     const openAllStarters = document.getElementById('open-all-starters');
     window.__MFL_WORKBENCH_UI_VERSION = window.__MFL_WORKBENCH_UI_VERSION || document.getElementById('focaf-brand-shell')?.dataset.uiVersion || 'unknown';
@@ -129,6 +181,9 @@
     let sourcePreviewHideTimer = 0;
     let sourcePreviewShowTimer = 0;
     let sourcePreviewSuppressUntil = 0;
+    let recordInspectorState = null;
+    let recordInspectorOwner = null;
+    let recordInspectorZoom = 1;
     let sending = false;
     let activeRequestController = null;
     let toastTimer = 0;
@@ -140,6 +195,17 @@
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
+    }
+
+    function safeExternalUrl(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      try {
+        const parsed = new URL(raw);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+      } catch (err) {
+        return '';
+      }
     }
 
     function hasPrivateRecordSources() {
@@ -195,6 +261,302 @@
         throw new Error(String(message));
       }
       return payload;
+    }
+
+
+    const documentWorkspaceState = {
+      documents: [],
+      active: null,
+      proposal: null,
+      returnFocus: null,
+      docxAvailable: false,
+    };
+
+    function setDocumentWorkspaceStatus(message, kind = '') {
+      if (!documentWorkspaceStatus) return;
+      documentWorkspaceStatus.className = `document-workspace-status${kind ? ` is-${kind}` : ''}`;
+      documentWorkspaceStatus.textContent = String(message || 'Ready.');
+    }
+
+    function workspaceDownload(documentId, format) {
+      if (!documentId) return;
+      const link = document.createElement('a');
+      link.href = `/api/document-workspace/documents/${encodeURIComponent(documentId)}/export?format=${encodeURIComponent(format)}`;
+      link.download = '';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast(`${format.toUpperCase()} export started.`);
+    }
+
+    function clearWorkspaceProposal() {
+      documentWorkspaceState.proposal = null;
+      if (documentWorkspaceReviewTitle) documentWorkspaceReviewTitle.textContent = 'No pending change';
+      if (documentWorkspaceDiff) documentWorkspaceDiff.textContent = 'Edit the document, then choose “Propose revision” to see every changed line before committing.';
+      if (documentWorkspaceCommit) documentWorkspaceCommit.disabled = true;
+      if (documentWorkspaceReject) documentWorkspaceReject.disabled = true;
+    }
+
+    function renderWorkspaceHistory(documentRow) {
+      if (!documentWorkspaceHistory) return;
+      const revisions = Array.isArray(documentRow?.revisions) ? documentRow.revisions : [];
+      if (!revisions.length) {
+        documentWorkspaceHistory.textContent = 'No revision history is available.';
+        return;
+      }
+      documentWorkspaceHistory.innerHTML = revisions.slice().reverse().map((revision) => `<article><div><strong>${escapeHtml(String(revision.operation || 'revision').replaceAll('_', ' '))}</strong><span class="badge ${revision.status === 'committed' ? 'good' : 'warn'}">${escapeHtml(revision.status || 'review')}</span></div><small>${escapeHtml(revision.created_at || '')} · ${escapeHtml(String(revision.revision_id || '').slice(0, 8))}</small>${revision.note ? `<p>${escapeHtml(revision.note)}</p>` : ''}</article>`).join('');
+    }
+
+    function renderWorkspaceDiff(proposal) {
+      const diff = proposal?.diff || {};
+      const rows = Array.isArray(diff.rows) ? diff.rows : [];
+      if (documentWorkspaceReviewTitle) documentWorkspaceReviewTitle.textContent = diff.summary || 'Review proposed revision';
+      if (!documentWorkspaceDiff) return;
+      if (!rows.length) {
+        documentWorkspaceDiff.textContent = 'No line-level changes were returned.';
+        return;
+      }
+      documentWorkspaceDiff.innerHTML = `<div class="document-diff-summary"><span class="badge good">+${Number(diff.additions || 0)}</span><span class="badge bad">−${Number(diff.deletions || 0)}</span><span>${escapeHtml(diff.summary || '')}</span></div><div class="document-diff-lines">${rows.map((row) => `<div class="document-diff-line is-${escapeHtml(row.type || 'unchanged')}"><span>${row.type === 'add' ? '+' : row.type === 'delete' ? '−' : ' '}</span><code>${escapeHtml(row.content || '')}</code></div>`).join('')}</div>${diff.truncated ? '<p class="status-warn">Diff display was bounded for safety. Export or inspect the full draft before approval.</p>' : ''}`;
+    }
+
+    function updateWorkspaceControls() {
+      const active = documentWorkspaceState.active;
+      const deleted = active?.status === 'deleted';
+      const hasActive = Boolean(active?.document_id);
+      [documentWorkspacePropose, documentWorkspaceExportTxt, documentWorkspaceExportMd, documentWorkspaceExportDocx].forEach((button) => { if (button) button.disabled = !hasActive || deleted; });
+      if (documentWorkspaceDelete) { documentWorkspaceDelete.disabled = !hasActive || deleted; documentWorkspaceDelete.hidden = deleted; }
+      if (documentWorkspaceRestore) { documentWorkspaceRestore.disabled = !hasActive || !deleted; documentWorkspaceRestore.hidden = !deleted; }
+      if (documentWorkspaceSaveNew) documentWorkspaceSaveNew.hidden = hasActive;
+      if (documentWorkspaceEditor) documentWorkspaceEditor.disabled = deleted;
+      if (documentWorkspaceTitle) documentWorkspaceTitle.disabled = hasActive || deleted;
+      if (documentWorkspaceType) documentWorkspaceType.disabled = hasActive || deleted;
+      const sourceRefs = Array.isArray(active?.source_refs) ? active.source_refs : [];
+      const hasDocx = sourceRefs.some((row) => /docx/i.test(`${row?.source_class || ''} ${row?.title || ''}`));
+      if (documentWorkspaceDocxLoad) documentWorkspaceDocxLoad.disabled = !hasActive || !hasDocx || !documentWorkspaceState.docxAvailable;
+    }
+
+    function renderWorkspaceList() {
+      if (!documentWorkspaceList) return;
+      const rows = documentWorkspaceState.documents;
+      if (!rows.length) {
+        documentWorkspaceList.innerHTML = '<div class="document-workspace-empty"><strong>No drafts yet.</strong><span>Save an answer, import a record, or create a new document.</span></div>';
+        return;
+      }
+      documentWorkspaceList.innerHTML = rows.map((row) => `<button class="document-workspace-list-item${documentWorkspaceState.active?.document_id === row.document_id ? ' is-active' : ''}" data-workspace-document-id="${escapeHtml(row.document_id)}" type="button"><strong>${escapeHtml(row.title)}</strong><span>${escapeHtml(String(row.document_type || 'draft').replaceAll('_', ' '))} · ${escapeHtml(row.revision_count || 1)} revision${Number(row.revision_count || 1) === 1 ? '' : 's'}</span><small>${row.status === 'deleted' ? 'In trash' : 'Review required'} · ${escapeHtml(row.updated_at || '')}</small></button>`).join('');
+      documentWorkspaceList.querySelectorAll('[data-workspace-document-id]').forEach((button) => button.addEventListener('click', () => selectWorkspaceDocument(button.dataset.workspaceDocumentId)));
+    }
+
+    function newWorkspaceDraft(seed = {}) {
+      documentWorkspaceState.active = null;
+      clearWorkspaceProposal();
+      if (documentWorkspaceTitle) { documentWorkspaceTitle.disabled = false; documentWorkspaceTitle.value = String(seed.title || ''); }
+      if (documentWorkspaceType) { documentWorkspaceType.disabled = false; documentWorkspaceType.value = String(seed.documentType || 'draft'); }
+      if (documentWorkspaceEditor) { documentWorkspaceEditor.disabled = false; documentWorkspaceEditor.value = String(seed.content || ''); }
+      if (documentWorkspaceMeta) documentWorkspaceMeta.textContent = 'New local draft · review required · not filing-ready';
+      if (documentWorkspaceHistory) documentWorkspaceHistory.textContent = 'The first save creates an immutable original revision.';
+      if (documentWorkspaceDocxResult) documentWorkspaceDocxResult.textContent = 'Original Word files are never overwritten.';
+      renderWorkspaceList();
+      updateWorkspaceControls();
+      documentWorkspaceTitle?.focus();
+    }
+
+    async function loadDocumentWorkspaceDocuments(selectId = '') {
+      if (!documentWorkspaceList) return;
+      documentWorkspaceList.textContent = 'Loading local documents…';
+      try {
+        const payload = await fetchJson('/api/document-workspace/documents?include_deleted=true&limit=500');
+        documentWorkspaceState.documents = Array.isArray(payload.documents) ? payload.documents : [];
+        renderWorkspaceList();
+        const audit = await fetchJson('/api/document-workspace/audit/verify');
+        if (documentWorkspaceAudit) {
+          documentWorkspaceAudit.className = `document-workspace-audit ${audit.valid ? 'is-good' : 'is-bad'}`;
+          documentWorkspaceAudit.textContent = audit.valid ? `Audit chain verified · ${audit.event_count || 0} events` : 'Audit chain needs review';
+        }
+        const engine = await fetchJson('/api/document-workspace/docx/status');
+        documentWorkspaceState.docxAvailable = Boolean(engine.tracked_changes_available);
+        if (documentWorkspaceDocxStatus) {
+          documentWorkspaceDocxStatus.className = `badge ${documentWorkspaceState.docxAvailable ? 'good' : 'warn'}`;
+          documentWorkspaceDocxStatus.textContent = documentWorkspaceState.docxAvailable ? `docx-editor ${engine.version || ''}`.trim() : 'Word tracking unavailable';
+        }
+        if (selectId) await selectWorkspaceDocument(selectId);
+        else if (documentWorkspaceState.active?.document_id) await selectWorkspaceDocument(documentWorkspaceState.active.document_id);
+      } catch (err) {
+        documentWorkspaceState.documents = [];
+        documentWorkspaceList.innerHTML = `<div class="document-workspace-empty"><strong>Document workspace unavailable.</strong><span>${escapeHtml(err.message)}</span></div>`;
+        setDocumentWorkspaceStatus(err.message, 'bad');
+      }
+    }
+
+    async function selectWorkspaceDocument(documentId) {
+      if (!documentId) return;
+      setDocumentWorkspaceStatus('Opening local document…');
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(documentId)}`);
+        const row = payload.document || {};
+        documentWorkspaceState.active = row;
+        clearWorkspaceProposal();
+        if (documentWorkspaceTitle) documentWorkspaceTitle.value = row.title || '';
+        if (documentWorkspaceType) documentWorkspaceType.value = row.document_type || 'draft';
+        if (documentWorkspaceEditor) documentWorkspaceEditor.value = row.content || '';
+        if (documentWorkspaceMeta) documentWorkspaceMeta.textContent = `${String(row.document_type || 'draft').replaceAll('_', ' ')} · ${row.revision_count || 1} revision${Number(row.revision_count || 1) === 1 ? '' : 's'} · ${row.status === 'deleted' ? 'in trash' : 'review required'} · original preserved`;
+        renderWorkspaceHistory(row);
+        renderWorkspaceList();
+        updateWorkspaceControls();
+        setDocumentWorkspaceStatus('Document opened. Changes remain local until you review and commit them.', 'good');
+      } catch (err) {
+        setDocumentWorkspaceStatus(err.message, 'bad');
+      }
+    }
+
+    async function openDocumentWorkspace(options = {}) {
+      if (!documentWorkspace) return;
+      documentWorkspaceState.returnFocus = document.activeElement;
+      documentWorkspace.hidden = false;
+      documentWorkspaceBackdrop.hidden = false;
+      documentWorkspace.setAttribute('aria-hidden', 'false');
+      documentWorkspaceBackdrop.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('document-workspace-open');
+      await loadDocumentWorkspaceDocuments(options.documentId || '');
+      if (options.seedContent !== undefined || options.seedTitle !== undefined) newWorkspaceDraft({title: options.seedTitle, content: options.seedContent, documentType: options.documentType});
+      if (!options.documentId && options.seedContent === undefined && !documentWorkspaceState.active) newWorkspaceDraft();
+      documentWorkspaceClose?.focus({preventScroll: true});
+    }
+
+    function closeDocumentWorkspace() {
+      if (!documentWorkspace) return;
+      documentWorkspace.hidden = true;
+      documentWorkspaceBackdrop.hidden = true;
+      documentWorkspace.setAttribute('aria-hidden', 'true');
+      documentWorkspaceBackdrop.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('document-workspace-open');
+      const target = documentWorkspaceState.returnFocus;
+      if (target && typeof target.focus === 'function') target.focus({preventScroll: true});
+      documentWorkspaceState.returnFocus = null;
+    }
+
+    async function saveWorkspaceNewDraft() {
+      const title = documentWorkspaceTitle?.value.trim() || 'Untitled local draft';
+      const content = documentWorkspaceEditor?.value || '';
+      setDocumentWorkspaceStatus('Saving immutable first revision…');
+      try {
+        const payload = await fetchJson('/api/document-workspace/documents', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title, content, document_type: documentWorkspaceType?.value || 'draft', note: 'Created in the in-app document workspace.', tags: [], source_refs: []})});
+        await loadDocumentWorkspaceDocuments(payload.document?.document_id || '');
+        showToast('Draft saved locally.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function saveAnswerAsDraft(text, payload = null) {
+      const structuredTitle = payload?.structured_answer?.intake_label || payload?.question || 'Chat answer draft';
+      await openDocumentWorkspace({seedTitle: String(structuredTitle).slice(0, 200), seedContent: String(text || ''), documentType: 'memo'});
+      setDocumentWorkspaceStatus('Answer copied into a new unsaved draft. Review the text, then save it.', 'good');
+    }
+
+    async function importRecordToWorkspace(binding, title = '') {
+      const token = recordToken(binding);
+      if (!token) { showToast('A secure local record token is not available.'); return; }
+      setDocumentWorkspaceStatus('Importing a verified copy while preserving the original…');
+      try {
+        const payload = await fetchJson('/api/document-workspace/import-record', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({source_token: token, page: 0, title: title || binding?.basename || '', document_type: 'draft'})});
+        await openDocumentWorkspace({documentId: payload.document?.document_id || ''});
+        setDocumentWorkspaceStatus('Verified record imported. The original is immutable; edit the working draft or create tracked Word changes.', 'good');
+        showToast('Record imported into drafting.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); showToast(err.message); }
+    }
+
+    async function proposeWorkspaceRevision() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id) return;
+      setDocumentWorkspaceStatus('Building line-by-line review…');
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/proposals`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({content: documentWorkspaceEditor?.value || '', base_revision_id: active.current_revision_id, note: 'Proposed in the in-app drafting workspace.'})});
+        documentWorkspaceState.proposal = payload.proposal;
+        renderWorkspaceDiff(payload.proposal);
+        documentWorkspaceCommit.disabled = false;
+        documentWorkspaceReject.disabled = false;
+        setDocumentWorkspaceStatus('Proposal ready. Review every change before committing.', 'good');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function commitWorkspaceRevision() {
+      const active = documentWorkspaceState.active;
+      const proposal = documentWorkspaceState.proposal;
+      if (!active?.document_id || !proposal?.confirmation_token) return;
+      if (!window.confirm('Commit this reviewed revision as the current working draft? The prior revision and imported original will remain preserved.')) return;
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/commit`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision_id: proposal.revision_id, confirmation_token: proposal.confirmation_token, confirmed: true})});
+        await loadDocumentWorkspaceDocuments(payload.document?.document_id || active.document_id);
+        showToast('Reviewed revision committed.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function rejectWorkspaceRevision() {
+      const active = documentWorkspaceState.active;
+      const proposal = documentWorkspaceState.proposal;
+      if (!active?.document_id || !proposal?.revision_id) return;
+      try {
+        await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/reject`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision_id: proposal.revision_id})});
+        clearWorkspaceProposal();
+        await selectWorkspaceDocument(active.document_id);
+        showToast('Proposal rejected; current draft unchanged.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function softDeleteWorkspaceDocument() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id) return;
+      try {
+        const request = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/delete-request`, {method: 'POST'});
+        if (!window.confirm(`Move “${active.title}” to the local trash? Revisions and imported originals remain recoverable.`)) return;
+        await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/delete`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation_token: request.confirmation_token, confirmed: true})});
+        await loadDocumentWorkspaceDocuments(active.document_id);
+        showToast('Document moved to trash.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function restoreWorkspaceDocument() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id) return;
+      try {
+        await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/restore`, {method: 'POST'});
+        await loadDocumentWorkspaceDocuments(active.document_id);
+        showToast('Document restored.');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    async function loadWorkspaceDocxParagraphs() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id) return;
+      if (documentWorkspaceDocxResult) documentWorkspaceDocxResult.textContent = 'Reading hash-anchored Word paragraphs…';
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/docx/paragraphs?start=1&limit=300`);
+        const rows = Array.isArray(payload.paragraphs) ? payload.paragraphs : [];
+        documentWorkspaceDocxParagraph.innerHTML = rows.map((row) => `<option value="${escapeHtml(row.ref)}">${escapeHtml(row.ref)} · ${escapeHtml(String(row.text || '').slice(0, 110))}</option>`).join('') || '<option value="">No paragraphs found</option>';
+        [documentWorkspaceDocxParagraph, documentWorkspaceDocxAction, documentWorkspaceDocxFind, documentWorkspaceDocxText, documentWorkspaceDocxApply].forEach((control) => { if (control) control.disabled = !rows.length; });
+        documentWorkspaceDocxResult.textContent = `${rows.length} of ${payload.total || rows.length} paragraphs loaded. Select the exact hash-anchored paragraph.`;
+      } catch (err) { documentWorkspaceDocxResult.textContent = err.message; }
+    }
+
+    async function applyWorkspaceTrackedDocxEdit() {
+      const active = documentWorkspaceState.active;
+      const paragraph = documentWorkspaceDocxParagraph?.value || '';
+      const action = documentWorkspaceDocxAction?.value || 'replace';
+      if (!active?.document_id || !paragraph) return;
+      const find = documentWorkspaceDocxFind?.value || '';
+      const text = documentWorkspaceDocxText?.value || '';
+      const operation = {action, paragraph, occurrence: 0};
+      if (action === 'replace') { operation.find = find; operation.replace_with = text; }
+      else if (action === 'delete') operation.text = find || text;
+      else if (action === 'insert_after') { operation.find = find; operation.text = text; }
+      else if (action === 'rewrite_paragraph') operation.text = text;
+      else if (action === 'add_comment') { operation.find = find; operation.comment = text; delete operation.paragraph; }
+      if (!window.confirm('Create a NEW Word copy with this tracked change? The imported original will not be overwritten.')) return;
+      documentWorkspaceDocxApply.disabled = true;
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/docx/tracked-edit`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({operations: [operation], author: 'Maine Family Law LLM User', confirmed: true})});
+        documentWorkspaceDocxResult.innerHTML = `<strong>Tracked review copy created.</strong><span>Original preserved · SHA-256 ${escapeHtml(String(payload.sha256 || '').slice(0, 16))}…</span><a class="primary-action compact-action" href="${escapeHtml(payload.download_url)}" download>Download tracked Word copy</a>`;
+        showToast('Tracked Word copy created.');
+      } catch (err) { documentWorkspaceDocxResult.textContent = err.message; }
+      finally { documentWorkspaceDocxApply.disabled = false; }
     }
 
     function selectedLabel(select) {
@@ -329,17 +691,25 @@
         const documentType = escapeHtml(String(group.document_type || 'record').replaceAll('_', ' '));
         const matches = Number(group.match_count || 0);
         const detailId = `record-matches-${index}`;
-        return `<article class="record-result-card"><div class="record-result-head"><div><strong>${basename}</strong><p class="muted">${documentType} · ${matches} matching ${matches === 1 ? 'row' : 'rows'}${pages.length ? ` · pages ${escapeHtml(pages.join(', '))}` : ''}</p></div><div class="record-result-actions"><button class="secondary compact-action" data-open-record="${token}" type="button" aria-label="Open PDF for ${basename}">Open PDF</button>${pages.slice(0, 6).map((page) => `<button class="secondary compact-action" data-open-record-page="${token}" data-page="${escapeHtml(page)}" type="button" aria-label="Open ${basename} at page ${escapeHtml(page)}">Open at page ${escapeHtml(page)}</button>`).join('')}</div></div><details id="${detailId}" class="record-match-details"><summary>Show all matches in this document</summary><ul class="answer-list">${snippets.map((snippet) => `<li>${escapeHtml(String(snippet))}</li>`).join('')}</ul></details></article>`;
+        const pagePicker = pages.length ? `<span class="record-page-picker"><label class="sr-only" for="record-page-${index}">Matching page</label><select id="record-page-${index}" data-record-page-select="${token}">${pages.map((page) => `<option value="${escapeHtml(page)}">Page ${escapeHtml(page)}</option>`).join('')}</select><button class="secondary compact-action" data-inspect-selected-page="${token}" type="button">Inspect page</button></span>` : '';
+        return `<article class="record-result-card"><div class="record-result-head"><div><strong>${basename}</strong><p class="muted">${documentType} · ${matches} matching ${matches === 1 ? 'row' : 'rows'}${pages.length ? ` · ${pages.length} matching ${pages.length === 1 ? 'page' : 'pages'}` : ''}</p></div><div class="record-result-actions"><button class="primary-action compact-action" data-inspect-record="${token}" type="button" aria-label="Inspect ${basename}">Inspect</button><button class="secondary compact-action" data-draft-record="${token}" data-record-title="${basename}" type="button" aria-label="Draft from ${basename}">Draft from record</button><button class="secondary compact-action" data-open-record="${token}" type="button" aria-label="Open original ${basename}">Open original</button>${pagePicker}</div></div><details id="${detailId}" class="record-match-details"><summary>Show all matches in this document</summary><ul class="answer-list">${snippets.map((snippet) => `<li>${escapeHtml(String(snippet))}</li>`).join('')}</ul></details></article>`;
       }).join('')}</section>`;
     }
 
     function bindRecordOpenActions(container = answer) {
-      container.querySelectorAll('[data-open-record], [data-open-record-page]').forEach((button) => button.addEventListener('click', () => {
-        const token = button.dataset.openRecord || button.dataset.openRecordPage || '';
-        const page = Number(button.dataset.page || 0);
-        if (!/^[a-f0-9]{64}$/i.test(token)) return;
-        const suffix = page > 0 ? `#page=${encodeURIComponent(String(page))}` : '';
-        window.open(`/api/records/open/${encodeURIComponent(token)}?page=${encodeURIComponent(String(page || 0))}${suffix}`, '_blank', 'noopener,noreferrer');
+      container.querySelectorAll('[data-inspect-record]').forEach((button) => button.addEventListener('click', () => {
+        openRecordInspector({source_token: button.dataset.inspectRecord}, 0, button);
+      }));
+      container.querySelectorAll('[data-draft-record]').forEach((button) => button.addEventListener('click', () => {
+        importRecordToWorkspace({source_token: button.dataset.draftRecord, basename: button.dataset.recordTitle || ''}, button.dataset.recordTitle || 'Imported record draft');
+      }));
+      container.querySelectorAll('[data-open-record]').forEach((button) => button.addEventListener('click', () => {
+        openRecordOriginal({source_token: button.dataset.openRecord}, 0);
+      }));
+      container.querySelectorAll('[data-inspect-selected-page]').forEach((button) => button.addEventListener('click', () => {
+        const token = button.dataset.inspectSelectedPage || '';
+        const select = container.querySelector(`[data-record-page-select="${CSS.escape(token)}"]`);
+        openRecordInspector({source_token: token}, Number(select?.value || 0), button);
       }));
     }
 
@@ -543,10 +913,19 @@
       return raw.split('/').pop() || 'Source';
     }
 
-    function recordOpenBinding(item) {
+    function recordOpenBindingForPayload(item, payload = lastPayload) {
       const meta = item?.metadata || item || {};
-      if (String(meta.source_lane || '') !== 'private_record') return null;
-      const groups = Array.isArray(lastPayload?.record_groups) ? lastPayload.record_groups : [];
+      if (String(meta.source_lane || '') !== 'private_record' && !meta.record_open_token && !item?.source_token) return null;
+      const directToken = String(meta.record_open_token || item?.source_token || '');
+      if (/^[a-f0-9]{64}$/i.test(directToken)) {
+        return {
+          source_token: directToken,
+          source_id: String(meta.parent_evidence_id || item?.source_id || ''),
+          basename: String(meta.record_open_basename || sourceBasename(item)),
+          pages: Number(meta.record_open_page || meta.page_number || 0) ? [Number(meta.record_open_page || meta.page_number)] : [],
+        };
+      }
+      const groups = Array.isArray(payload?.record_groups) ? payload.record_groups : [];
       const sourceId = sourceIdentity(item);
       const parentId = String(meta.parent_evidence_id || sourceId || '');
       const basename = sourceBasename(item).toLowerCase();
@@ -557,16 +936,181 @@
       }) || null;
     }
 
-    function openRecordBinding(binding, page = 0) {
-      const token = String(binding?.source_token || '');
+    function recordOpenBinding(item) {
+      return recordOpenBindingForPayload(item, lastPayload);
+    }
+
+    function recordToken(binding) {
+      const token = String(binding?.source_token || binding?.record_open_token || '');
+      return /^[a-f0-9]{64}$/i.test(token) ? token : '';
+    }
+
+    function openRecordOriginal(binding, page = 0, {download = false} = {}) {
+      const token = recordToken(binding);
       const safePage = Math.max(0, Number(page || 0));
-      if (!/^[a-f0-9]{64}$/i.test(token)) {
+      if (!token) {
         showToast('The secure local open token is not available for this card.');
         return false;
       }
-      const suffix = safePage > 0 ? `#page=${encodeURIComponent(String(safePage))}` : '';
-      window.open(`/api/records/open/${encodeURIComponent(token)}?page=${encodeURIComponent(String(safePage))}${suffix}`, '_blank', 'noopener,noreferrer');
+      const query = new URLSearchParams({page: String(safePage)});
+      if (download) query.set('download', 'true');
+      const suffix = safePage > 0 && !download ? `#page=${encodeURIComponent(String(safePage))}` : '';
+      window.open(`/api/records/open/${encodeURIComponent(token)}?${query.toString()}${suffix}`, '_blank', 'noopener,noreferrer');
       return true;
+    }
+
+    function formatBytes(value) {
+      const bytes = Math.max(0, Number(value || 0));
+      if (bytes < 1024) return `${bytes.toLocaleString()} B`;
+      const units = ['KB', 'MB', 'GB'];
+      let amount = bytes / 1024;
+      let index = 0;
+      while (amount >= 1024 && index < units.length - 1) { amount /= 1024; index += 1; }
+      return `${amount.toFixed(amount >= 10 ? 1 : 2)} ${units[index]}`;
+    }
+
+    function recordInspectorMetaMarkup(payload) {
+      const rows = [
+        ['File', payload.filename || 'Record'],
+        ['Type', String(payload.source_type || payload.extension || 'record').replaceAll('_', ' ')],
+        ['Size', formatBytes(payload.size_bytes)],
+        ['Safe locator', payload.safe_locator || payload.filename || 'Record'],
+        ['Parser', String(payload.parser_status || 'unknown').replaceAll('_', ' ')],
+        ['Text', String(payload.text_status || 'unknown').replaceAll('_', ' ')],
+        ['OCR', String(payload.ocr_status || 'unknown').replaceAll('_', ' ')],
+        ['Hash check', payload.source_hash_verified ? 'Verified against the indexed source' : 'Not verified'],
+      ];
+      if (Number(payload.page_count || 0)) rows.splice(3, 0, ['Pages', String(payload.page_count)]);
+      return `<h3>Safe source details</h3><dl class="record-inspector-meta">${rows.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl><div class="record-inspector-note">This preview is generated locally from the active matter. It does not expose the filesystem path, and record text cannot change application policy.</div>`;
+    }
+
+    function emailViewerMarkup(preview) {
+      const headers = preview?.headers || {};
+      const headerRows = Object.entries(headers).map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`).join('');
+      const attachments = Array.isArray(preview?.attachments) ? preview.attachments : [];
+      const attachmentMarkup = attachments.length ? `<section><h3>Attachments (${escapeHtml(preview.attachment_count || attachments.length)})</h3><div class="record-attachment-list">${attachments.map((item) => `<article class="record-attachment-card"><div><strong>${escapeHtml(item.filename || 'Attachment')}</strong><small>${escapeHtml(item.content_type || item.viewer_kind || 'file')} · ${escapeHtml(formatBytes(item.size_bytes))}</small></div><div class="row"><button class="primary-action compact-action" data-inspect-nested-record="${escapeHtml(item.source_token || '')}" type="button">Inspect</button><button class="secondary compact-action" data-open-nested-record="${escapeHtml(item.source_token || '')}" type="button">Open original</button></div></article>`).join('')}</div></section>` : '';
+      return `<div class="record-email-view"><article class="record-email-sheet"><dl class="record-email-headers">${headerRows || '<dt>Email</dt><dd>No standard headers were returned.</dd>'}</dl><pre class="record-email-body">${escapeHtml(preview?.body || 'No readable message body was returned.')}</pre>${preview?.body_truncated ? '<p class="record-inspector-note">The body preview was shortened. Open the original for the complete message.</p>' : ''}${attachmentMarkup}</article></div>`;
+    }
+
+    function archiveViewerMarkup(preview) {
+      const members = Array.isArray(preview?.members) ? preview.members : [];
+      if (!members.length) return '<div class="record-inspector-empty">No safe archive members were available to preview.</div>';
+      return `<div class="record-member-list">${members.map((item) => `<article class="record-member-card"><div><strong>${escapeHtml(item.filename || 'Archive member')}</strong><small>${escapeHtml(item.member_locator || '')} · ${escapeHtml(formatBytes(item.size_bytes))}</small></div><div class="row"><button class="primary-action compact-action" data-inspect-nested-record="${escapeHtml(item.source_token || '')}" type="button">Inspect</button><button class="secondary compact-action" data-open-nested-record="${escapeHtml(item.source_token || '')}" type="button">Open original</button></div></article>`).join('')}</div>`;
+    }
+
+    function tableViewerMarkup(preview) {
+      const rows = Array.isArray(preview?.rows) ? preview.rows : [];
+      if (!rows.length) return '<div class="record-inspector-empty">No tabular rows were available.</div>';
+      return `<div class="record-inspector-table-wrap"><table class="record-inspector-table"><tbody>${rows.map((row) => `<tr>${(Array.isArray(row) ? row : []).map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>${preview.rows_truncated ? '<p class="record-inspector-note">The table preview was shortened.</p>' : ''}</div>`;
+    }
+
+    function renderRecordInspector(payload) {
+      recordInspectorState = payload;
+      recordInspectorZoom = 1;
+      const kind = String(payload?.viewer_kind || 'binary');
+      const page = Math.max(1, Number(payload?.page || 1));
+      const pageCount = Math.max(0, Number(payload?.page_count || 0));
+      recordInspectorTitle.textContent = payload?.filename || 'Document inspector';
+      recordInspectorSubtitle.textContent = `${String(payload?.extension || payload?.mime_type || 'record').replace('.', '').toUpperCase()} · ${formatBytes(payload?.size_bytes)} · verified local source`;
+      recordInspectorBadges.innerHTML = `<span class="badge good">Hash verified</span><span class="badge">${escapeHtml(kind.replaceAll('_', ' '))}</span><span class="badge warn">Private record</span>`;
+      recordInspectorDetails.innerHTML = recordInspectorMetaMarkup(payload);
+      recordInspectorPageControls.hidden = kind !== 'pdf' || !pageCount;
+      recordInspectorZoomControls.hidden = kind !== 'image';
+      if (!recordInspectorPageControls.hidden) {
+        recordInspectorPageInput.value = String(Math.min(pageCount, page));
+        recordInspectorPageInput.max = String(pageCount);
+        recordInspectorPageCount.textContent = `of ${pageCount.toLocaleString()}`;
+        recordInspectorPrevPage.disabled = page <= 1;
+        recordInspectorNextPage.disabled = page >= pageCount;
+      }
+      const openUrl = String(payload?.open_url || '');
+      const preview = payload?.preview || {};
+      if (kind === 'pdf') {
+        const initialPage = Math.max(1, Number(payload.page || 1));
+        recordInspectorViewer.innerHTML = `<iframe class="record-inspector-frame" title="PDF preview of ${escapeHtml(payload.filename || 'record')}" src="${escapeHtml(openUrl)}#page=${encodeURIComponent(String(initialPage))}&zoom=page-width"></iframe>`;
+        if (preview.page_text) recordInspectorDetails.insertAdjacentHTML('beforeend', `<h3>Indexed text for page ${escapeHtml(initialPage)}</h3><pre class="record-text-preview">${escapeHtml(preview.page_text)}</pre>`);
+      } else if (kind === 'image') {
+        recordInspectorViewer.innerHTML = `<div class="record-image-stage"><img alt="Preview of ${escapeHtml(payload.filename || 'image record')}" id="record-inspector-image" src="${escapeHtml(openUrl)}"/></div>`;
+        if (preview.ocr_text) recordInspectorDetails.insertAdjacentHTML('beforeend', `<h3>Local OCR text</h3><pre class="record-text-preview">${escapeHtml(preview.ocr_text)}</pre>`);
+      } else if (kind === 'email') {
+        recordInspectorViewer.innerHTML = emailViewerMarkup(preview);
+      } else if (kind === 'archive') {
+        recordInspectorViewer.innerHTML = archiveViewerMarkup(preview);
+      } else if (kind === 'table') {
+        recordInspectorViewer.innerHTML = tableViewerMarkup(preview);
+      } else if (kind === 'text' || kind === 'office_text') {
+        recordInspectorViewer.innerHTML = `<pre class="record-text-preview">${escapeHtml(preview.text || 'No readable text was returned.')}</pre>${preview.text_truncated ? '<p class="record-inspector-note">The text preview was shortened. Open the verified original for the complete file.</p>' : ''}`;
+      } else if (kind === 'audio') {
+        recordInspectorViewer.innerHTML = `<div class="record-media-view"><audio controls preload="metadata" src="${escapeHtml(openUrl)}"></audio></div>`;
+      } else if (kind === 'video') {
+        recordInspectorViewer.innerHTML = `<div class="record-media-view"><video controls preload="metadata" src="${escapeHtml(openUrl)}"></video></div>`;
+      } else {
+        recordInspectorViewer.innerHTML = `<div class="record-inspector-empty"><div><strong>No safe embedded viewer is available for this format.</strong><p>${escapeHtml(preview.message || 'Use Open original or Download verified copy.')}</p></div></div>`;
+      }
+      recordInspectorViewer.querySelectorAll('[data-inspect-nested-record]').forEach((button) => button.addEventListener('click', () => openRecordInspector({source_token: button.dataset.inspectNestedRecord}, 0, button)));
+      recordInspectorViewer.querySelectorAll('[data-open-nested-record]').forEach((button) => button.addEventListener('click', () => openRecordOriginal({source_token: button.dataset.openNestedRecord}, 0)));
+    }
+
+    async function openRecordInspector(binding, page = 0, owner = null) {
+      const token = recordToken(binding);
+      const safePage = Math.max(0, Number(page || 0));
+      if (!token) {
+        showToast('This source does not have a current secure inspection token.');
+        return false;
+      }
+      closeSourcePreview({force: true});
+      recordInspectorOwner = owner || document.activeElement;
+      recordInspector.hidden = false;
+      recordInspectorBackdrop.hidden = false;
+      recordInspector.setAttribute('aria-hidden', 'false');
+      recordInspectorBackdrop.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('record-inspector-open');
+      recordInspectorTitle.textContent = 'Document inspector';
+      recordInspectorSubtitle.textContent = 'Loading verified local source…';
+      recordInspectorViewer.innerHTML = '<div class="record-inspector-loading">Loading verified local source…</div>';
+      recordInspectorDetails.innerHTML = '<div class="record-inspector-loading">Checking source hash and preparing a safe preview…</div>';
+      recordInspectorPageControls.hidden = true;
+      recordInspectorZoomControls.hidden = true;
+      try {
+        const payload = await fetchJson(`/api/records/inspect/${encodeURIComponent(token)}?page=${encodeURIComponent(String(safePage))}`);
+        renderRecordInspector(payload);
+        recordInspectorClose?.focus();
+        return true;
+      } catch (err) {
+        recordInspectorViewer.innerHTML = `<div class="record-inspector-empty"><div><strong>The verified source could not be inspected.</strong><p>${escapeHtml(err.message)}</p></div></div>`;
+        recordInspectorDetails.innerHTML = '<div class="record-inspector-note">The app failed closed. No filesystem path or unverified file was opened.</div>';
+        return false;
+      }
+    }
+
+    function closeRecordInspector() {
+      if (!recordInspector || recordInspector.hidden) return;
+      recordInspector.hidden = true;
+      recordInspectorBackdrop.hidden = true;
+      recordInspector.setAttribute('aria-hidden', 'true');
+      recordInspectorBackdrop.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('record-inspector-open');
+      const owner = recordInspectorOwner;
+      recordInspectorOwner = null;
+      recordInspectorState = null;
+      if (owner && typeof owner.focus === 'function') owner.focus();
+    }
+
+    function changeInspectorPage(delta = 0, explicitPage = null) {
+      if (!recordInspectorState || recordInspectorState.viewer_kind !== 'pdf') return;
+      const total = Math.max(1, Number(recordInspectorState.page_count || 1));
+      const current = Math.max(1, Number(recordInspectorState.page || 1));
+      const target = Math.min(total, Math.max(1, explicitPage == null ? current + delta : Number(explicitPage || current)));
+      openRecordInspector({source_token: recordInspectorState.token}, target, recordInspectorOwner);
+    }
+
+    function changeInspectorZoom(delta = 0, fit = false) {
+      const image = document.getElementById('record-inspector-image');
+      if (!image) return;
+      recordInspectorZoom = fit ? 1 : Math.min(4, Math.max(.25, recordInspectorZoom + delta));
+      image.style.transform = `scale(${recordInspectorZoom})`;
+      image.style.maxWidth = fit ? '100%' : 'none';
+      image.style.maxHeight = fit ? '100%' : 'none';
     }
 
     function sourcePreviewMarkup(item, payload = null) {
@@ -584,6 +1128,7 @@
         ['Source type', sourceType.replaceAll('_', ' ')],
         ['Version', meta.version_label || 'verify current source'],
         ['Effective', meta.effective_date || 'verify'],
+        ['Freshness status', meta.freshness_status || meta.currentness_status || 'verify current source'],
         ['Source ID', sourceIdentity(item) || 'source'],
         ['Locator', meta.source_locator_basename || sourceBasename(item)],
         ['Page', pageNumber || 'not specified'],
@@ -597,16 +1142,19 @@
         <h3>${escapeHtml(title)}</h3>
         <dl class="source-preview-grid">${fields.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>
         <section class="source-preview-snippet"><strong>${snippet ? 'Matched passage' : 'Preview'}</strong><p>${escapeHtml(snippet || 'No preview text was returned for this card.')}</p></section>
+        ${meta.ocr_derived || String(meta.ocr_status || '').toLowerCase().includes('ocr') ? '<p class="status-warn"><strong>OCR note:</strong> local OCR-derived; verify against page image.</p>' : ''}
         ${meta.instruction_like_text_detected ? '<p class="status-warn"><strong>Warning:</strong> instruction-like text is treated only as record content and cannot change app policy.</p>' : ''}
         ${details}`;
     }
 
     function positionSourcePreview(owner) {
       if (!sourcePreviewFlyout || sourcePreviewFlyout.hidden) return;
+      if (sourcePreviewPinned) {
+        ['width', 'left', 'top', 'right', 'bottom'].forEach((name) => sourcePreviewFlyout.style.removeProperty(name));
+        return;
+      }
       if (window.innerWidth < 960 || !owner) {
-        sourcePreviewFlyout.style.removeProperty('left');
-        sourcePreviewFlyout.style.removeProperty('top');
-        sourcePreviewFlyout.style.removeProperty('right');
+        ['width', 'left', 'top', 'right', 'bottom'].forEach((name) => sourcePreviewFlyout.style.removeProperty(name));
         return;
       }
       const rect = owner.getBoundingClientRect();
@@ -637,6 +1185,9 @@
       sourcePreviewFlyout.hidden = true;
       sourcePreviewFlyout.setAttribute('aria-hidden', 'true');
       sourcePreviewFlyout.classList.remove('is-pinned');
+      sourcePreviewFlyout.setAttribute('aria-modal', 'false');
+      document.body.classList.remove('source-preview-open');
+      ['width', 'left', 'top', 'right', 'bottom'].forEach((name) => sourcePreviewFlyout.style.removeProperty(name));
       if (sourcePreviewBackdrop) sourcePreviewBackdrop.hidden = true;
       if (returnFocus && owner && typeof owner.focus === 'function') owner.focus();
     }
@@ -650,19 +1201,22 @@
       const lane = String(meta.source_lane || 'legal_authority');
       const binding = recordOpenBinding(item);
       const pageNumber = Number(meta.page_number || item?.page_number || 0);
-      const url = String(meta.url || '');
+      const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
       sourcePreviewOwner = owner || sourcePreviewOwner;
       sourcePreviewPinned = Boolean(pin);
       sourcePreviewTitle.textContent = title;
       sourcePreviewBody.innerHTML = sourcePreviewMarkup(item, payload);
-      sourcePreviewActions.innerHTML = `${lane === 'private_record' && binding ? `<button class="primary-action" data-preview-open-record type="button">Open original</button>${pageNumber > 0 ? '<button class="secondary" data-preview-open-page type="button">Open matching page</button>' : ''}` : ''}${lane !== 'private_record' && url ? `<a class="primary-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : ''}<button class="secondary" data-preview-copy type="button">Copy source card</button>`;
+      sourcePreviewActions.innerHTML = `${lane === 'private_record' && binding ? `<button class="primary-action" data-preview-inspect-record type="button">Inspect document</button><button class="secondary" data-preview-open-record type="button">Open original</button>${pageNumber > 0 ? '<button class="secondary" data-preview-inspect-page type="button">Inspect matching page</button>' : ''}` : ''}${lane !== 'private_record' && url ? `<a class="primary-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : ''}<button class="secondary" data-preview-copy type="button">Copy source card</button>`;
       sourcePreviewFlyout.hidden = false;
       sourcePreviewFlyout.setAttribute('aria-hidden', 'false');
       sourcePreviewFlyout.classList.toggle('is-pinned', sourcePreviewPinned);
+      sourcePreviewFlyout.setAttribute('aria-modal', sourcePreviewPinned ? 'true' : 'false');
+      document.body.classList.toggle('source-preview-open', sourcePreviewPinned);
       if (sourcePreviewBackdrop) sourcePreviewBackdrop.hidden = !sourcePreviewPinned;
       positionSourcePreview(sourcePreviewOwner);
-      sourcePreviewActions.querySelector('[data-preview-open-record]')?.addEventListener('click', () => openRecordBinding(binding, 0));
-      sourcePreviewActions.querySelector('[data-preview-open-page]')?.addEventListener('click', () => openRecordBinding(binding, pageNumber));
+      sourcePreviewActions.querySelector('[data-preview-inspect-record]')?.addEventListener('click', () => openRecordInspector(binding, 0, sourcePreviewOwner));
+      sourcePreviewActions.querySelector('[data-preview-open-record]')?.addEventListener('click', () => openRecordOriginal(binding, 0));
+      sourcePreviewActions.querySelector('[data-preview-inspect-page]')?.addEventListener('click', () => openRecordInspector(binding, pageNumber, sourcePreviewOwner));
       sourcePreviewActions.querySelector('[data-preview-copy]')?.addEventListener('click', async (event) => {
         const safe = lastHandoffSources.find((row) => sourceIdentity(row) === sourceIdentity(item)) || item;
         await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
@@ -705,7 +1259,7 @@
         const citation = item.citation || meta.citation_hint || '';
         const sourceId = sourceIdentity(item);
         const pageNumber = Number(meta.page_number || item.page_number || 0);
-        const url = meta.url || '';
+        const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
         const binding = recordOpenBinding(item);
         const previewId = `source-preview-${index}`;
         const badges = [
@@ -714,14 +1268,14 @@
           meta.official === false ? '<span class="badge warn">unofficial</span>' : '',
         ].join('');
         const openAction = lane === 'private_record' && binding
-          ? `<button class="primary-action compact-action" data-open-source-record="${escapeHtml(sourceId)}" type="button">Open original</button>${pageNumber > 0 ? `<button class="secondary compact-action" data-open-source-page="${escapeHtml(sourceId)}" data-page="${escapeHtml(pageNumber)}" type="button">Open at page ${escapeHtml(pageNumber)}</button>` : ''}`
+          ? `<button class="primary-action compact-action" data-inspect-source-record="${escapeHtml(sourceId)}" type="button">Inspect</button><button class="secondary compact-action" data-open-source-record="${escapeHtml(sourceId)}" type="button">Open original</button>${pageNumber > 0 ? `<button class="secondary compact-action" data-inspect-source-page="${escapeHtml(sourceId)}" data-page="${escapeHtml(pageNumber)}" type="button">Inspect page ${escapeHtml(pageNumber)}</button>` : ''}`
           : (url ? `<a class="primary-action compact-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : '');
         return `<article aria-controls="source-preview-flyout" class="source-card source-preview-anchor" data-source-card="visible" data-source-id="${escapeHtml(sourceId)}" data-preview-id="${previewId}" tabindex="0">
           <div class="source-card-badges">${badges}</div>
           <strong>${escapeHtml(title)}</strong>
-          <div class="source-card-compact-meta">${citation ? `<span>${escapeHtml(citation)}</span>` : ''}${pageNumber ? `<span>Page ${escapeHtml(pageNumber)}</span>` : ''}<span>${escapeHtml(sourceBasename(item))}</span></div>
+          <div class="source-card-compact-meta">${citation ? `<span>${escapeHtml(citation)}</span>` : ''}${pageNumber ? `<span>Page ${escapeHtml(pageNumber)}</span>` : ''}<span>Locator: ${escapeHtml(sourceBasename(item))}</span></div>
           <div class="source-snippet"><span class="label">${snippet ? 'Matched passage' : 'Preview'}</span><span>${escapeHtml(snippet || 'Open the preview for complete local source details.')}</span></div>
-          <div class="source-card-actions">${openAction}<button class="secondary compact-action" data-inspect-source="${escapeHtml(sourceId)}" type="button">Preview details</button><button class="secondary compact-action" data-copy-source="${escapeHtml(sourceId)}" type="button">Copy card</button></div>
+          <div class="source-card-actions">${openAction}<button class="secondary compact-action" data-inspect-source="${escapeHtml(sourceId)}" type="button">Quick preview</button><button class="secondary compact-action" data-copy-source="${escapeHtml(sourceId)}" type="button">Copy card</button></div>
         </article>`;
       }).join('');
       sourceCards.querySelectorAll('.source-preview-anchor').forEach((card, index) => {
@@ -748,12 +1302,17 @@
       sourceCards.querySelectorAll('[data-inspect-source]').forEach((button) => {
         button.addEventListener('click', () => inspectSource(button.dataset.inspectSource, {pin: true, owner: button.closest('.source-card')}));
       });
-      sourceCards.querySelectorAll('[data-open-source-record], [data-open-source-page]').forEach((button) => {
+      sourceCards.querySelectorAll('[data-inspect-source-record], [data-inspect-source-page]').forEach((button) => {
         button.addEventListener('click', () => {
-          const sourceId = button.dataset.openSourceRecord || button.dataset.openSourcePage || '';
+          const sourceId = button.dataset.inspectSourceRecord || button.dataset.inspectSourcePage || '';
           const item = lastSources.find((row) => sourceIdentity(row) === sourceId);
-          const binding = recordOpenBinding(item);
-          openRecordBinding(binding, Number(button.dataset.page || 0));
+          openRecordInspector(recordOpenBinding(item), Number(button.dataset.page || 0), button);
+        });
+      });
+      sourceCards.querySelectorAll('[data-open-source-record]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const item = lastSources.find((row) => sourceIdentity(row) === button.dataset.openSourceRecord);
+          openRecordOriginal(recordOpenBinding(item), 0);
         });
       });
     }
@@ -761,6 +1320,11 @@
     async function inspectSource(sourceId, {pin = true, owner = null} = {}) {
       if (!sourceId) return;
       const local = lastSources.find((item) => sourceIdentity(item) === sourceId) || {};
+      const binding = recordOpenBinding(local);
+      if (binding) {
+        await openRecordInspector(binding, Number(local?.metadata?.page_number || local?.page_number || 0), owner);
+        return;
+      }
       showSourcePreview(local, owner, {pin});
       try {
         const payload = await fetchJson(`/inspect-source/${encodeURIComponent(sourceId)}`);
@@ -774,6 +1338,30 @@
       }
     }
 
+    recordInspectorClose?.addEventListener('click', closeRecordInspector);
+    recordInspectorBackdrop?.addEventListener('click', closeRecordInspector);
+    recordInspectorOpenOriginal?.addEventListener('click', () => {
+      if (recordInspectorState) openRecordOriginal({source_token: recordInspectorState.token}, Number(recordInspectorState.page || 0));
+    });
+    recordInspectorDownload?.addEventListener('click', () => {
+      if (recordInspectorState) openRecordOriginal({source_token: recordInspectorState.token}, Number(recordInspectorState.page || 0), {download: true});
+    });
+    recordInspectorCopyDetails?.addEventListener('click', async () => {
+      if (!recordInspectorState) return;
+      const safe = {...recordInspectorState};
+      delete safe.token;
+      delete safe.open_url;
+      delete safe.download_url;
+      await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
+      showToast('Safe source details copied.');
+    });
+    recordInspectorPrevPage?.addEventListener('click', () => changeInspectorPage(-1));
+    recordInspectorNextPage?.addEventListener('click', () => changeInspectorPage(1));
+    recordInspectorPageInput?.addEventListener('change', () => changeInspectorPage(0, recordInspectorPageInput.value));
+    recordInspectorZoomIn?.addEventListener('click', () => changeInspectorZoom(.25));
+    recordInspectorZoomOut?.addEventListener('click', () => changeInspectorZoom(-.25));
+    recordInspectorZoomFit?.addEventListener('click', () => changeInspectorZoom(0, true));
+
     sourcePreviewFlyout?.addEventListener('pointerenter', () => window.clearTimeout(sourcePreviewHideTimer));
     sourcePreviewFlyout?.addEventListener('pointerleave', scheduleSourcePreviewClose);
     sourcePreviewClose?.addEventListener('click', () => closeSourcePreview({force: true, returnFocus: true}));
@@ -781,6 +1369,43 @@
     window.addEventListener('resize', () => positionSourcePreview(sourcePreviewOwner));
     document.addEventListener('scroll', () => positionSourcePreview(sourcePreviewOwner), true);
     document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && documentWorkspace && !documentWorkspace.hidden) {
+        event.preventDefault();
+        closeDocumentWorkspace();
+        return;
+      }
+      if (event.key === 'Tab' && documentWorkspace && !documentWorkspace.hidden) {
+        const focusable = overlayFocusableElements(documentWorkspace);
+        if (focusable.length) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      }
+      if (event.key === 'Escape' && recordInspector && !recordInspector.hidden) {
+        event.preventDefault();
+        closeRecordInspector();
+        return;
+      }
+      if (event.key === 'Tab' && recordInspector && !recordInspector.hidden) {
+        const focusable = overlayFocusableElements(recordInspector);
+        if (focusable.length) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      }
+      if (event.key === 'Tab' && sourcePreviewPinned && sourcePreviewFlyout && !sourcePreviewFlyout.hidden) {
+        const focusable = overlayFocusableElements(sourcePreviewFlyout);
+        if (focusable.length) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      }
       if (event.key === 'Escape' && sourcePreviewFlyout && !sourcePreviewFlyout.hidden) {
         event.preventDefault();
         closeSourcePreview({force: true, returnFocus: true});
@@ -1141,14 +1766,158 @@
       }
     }
 
-    function renderChatSourceSummary(payload) {
-      if (!payload || typeof payload !== 'object') return '';
-      const sources = Array.isArray(payload.citations) ? payload.citations : [];
-      const legalCount = sources.filter((item) => String(item?.metadata?.source_lane || 'legal_authority') !== 'private_record').length;
-      const recordCount = sources.filter((item) => String(item?.metadata?.source_lane || '') === 'private_record').length;
-      const externalCount = Number(payload.external_source_count || 0);
-      if (!legalCount && !recordCount && !externalCount) return '';
-      return `<div class="chat-source-summary"><div><strong>Sources</strong><button class="inline-source-link" data-chat-open-evidence="all" type="button">View all sources</button></div><div class="chat-source-lanes"><button data-chat-open-evidence="law" type="button"><span aria-hidden="true">⚖</span> Maine law <strong>${legalCount}</strong></button><button data-chat-open-evidence="records" type="button"><span aria-hidden="true">▰</span> My records <strong>${recordCount}</strong></button><button data-chat-open-evidence="external" type="button"><span aria-hidden="true">◎</span> External <strong>${externalCount}</strong></button></div></div>`;
+    function sourceLane(item) {
+      const meta = item?.metadata || item || {};
+      return String(meta.source_lane || 'legal_authority') === 'private_record' ? 'records' : 'law';
+    }
+
+    function sourceItemsFromPayload(payload) {
+      return Array.isArray(payload?.citations) ? payload.citations.filter(Boolean) : [];
+    }
+
+    function renderInlineSourceCard(item, index, payload, hidden = false) {
+      const meta = item?.metadata || item || {};
+      const lane = sourceLane(item);
+      const title = item?.title || meta.title || meta.id || 'Source';
+      const sourceType = String(meta.source_type || meta.source_class || 'source').replaceAll('_', ' ');
+      const citation = item?.citation || meta.citation_hint || '';
+      const snippet = item?.snippet || item?.text_excerpt || meta.text_excerpt || meta.description || '';
+      const pageNumber = Number(meta.page_number || item?.page_number || 0);
+      const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
+      const binding = recordOpenBindingForPayload(item, payload);
+      const badges = `<span class="badge ${lane === 'records' ? 'warn' : 'good'}">${lane === 'records' ? 'My record' : 'Maine law'}</span><span class="badge">${escapeHtml(sourceType)}</span>`;
+      const primaryAction = lane === 'records' && binding
+        ? `<button class="primary-action compact-action" data-inline-inspect-record="${index}" type="button">Inspect</button><button class="secondary compact-action" data-inline-draft-record="${index}" type="button">Draft from record</button><button class="secondary compact-action" data-inline-open-record="${index}" type="button">Open original</button>${pageNumber > 0 ? `<button class="secondary compact-action" data-inline-inspect-page="${index}" data-page="${escapeHtml(pageNumber)}" type="button">Open at page ${escapeHtml(pageNumber)}</button>` : ''}`
+        : (url ? `<a class="primary-action compact-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : '');
+      return `<article class="chat-evidence-card source-preview-anchor" data-inline-source-index="${index}" data-inline-source-lane="${lane}"${hidden ? ' hidden' : ''} tabindex="0">
+        <div class="source-card-badges">${badges}</div>
+        <button class="chat-evidence-title" data-inline-preview-source="${index}" type="button">${escapeHtml(title)}</button>
+        <div class="source-card-compact-meta">${citation ? `<span>${escapeHtml(citation)}</span>` : ''}${pageNumber ? `<span>Page ${escapeHtml(pageNumber)}</span>` : ''}<span>${escapeHtml(sourceBasename(item))}</span></div>
+        <div class="chat-evidence-snippet">${escapeHtml(snippet || 'Open the source preview for the complete local details.')}</div>
+        <div class="source-card-actions">${primaryAction}<button class="secondary compact-action" data-inline-preview-source="${index}" type="button">Preview</button><button class="secondary compact-action" data-inline-copy-source="${index}" type="button">Copy</button></div>
+      </article>`;
+    }
+
+    function renderInlineEvidence(payload) {
+      const items = sourceItemsFromPayload(payload);
+      if (!items.length) return '';
+      const lawCount = items.filter((item) => sourceLane(item) === 'law').length;
+      const recordCount = items.filter((item) => sourceLane(item) === 'records').length;
+      const initialLimit = 4;
+      return `<section class="chat-evidence-panel" data-inline-evidence-panel aria-label="Evidence used in this answer" tabindex="-1">
+        <header class="chat-evidence-header"><div><span>Evidence used in this answer</span><strong>Open the proof here—no side-panel hunt required.</strong></div><button class="secondary compact-action" data-inline-open-workspace type="button">Evidence workspace</button></header>
+        <div class="chat-evidence-filters" role="group" aria-label="Filter answer evidence"><button class="is-selected" data-inline-evidence-filter="all" aria-pressed="true" type="button">All <strong>${items.length}</strong></button><button data-inline-evidence-filter="law" aria-pressed="false" type="button">Maine law <strong>${lawCount}</strong></button><button data-inline-evidence-filter="records" aria-pressed="false" type="button">My records <strong>${recordCount}</strong></button></div>
+        <div class="chat-evidence-grid">${items.map((item, index) => renderInlineSourceCard(item, index, payload, index >= initialLimit)).join('')}</div>
+        ${items.length > initialLimit ? `<button class="chat-evidence-more" data-inline-evidence-more type="button">Show ${items.length - initialLimit} more source${items.length - initialLimit === 1 ? '' : 's'}</button>` : ''}
+      </section>`;
+    }
+
+    function applyInlineEvidenceView(panel) {
+      if (!panel) return;
+      const filter = panel.dataset.inlineEvidenceFilter || 'all';
+      const expanded = panel.dataset.inlineEvidenceExpanded === 'true';
+      const cards = Array.from(panel.querySelectorAll('[data-inline-source-index]'));
+      let visibleMatches = 0;
+      cards.forEach((card) => {
+        const laneMatches = filter === 'all' || card.dataset.inlineSourceLane === filter;
+        const shouldShow = laneMatches && (expanded || filter !== 'all' || visibleMatches < 4);
+        card.hidden = !shouldShow;
+        if (laneMatches) visibleMatches += 1;
+      });
+      const more = panel.querySelector('[data-inline-evidence-more]');
+      if (more) {
+        const hiddenMatches = cards.filter((card) => (filter === 'all' || card.dataset.inlineSourceLane === filter) && card.hidden).length;
+        more.hidden = hiddenMatches === 0 && !expanded;
+        more.textContent = expanded ? 'Show fewer sources' : `Show ${hiddenMatches} more source${hiddenMatches === 1 ? '' : 's'}`;
+      }
+    }
+
+    function bindInlineEvidenceActions(container, payload) {
+      const items = sourceItemsFromPayload(payload);
+      container.querySelectorAll('[data-inline-evidence-panel]').forEach((panel) => {
+        panel.dataset.inlineEvidenceFilter = 'all';
+        panel.dataset.inlineEvidenceExpanded = 'false';
+        panel.querySelectorAll('[data-inline-evidence-filter]').forEach((button) => button.addEventListener('click', () => {
+          panel.dataset.inlineEvidenceFilter = button.dataset.inlineEvidenceFilter || 'all';
+          panel.dataset.inlineEvidenceExpanded = 'false';
+          panel.querySelectorAll('[data-inline-evidence-filter]').forEach((row) => {
+            const selected = row === button;
+            row.classList.toggle('is-selected', selected);
+            row.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          });
+          applyInlineEvidenceView(panel);
+        }));
+        panel.querySelector('[data-inline-evidence-more]')?.addEventListener('click', () => {
+          panel.dataset.inlineEvidenceExpanded = panel.dataset.inlineEvidenceExpanded === 'true' ? 'false' : 'true';
+          applyInlineEvidenceView(panel);
+        });
+        panel.querySelector('[data-inline-open-workspace]')?.addEventListener('click', () => setDrawerOpen(true, 'evidence'));
+        applyInlineEvidenceView(panel);
+      });
+
+      const itemAt = (button) => items[Number(button.dataset.inlinePreviewSource ?? button.dataset.inlineInspectRecord ?? button.dataset.inlineDraftRecord ?? button.dataset.inlineOpenRecord ?? button.dataset.inlineInspectPage ?? button.dataset.inlineCopySource)];
+      container.querySelectorAll('[data-inline-preview-source]').forEach((button) => button.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        if (!item) return;
+        const card = button.closest('.chat-evidence-card') || button;
+        showSourcePreview(item, card, {pin: true});
+        const sourceId = sourceIdentity(item);
+        if (!sourceId) return;
+        try {
+          const details = await fetchJson(`/inspect-source/${encodeURIComponent(sourceId)}`);
+          if (sourcePreviewOwner === card && sourcePreviewPinned && !sourcePreviewFlyout.hidden) showSourcePreview(item, card, {pin: true, payload: details});
+        } catch (err) {
+          if (sourcePreviewOwner === card && sourcePreviewBody && !sourcePreviewFlyout.hidden) sourcePreviewBody.insertAdjacentHTML('beforeend', `<p class="status-warn">Full local metadata was not available: ${escapeHtml(err.message)}</p>`);
+        }
+      }));
+      container.querySelectorAll('[data-inline-inspect-record]').forEach((button) => button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        openRecordInspector(recordOpenBindingForPayload(item, payload), 0, button);
+      }));
+      container.querySelectorAll('[data-inline-draft-record]').forEach((button) => button.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        await importRecordToWorkspace(recordOpenBindingForPayload(item, payload), item?.title || sourceBasename(item));
+      }));
+      container.querySelectorAll('[data-inline-open-record]').forEach((button) => button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        openRecordOriginal(recordOpenBindingForPayload(item, payload), 0);
+      }));
+      container.querySelectorAll('[data-inline-inspect-page]').forEach((button) => button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        openRecordInspector(recordOpenBindingForPayload(item, payload), Number(button.dataset.page || 0), button);
+      }));
+      container.querySelectorAll('[data-inline-copy-source]').forEach((button) => button.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const item = itemAt(button) || {};
+        const handoff = Array.isArray(payload?.handoff_safe_source_cards) ? payload.handoff_safe_source_cards : [];
+        const safe = handoff.find((row) => sourceIdentity(row) === sourceIdentity(item)) || item;
+        await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
+        button.textContent = 'Copied';
+        showToast('Source card copied.');
+        window.setTimeout(() => { button.textContent = 'Copy'; }, 1100);
+      }));
+      container.querySelectorAll('.chat-evidence-card').forEach((card) => card.addEventListener('click', (event) => {
+        if (event.target.closest('button, a')) return;
+        const item = items[Number(card.dataset.inlineSourceIndex)];
+        if (item) showSourcePreview(item, card, {pin: true});
+      }));
+    }
+
+    function renderMainChatAnswer(text, payload) {
+      if (payload?.direct_record_search) {
+        return `${renderParagraphBlocks(text)}${renderRecordGroups(payload.record_groups)}`;
+      }
+      const structured = payload?.structured_answer || null;
+      if (!structured) return `${renderParagraphBlocks(text)}${renderInlineEvidence(payload)}`;
+      const primary = structured.what_this_means || text;
+      const immediate = Array.isArray(structured.what_to_do_right_now) ? structured.what_to_do_right_now.slice(0, 4) : [];
+      const next = Array.isArray(structured.next_three_steps) ? structured.next_three_steps.slice(0, 3) : [];
+      return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${renderInlineEvidence(payload)}${renderCriticalDates(structured.critical_dates || structured.intake?.critical_dates)}${renderStructuredSection('What to do right now', immediate)}${renderStructuredSection('Next steps', next)}</div>`;
     }
 
     function addMessage(role, text, payload = null) {
@@ -1156,16 +1925,28 @@
       messages.push({role, text, at});
       const speaker = role === 'user' ? 'You' : 'Maine Family Law LLM';
       const bubbleClass = role === 'user' ? 'user-bubble' : 'assistant-bubble';
-      const content = role === 'assistant'
-        ? `${renderParagraphBlocks(text)}${payload?.direct_record_search ? renderRecordGroups(payload.record_groups) : ''}${renderChatSourceSummary(payload)}`
-        : `<p>${escapeHtml(text)}</p>`;
+      const content = role === 'assistant' ? renderMainChatAnswer(text, payload) : `<p>${escapeHtml(text)}</p>`;
+      const evidenceCount = role === 'assistant' ? sourceItemsFromPayload(payload).length : 0;
+      const evidenceJump = evidenceCount ? `<button class="message-evidence-jump" data-message-evidence-jump type="button">Evidence ${evidenceCount}</button>` : '';
+      const draftAction = role === 'assistant' ? '<button class="message-draft-action" data-message-save-draft type="button">Save as draft</button>' : '';
       const wrapper = document.createElement('div');
       wrapper.className = `message ${role}`;
-      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div><div class="message-content">${content}</div></div>`;
+      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><div class="message-speaker-meta">${draftAction}${evidenceJump}<span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div></div><div class="message-content">${content}</div></div>`;
       transcript.appendChild(wrapper);
-      wrapper.querySelectorAll('[data-chat-open-evidence]').forEach((button) => button.addEventListener('click', () => setDrawerOpen(true, 'evidence')));
+      if (role === 'assistant' && payload) bindInlineEvidenceActions(wrapper, payload);
       if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
-      if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
+      wrapper.querySelector('[data-message-save-draft]')?.addEventListener('click', () => saveAnswerAsDraft(text, payload));
+      wrapper.querySelector('[data-message-evidence-jump]')?.addEventListener('click', () => {
+        const target = wrapper.querySelector('.chat-evidence-panel, .record-results');
+        target?.scrollIntoView({behavior: 'smooth', block: 'start'});
+        target?.focus({preventScroll: true});
+      });
+      if (chatScroll) {
+        window.requestAnimationFrame(() => {
+          if (role === 'assistant') wrapper.scrollIntoView({block: 'start'});
+          else chatScroll.scrollTop = chatScroll.scrollHeight;
+        });
+      }
     }
 
     function resetSession({preserveContext} = {preserveContext: false}) {
@@ -1524,8 +2305,23 @@
     drawerRefreshCorpus?.addEventListener('click', async () => { await loadCorpusLibrary(); showToast('Corpus status refreshed.'); });
     openAllStarters?.addEventListener('click', () => setDrawerOpen(true, 'starters'));
     quickNewCorpus?.addEventListener('click', () => { setDrawerOpen(true, 'setup'); showToast('Use the desktop launcher to create a new local case corpus.'); });
-    quickOpenWorkspace?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
+    quickOpenWorkspace?.addEventListener('click', () => openDocumentWorkspace());
     quickExportChat?.addEventListener('click', () => downloadButton?.click());
+    documentWorkspaceClose?.addEventListener('click', closeDocumentWorkspace);
+    documentWorkspaceBackdrop?.addEventListener('click', closeDocumentWorkspace);
+    documentWorkspaceRefresh?.addEventListener('click', () => loadDocumentWorkspaceDocuments(documentWorkspaceState.active?.document_id || ''));
+    documentWorkspaceNew?.addEventListener('click', () => newWorkspaceDraft());
+    documentWorkspaceSaveNew?.addEventListener('click', saveWorkspaceNewDraft);
+    documentWorkspacePropose?.addEventListener('click', proposeWorkspaceRevision);
+    documentWorkspaceCommit?.addEventListener('click', commitWorkspaceRevision);
+    documentWorkspaceReject?.addEventListener('click', rejectWorkspaceRevision);
+    documentWorkspaceExportTxt?.addEventListener('click', () => workspaceDownload(documentWorkspaceState.active?.document_id, 'txt'));
+    documentWorkspaceExportMd?.addEventListener('click', () => workspaceDownload(documentWorkspaceState.active?.document_id, 'md'));
+    documentWorkspaceExportDocx?.addEventListener('click', () => workspaceDownload(documentWorkspaceState.active?.document_id, 'docx'));
+    documentWorkspaceDelete?.addEventListener('click', softDeleteWorkspaceDocument);
+    documentWorkspaceRestore?.addEventListener('click', restoreWorkspaceDocument);
+    documentWorkspaceDocxLoad?.addEventListener('click', loadWorkspaceDocxParagraphs);
+    documentWorkspaceDocxApply?.addEventListener('click', applyWorkspaceTrackedDocxEdit);
 
     let drawerReturnFocus = null;
     let drawerUserPreference = null;

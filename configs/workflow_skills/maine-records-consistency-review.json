@@ -1,0 +1,17 @@
+{
+  "name": "maine-records-consistency-review",
+  "version": "1.0.0",
+  "title": "Cross-document hard-field consistency review",
+  "description": "Extract bounded hard fields such as dates, docket numbers, money amounts, phone numbers, email addresses, and named case references, then report conflicts with source locations without deciding legal significance.",
+  "module": "records_consistency",
+  "user_role": "matter_worker",
+  "phases": ["record_organization", "evidence_review"],
+  "categories": ["conflict_detection", "evidence_review"],
+  "permissions": ["read_files", "write_derived_files"],
+  "dependencies": [{"name": "maine-records-multi-label-classify", "optional": false}],
+  "output_contract": "cross_document_conflicts_v1",
+  "review_required": true,
+  "network_allowed": false,
+  "source_requirements": ["source_text_with_locations"],
+  "metadata": {"legal_conclusion": false, "exact_source_locations_required": true}
+}

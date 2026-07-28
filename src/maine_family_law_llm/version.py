@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-VERSION = "5.0.0"
-BUILD_NUMBER = 26
+VERSION = "5.2.0"
+BUILD_NUMBER = 29
 # Microsoft Store accepts a four-part MSIX version, but the revision component
 # must remain zero. Keep the product version in the first three components.
 PACKAGE_VERSION = f"{VERSION}.0"
-UI_TRACK = "premium-family-justice-workbench"
+UI_TRACK = "answer-first-evidence-security"
 UI_VERSION = f"{VERSION}-{UI_TRACK}-b{BUILD_NUMBER}"
-UI_PASS_MARKER = "v5.0.0-premium-family-justice-workbench"
-UI_FOOTER_LABEL = "v5.0.0"
+UI_PASS_MARKER = "v5.2.0-answer-first-evidence-security"
+UI_FOOTER_LABEL = "v5.2.0"
 
 APP_DISPLAY_NAME = "Maine Family Law LLM"
 APP_EXECUTABLE_NAME = "MaineFamilyLawLLM.exe"
