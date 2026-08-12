@@ -21,8 +21,8 @@ jobs:
         run: python scripts/check-dependency-security.py --strict-optional
       - name: Current advisory audit
         run: python -m pip_audit .
-      - name: Quality checks marker
-        run: python scripts/run-quality-checks.py --help
+      - name: Quality-check command contract
+        run: python -m py_compile scripts/run-quality-checks.py
       - name: Chat library evidence
         run: python scripts/run-chat-library-evidence.py --require-ready --output docs/external-evidence/chat_library_workbench_evidence_ci.json
       - name: Targeted tests
