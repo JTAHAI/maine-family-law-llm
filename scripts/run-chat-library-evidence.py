@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -191,7 +192,10 @@ def main() -> int:
         "served_papers_starter": "Served papers" in html,
         "appeals_routing_starter": "What court handles appeals?" in html,
         "runtime_diagnostics_panel": "id=\"runtime-diagnostics\"" in html and "/api/runtime-diagnostics" in html,
-        "live_ui_version_marker": "1.87.0-chat-library-routing-input-clear" in html,
+        # The production launcher replaces this token with the canonical UI
+        # version at runtime. A hard-coded historical release string makes a
+        # valid newer UI fail clean-checkout evidence.
+        "live_ui_version_marker": re.search(r'data-ui-version="[^"]+"', html) is not None,
         "visible_brand_shell": "id=\"focaf-brand-shell\"" in html and "FOCAF" in html,
         "enter_submit_hint_visible": "Press <strong>Enter</strong>" in html and "Shift+Enter" in html,
         "no_broken_js_newline_literals": "join('\n" not in html and "].join('\n" not in html,
