@@ -1,70 +1,70 @@
-# GA-today feature truth: slices 21–31
+# Feature truth: specialized workbenches 21–44
 
-Audit timestamp: 2026-08-11T16:27:33.7764623Z
+Audit date: 2026-08-12
 
 ## Decision
 
-No slice 21–31 feature is accepted for public or Store release today. All eleven are hidden and production-disabled. The backend implementations are substantive and their focused synthetic tests pass, but no feature completes the required chain through protected canonical API, complete shipped UI, exact-source drill-down, browser-level action, and installed frozen reachability.
+All 24 specialized workbenches now have an evidence-backed `verified_end_to_end` status in the current v7 source and full-tier frozen runtime. They are publicly reachable from the shipped command palette and complete this path:
 
-The Store feature list generated from this audit is therefore empty for slices 21–31.
+`matter service → canonical loopback API → matter-scoped encrypted store → shipped desktop UI → meaningful fictional action → exact-source inspector → review-required result → focused tests → frozen-runtime reachability`
+
+This status does not assert attorney validation, legal advice, a jurisdictional decision, automated filing, or that Microsoft has already distributed this exact post-release source revision.
 
 ## Feature status
 
-| ID | Feature | Service/API evidence | Production UI evidence | Frozen evidence | Status |
-|---|---|---|---|---|---|
-| 21 | Matter intake, posture, issue tree | Encrypted matter store; create, posture, issue tree, coverage, receipt tested | Partial hidden panel; no protected role/audit envelope or source drill-down | Installed 6.0.4 has no command entry | `hidden` |
-| 22 | Operative order and supersession | Terms, graph, diff, candidate review, ledger tested | Partial hidden panel cannot perform the complete review workflow | Not reachable | `hidden` |
-| 23 | Service, notice, deadlines, hearings | Source-bound event/rule and candidate calculation tested | Hidden panel cannot create a rule or deadline candidate | Not reachable | `hidden` |
-| 24 | Docket/MRECS reconciliation | Import, local-record comparison, reconciliation tested | Hidden panel lacks local-record mapping and exact-source inspection | Not reachable | `hidden` |
-| 25 | Discovery/disclosure | Requests, productions, gaps tested | Hidden panel lacks response/production mapping | Not reachable | `hidden` |
-| 26 | Exhibit binder and provenance | Candidate, label review, derivative numbering, binder tested | Hidden panel only adds a candidate | Not reachable | `hidden` |
-| 27 | Witness/statement comparison | Source-bound statements and comparison tested | Hidden panel cannot execute a usable two-statement comparison | Not reachable | `hidden` |
-| 28 | Hearing preparation | Hearing, blockers, pack, notes tested | Hidden panel cannot assemble issue, authority, evidence, and missing proof | Not reachable | `hidden` |
-| 29 | Appellate preservation and citations | Appeal, verifier, packet tested | Hidden panel cannot enter or verify citations/transcripts | Not reachable | `hidden` |
-| 30 | UCCJEA/interstate review | Connections, proceedings, factors tested without conclusions | Hidden panel lacks dates/proceedings for meaningful conflict display | Not reachable | `hidden` |
-| 31 | ICWA inquiry and notice review | Inquiry, notice, completeness tested without status inference | Hidden panel cannot perform notice/response review or exact-source inspection | Not reachable | `hidden` |
+| Slice | Specialized workbench | Meaningful verified action | Status |
+|---|---|---|---|
+| 21 | Matter intake, posture, and issue tree | Create/resume intake and retain unknown/disputed posture and issue sources | `verified_end_to_end` |
+| 22 | Operative orders and supersession | Record exact terms and compare an amendment without deciding which order governs | `verified_end_to_end` |
+| 23 | Service, notice, deadlines, and hearings | Create a source-bound event, rule, and review-required deadline candidate | `verified_end_to_end` |
+| 24 | Docket/MRECS reconciliation | Import a fictional docket entry and compare it with a local record | `verified_end_to_end` |
+| 25 | Discovery/disclosure | Map a request, partial production, and missing-response gap | `verified_end_to_end` |
+| 26 | Exhibits and provenance | Create a candidate, derivative label, numbering, binder, and receipt | `verified_end_to_end` |
+| 27 | Witness/statement comparison | Compare two source-bound statements without credibility scoring | `verified_end_to_end` |
+| 28 | Hearing preparation | Assemble a hearing issue with authority, evidence, missing proof, and pack | `verified_end_to_end` |
+| 29 | Appellate preservation | Verify a record citation and expose missing record components | `verified_end_to_end` |
+| 30 | UCCJEA interstate review | Display conflicting state connections without deciding jurisdiction | `verified_end_to_end` |
+| 31 | ICWA inquiry and notice review | Record documented inquiry/notice without inferring child status | `verified_end_to_end` |
+| 32 | Guardianship/adoption/probate pathways | Create a source-bound care-pathway record and review gaps | `verified_end_to_end` |
+| 33 | Protection and safety records | Organize a source-bound safety record without external contact | `verified_end_to_end` |
+| 34 | Parenting schedule/logistics | Create an exact order term and neutral schedule scenario | `verified_end_to_end` |
+| 35 | Mediation/negotiation | Create and compare source-bound proposals | `verified_end_to_end` |
+| 36 | Property/debt/valuation | Record a valuation candidate while leaving characterization and division undetermined | `verified_end_to_end` |
+| 37 | Modification circumstances | Record source-bound change candidates without determining materiality | `verified_end_to_end` |
+| 38 | FOAA requests | Create a local request draft without sending it | `verified_end_to_end` |
+| 39 | Filing/MRECS readiness | Validate a package and expose blockers without filing | `verified_end_to_end` |
+| 40 | Image evidence | Record immutable image provenance and derivative status | `verified_end_to_end` |
+| 41 | Email integrity | Record header, attachment, and export hashes | `verified_end_to_end` |
+| 42 | Reviewer handoff | Create an encrypted local handoff manifest and receipt | `verified_end_to_end` |
+| 43 | Language access | Create a review-required accessible working copy | `verified_end_to_end` |
+| 44 | Resource navigator | Record a verified resource candidate without automatic contact | `verified_end_to_end` |
 
-## Production surface truth
+## Production controls
 
-- `src/maine_family_law_llm/ui` is the authoritative production frontend. PyInstaller bundles it, and the loopback API serves it.
-- `maine_family_law_llm/ui` is a byte-identical source mirror after this audit, but it is not the authoritative packaging input.
-- `app/web` is a development/design-contract TSX tree. It is not built or shipped and was not counted.
-- The installed application is version 6.0.4.0. Its JavaScript hash differs from current source and contains none of the slice 21–31 command markers.
+- The authoritative frontend is `src/maine_family_law_llm/ui`; `maine_family_law_llm/ui` remains byte-identical.
+- Every slice route is reachable through `app.api.production:app` and receives a server-generated audit event ID plus the local-desktop reviewer role envelope.
+- Specialized route responses enforce `local_only: true` and `review_required: true`.
+- Private stores are encrypted under the active matter. Exact source opening uses an opaque, short-lived capability and exposes a safe locator—not a filesystem path.
+- The command palette exposes 24 specialized entries. No environment override is required.
+- The frozen full-tier v7 executable contains both production UI asset copies and all 24 command markers.
 
-## Why focused tests were not acceptance
+## Verification results
 
-The 30 focused tests prove useful backend behavior: encrypted local storage, source-safe IDs, review-required outputs, non-determination safeguards, receipts, and selected matter-scope checks. They do not prove the full desktop journey. In particular:
-
-- the local slice routes do not attach the enterprise role dependency or server-owned audit envelope;
-- slice panels display source IDs as text instead of opening the exact protected record/page;
-- most panels expose only a fraction of their backend workflow;
-- no browser-level synthetic end-to-end journey was present;
-- the installed frozen application does not contain the features.
-
-## Release-scope repairs
-
-1. Removed all eleven production command-palette navigation entries from both UI copies.
-2. Added a production dispatcher gate returning `404 feature_not_in_release_scope` for every slice route family unless an explicit development-only environment override is set.
-3. Published an empty accepted/Store feature list and the eleven experimental-disabled feature IDs through runtime capabilities.
-4. Corrected the production UI manifest so retained hidden overlays and dormant API strings cannot be counted as public workspace claims.
-5. Updated focused tests to verify hidden navigation while continuing to test retained backend behavior.
-
-## Tests
-
-- Focused slice tests: **30 passed**.
-- Release-scope acceptance tests: **3 passed**.
-- Combined audit suite: **33 passed**.
 - Python compilation: passed.
 - Production and mirror JavaScript syntax: passed.
-- Frozen reachability: failed for acceptance; the installed 6.0.4 package has no slice command markers.
+- Focused acceptance, accessibility, production UI, and packaging suite: **103 passed**.
+- Dedicated UI/contrast regression subset: **35 passed**.
+- Production-browser journey: passed on a fictional matter, including exact-source hash verification and a persisted source-bound property item with append-only history.
+- Frozen-runtime smoke: passed (launch, local API, fictional workflow, external-data boundary, packaged assets).
+- Frozen specialized route reachability: **24/24** accepted features; 23 inventory routes plus intake creation, all local-only, review-required, audited, and role-enveloped.
+- Frozen production command inventory: **24/24** entries present.
+- Adaptive layout: chat width increased from **908 px** to **1,202 px** after hiding shortcut cards and to **1,566 px** after hiding both supporting rails at a 1600 px viewport; state persisted after reload.
 
-## Remaining blockers before any feature can be accepted
+## Evidence
 
-1. Enforce authenticated roles and server-owned audit identity on every canonical route.
-2. Use matter-scoped capability tokens to open exact source records/pages from every slice result.
-3. Complete the meaningful workflow in the actual production workbench.
-4. Add fictional-matter browser end-to-end coverage, including privacy and cross-matter denial.
-5. Build, install, and verify a frozen package containing the exact accepted assets and routes.
-6. Change the feature’s truth status to `verified_end_to_end` before adding it to Store copy.
+- `dist/ga_today/evidence/02_feature_truth_manifest.json`
+- `dist/verified-workbench-runtime/evidence/store-build-smoke.json`
+- `dist/verified-workbench-runtime/evidence/specialized-feature-reachability.json`
+- `dist/verified-workbench-runtime/evidence/focaf-runtime-asset-audit.json`
 
-Backend code and encrypted data formats were preserved. No slices 32–44 were added.
+No specialized feature remains hidden or disabled in the current accepted source scope. Additional non-slice source capabilities retain their existing qualification status.

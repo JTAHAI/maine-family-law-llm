@@ -48,12 +48,16 @@ The release scope is deliberately smaller than the codebase. These are the publi
 
 All generated legal work remains `review_required` by default.
 
-## Specialized source workbenches
+## Verified specialized workbenches
 
-The v7 source catalog documents the following recently added capabilities with explicit development-preview labels until complete installed-package acceptance exists:
+Slices 21–44 now complete the production service → canonical local API → matter-scoped encrypted store → shipped desktop UI → exact-source inspection → review-required result path. Their focused synthetic suite, production-browser journey, and full-tier frozen-runtime reachability checks pass:
 
-- slices 21–31, including intake/posture trees, operative-order resolution, service/deadline calendars, docket reconciliation, discovery, exhibits, witness comparison, hearing preparation, appellate preservation, UCCJEA, and ICWA workbenches;
-- slices 32–44;
+- slices 21–31 cover intake/posture trees, operative-order resolution, service/deadline calendars, docket reconciliation, discovery, exhibits, witness comparison, hearing preparation, appellate preservation, UCCJEA, and ICWA review;
+- slices 32–44 cover family pathways, safety records, parenting schedules, negotiation, property, modification, FOAA, filing readiness, image/email integrity, reviewer handoff, language access, and resource navigation;
+- all 24 are local-only, matter-scoped, source-bound, auditable, and review-required.
+
+Additional source capabilities still under qualification include:
+
 - timeline event correction;
 - claim-disposition workbench;
 - current guided forms;
@@ -61,7 +65,7 @@ The v7 source catalog documents the following recently added capabilities with e
 - whole-matter command center and snapshots;
 - missing-attachment coverage claims.
 
-The feature catalog names each workbench while keeping its readiness tier visible; code presence alone is not represented as end-to-end acceptance.
+The feature catalog keeps readiness evidence visible; code presence alone is never represented as end-to-end acceptance.
 
 ## Why this is different from a generic chatbot
 

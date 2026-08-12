@@ -1736,6 +1736,12 @@ if FastAPI is not None:
                 response.headers["X-MFL-Service-Instance"] = service_instance
                 response.headers["X-MFL-Service-Pid"] = str(os.getpid())
         response.headers["X-Request-ID"] = request_id
+        if request.url.path.startswith("/api/"):
+            response.headers["X-MFLL-Audit-Event-Id"] = request_id
+            response.headers["X-MFLL-Audit-Event-Type"] = (
+                f"{request.method.upper()}:{request.url.path}"
+            )
+            response.headers["X-MFLL-RBAC"] = "local-desktop-reviewer"
         return response
 
     def _health_payload() -> dict[str, Any]:
@@ -3266,7 +3272,14 @@ if FastAPI is not None:
 
     def _intake_call(operation):  # type: ignore[no-untyped-def]
         try:
-            return operation()
+            result = operation()
+            if isinstance(result, dict):
+                # Specialized matter workbenches always return local working
+                # data. Service methods cannot accidentally suppress the
+                # human-review boundary on a comparison, inventory, or receipt.
+                result["review_required"] = True
+                result["local_only"] = True
+            return result
         except IntakeWorkbenchError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
 

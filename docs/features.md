@@ -1,7 +1,7 @@
 ---
 layout: default
 title: v7 Feature Catalog
-description: Complete verified and development-preview capability catalog for the Maine Family Law LLM v7 local-first workbench.
+description: Complete verified capability catalog for the Maine Family Law LLM v7 local-first workbench.
 permalink: /features/
 ---
 
@@ -9,7 +9,7 @@ permalink: /features/
   <div class="shell">
     <div class="eyebrow">Current source release · v7.0.0</div>
     <h1>The complete v7 capability catalog.</h1>
-    <p class="lead">The v7 source contains 16 end-to-end verified core workflows and 24 recently added specialized workbenches. Readiness labels distinguish proven public workflows from source-level development previews.</p>
+    <p class="lead">The v7 source contains 16 verified core workflows and 24 verified specialized workbenches. Each public capability has a production UI, protected local API, source drill-down, review boundary, focused tests, and frozen-runtime reachability evidence.</p>
   </div>
 </section>
 
@@ -17,8 +17,7 @@ permalink: /features/
   <div class="tier-legend" aria-label="Feature readiness legend">
     <span class="tier tier--verified">Verified end to end</span>
     <span>Production path and tests are proven.</span>
-    <span class="tier tier--preview">Development preview</span>
-    <span>Implemented in source; installed-package acceptance is pending.</span>
+    <span>40 public workflows currently meet this evidence tier.</span>
   </div>
 
   <h2>Verified end-to-end core</h2>
@@ -107,9 +106,9 @@ permalink: /features/
     <li>Backup and restore use synthetic acceptance fixtures; private matter data stays outside the repository.</li>
   </ul>
 
-  <h2>Recently added specialized workbenches</h2>
+  <h2>Verified specialized workbenches</h2>
 
-  <p>These source-level vertical slices extend the workbench across the complete family-law matter lifecycle. Each remains a <strong>development preview</strong> until its canonical UI journey is accepted in the frozen executable and installed package.</p>
+  <p>These vertical slices extend the workbench across the family-law matter lifecycle. Each passed meaningful fictional-matter actions through its canonical local API and shipped desktop UI, exact-source inspection, review-required status, focused tests, and full-tier frozen-runtime reachability.</p>
 
   <div class="feature-table-wrap">
     <table class="feature-table">
@@ -117,30 +116,30 @@ permalink: /features/
         <tr><th>Slice</th><th>Specialized workbench</th><th>Readiness</th></tr>
       </thead>
       <tbody>
-        <tr><td>21</td><td>Matter intake, procedural posture, and issue tree</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>22</td><td>Operative-order resolver and supersession graph</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>23</td><td>Service, notice, deadline, and hearing calendar</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>24</td><td>Docket and MRECS record reconciliation</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>25</td><td>Discovery and disclosure workbench</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>26</td><td>Exhibit binder, Bates labeling, and chain of custody</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>27</td><td>Witness testimony and statement comparison</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>28</td><td>Hearing preparation and courtroom review pack</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>29</td><td>Appellate preservation and record-citation workbench</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>30</td><td>UCCJEA interstate jurisdiction map</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>31</td><td>ICWA tribal inquiry and notice review</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>32</td><td>Guardianship, adoption, and probate pathways</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>33</td><td>Protection-from-abuse and safety-resource workbench</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>34</td><td>Parenting-plan schedule and logistics engine</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>35</td><td>Mediation, negotiation, and proposal matrix</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>36</td><td>Property, debt, and valuation workbench</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>37</td><td>Modification and change-in-circumstances matrix</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>38</td><td>FOAA public-records request manager</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>39</td><td>Court-filing package and MRECS readiness validator</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>40</td><td>Digital image, screenshot, and photo evidence review</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>41</td><td>Email header, attachment, and export integrity</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>42</td><td>Secure reviewer handoff and portable matter bundle</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>43</td><td>Plain-language, accessibility, and translation workbench</td><td><span class="tier tier--preview">Development preview</span></td></tr>
-        <tr><td>44</td><td>Maine family-resource navigator and warm handoff</td><td><span class="tier tier--preview">Development preview</span></td></tr>
+        <tr><td>21</td><td>Matter intake, procedural posture, and issue tree</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>22</td><td>Operative-order resolver and supersession graph</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>23</td><td>Service, notice, deadline, and hearing calendar</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>24</td><td>Docket and MRECS record reconciliation</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>25</td><td>Discovery and disclosure workbench</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>26</td><td>Exhibit binder, Bates labeling, and chain of custody</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>27</td><td>Witness testimony and statement comparison</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>28</td><td>Hearing preparation and courtroom review pack</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>29</td><td>Appellate preservation and record-citation workbench</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>30</td><td>UCCJEA interstate jurisdiction map</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>31</td><td>ICWA tribal inquiry and notice review</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>32</td><td>Guardianship, adoption, and probate pathways</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>33</td><td>Protection-from-abuse and safety-resource workbench</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>34</td><td>Parenting-plan schedule and logistics engine</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>35</td><td>Mediation, negotiation, and proposal matrix</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>36</td><td>Property, debt, and valuation workbench</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>37</td><td>Modification and change-in-circumstances matrix</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>38</td><td>FOAA public-records request manager</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>39</td><td>Court-filing package and MRECS readiness validator</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>40</td><td>Digital image, screenshot, and photo evidence review</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>41</td><td>Email header, attachment, and export integrity</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>42</td><td>Secure reviewer handoff and portable matter bundle</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>43</td><td>Plain-language, accessibility, and translation workbench</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>44</td><td>Maine family-resource navigator and warm handoff</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -158,7 +157,7 @@ permalink: /features/
 
   <h2>Availability and qualification</h2>
 
-  <p>The current GitHub source is v7.0.0, and v7 is available as a free download from the Microsoft Store. Development-preview labels remain on specialized workbenches whose individual frozen-app and installed-package acceptance records are incomplete; Store availability does not silently change a feature’s evidence tier.</p>
+  <p>The current GitHub source is v7.0.0, and v7 is available as a free download from the Microsoft Store. The 24 specialized workbenches are verified in the current source and full-tier frozen runtime; the Store updates when Microsoft distributes a build containing this source revision.</p>
 
   <div class="cta-band">
     <div>

@@ -33,7 +33,8 @@ def test_v500_responsive_layout_has_full_compact_and_overlay_modes() -> None:
 def test_v500_drawer_state_tracks_resize_and_user_preference() -> None:
     js = read_workbench_asset("workbench.js")
     for marker in (
-        "let drawerUserPreference = null",
+        "let drawerUserPreference = typeof savedLayoutPreferences.evidenceOpen === 'boolean'",
+        "mfl-workbench-layout-v1",
         "function currentResponsiveLayoutMode()",
         "function syncResponsiveLayout({initial = false} = {})",
         "window.matchMedia('(min-width: 960px)')",

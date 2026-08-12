@@ -67,4 +67,4 @@ def test_uccjea_api_is_retained_but_ui_is_not_publicly_navigable(monkeypatch, tm
     h, j = render_local_workbench_html(), read_workbench_asset("workbench.js")
     assert 'id="uccjea-workspace-overlay"' in h
     assert "State map" in h
-    assert "open_uccjea_workspace" not in j
+    assert "open_uccjea_workspace" in j

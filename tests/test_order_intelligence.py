@@ -171,11 +171,11 @@ def test_order_api_is_scoped_to_active_matter(monkeypatch, tmp_path: Path) -> No
     assert client.get("/api/orders/receipt").json()["review_required"] is True
 
 
-def test_experimental_orders_markup_is_retained_but_not_publicly_navigable() -> None:
+def test_orders_workbench_is_publicly_navigable() -> None:
     html = render_local_workbench_html()
     script = read_workbench_asset("workbench.js")
     assert 'id="orders-workspace-overlay"' in html
     for label in ("Order inventory", "Supersession graph", "Term explorer", "Obligation ledger"):
         assert label in html
-    assert "open_orders_workspace" not in script
+    assert "open_orders_workspace" in script
     assert "never decides what order governs" in html

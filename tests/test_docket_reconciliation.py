@@ -84,7 +84,7 @@ def test_docket_api_is_matter_scoped_and_never_exposes_portal_access(
     assert len(client.get("/api/docket/receipt").json()["receipt_hash"]) == 64
 
 
-def test_experimental_docket_markup_is_retained_but_not_publicly_navigable() -> None:
+def test_docket_workbench_is_publicly_navigable() -> None:
     html = render_local_workbench_html()
     script = read_workbench_asset("workbench.js")
     assert 'id="docket-workspace-overlay"' in html
@@ -96,5 +96,5 @@ def test_experimental_docket_markup_is_retained_but_not_publicly_navigable() -> 
     ):
         assert label in html
     assert 'aria-live="polite"' in html
-    assert "open_docket_workspace" not in script
+    assert "open_docket_workspace" in script
     assert "official record complete" in html

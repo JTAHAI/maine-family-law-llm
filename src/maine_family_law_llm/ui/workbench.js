@@ -310,6 +310,8 @@
     const viewportProof = document.getElementById('viewport-proof');
     const welcomeButton = document.getElementById('welcome-button');
     const copyLinkButton = document.getElementById('copy-link-button');
+    const toggleSideCardsButton = document.getElementById('toggle-side-cards-button');
+    const workbenchShortcuts = document.getElementById('workbench-shortcuts');
     const focusModeButton = document.getElementById('focus-mode-button');
     const helpButton = document.getElementById('help-button');
     const newChatButton = document.getElementById('new-chat-button');
@@ -589,7 +591,7 @@
     const careWorkspaceOverlay=document.getElementById('care-workspace-overlay'),careWorkspaceClose=document.getElementById('care-workspace-close'),careWorkspaceStatus=document.getElementById('care-workspace-status'),careWorkspaceResults=document.getElementById('care-workspace-results'),carePathwayId=document.getElementById('care-pathway-id'),careChildId=document.getElementById('care-child-id'),careKind=document.getElementById('care-kind'),careSourceId=document.getElementById('care-source-id'),careAdd=document.getElementById('care-add'),careRefresh=document.getElementById('care-refresh'),careReceipt=document.getElementById('care-receipt');
     const safetyWorkspaceOverlay=document.getElementById('safety-workspace-overlay'),safetyWorkspaceClose=document.getElementById('safety-workspace-close'),safetyWorkspaceStatus=document.getElementById('safety-workspace-status'),safetyWorkspaceResults=document.getElementById('safety-workspace-results'),safetyRecordId=document.getElementById('safety-record-id'),safetyKind=document.getElementById('safety-kind'),safetySourceId=document.getElementById('safety-source-id'),safetySummary=document.getElementById('safety-summary'),safetyAdd=document.getElementById('safety-add'),safetyRefresh=document.getElementById('safety-refresh'),safetyReceipt=document.getElementById('safety-receipt');
     const scheduleWorkspaceOverlay=document.getElementById('schedule-workspace-overlay'),scheduleWorkspaceClose=document.getElementById('schedule-workspace-close'),scheduleWorkspaceStatus=document.getElementById('schedule-workspace-status'),scheduleWorkspaceResults=document.getElementById('schedule-workspace-results'),scheduleTermId=document.getElementById('schedule-term-id'),scheduleTopic=document.getElementById('schedule-topic'),scheduleSourceId=document.getElementById('schedule-source-id'),scheduleLanguage=document.getElementById('schedule-language'),scheduleAdd=document.getElementById('schedule-add'),scheduleRefresh=document.getElementById('schedule-refresh'),scheduleReceipt=document.getElementById('schedule-receipt');
-    const lateReviewOverlay=document.getElementById('late-review-overlay'),lateReviewClose=document.getElementById('late-review-close'),lateReviewDescription=document.getElementById('late-review-description'),lateReviewStatus=document.getElementById('late-review-status'),lateReviewResults=document.getElementById('late-review-results'),lateReviewRefresh=document.getElementById('late-review-refresh'),lateReviewReceipt=document.getElementById('late-review-receipt');let lateReviewConfig=null;
+    const lateReviewOverlay=document.getElementById('late-review-overlay'),lateReviewClose=document.getElementById('late-review-close'),lateReviewTitle=document.getElementById('late-review-title'),lateReviewDescription=document.getElementById('late-review-description'),lateReviewStatus=document.getElementById('late-review-status'),lateReviewResults=document.getElementById('late-review-results'),lateReviewRefresh=document.getElementById('late-review-refresh'),lateReviewReceipt=document.getElementById('late-review-receipt'),lateReviewCreate=document.getElementById('late-review-create'),lateReviewAction=document.getElementById('late-review-action'),lateReviewPrimaryId=document.getElementById('late-review-primary-id'),lateReviewSecondaryId=document.getElementById('late-review-secondary-id'),lateReviewSourceId=document.getElementById('late-review-source-id'),lateReviewKind=document.getElementById('late-review-kind'),lateReviewValue=document.getElementById('late-review-value'),lateReviewHash=document.getElementById('late-review-hash'),lateReviewDetails=document.getElementById('late-review-details'),lateReviewPrimaryLabel=document.getElementById('late-review-primary-label'),lateReviewSecondaryLabel=document.getElementById('late-review-secondary-label'),lateReviewSourceLabel=document.getElementById('late-review-source-label'),lateReviewKindLabel=document.getElementById('late-review-kind-label'),lateReviewValueLabel=document.getElementById('late-review-value-label'),lateReviewHashLabel=document.getElementById('late-review-hash-label'),lateReviewDetailsLabel=document.getElementById('late-review-details-label');let lateReviewConfig=null;
     const quickExportChat = document.getElementById('quick-export-chat');
     const openAllStarters = document.getElementById('open-all-starters');
     const workflowNavigator = document.getElementById('workflow-navigator');
@@ -1754,8 +1756,150 @@
     function renderCare(p){const r=Array.isArray(p?.pathways)?p.pathways:[];if(careWorkspaceStatus)careWorkspaceStatus.textContent=`${r.length} pathway record(s) · review required`;if(careWorkspaceResults)careWorkspaceResults.innerHTML=`<strong>Care pathways</strong><ul>${r.map(x=>`<li><strong>${escapeHtml(x.pathway_id)}</strong> · ${escapeHtml(x.kind)} · ${escapeHtml(x.source_ref?.record_id||'source required')}</li>`).join('')||'<li>No pathway records yet.</li>'}</ul><p>Eligibility, consent validity, fitness, best interests, and outcome are not determined.</p>`;}async function openCareWorkspace(){if(!careWorkspaceOverlay)return;openOverlay(careWorkspaceOverlay);if(!corpusSelect?.value)return;await refreshCare();carePathwayId?.focus({preventScroll:true});}async function refreshCare(){try{renderCare(await fetchJson('/api/care-pathways/inventory'));}catch(e){if(careWorkspaceStatus)careWorkspaceStatus.textContent=e.message;}}async function addCare(){const id=intakeSafeId(carePathwayId?.value),child=intakeSafeId(careChildId?.value),source=intakeSafeId(careSourceId?.value);if(!id||!child||!source){if(careWorkspaceStatus)careWorkspaceStatus.textContent='Add safe pathway, child, and source IDs.';return;}try{await fetchJson('/api/care-pathways',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pathways:[{pathway_id:id,child_id:child,kind:careKind?.value||'unknown',source_ref:{record_id:source}}]})});await refreshCare();}catch(e){if(careWorkspaceStatus)careWorkspaceStatus.textContent=e.message;}}async function showCareReceipt(){try{const r=await fetchJson('/api/care-pathways/receipt');if(careWorkspaceResults)careWorkspaceResults.innerHTML=`<strong>Care-pathway receipt</strong><p><code>${escapeHtml(r.receipt_hash)}</code></p>`;}catch(e){if(careWorkspaceStatus)careWorkspaceStatus.textContent=e.message;}}
     function renderSafety(p){const r=Array.isArray(p?.records)?p.records:[];if(safetyWorkspaceStatus)safetyWorkspaceStatus.textContent=`${r.length} safety record(s) · review required · not an emergency service`;if(safetyWorkspaceResults)safetyWorkspaceResults.innerHTML=`<strong>Safety records</strong><ul>${r.map(x=>`<li><strong>${escapeHtml(x.record_id)}</strong> · ${escapeHtml(x.kind)} · ${escapeHtml(x.source_ref?.record_id||'source required')}</li>`).join('')||'<li>No safety records yet.</li>'}</ul><p>No abuse conclusion, risk score, or confrontation guidance is available.</p>`;}async function openSafetyWorkspace(){if(!safetyWorkspaceOverlay)return;openOverlay(safetyWorkspaceOverlay);if(!corpusSelect?.value)return;await refreshSafety();safetyRecordId?.focus({preventScroll:true});}async function refreshSafety(){try{renderSafety(await fetchJson('/api/safety/inventory'));}catch(e){if(safetyWorkspaceStatus)safetyWorkspaceStatus.textContent=e.message;}}async function addSafety(){const id=intakeSafeId(safetyRecordId?.value),source=intakeSafeId(safetySourceId?.value);if(!id||!source){if(safetyWorkspaceStatus)safetyWorkspaceStatus.textContent='Add safe record and source IDs.';return;}try{await fetchJson('/api/safety/records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records:[{record_id:id,kind:safetyKind?.value||'',summary:safetySummary?.value||'',source_ref:{record_id:source}}]})});await refreshSafety();}catch(e){if(safetyWorkspaceStatus)safetyWorkspaceStatus.textContent=e.message;}}async function showSafetyReceipt(){try{const r=await fetchJson('/api/safety/receipt');if(safetyWorkspaceResults)safetyWorkspaceResults.innerHTML=`<strong>Safety review receipt</strong><p><code>${escapeHtml(r.receipt_hash)}</code></p>`;}catch(e){if(safetyWorkspaceStatus)safetyWorkspaceStatus.textContent=e.message;}}
     function renderSchedule(p){const r=Array.isArray(p?.terms)?p.terms:[];if(scheduleWorkspaceStatus)scheduleWorkspaceStatus.textContent=`${r.length} source term(s) · review required · no calendar write`;if(scheduleWorkspaceResults)scheduleWorkspaceResults.innerHTML=`<strong>Source schedule terms</strong><ul>${r.map(x=>`<li><strong>${escapeHtml(x.term_id)}</strong> · ${escapeHtml(x.topic)} · ${escapeHtml(x.source_ref?.record_id||'source required')}</li>`).join('')||'<li>No schedule terms yet.</li>'}</ul><p>This app does not decide operative meaning or provide legal advice.</p>`;}async function openScheduleWorkspace(){if(!scheduleWorkspaceOverlay)return;openOverlay(scheduleWorkspaceOverlay);if(!corpusSelect?.value)return;await refreshSchedule();scheduleTermId?.focus({preventScroll:true});}async function refreshSchedule(){try{renderSchedule(await fetchJson('/api/parenting-schedule/inventory'));}catch(e){if(scheduleWorkspaceStatus)scheduleWorkspaceStatus.textContent=e.message;}}async function addSchedule(){const id=intakeSafeId(scheduleTermId?.value),source=intakeSafeId(scheduleSourceId?.value),text=String(scheduleLanguage?.value||'').trim();if(!id||!source||!text){if(scheduleWorkspaceStatus)scheduleWorkspaceStatus.textContent='Add safe term and source IDs plus exact language.';return;}try{await fetchJson('/api/parenting-schedule/terms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({terms:[{term_id:id,topic:scheduleTopic?.value||'',exact_language:text,source_ref:{record_id:source}}]})});await refreshSchedule();}catch(e){if(scheduleWorkspaceStatus)scheduleWorkspaceStatus.textContent=e.message;}}async function showScheduleReceipt(){try{const r=await fetchJson('/api/parenting-schedule/receipt');if(scheduleWorkspaceResults)scheduleWorkspaceResults.innerHTML=`<strong>Schedule receipt</strong><p><code>${escapeHtml(r.receipt_hash)}</code></p>`;}catch(e){if(scheduleWorkspaceStatus)scheduleWorkspaceStatus.textContent=e.message;}}
-    async function openLateReview(title,inventory,receipt,description){lateReviewConfig={title,inventory,receipt};if(!lateReviewOverlay)return;openOverlay(lateReviewOverlay);if(lateReviewDescription)lateReviewDescription.textContent=description;if(!corpusSelect?.value){if(lateReviewStatus)lateReviewStatus.textContent='Select a local matter before reviewing local records.';return;}await refreshLateReview();}async function refreshLateReview(){if(!lateReviewConfig)return;try{const p=await fetchJson(lateReviewConfig.inventory);if(lateReviewStatus)lateReviewStatus.textContent='Local inventory · review required · no external action';if(lateReviewResults)lateReviewResults.innerHTML=`<strong>${escapeHtml(lateReviewConfig.title)}</strong><pre>${escapeHtml(JSON.stringify(p,null,2))}</pre>`;}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;}}async function showLateReviewReceipt(){if(!lateReviewConfig)return;try{const r=await fetchJson(lateReviewConfig.receipt);if(lateReviewResults)lateReviewResults.innerHTML=`<strong>${escapeHtml(lateReviewConfig.title)} receipt</strong><p><code>${escapeHtml(r.receipt_hash||'receipt unavailable')}</code></p>`;}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;}}
-    const openNegotiationWorkspace=()=>openLateReview('Mediation, negotiation and proposals','/api/negotiation/inventory','/api/negotiation/receipt','Compare local source-bound proposals; nothing is sent or accepted.');const openPropertyWorkspace=()=>openLateReview('Property, debt and valuation','/api/property/inventory','/api/property/receipt','Values, characterization, and division require review.');const openModificationWorkspace=()=>openLateReview('Modification review','/api/modification/inventory','/api/modification/receipt','Material change and outcome are not determined.');const openFoaaWorkspace=()=>openLateReview('FOAA request manager','/api/foaa/inventory','/api/foaa/receipt','Drafts are local only and are never submitted.');const openFilingWorkspace=()=>openLateReview('Filing readiness','/api/filing-readiness/inventory','/api/filing-readiness/receipt','Blockers require review; this app never files.');const openImageEvidenceWorkspace=()=>openLateReview('Image evidence review','/api/image-evidence/inventory','/api/image-evidence/receipt','Originals remain immutable; authenticity is not determined.');const openEmailIntegrityWorkspace=()=>openLateReview('Email export integrity','/api/email-integrity/inventory','/api/email-integrity/receipt','No mail is sent and authenticity remains review-required.');const openHandoffWorkspace=()=>openLateReview('Secure reviewer handoff','/api/reviewer-handoff/inventory','/api/reviewer-handoff/receipt','No sharing or upload is automatic.');const openLanguageWorkspace=()=>openLateReview('Language access','/api/language-access/inventory','/api/language-access/receipt','Working copies are not certified translations.');const openResourceWorkspace=()=>openLateReview('Maine family resource navigator','/api/resources/inventory','/api/resources/receipt','Resource availability and outreach remain reviewer questions.');
+    function lateReviewValues() {
+      return {
+        primary: String(lateReviewPrimaryId?.value || '').trim().toLowerCase(),
+        secondary: String(lateReviewSecondaryId?.value || '').trim().toLowerCase(),
+        source: String(lateReviewSourceId?.value || '').trim().toLowerCase(),
+        kind: String(lateReviewKind?.value || '').trim(),
+        value: String(lateReviewValue?.value || '').trim(),
+        hash: String(lateReviewHash?.value || '').trim(),
+        details: String(lateReviewDetails?.value || '').trim(),
+      };
+    }
+
+    function requireLateReviewIds(values, names) {
+      for (const name of names) {
+        if (!intakeSafeId(values[name])) throw makeSafeLocalError({status: 422, code: `${name}_safe_id_required`, recovery: 'Use lowercase letters, numbers, underscores, or hyphens for every required safe ID.'});
+      }
+    }
+
+    const lateReviewDefinitions = {
+      orders: {title:'Operative orders and supersession',inventory:'/api/orders/inventory',receipt:'/api/orders/receipt',createUrl:'/api/orders',description:'Record exact order language, compare amendments, and review an operative candidate without deciding which order controls.',labels:{primary:'Order safe ID',secondary:'Term safe ID',source:'Source record safe ID',kind:'Term subject',value:'Comparison term safe ID',hash:'Source span',details:'Exact order language'},required:['primary','secondary','source'],build:v=>({orders:[{order_id:v.primary,source_ref:{record_id:v.source},order_type:'unknown',status_candidate:'review_required',terms:[{term_id:v.secondary,subject:v.kind||'other',exact_language:v.details,source_ref:{record_id:v.source,span:v.hash}}]}]}),review:{label:'Compare exact terms',url:'/api/orders/compare',method:'POST',build:v=>({left_term_id:v.secondary,right_term_id:v.value})}},
+      calendar: {title:'Service, notice, deadlines and hearings',inventory:'/api/calendar/events',receipt:'/api/calendar/receipt',description:'Create a source-bound trigger and rule, then calculate a review-required deadline candidate. No calendar account is changed.',labels:{primary:'Event safe ID',secondary:'Rule safe ID',source:'Source record safe ID',kind:'Trigger event type',value:'Trigger date/time',hash:'Rule citation',details:'Notice or hearing description'},required:['primary','secondary','source'],create:async v=>{await fetchJson('/api/calendar/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:[{event_id:v.primary,kind:v.kind||'source_event_candidate',date_time:v.value,time_zone:'America/New_York',document_or_notice:v.details,source_ref:{record_id:v.source}}]})});return fetchJson('/api/calendar/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rules:[{rule_id:v.secondary,citation:v.hash||'Review-required rule candidate',freshness:'unknown',triggering_event:v.kind||'source_event_candidate',unit:'days',count:7,inclusion_rule:'unknown',weekend_holiday_handling:'unknown',source_ref:{record_id:v.source}}]})});},review:{label:'Calculate deadline candidate',url:'/api/calendar/deadline-candidates',method:'POST',build:v=>({rule_id:v.secondary,trigger_event_id:v.primary,holidays:[]})}},
+      docket: {title:'Docket and MRECS reconciliation',inventory:'/api/docket/reconcile',receipt:'/api/docket/receipt',description:'Import a fictional or user-selected docket entry and reconcile it against a local record without claiming the official record is complete.',labels:{primary:'Docket entry safe ID',secondary:'Local record safe ID',source:'Docket source record safe ID',kind:'Docket description',value:'Local record title',hash:'Source hash',details:'Referenced attachment or note'},required:['primary','secondary','source'],create:async v=>{await fetchJson('/api/docket/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:[{entry_id:v.primary,description:v.kind,referenced_attachment:v.details,source_ref:{record_id:v.source,source_hash:v.hash}}]})});await fetchJson('/api/docket/local-records',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records:[{record_id:v.secondary,title:v.value||v.kind,source_hash:v.hash,sealed_confidential:false}]})});return fetchJson('/api/docket/reconcile');}},
+      discovery: {title:'Discovery and disclosure',inventory:'/api/discovery/inventory',receipt:'/api/discovery/receipt',description:'Map an exact request to a response or production and expose gaps. Nothing is served and privilege is not decided.',labels:{primary:'Request safe ID',secondary:'Production safe ID',source:'Discovery source record safe ID',kind:'Request type',value:'Response status or text',hash:'Production source hash',details:'Exact request text'},required:['primary','secondary','source'],create:async v=>{await fetchJson('/api/discovery/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{item_id:v.primary,kind:v.kind||'request_for_production',exact_request_text:v.details,source_ref:{record_id:v.source},response_text:v.value,privilege_flags:[]}]})});await fetchJson('/api/discovery/productions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productions:[{production_id:v.secondary,source_hash:v.hash||'unknown',request_ids:[v.primary]}]})});return fetchJson('/api/discovery/gaps');},review:{label:'Review discovery gaps',method:'GET',url:'/api/discovery/gaps'}},
+      exhibits: {title:'Exhibit binder, Bates labels and provenance',inventory:'/api/exhibits/inventory',receipt:'/api/exhibits/receipt',description:'Select a record, approve a proposed label, create derivative numbering, and build a hash-bound manifest without changing the original.',labels:{primary:'Exhibit safe ID',secondary:'Reviewer safe ID',source:'Original record safe ID',kind:'Approved exhibit label',value:'Binder safe ID',hash:'Original source hash',details:'Source-bound exhibit description'},required:['primary','secondary','source'],create:async v=>{await fetchJson('/api/exhibits/candidates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates:[{exhibit_id:v.primary,original_record_id:v.source,original_hash:v.hash,proposed_label:v.kind||'Exhibit A',description:v.details,page_count:1}]})});await fetchJson('/api/exhibits/labels/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({exhibit_id:v.primary,approved_label:v.kind||'Exhibit A',reviewer_safe_id:v.secondary})});await fetchJson('/api/exhibits/numbering',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({exhibit_id:v.primary,prefix:'EX',start:1,reviewer_safe_id:v.secondary})});return fetchJson('/api/exhibits/binders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({binder_id:intakeSafeId(v.value)||`binder_${v.primary}`,exhibit_ids:[v.primary],reviewer_safe_id:v.secondary})});}},
+      statements: {title:'Witness testimony and statement comparison',inventory:'/api/statements/inventory',receipt:'/api/statements/receipt',description:'Record two exact source-bound statements and compare them without credibility, deception, or identity inference.',labels:{primary:'First statement safe ID',secondary:'Second statement safe ID',source:'Source record safe ID',kind:'Statement type',value:'Person safe ID',hash:'Second exact statement text',details:'First exact statement text'},required:['primary','secondary','source'],create:async v=>{const person=intakeSafeId(v.value);if(!person)throw makeSafeLocalError({status:422,code:'person_safe_id_required'});await fetchJson('/api/statements/people',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({people:[{person_id:person,role:'witness',user_confirmed:true}]})});return fetchJson('/api/statements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({statements:[{statement_id:v.primary,speaker_id:person,statement_type:v.kind||'testimony',exact_text:v.details,event_date:'2027-01-01',source_ref:{record_id:v.source}},{statement_id:v.secondary,speaker_id:person,statement_type:'prior_statement',exact_text:v.hash,event_date:'2027-01-02',source_ref:{record_id:v.source}}]})});},review:{label:'Compare exact statements',url:'/api/statements/compare',method:'POST',build:v=>({left_statement_id:v.primary,right_statement_id:v.secondary})}},
+      hearings: {title:'Hearing preparation and courtroom review',inventory:'/api/hearings/inventory',receipt:'/api/hearings/receipt',createUrl:'/api/hearings',description:'Assemble one hearing issue with a notice source, authority candidate, and missing-proof blockers. No outcome is predicted.',labels:{primary:'Hearing safe ID',secondary:'Exhibit candidate safe ID',source:'Notice source record safe ID',kind:'Hearing issue',value:'Authority citation candidate',hash:'Authority freshness',details:'Claim or missing-proof note'},required:['primary','source'],build:v=>({hearings:[{hearing_id:v.primary,notice_ref:{record_id:v.source},issues:[v.kind],authority:[{citation:v.value,freshness:v.hash||'unknown'}],claims:[{claim:v.details}],exhibit_ids:v.secondary?[v.secondary]:[]}]}) ,review:{label:'Build review pack',method:'GET',url:v=>`/api/hearings/${encodeURIComponent(v.primary)}/pack`}},
+      appellate: {title:'Appellate preservation and record citations',inventory:'/api/appellate/inventory',receipt:'/api/appellate/receipt',createUrl:'/api/appellate',description:'Verify a record-citation candidate and expose missing rulings, transcripts, or stale authority without predicting merit.',labels:{primary:'Appeal safe ID',secondary:'Transcript safe ID',source:'Judgment record safe ID',kind:'Preservation issue',value:'Record citation locator',hash:'Authority freshness',details:'Authority citation candidate'},required:['primary','source'],build:v=>({appeals:[{appeal_id:v.primary,judgment_ref:{record_id:v.source},issues:[{issue:v.kind}],authority:[{citation:v.details,freshness:v.hash||'unknown'}],citations:[{locator:v.value}],transcript_ids:v.secondary?[v.secondary]:[]}]}),review:{label:'Verify appellate blockers',method:'GET',url:v=>`/api/appellate/${encodeURIComponent(v.primary)}/verify`}},
+      uccjea: {title:'UCCJEA interstate jurisdiction map',inventory:'/api/uccjea/inventory',receipt:'/api/uccjea/receipt',description:'Display conflicting state-residence date candidates without exposing addresses or deciding jurisdiction or relocation legality.',labels:{primary:'First connection safe ID',secondary:'Second connection safe ID',source:'First source record safe ID',kind:'First state or country',value:'Second state or country',hash:'Second source record safe ID',details:'Child safe ID'},required:['primary','secondary','source','hash'],create:async v=>{const child=intakeSafeId(v.details);if(!child)throw makeSafeLocalError({status:422,code:'child_safe_id_required'});return fetchJson('/api/uccjea/connections',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connections:[{connection_id:v.primary,child_id:child,state_territory_country:v.kind||'Maine',date_start:'2027-01-01',date_end:'2027-02-01',source_ref:{record_id:v.source}},{connection_id:v.secondary,child_id:child,state_territory_country:v.value||'New Hampshire',date_start:'2027-01-15',date_end:'2027-02-15',source_ref:{record_id:v.hash}}]})});},review:{label:'Review conflicts and factors',method:'GET',url:'/api/uccjea/factors'}},
+      icwa: {title:'ICWA inquiry and notice review',inventory:'/api/icwa/inventory',receipt:'/api/icwa/receipt',description:'Record explicit documented inquiry and notice material without inferring identity, membership, eligibility, or tribal status and without sending notice.',labels:{primary:'Inquiry safe ID',secondary:'Notice safe ID',source:'Source record safe ID',kind:'Child safe ID',value:'Person safe ID',hash:'Recipient safe ID',details:'Exact inquiry question'},required:['primary','secondary','source','hash'],create:async v=>{const child=intakeSafeId(v.kind),person=intakeSafeId(v.value);if(!child||!person)throw makeSafeLocalError({status:422,code:'child_and_person_safe_ids_required'});await fetchJson('/api/icwa/inquiries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inquiries:[{inquiry_id:v.primary,child_id:child,person_safe_id:person,question:v.details,source_ref:{record_id:v.source}}]})});return fetchJson('/api/icwa/notices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notices:[{notice_id:v.secondary,recipient_safe_id:v.hash,notice_status:'documented_candidate',source_ref:{record_id:v.source}}]})});},review:{label:'Review completeness',method:'GET',url:'/api/icwa/completeness'}},
+      care: {title:'Guardianship, adoption and probate pathways',inventory:'/api/care-pathways/inventory',receipt:'/api/care-pathways/receipt',createUrl:'/api/care-pathways',description:'Organize source-bound pathway requirements without deciding eligibility, fitness, consent validity, best interests, or outcome.',labels:{primary:'Pathway safe ID',secondary:'Child safe ID',source:'Source record safe ID',kind:'Pathway type',value:'Court safe ID',hash:'Source span',details:'Requirement note'},required:['primary','secondary','source'],build:v=>({pathways:[{pathway_id:v.primary,child_id:v.secondary,kind:v.kind||'unknown',court_safe_id:v.value,source_ref:{record_id:v.source,span:v.hash},requirements:v.details?[v.details]:[],record_ids:[v.source]}]}),review:{label:'Review missing requirements',method:'GET',url:'/api/care-pathways/gaps'}},
+      safety: {title:'Protection from abuse and safety resources',inventory:'/api/safety/inventory',receipt:'/api/safety/receipt',createUrl:'/api/safety/records',description:'Organize source-bound protection and safety records. This is not emergency service and the app does not decide whether abuse occurred.',labels:{primary:'Safety record safe ID',secondary:'Related order safe ID',source:'Source record safe ID',kind:'Safety record type',value:'Date candidate',hash:'Source span',details:'Source-bound neutral summary'},required:['primary','source'],build:v=>({records:[{record_id:v.primary,kind:v.kind,summary:v.details,date_candidate:v.value,related_order_id:v.secondary,source_ref:{record_id:v.source,span:v.hash}}]})},
+      schedule: {title:'Parenting plan schedule and logistics',inventory:'/api/parenting-schedule/inventory',receipt:'/api/parenting-schedule/receipt',createUrl:'/api/parenting-schedule/terms',description:'Build transparent scenarios from exact source terms. The app does not interpret orders or write to a calendar.',labels:{primary:'Schedule term safe ID',secondary:'Scenario safe ID',source:'Source order record safe ID',kind:'Schedule topic',value:'Scenario event label',hash:'Source span',details:'Exact schedule language'},required:['primary','secondary','source'],build:v=>({terms:[{term_id:v.primary,topic:v.kind,exact_language:v.details,source_ref:{record_id:v.source,span:v.hash}}]}),review:{label:'Build schedule scenario',url:'/api/parenting-schedule/scenarios',method:'POST',build:v=>({scenario_id:v.secondary,term_ids:[v.primary],events:[{label:v.value||'Review-required event candidate'}]})}},
+      negotiation: {title:'Mediation, negotiation and proposals',inventory:'/api/negotiation/inventory',receipt:'/api/negotiation/receipt',createUrl:'/api/negotiation/proposals',description:'Create and compare local source-bound proposals. Nothing is sent, accepted, or treated as an agreement.',labels:{primary:'Proposal safe ID',secondary:'Author role safe ID',source:'Source record safe ID',kind:'Proposal topic',value:'Comparison proposal safe ID',hash:'Source span or hash',details:'Exact proposal text'},required:['primary','secondary','source'],build:v=>({proposals:[{proposal_id:v.primary,author_role:v.secondary,date_candidate:'',topics:[v.kind||'general'],exact_text:v.details,source_ref:{record_id:v.source,span:v.hash}}]}),review:{label:'Compare two proposals',url:'/api/negotiation/compare',method:'POST',build:v=>({left_id:v.primary,right_id:v.value})}},
+      property: {title:'Property, debt and valuation',inventory:'/api/property/inventory',receipt:'/api/property/receipt',createUrl:'/api/property/items',description:'Record valuation candidates from exact sources. Characterization, value, and division remain undetermined.',labels:{primary:'Item safe ID',secondary:'Owner candidate',source:'Source record safe ID',kind:'Property or debt type',value:'Value candidate',hash:'Source span',details:'Source-bound description'},required:['primary','source'],build:v=>({items:[{item_id:v.primary,kind:v.kind,description:v.details,owner_candidate:v.secondary,value_candidate:v.value,valuation_date_candidate:'',source_ref:{record_id:v.source,span:v.hash}}]})},
+      modification: {title:'Modification review',inventory:'/api/modification/inventory',receipt:'/api/modification/receipt',createUrl:'/api/modification/changes',description:'Record source-bound changed-circumstance candidates without deciding materiality or outcome.',labels:{primary:'Change safe ID',secondary:'Related order safe ID',source:'Source record safe ID',kind:'Change category',value:'Date candidate',hash:'Source span',details:'Source-bound change description'},required:['primary','source'],build:v=>({changes:[{change_id:v.primary,category:v.kind,date_candidate:v.value,description:v.details,source_ref:{record_id:v.source,span:v.hash},disputed:true,related_order_id:v.secondary}]})},
+      foaa: {title:'FOAA request manager',inventory:'/api/foaa/inventory',receipt:'/api/foaa/receipt',createUrl:'/api/foaa/requests',description:'Create a local request draft and track its scope. The app never submits it.',labels:{primary:'Request safe ID',secondary:'Agency safe ID',source:'Supporting record safe ID',kind:'Request category',value:'Request scope',hash:'Source span',details:'Draft request text'},required:['primary','secondary'],build:v=>({requests:[{request_id:v.primary,agency_safe_id:v.secondary,draft_text:v.details,scope:v.value||v.kind,source_refs:v.source?[{record_id:v.source,span:v.hash}]:[]}]})},
+      filing: {title:'Court filing and MRECS readiness',inventory:'/api/filing-readiness/inventory',receipt:'/api/filing-readiness/receipt',createUrl:'/api/filing-readiness/packages',description:'Assemble a local package candidate and expose blockers. The app never files or submits to MRECS.',labels:{primary:'Package safe ID',secondary:'Court safe ID',source:'Document record safe ID',kind:'Document type',value:'Service proof candidate',hash:'Document hash',details:'Reviewer notes'},required:['primary','source'],build:v=>({packages:[{package_id:v.primary,document_ids:[v.source],court_safe_id:v.secondary,service_proof_candidate:v.value,document_type:v.kind,document_hash:v.hash,reviewer_notes:v.details}]}),review:{label:'Validate blockers',method:'GET',url:v=>`/api/filing-readiness/${encodeURIComponent(v.primary)}/validate`}},
+      image: {title:'Image evidence review',inventory:'/api/image-evidence/inventory',receipt:'/api/image-evidence/receipt',createUrl:'/api/image-evidence/items',description:'Label immutable image evidence and derivative provenance without deciding authenticity.',labels:{primary:'Image safe ID',secondary:'Derivative safe ID',source:'Source record safe ID',kind:'Image type',value:'Metadata warning note',hash:'Original SHA-256',details:'Reviewer annotation'},required:['primary','source'],build:v=>({items:[{image_id:v.primary,original_hash:v.hash,kind:v.kind,source_ref:{record_id:v.source},metadata_warning:Boolean(v.value),annotation_derivative_hash:v.secondary,reviewer_note:v.details}]})},
+      email: {title:'Email header, attachment and export integrity',inventory:'/api/email-integrity/inventory',receipt:'/api/email-integrity/receipt',createUrl:'/api/email-integrity/exports',description:'Record source and header hashes without sending mail or deciding authenticity or delivery.',labels:{primary:'Export safe ID',secondary:'Attachment hash',source:'Source record safe ID',kind:'Export format',value:'Header hash',hash:'Source hash',details:'Reviewer notes'},required:['primary','source'],build:v=>({exports:[{export_id:v.primary,source_hash:v.hash,header_hash:v.value,attachment_hashes:v.secondary?[v.secondary]:[],format:v.kind||'eml',source_ref:{record_id:v.source},reviewer_notes:v.details}]})},
+      handoff: {title:'Secure reviewer handoff',inventory:'/api/reviewer-handoff/inventory',receipt:'/api/reviewer-handoff/receipt',createUrl:'/api/reviewer-handoff',description:'Create an encrypted local manifest. No sharing or upload is automatic.',labels:{primary:'Handoff safe ID',secondary:'Reviewer safe ID',source:'Included record safe ID',kind:'Review purpose category',value:'Expiration candidate',hash:'Record-set hash',details:'Purpose and reviewer instructions'},required:['primary','secondary','source'],build:v=>({handoff_id:v.primary,record_ids:[v.source],reviewer_safe_id:v.secondary,purpose:[v.kind,v.details].filter(Boolean).join(': '),expiration_candidate:v.value,record_set_hash:v.hash})},
+      language: {title:'Plain-language, accessibility and translation',inventory:'/api/language-access/inventory',receipt:'/api/language-access/receipt',createUrl:'/api/language-access/copies',description:'Create a working copy linked to immutable source text. It is not a certified translation.',labels:{primary:'Working copy safe ID',secondary:'Review language safe ID',source:'Source record safe ID',kind:'Copy type',value:'Target language',hash:'Source hash',details:'Working copy text'},required:['primary','source'],build:v=>({copies:[{copy_id:v.primary,source_record_id:v.source,source_hash:v.hash,kind:v.kind||'plain_language',target_language:v.value||v.secondary||'English',working_text:v.details}]})},
+      resources: {title:'Maine family resource navigator',inventory:'/api/resources/inventory',receipt:'/api/resources/receipt',createUrl:'/api/resources',description:'Record a reviewed resource candidate. Availability is not assumed and no outreach is automatic.',labels:{primary:'Resource safe ID',secondary:'County or region',source:'Official URL or source record',kind:'Resource category',value:'Resource name',hash:'Source verification hash',details:'Contact and warm-handoff note'},required:['primary'],build:v=>({resources:[{resource_id:v.primary,name:v.value,category:v.kind,county_or_region:v.secondary,source_url_or_record:v.source,contact_note:[v.details,v.hash?`verification ${v.hash}`:''].filter(Boolean).join(' · ')}]})},
+    };
+
+    function configureLateReview(config) {
+      const fields = {primary:lateReviewPrimaryLabel,secondary:lateReviewSecondaryLabel,source:lateReviewSourceLabel,kind:lateReviewKindLabel,value:lateReviewValueLabel,hash:lateReviewHashLabel,details:lateReviewDetailsLabel};
+      Object.entries(fields).forEach(([name, element]) => { if (element) element.textContent = config.labels?.[name] || element.textContent; });
+      if (lateReviewTitle) lateReviewTitle.textContent = config.title;
+      if (lateReviewDescription) lateReviewDescription.textContent = config.description;
+      if (lateReviewCreate) lateReviewCreate.textContent = `Add ${String(config.labels?.primary || 'review item').replace(/ safe ID$/i,'').toLowerCase()}`;
+      if (lateReviewAction) {
+        lateReviewAction.hidden = !config.review;
+        lateReviewAction.textContent = config.review?.label || 'Run review action';
+      }
+    }
+
+    function renderLateReviewPayload(payload, heading) {
+      if (!lateReviewResults) return;
+      const sourceId = intakeSafeId(lateReviewSourceId?.value);
+      lateReviewResults.innerHTML = `<div class="review-required-banner"><strong>Review required</strong><span>Local source-bound working data; no legal conclusion or external action.</span></div><strong>${escapeHtml(heading)}</strong><pre>${escapeHtml(JSON.stringify(payload,null,2))}</pre>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source ${escapeHtml(sourceId)}</button>`:''}`;
+    }
+
+    async function openLateReview(config) {
+      lateReviewConfig=config;
+      if(!lateReviewOverlay)return;
+      configureLateReview(config);
+      openOverlay(lateReviewOverlay);
+      if(!corpusSelect?.value){if(lateReviewStatus)lateReviewStatus.textContent='Select a local matter before reviewing local records.';return;}
+      await refreshLateReview();
+      lateReviewPrimaryId?.focus({preventScroll:true});
+    }
+
+    async function createLateReviewItem() {
+      if(!lateReviewConfig)return;
+      const values=lateReviewValues();
+      try {
+        requireLateReviewIds(values,lateReviewConfig.required||['primary']);
+        if(lateReviewStatus)lateReviewStatus.textContent='Saving encrypted local review item…';
+        const payload=lateReviewConfig.create
+          ? await lateReviewConfig.create(values)
+          : await fetchJson(lateReviewConfig.createUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lateReviewConfig.build(values))});
+        if(lateReviewStatus)lateReviewStatus.textContent='Saved locally · review required · source drill-down available';
+        renderLateReviewPayload(payload,`${lateReviewConfig.title} — saved item`);
+      } catch(e) {
+        if(lateReviewStatus)lateReviewStatus.textContent=e.message;
+        if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e,{title:'The review item was not saved'});
+      }
+    }
+
+    async function runLateReviewAction() {
+      if(!lateReviewConfig?.review)return;
+      const values=lateReviewValues();
+      try {
+        requireLateReviewIds(values,['primary']);
+        const review=lateReviewConfig.review;
+        const url=typeof review.url==='function'?review.url(values):review.url;
+        const options={method:review.method||'POST'};
+        if(review.build){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(review.build(values));}
+        const payload=await fetchJson(url,options);
+        renderLateReviewPayload(payload,`${lateReviewConfig.title} — ${review.label}`);
+      } catch(e) {
+        if(lateReviewStatus)lateReviewStatus.textContent=e.message;
+        if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e,{title:'The review action could not finish'});
+      }
+    }
+
+    async function refreshLateReview(){if(!lateReviewConfig)return;try{const p=await fetchJson(lateReviewConfig.inventory);if(lateReviewStatus)lateReviewStatus.textContent='Encrypted local inventory · review required · no external action';renderLateReviewPayload(p,`${lateReviewConfig.title} inventory`);}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e);}}
+    async function showLateReviewReceipt(){if(!lateReviewConfig)return;try{const r=await fetchJson(lateReviewConfig.receipt);renderLateReviewPayload(r,`${lateReviewConfig.title} receipt`);}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e);}}
+
+    async function openSpecializedSourceRecord(recordId, owner=null) {
+      const safeId=intakeSafeId(recordId);
+      if(!safeId){showToast('Enter a valid source record safe ID first.');return;}
+      try {
+        const payload=await fetchJson(`/api/records/${encodeURIComponent(safeId)}/integrity`);
+        const token=String(payload?.preview?.token||'');
+        if(!token)throw makeSafeLocalError({status:404,code:'record_preview_token_missing'});
+        await openRecordInspector({source_token:token},0,owner);
+      } catch(e) {
+        showToast(`${e.message} (${e.safeCode||'source_review_failed'})`);
+      }
+    }
+
+    function installSpecializedSourceInspectors() {
+      document.querySelectorAll('input[id$="-source-id"]').forEach((input) => {
+        if(input.parentElement?.querySelector('[data-source-input-inspector]'))return;
+        const button=document.createElement('button');
+        button.type='button';button.className='secondary compact-action source-input-inspector';button.dataset.sourceInputInspector=input.id;button.textContent='Inspect exact source';
+        button.addEventListener('click',()=>openSpecializedSourceRecord(input.value,button));
+        input.insertAdjacentElement('afterend',button);
+      });
+    }
+
+    document.addEventListener('click',(event)=>{const button=event.target.closest?.('[data-specialized-source]');if(button){event.preventDefault();openSpecializedSourceRecord(button.dataset.specializedSource,button);}});
+
+    const openNegotiationWorkspace=()=>openLateReview(lateReviewDefinitions.negotiation);
+    const openPropertyWorkspace=()=>openLateReview(lateReviewDefinitions.property);
+    const openModificationWorkspace=()=>openLateReview(lateReviewDefinitions.modification);
+    const openFoaaWorkspace=()=>openLateReview(lateReviewDefinitions.foaa);
+    const openFilingWorkspace=()=>openLateReview(lateReviewDefinitions.filing);
+    const openImageEvidenceWorkspace=()=>openLateReview(lateReviewDefinitions.image);
+    const openEmailIntegrityWorkspace=()=>openLateReview(lateReviewDefinitions.email);
+    const openHandoffWorkspace=()=>openLateReview(lateReviewDefinitions.handoff);
+    const openLanguageWorkspace=()=>openLateReview(lateReviewDefinitions.language);
+    const openResourceWorkspace=()=>openLateReview(lateReviewDefinitions.resources);
 
     function renderMatterCommandCenter(payload) {
       matterCommandCenterPayload = payload || null;
@@ -4296,7 +4440,7 @@
     careWorkspaceClose?.addEventListener('click',()=>closeOverlay(careWorkspaceOverlay));careWorkspaceOverlay?.addEventListener('mousedown',e=>{if(e.target===careWorkspaceOverlay)closeOverlay(careWorkspaceOverlay);});careAdd?.addEventListener('click',addCare);careRefresh?.addEventListener('click',refreshCare);careReceipt?.addEventListener('click',showCareReceipt);
     safetyWorkspaceClose?.addEventListener('click',()=>closeOverlay(safetyWorkspaceOverlay));safetyWorkspaceOverlay?.addEventListener('mousedown',e=>{if(e.target===safetyWorkspaceOverlay)closeOverlay(safetyWorkspaceOverlay);});safetyAdd?.addEventListener('click',addSafety);safetyRefresh?.addEventListener('click',refreshSafety);safetyReceipt?.addEventListener('click',showSafetyReceipt);
     scheduleWorkspaceClose?.addEventListener('click',()=>closeOverlay(scheduleWorkspaceOverlay));scheduleWorkspaceOverlay?.addEventListener('mousedown',e=>{if(e.target===scheduleWorkspaceOverlay)closeOverlay(scheduleWorkspaceOverlay);});scheduleAdd?.addEventListener('click',addSchedule);scheduleRefresh?.addEventListener('click',refreshSchedule);scheduleReceipt?.addEventListener('click',showScheduleReceipt);
-    lateReviewClose?.addEventListener('click',()=>closeOverlay(lateReviewOverlay));lateReviewOverlay?.addEventListener('mousedown',e=>{if(e.target===lateReviewOverlay)closeOverlay(lateReviewOverlay);});lateReviewRefresh?.addEventListener('click',refreshLateReview);lateReviewReceipt?.addEventListener('click',showLateReviewReceipt);
+    lateReviewClose?.addEventListener('click',()=>closeOverlay(lateReviewOverlay));lateReviewOverlay?.addEventListener('mousedown',e=>{if(e.target===lateReviewOverlay)closeOverlay(lateReviewOverlay);});lateReviewCreate?.addEventListener('click',createLateReviewItem);lateReviewAction?.addEventListener('click',runLateReviewAction);lateReviewRefresh?.addEventListener('click',refreshLateReview);lateReviewReceipt?.addEventListener('click',showLateReviewReceipt);
     corpusSelect?.addEventListener('change', () => {
       syncContextBar();
       if (matterCommandCenterOverlay && !matterCommandCenterOverlay.hidden) loadMatterCommandCenter();
@@ -5916,8 +6060,29 @@
     authorityImpactAnalyze?.addEventListener('click', analyzeAuthorityImpact);
     authorityImpactBuild?.addEventListener('click', buildAuthorityImpactPacket);
 
+    const layoutPreferenceKey = 'mfl-workbench-layout-v1';
+    function readLayoutPreferences() {
+      try {
+        const value = JSON.parse(window.localStorage.getItem(layoutPreferenceKey) || '{}');
+        return value && typeof value === 'object' ? value : {};
+      } catch (_error) {
+        return {};
+      }
+    }
+    function saveLayoutPreferences() {
+      try {
+        window.localStorage.setItem(layoutPreferenceKey, JSON.stringify({
+          evidenceOpen: drawerUserPreference,
+          shortcutsOpen: sideCardsUserPreference,
+        }));
+      } catch (_error) {
+        // Layout remains fully usable when storage is unavailable.
+      }
+    }
+    const savedLayoutPreferences = readLayoutPreferences();
     let drawerReturnFocus = null;
-    let drawerUserPreference = null;
+    let drawerUserPreference = typeof savedLayoutPreferences.evidenceOpen === 'boolean' ? savedLayoutPreferences.evidenceOpen : null;
+    let sideCardsUserPreference = savedLayoutPreferences.shortcutsOpen !== false;
     let responsiveLayoutMode = '';
     const inlineDrawerQuery = window.matchMedia('(min-width: 960px)');
     const fullWorkbenchQuery = window.matchMedia('(min-width: 1360px)');
@@ -5931,7 +6096,10 @@
     function setDrawerOpen(open, panel = '', options = {}) {
       const {manageFocus = true, userInitiated = false} = options;
       const wasOpen = document.body.dataset.drawer === 'open';
-      if (userInitiated) drawerUserPreference = Boolean(open);
+      if (userInitiated) {
+        drawerUserPreference = Boolean(open);
+        saveLayoutPreferences();
+      }
       if (open && !wasOpen && manageFocus) drawerReturnFocus = document.activeElement;
       if (!open && wasOpen && manageFocus) {
         const returnTarget = drawerReturnFocus || focusModeButton;
@@ -5956,6 +6124,22 @@
       }
     }
 
+    function setShortcutCardsVisible(visible, {userInitiated = false} = {}) {
+      sideCardsUserPreference = Boolean(visible);
+      document.body.dataset.shortcuts = visible ? 'open' : 'closed';
+      if (workbenchShortcuts) {
+        workbenchShortcuts.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        workbenchShortcuts.inert = !visible;
+      }
+      toggleSideCardsButton?.setAttribute('aria-expanded', visible ? 'true' : 'false');
+      const label = toggleSideCardsButton?.querySelector('.action-label');
+      if (label) label.textContent = visible ? 'Hide shortcuts' : 'Show shortcuts';
+      if (userInitiated) {
+        saveLayoutPreferences();
+        showToast(visible ? 'Shortcut cards shown. Chat resized.' : 'Shortcut cards hidden. Chat expanded.');
+      }
+    }
+
     function syncResponsiveLayout({initial = false} = {}) {
       const nextMode = currentResponsiveLayoutMode();
       const modeChanged = nextMode !== responsiveLayoutMode;
@@ -5963,7 +6147,7 @@
       document.body.dataset.layout = nextMode;
 
       if (initial) {
-        setDrawerOpen(nextMode !== 'overlay', 'evidence', {manageFocus: false});
+        setDrawerOpen(nextMode !== 'overlay' && drawerUserPreference !== false, 'evidence', {manageFocus: false});
         return;
       }
       if (!modeChanged) {
@@ -6000,6 +6184,7 @@
     }
 
     focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
+    toggleSideCardsButton?.addEventListener('click', () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true}));
     closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     document.querySelectorAll('[data-drawer-tab]').forEach((button) => {
@@ -6167,8 +6352,33 @@
       {id: 'search_both_separately', group: 'Research', label: 'Search law and records separately', hint: 'Keep authority and matter facts in distinct lanes', aliases: 'both combined compare', run: () => setSearchMode('both')},
       {id: 'choose_matter', group: 'Matter', label: 'Choose active matter', hint: 'Open the local corpus library', aliases: 'case family client corpus', run: () => setDrawerOpen(true, 'setup')},
       {id: 'open_authority_library', group: 'Matter', label: 'Open Maine Authority Library', hint: 'Review official source counts and freshness', aliases: 'official law statutes rules forms opinions', run: () => { setDrawerOpen(true, 'setup'); window.setTimeout(() => authoritySearch?.focus({preventScroll: true}), 20); }},
+      {id:'open_matter_intake',group:'Specialized workbenches',label:'Matter intake, posture & issue tree',hint:'Create or resume an encrypted review-required intake',aliases:'slice 21 procedural posture issue tree',run:()=>openMatterIntake()},
+      {id:'open_orders_workspace',group:'Specialized workbenches',label:'Operative orders & supersession',hint:'Record exact terms and compare amendments',aliases:'slice 22 orders supersession operative',run:()=>openLateReview(lateReviewDefinitions.orders)},
+      {id:'open_calendar_workspace',group:'Specialized workbenches',label:'Service, deadlines & hearings',hint:'Build source-bound deadline candidates',aliases:'slice 23 service notice calendar',run:()=>openLateReview(lateReviewDefinitions.calendar)},
+      {id:'open_docket_workspace',group:'Specialized workbenches',label:'Docket & MRECS reconciliation',hint:'Compare docket entries with local records',aliases:'slice 24 docket mrecs missing records',run:()=>openLateReview(lateReviewDefinitions.docket)},
+      {id:'open_discovery_workspace',group:'Specialized workbenches',label:'Discovery & disclosure',hint:'Map requests, responses, productions and gaps',aliases:'slice 25 discovery disclosure',run:()=>openLateReview(lateReviewDefinitions.discovery)},
+      {id:'open_exhibits_workspace',group:'Specialized workbenches',label:'Exhibits, Bates & provenance',hint:'Create derivative labels and binder receipts',aliases:'slice 26 exhibit binder bates custody',run:()=>openLateReview(lateReviewDefinitions.exhibits)},
+      {id:'open_statements_workspace',group:'Specialized workbenches',label:'Witness & statement comparison',hint:'Compare exact source-bound statements',aliases:'slice 27 witness testimony statements',run:()=>openLateReview(lateReviewDefinitions.statements)},
+      {id:'open_hearing_workspace',group:'Specialized workbenches',label:'Hearing preparation',hint:'Assemble issues, authority and missing proof',aliases:'slice 28 hearing courtroom pack',run:()=>openLateReview(lateReviewDefinitions.hearings)},
+      {id:'open_appellate_workspace',group:'Specialized workbenches',label:'Appellate preservation',hint:'Verify record citations and missing components',aliases:'slice 29 appeal transcript citation',run:()=>openLateReview(lateReviewDefinitions.appellate)},
+      {id:'open_uccjea_workspace',group:'Specialized workbenches',label:'UCCJEA interstate review',hint:'Review conflicting state-residence dates',aliases:'slice 30 interstate jurisdiction uccjea',run:()=>openLateReview(lateReviewDefinitions.uccjea)},
+      {id:'open_icwa_workspace',group:'Specialized workbenches',label:'ICWA inquiry & notice review',hint:'Record documented inquiry without status inference',aliases:'slice 31 icwa tribal notice',run:()=>openLateReview(lateReviewDefinitions.icwa)},
+      {id:'open_care_workspace',group:'Specialized workbenches',label:'Guardianship, adoption & probate',hint:'Organize care-pathway records and gaps',aliases:'slice 32 guardianship adoption probate',run:()=>openLateReview(lateReviewDefinitions.care)},
+      {id:'open_safety_workspace',group:'Specialized workbenches',label:'Protection & safety records',hint:'Organize source-bound safety records',aliases:'slice 33 pfa abuse protection safety',run:()=>openLateReview(lateReviewDefinitions.safety)},
+      {id:'open_schedule_workspace',group:'Specialized workbenches',label:'Parenting schedule & logistics',hint:'Build scenarios from exact order terms',aliases:'slice 34 parenting plan schedule logistics',run:()=>openLateReview(lateReviewDefinitions.schedule)},
+      {id:'open_negotiation_workspace',group:'Specialized workbenches',label:'Mediation & proposal matrix',hint:'Create and compare source-bound proposals',aliases:'slice 35 mediation negotiation proposal',run:openNegotiationWorkspace},
+      {id:'open_property_workspace',group:'Specialized workbenches',label:'Property, debt & valuation',hint:'Record valuation candidates from sources',aliases:'slice 36 property debt valuation',run:openPropertyWorkspace},
+      {id:'open_modification_workspace',group:'Specialized workbenches',label:'Modification review',hint:'Record changed-circumstance candidates',aliases:'slice 37 modification circumstances',run:openModificationWorkspace},
+      {id:'open_foaa_workspace',group:'Specialized workbenches',label:'FOAA request manager',hint:'Create local public-record request drafts',aliases:'slice 38 foaa public records',run:openFoaaWorkspace},
+      {id:'open_filing_workspace',group:'Specialized workbenches',label:'Filing & MRECS readiness',hint:'Expose package blockers without filing',aliases:'slice 39 filing package mrecs',run:openFilingWorkspace},
+      {id:'open_image_evidence_workspace',group:'Specialized workbenches',label:'Image & screenshot evidence',hint:'Review immutable image provenance',aliases:'slice 40 image screenshot photo',run:openImageEvidenceWorkspace},
+      {id:'open_email_integrity_workspace',group:'Specialized workbenches',label:'Email export integrity',hint:'Record header and attachment hashes',aliases:'slice 41 email header attachment',run:openEmailIntegrityWorkspace},
+      {id:'open_handoff_workspace',group:'Specialized workbenches',label:'Secure reviewer handoff',hint:'Create an encrypted local handoff manifest',aliases:'slice 42 handoff portable bundle',run:openHandoffWorkspace},
+      {id:'open_language_workspace',group:'Specialized workbenches',label:'Plain language & translation',hint:'Create review-required accessible working copies',aliases:'slice 43 accessibility translation',run:openLanguageWorkspace},
+      {id:'open_resource_workspace',group:'Specialized workbenches',label:'Maine resource navigator',hint:'Record verified resource candidates',aliases:'slice 44 resource warm handoff',run:openResourceWorkspace},
       {id: 'open_document_intelligence', group: 'Evidence', label: 'Open document intelligence', hint: 'Inspect OCR, privacy review, and preservation copies', aliases: 'ocr redact preserve compare duplicate', run: () => openDocumentIntelligence()},
       {id: 'toggle_evidence_drawer', group: 'Evidence', label: 'Open Evidence & tools', hint: 'Sources, matter controls, review and starters', aliases: 'drawer proof audit', run: () => setDrawerOpen(true, 'evidence')},
+      {id: 'toggle_shortcut_cards', group: 'Workspace', label: 'Toggle shortcut cards', hint: 'Hide or show supporting cards and resize chat', aliases: 'side cards rail expand chat layout', run: () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true})},
       {id: 'open_source_list', group: 'Evidence', label: 'Open source list', hint: 'Load available source cards and inspect the proof', aliases: 'citations authority evidence', run: async () => { setDrawerOpen(true, 'evidence'); await loadSources(); }},
       {id: 'search_family_printables', group: 'Resources', label: 'Search family printables', hint: 'Search bundled local FOCAF printable page text', aliases: 'printables worksheets guides family resources', run: () => { setDrawerOpen(true, 'printables'); printableSearch?.focus(); }},
       {id: 'browse_printables', group: 'Resources', label: 'Browse printables', hint: 'Open optional family resources and previews', aliases: 'focaf browse resources', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('family'); }},
@@ -6530,6 +6740,8 @@
       }
     });
 
+    installSpecializedSourceInspectors();
+    setShortcutCardsVisible(sideCardsUserPreference);
     selectDrawerTab('evidence');
     syncResponsiveLayout({initial: true});
     const scheduleResponsiveSync = (() => {

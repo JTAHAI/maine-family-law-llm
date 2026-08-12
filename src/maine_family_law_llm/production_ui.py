@@ -10,34 +10,8 @@ from typing import Any
 from .local_workbench_ui import ui_asset_root
 
 PRODUCTION_ASSETS = ("workbench.html", "workbench.css", "workbench.js")
-EXPERIMENTAL_HIDDEN_WORKSPACE_IDS = frozenset(
-    {
-        "appellate-workspace-overlay",
-        "calendar-workspace-overlay",
-        "discovery-workspace-overlay",
-        "docket-workspace-overlay",
-        "exhibits-workspace-overlay",
-        "hearing-workspace-overlay",
-        "icwa-workspace-overlay",
-        "orders-workspace-overlay",
-        "statements-workspace-overlay",
-        "uccjea-workspace-overlay",
-    }
-)
-EXPERIMENTAL_HIDDEN_API_PREFIXES = (
-    "/api/intake/matters",
-    "/api/matter-journey",
-    "/api/orders",
-    "/api/calendar",
-    "/api/docket",
-    "/api/discovery",
-    "/api/exhibits",
-    "/api/statements",
-    "/api/hearings",
-    "/api/appellate",
-    "/api/uccjea",
-    "/api/icwa",
-)
+EXPERIMENTAL_HIDDEN_WORKSPACE_IDS: frozenset[str] = frozenset()
+EXPERIMENTAL_HIDDEN_API_PREFIXES: tuple[str, ...] = ()
 REQUIRED_CONTRACTS = {
     "skip_navigation": ("workbench.html", 'class="skip-link"'),
     "live_status": ("workbench.html", "aria-live="),

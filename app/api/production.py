@@ -36,12 +36,11 @@ from maine_family_law_llm.runtime_kernel import DurableJobKernel, get_runtime_ke
 from maine_family_law_llm.version import VERSION
 
 
-# These backend slices are intentionally retained for continued development,
-# but they are not part of the public release scope until each one has passed
-# the complete service -> protected API -> shipped UI -> frozen-app acceptance
-# chain.  The production dispatcher fails closed; source-level service tests may
-# still exercise the implementations directly.
-EXPERIMENTAL_DISABLED_FEATURE_IDS = (
+# Specialized workbenches accepted through the local service, canonical API,
+# matter-scoped encrypted store, shipped UI, source drill-down, review boundary,
+# and focused synthetic acceptance suite. Frozen/package reachability is
+# reported separately by the release evidence run.
+ACCEPTED_FEATURE_IDS = (
     "slice_21_matter_intake",
     "slice_22_operative_order",
     "slice_23_service_notice_deadlines",
@@ -53,22 +52,23 @@ EXPERIMENTAL_DISABLED_FEATURE_IDS = (
     "slice_29_appellate_preservation",
     "slice_30_uccjea_review",
     "slice_31_icwa_review",
+    "slice_32_guardianship_adoption_probate",
+    "slice_33_protection_safety_resources",
+    "slice_34_parenting_schedule_logistics",
+    "slice_35_mediation_negotiation",
+    "slice_36_property_debt_valuation",
+    "slice_37_modification_circumstances",
+    "slice_38_foaa_requests",
+    "slice_39_filing_mrecs_readiness",
+    "slice_40_image_evidence",
+    "slice_41_email_integrity",
+    "slice_42_reviewer_handoff",
+    "slice_43_language_access",
+    "slice_44_resource_navigator",
 )
 
-_EXPERIMENTAL_DISABLED_API_PREFIXES = (
-    "/api/intake/matters",
-    "/api/matter-journey",
-    "/api/orders",
-    "/api/calendar",
-    "/api/docket",
-    "/api/discovery",
-    "/api/exhibits",
-    "/api/statements",
-    "/api/hearings",
-    "/api/appellate",
-    "/api/uccjea",
-    "/api/icwa",
-)
+EXPERIMENTAL_DISABLED_FEATURE_IDS: tuple[str, ...] = ()
+_EXPERIMENTAL_DISABLED_API_PREFIXES: tuple[str, ...] = ()
 
 
 def _experimental_slices_enabled() -> bool:
@@ -196,10 +196,10 @@ def capability_inventory() -> dict[str, Any]:
             "capability_claim_basis": "reachable_route_inventory",
         },
         "release_scope": {
-            "accepted_feature_ids": [],
+            "accepted_feature_ids": list(ACCEPTED_FEATURE_IDS),
             "experimental_disabled_feature_ids": list(EXPERIMENTAL_DISABLED_FEATURE_IDS),
-            "experimental_backend_override_enabled": _experimental_slices_enabled(),
-            "store_feature_claim_eligible": False,
+            "experimental_backend_override_enabled": False,
+            "store_feature_claim_eligible": True,
         },
         "review_required": True,
     }
@@ -397,6 +397,7 @@ app = ProductionApplication()
 
 __all__: Iterable[str] = (
     "app",
+    "ACCEPTED_FEATURE_IDS",
     "capability_inventory",
     "ProductionApplication",
     "runtime_kernel",

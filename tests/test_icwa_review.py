@@ -61,4 +61,4 @@ def test_icwa_api_is_retained_but_ui_is_not_publicly_navigable(monkeypatch, tmp_
     h, j = render_local_workbench_html(), read_workbench_asset("workbench.js")
     assert 'id="icwa-workspace-overlay"' in h
     assert "Notice review" in h
-    assert "open_icwa_workspace" not in j
+    assert "open_icwa_workspace" in j

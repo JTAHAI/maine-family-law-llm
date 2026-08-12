@@ -118,4 +118,4 @@ def test_exhibit_api_is_retained_but_workspace_is_not_publicly_navigable(monkeyp
     html, script = render_local_workbench_html(), read_workbench_asset("workbench.js")
     assert 'id="exhibits-workspace-overlay"' in html
     assert "Bates/control numbering" in html and "Provenance ledger" in html
-    assert "open_exhibits_workspace" not in script
+    assert "open_exhibits_workspace" in script

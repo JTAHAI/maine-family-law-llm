@@ -63,4 +63,4 @@ def test_hearing_api_is_retained_but_workspace_is_not_publicly_navigable(monkeyp
         and "Missing proof" in html
         and "Courtroom notes" in html
     )
-    assert "open_hearing_workspace" not in script
+    assert "open_hearing_workspace" in script

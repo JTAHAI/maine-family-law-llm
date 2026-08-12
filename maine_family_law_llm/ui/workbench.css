@@ -4471,3 +4471,105 @@ body.v6-workbench[data-reading-level="detailed"] :where(.message-bubble, .answer
   .trust-lane > small { display: none; }
   .trust-lane-action { grid-column: 2; grid-row: 1 / 3; align-self: center; min-height: 26px; margin-top: 0; }
 }
+
+/* v7 accessibility and adaptive workspace pass.
+   Secondary copy remains visually quiet without dropping below readable
+   contrast, and either supporting rail can be dismissed independently. */
+:root {
+  --muted: #4b5b66;
+  --v5-ink-500: #526177;
+  --v5-ink-700: #33445d;
+  --v5-line: #c8d2df;
+  --v5-line-strong: #b7c4d3;
+}
+
+body.v6-workbench :where(input, textarea)::placeholder {
+  color: #59677a;
+  opacity: 1;
+}
+
+body.v6-workbench {
+  --v6-ink-500: #526177;
+  --v6-ink-650: #3f515a;
+  --v6-line: #c8d2cf;
+  --v6-line-strong: #aebcb7;
+}
+
+.v6-workbench :where(.v5-control-field label, .trust-lane > span, .source-preview-kicker) {
+  color: #3f515a;
+  font-size: 11px;
+}
+
+.v6-workbench :where(.footerbar, .composer-meta, .chat-subtitle) {
+  font-size: 11px;
+}
+
+body.v6-workbench :where(button, input, select, textarea, summary, a):focus-visible {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+}
+
+body.v6-workbench :where(button, input, select, textarea):disabled {
+  color: #526177;
+  background-color: #edf1f5;
+  border-color: #b7c4d3;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.v5-workbench :where(
+  .v5-local-status small,
+  .v5-corpus-summary small,
+  .v5-corpus-summary span,
+  .v5-progress-label,
+  .v5-action-list button,
+  .v5-pack-list button,
+  .v5-pack-list [data-pack-prompt],
+  .v5-quick-actions button,
+  .drawer-tab,
+  .source-card-compact-meta,
+  .composer-meta,
+  .v5-source-cards button,
+  .v5-source-cards a
+) {
+  font-size: 11px !important;
+  line-height: 1.4;
+}
+
+.v5-action-list button span {
+  color: #526177;
+}
+
+body[data-shortcuts="closed"] .workbench-rail {
+  display: none !important;
+}
+
+body[data-shortcuts="closed"][data-drawer="open"] .v5-main-stage.main-stage {
+  grid-template-columns: minmax(0, 1fr) 350px;
+}
+
+body[data-shortcuts="closed"][data-drawer="closed"] .v5-main-stage.main-stage {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-shortcuts="closed"][data-drawer="closed"] .v5-workbench :where(.chat-seed, .message) {
+  max-width: 1180px;
+}
+
+#toggle-side-cards-button[aria-expanded="false"] {
+  color: #ffffff;
+  background: #0f5fbf;
+  border-color: #0b4e9d;
+}
+
+@media (max-width: 1359px) {
+  #toggle-side-cards-button { display: none; }
+}
+
+@media (forced-colors: active) {
+  #toggle-side-cards-button[aria-expanded="false"] {
+    color: ButtonText;
+    background: ButtonFace;
+    border-color: ButtonText;
+  }
+}

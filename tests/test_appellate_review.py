@@ -59,4 +59,4 @@ def test_appellate_api_is_retained_but_ui_is_not_publicly_navigable(monkeypatch,
     h, j = render_local_workbench_html(), read_workbench_asset("workbench.js")
     assert 'id="appellate-workspace-overlay"' in h
     assert "Record-citation verifier" in h
-    assert "open_appellate_workspace" not in j
+    assert "open_appellate_workspace" in j

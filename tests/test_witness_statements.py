@@ -99,4 +99,4 @@ def test_statement_api_is_retained_but_workspace_is_not_publicly_navigable(monke
     html, script = render_local_workbench_html(), read_workbench_asset("workbench.js")
     assert 'id="statements-workspace-overlay"' in html
     assert "Side-by-side comparison" in html and "Clarification outline" in html
-    assert "open_statements_workspace" not in script
+    assert "open_statements_workspace" in script

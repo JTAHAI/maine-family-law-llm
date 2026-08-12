@@ -184,6 +184,8 @@ class CarePathwayStore:
                 g.append({"pathway_id": x["pathway_id"], "missing": "supporting_records"})
         return {
             "status": "review_required",
+            "review_required": True,
+            "local_only": True,
             "gaps": g,
             "eligibility": "not_determined",
             "consent_validity": "not_determined",

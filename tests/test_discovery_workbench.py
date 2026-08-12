@@ -90,7 +90,7 @@ def test_discovery_api_is_matter_scoped_and_does_not_send_service(
     assert len(client.get("/api/discovery/receipt").json()["receipt_hash"]) == 64
 
 
-def test_experimental_discovery_markup_is_retained_but_not_publicly_navigable() -> None:
+def test_discovery_workbench_is_publicly_navigable() -> None:
     html = render_local_workbench_html()
     script = read_workbench_asset("workbench.js")
     assert 'id="discovery-workspace-overlay"' in html
@@ -102,5 +102,5 @@ def test_experimental_discovery_markup_is_retained_but_not_publicly_navigable() 
     ):
         assert label in html
     assert 'aria-live="polite"' in html
-    assert "open_discovery_workspace" not in script
+    assert "open_discovery_workspace" in script
     assert "Nothing is served" in html

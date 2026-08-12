@@ -209,6 +209,6 @@ def test_experimental_intake_markup_is_retained_but_not_publicly_navigable() -> 
     ):
         assert label in html
     assert 'id="matter-intake-overlay"' in html
-    assert "open_matter_intake" not in script
+    assert "open_matter_intake" in script
     assert "/api/intake/matters/" in script
     assert "predict an outcome" in html

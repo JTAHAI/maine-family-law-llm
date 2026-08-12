@@ -51,7 +51,7 @@ permalink: /
       <article class="card">
         <div class="card-number">02</div>
         <h3>Verified core</h3>
-        <p>Sixteen core workflows are verified end to end, including local launch, record import, OCR, privacy review, official-source research, verification, drafting, packets, filing gates, and backup/restore.</p>
+        <p>Forty workflows are verified end to end: 16 core workflows plus 24 source-bound specialized workbenches spanning the family-law matter lifecycle.</p>
       </article>
       <article class="card">
         <div class="card-number">03</div>
@@ -69,13 +69,13 @@ permalink: /
 <section class="section">
   <div class="shell">
     <div class="section-intro">
-      <div class="eyebrow">Recently added in source</div>
+      <div class="eyebrow">Verified specialized workbenches</div>
       <h2>Specialized workbenches now cover the full matter lifecycle.</h2>
-      <p class="lead">These recent vertical slices are present in the v7 source tree. They are labeled development preview until frozen-app and installed-package acceptance is complete.</p>
+      <p class="lead">Slices 21–44 now pass protected local API, meaningful production UI action, exact-source inspection, review-required status, focused tests, and full-tier frozen-runtime reachability.</p>
     </div>
     <div class="grid-3">
       <article class="card feature-cluster">
-        <div class="tier tier--preview">Development preview</div>
+        <div class="tier tier--verified">Verified end to end</div>
         <h3>Matter strategy and court operations</h3>
         <ul class="plain-list">
           <li>Matter intake, posture, and issue tree</li>
@@ -90,7 +90,7 @@ permalink: /
         </ul>
       </article>
       <article class="card feature-cluster">
-        <div class="tier tier--preview">Development preview</div>
+        <div class="tier tier--verified">Verified end to end</div>
         <h3>Jurisdiction, safety, and family pathways</h3>
         <ul class="plain-list">
           <li>UCCJEA interstate jurisdiction map</li>
@@ -104,7 +104,7 @@ permalink: /
         </ul>
       </article>
       <article class="card feature-cluster">
-        <div class="tier tier--preview">Development preview</div>
+        <div class="tier tier--verified">Verified end to end</div>
         <h3>Records, filing, handoff, and access</h3>
         <ul class="plain-list">
           <li>FOAA public-records request management</li>
