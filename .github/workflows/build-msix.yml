@@ -46,7 +46,7 @@ jobs:
           ./scripts/uninstall-test-msix.ps1
 
       - name: Upload Store artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maine-family-law-llm-msix
           path: |
