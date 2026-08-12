@@ -13,7 +13,7 @@ jobs:
           python-version: '3.11'
       - name: Install package
         shell: pwsh
-        run: python -m pip install -e ".[api,dev]"
+        run: python -m pip install ".[api,dev]"
       - name: Build installer package
         shell: pwsh
         run: .\scripts\build-windows-installer.ps1

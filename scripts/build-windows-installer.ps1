@@ -96,3 +96,7 @@ Write-Host "Windows installer package ready at $stageRoot"
 if (-not $SkipZip) {
   Write-Host "Zip artifact: $zipPath"
 }
+
+# Robocopy uses successful non-zero exit codes (for example, 1 means files
+# were copied). Do not leak that status as the PowerShell process exit code.
+exit 0
