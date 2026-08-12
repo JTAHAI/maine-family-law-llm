@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from legal.matter.document_inventory import scan_matter_folder
 from legal.matter.multi_label_classifier import MultiLabelMatterClassifier

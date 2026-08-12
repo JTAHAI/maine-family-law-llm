@@ -1,14 +1,22 @@
+import { EvidenceWorkbench } from "../components/evidence-workbench";
+
 export default function Evidence() {
   return (
-    <main data-review-status="review_required">
-      <h1>Evidence Map</h1>
-      <p>Fact-to-evidence map with document spans.</p>
-      <section data-source-card="visible">Source cards show jurisdiction, authority status, freshness, citation, and quote span availability.</section>
-      <section data-claim-drilldown="answer-to-claim">Answer → claim drilldown is available where answers or drafts are shown.</section>
-      <section data-citation-drilldown="claim-to-citation">Claim → citation drilldown is available for every legal assertion.</section>
-      <section data-source-text-drilldown="citation-to-source-text">Citation → source text drilldown opens official source text when the external authority store is populated.</section>
-      <section data-verifier-result-drilldown="source-text-to-verifier-result">Source text → verifier result drilldown shows citation, quote, claim-support, freshness, and jurisdiction checks.</section>
-      <section data-blocked-export-explanation="visible">Blocked exports explain every missing gate: authority, citation, quote, claim, fact, procedure, form, or human review.</section>
-    </main>
+    <EvidenceWorkbench
+      activeTab="/evidence"
+      kicker="Evidence work product"
+      title="Claims Review"
+      description="Enter a claim, promote a record sentence, or review a draft line against selected records without collapsing allegations into findings."
+    >
+      <section aria-label="Claim support matrix" className="evidence-workbench-card" data-review-status="review_required">
+        <h2>Support matrix</h2>
+        <ul>
+          <li data-claim-support="visible">Support, contradiction, qualification, alternative explanation, and unresolved cards remain separate.</li>
+          <li data-exact-source-span="visible">Every card keeps an exact source span and date context.</li>
+          <li data-no-binary-truth-score="true">No binary truth score is shown.</li>
+          <li data-context-window="visible">Show surrounding context and compare copies are available in the API.</li>
+        </ul>
+      </section>
+    </EvidenceWorkbench>
   );
 }

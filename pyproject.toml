@@ -4,18 +4,47 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "5.2.0"
-description = "Standalone Maine family-law legal-information workbench upgraded into a universal local-first full-case corpus builder with privacy-filtered external releases, role packages, proof reports, and one-click launchers"
+version = "7.0.0"
+description = "Local-first Maine family-law research, evidence, drafting, and optional loopback local-model workbench with exact context approval and provenance receipts"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pypdf>=6.14.2,<7", "pypdfium2>=5.12.1,<6", "python-docx>=1.2.0,<2", "defusedxml>=0.7.1,<1", "docx-editor>=0.7.1,<0.8"]
+dependencies = [
+  "pypdf>=6.15,<7",
+  "pypdfium2>=5.12.1,<6",
+  "python-docx>=1.2.0,<2",
+  "defusedxml>=0.7.1,<1",
+  "docx-editor>=0.7.1,<0.8",
+  "pywin32>=311; sys_platform == 'win32'",
+  "cryptography>=50,<51",
+  "h2>=4.4.1,<5",
+]
 
 [project.scripts]
 mfl = "maine_family_law_llm.cli:main"
 
 [project.optional-dependencies]
-api = ["fastapi>=0.139.2,<1", "starlette>=1.3.1,<2", "uvicorn>=0.51,<1", "httpx>=0.28.1,<1"]
+api = [
+  "fastapi==0.139.2",
+  "starlette==1.3.1",
+  "uvicorn==0.51.0",
+  "httpx>=0.28.1,<1",
+]
 dev = ["pytest>=9,<10", "ruff>=0.14.14,<1", "httpx>=0.28.1,<1", "pip-audit==2.10.1"]
+document-intelligence = [
+  "docling>=2.114.0,<3",
+  "presidio-analyzer>=2.2.363,<3",
+  "ocrmypdf>=17.8.1,<18",
+  "spacy>=3.8.0,<4",
+  "pikepdf>=10.0.0,<11",
+  "fpdf2>=2.8.0,<3",
+  "uharfbuzz>=0.41.0,<1",
+]
+retrieval-evaluation = ["sqlite-vec>=0.1.9,<0.2", "qdrant-client>=1.18.0,<2", "deepeval>=4.0.5,<5"]
+release-hardening = [
+  "opentelemetry-api>=1.42.1,<2",
+  "opentelemetry-sdk>=1.42.1,<2",
+  "Pillow>=12.3.0,<13",
+]
 
 [tool.setuptools.packages.find]
 where = [".", "src"]
@@ -47,3 +76,6 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

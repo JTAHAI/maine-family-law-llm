@@ -9,9 +9,10 @@ permalink: /getting-started/
   <div class="shell">
     <div class="eyebrow">First run</div>
     <h1>Start safely in about ten minutes.</h1>
-    <p class="lead">Install the Windows app, build a neutral sample or a workspace from records you select, make that corpus active, and then open the local chat and review tools.</p>
+    <p class="lead">Install the current Store build or run v7 from source, build a neutral sample or a workspace from records you select, make that corpus active, and then open the local chat and review tools.</p>
     <div class="hero-actions">
-      <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Get it from Microsoft Store</a>
+      <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Current Store build (6.0.4)</a>
+      <a class="button button--secondary" href="{{ '/release-status/' | relative_url }}">Check v7 status</a>
       <a class="button button--secondary" href="{{ '/privacy/' | relative_url }}">Read the privacy policy</a>
     </div>
   </div>
@@ -82,6 +83,6 @@ permalink: /getting-started/
       <h2>Install, learn with the neutral sample, then create a protected matter workspace.</h2>
       <p>The sample-first workflow makes the controls familiar before any sensitive family records are added.</p>
     </div>
-    <a class="button button--warm" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Open Microsoft Store</a>
+    <a class="button button--warm" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Open current Store build</a>
   </div>
 </div>

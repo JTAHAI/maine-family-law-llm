@@ -54,7 +54,7 @@ from app.api.main import app
 from app.web.ui_contracts import UICompletionAuditor
 
 
-def run_command(command: list[str], *, timeout: int = 300) -> dict:
+def run_command(command: list[str], *, timeout: int = 300, capture_json: bool = False) -> dict:
     env = os.environ.copy()
     if "pytest" in command:
         # Third-party pytest plugins injected by host environments can slow or hang
@@ -79,13 +79,19 @@ def run_command(command: list[str], *, timeout: int = 300) -> dict:
             "stderr": ((exc.stderr or "") + f"\ntimeout after {timeout}s")[-4000:],
             "timeout_seconds": timeout,
         }
-    return {
+    output = {
         "command": " ".join(command),
         "returncode": result.returncode,
         "stdout": result.stdout[-4000:],
         "stderr": result.stderr[-4000:],
         "timeout_seconds": timeout,
     }
+    if capture_json:
+        try:
+            output["json_result"] = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            output["json_parse_error"] = str(exc)
+    return output
 
 
 def run_pytest_batches() -> dict:
@@ -148,6 +154,8 @@ def load_json_artifact(path: Path) -> dict:
 
 
 def load_json_stdout(result: dict) -> dict:
+    if isinstance(result.get("json_result"), dict):
+        return result["json_result"]
     try:
         return json.loads(result.get("stdout") or "{}")
     except Exception as exc:  # pragma: no cover - defensive subprocess stdout
@@ -762,6 +770,7 @@ def main() -> int:
     doc_unsafe_claims_result = run_command(
         [sys.executable, "scripts/check-doc-unsafe-claims.py"],
         timeout=60,
+        capture_json=True,
     )
     doc_unsafe_claims = load_json_stdout(doc_unsafe_claims_result)
     orchestrator_result = EvaluationOrchestrator(ROOT).run_all()
@@ -884,7 +893,6 @@ def main() -> int:
         "0",
         "--delay",
         "0",
-        "--ignore-robots-txt",
     ])
     live_attempt["interpretation"] = (
         "Bounded live-network smoke only. Return code 0 means the sandbox fetched one official target; "

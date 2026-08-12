@@ -86,6 +86,7 @@ class OfficialSourceFetcher:
         retry_backoff_seconds: float = 1.5,
         respect_robots_txt: bool = True,
         strict_content_type: bool = False,
+        max_response_bytes: int = 25 * 1024 * 1024,
     ) -> None:
         self.timeout_seconds = timeout_seconds
         self.min_delay_seconds = min_delay_seconds
@@ -94,8 +95,10 @@ class OfficialSourceFetcher:
         self.retry_backoff_seconds = max(0.0, retry_backoff_seconds)
         self.respect_robots_txt = respect_robots_txt
         self.strict_content_type = strict_content_type
+        self.max_response_bytes = max(1, int(max_response_bytes))
         self._last_fetch_monotonic: float | None = None
         self._robots_cache: dict[str, RobotsCacheEntry] = {}
+        self._opener = urllib.request.build_opener(_OfficialRedirectHandler())
 
     def _rate_limit(self) -> None:
         if self._last_fetch_monotonic is None:
@@ -137,6 +140,9 @@ class OfficialSourceFetcher:
         entry = RobotsCacheEntry(parser=parser, allowed_to_fetch_robots=allowed_to_fetch_robots)
         self._robots_cache[robots_url] = entry
         return entry
+
+    def _open(self, request: urllib.request.Request):
+        return self._opener.open(request, timeout=self.timeout_seconds)
 
     def _check_robots(self, target: SourceTarget) -> None:
         if not self.respect_robots_txt:
@@ -186,8 +192,8 @@ class OfficialSourceFetcher:
                     target.url,
                     accept=target.expected_content_type or "*/*",
                 )
-                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                    content = response.read()
+                with self._open(request) as response:
+                    content, byte_count, truncated = self._read_response_body(response)
                     content_type = response.headers.get("Content-Type")
                     if self.strict_content_type and not self._content_type_matches(
                         target.expected_content_type, content_type, content
@@ -201,6 +207,19 @@ class OfficialSourceFetcher:
                             FetchAttempt(
                                 attempt_number=attempt_number,
                                 status="content_type_mismatch",
+                                message=last_message,
+                                elapsed_seconds=elapsed,
+                                status_code=getattr(response, "status", None),
+                            )
+                        )
+                        break
+                    if truncated:
+                        elapsed = time.monotonic() - started
+                        last_message = f"response too large: exceeded {self.max_response_bytes} bytes"
+                        attempts.append(
+                            FetchAttempt(
+                                attempt_number=attempt_number,
+                                status="response_too_large",
                                 message=last_message,
                                 elapsed_seconds=elapsed,
                                 status_code=getattr(response, "status", None),
@@ -224,6 +243,14 @@ class OfficialSourceFetcher:
                         content_type=content_type,
                         status_code=getattr(response, "status", None),
                         final_url=response.geturl(),
+                        fetch_metadata={
+                            "attempt_count": len(attempts),
+                            "content_length": byte_count,
+                            "max_response_bytes": self.max_response_bytes,
+                            "redirected": response.geturl() != target.url,
+                            "redirect_chain": getattr(response, "redirect_chain", []),
+                            "robots_policy_result": "checked" if self.respect_robots_txt else "not_checked",
+                        },
                     )
                 self._last_fetch_monotonic = time.monotonic()
                 return result
@@ -261,3 +288,38 @@ class OfficialSourceFetcher:
             message=last_message,
             attempts=attempts,
         )
+
+    def _read_response_body(self, response) -> tuple[bytes, int, bool]:
+        remaining = self.max_response_bytes
+        chunks: list[bytes] = []
+        byte_count = 0
+        while True:
+            chunk = response.read(min(1024 * 1024, remaining + 1))
+            if not chunk:
+                break
+            byte_count += len(chunk)
+            if byte_count > self.max_response_bytes:
+                return b"".join(chunks), byte_count, True
+            chunks.append(chunk)
+            remaining = self.max_response_bytes - byte_count
+            if remaining <= 0:
+                break
+        return b"".join(chunks), byte_count, False
+
+
+class _OfficialRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        parsed = urllib.parse.urlparse(str(newurl or ""))
+        host = (parsed.hostname or "").rstrip(".").casefold()
+        if parsed.scheme.casefold() != "https" or not (
+            host == "maine.gov" or host.endswith(".maine.gov")
+        ):
+            original_url = str(getattr(req, "full_url", getattr(req, "url", "")))
+            raise urllib.error.HTTPError(
+                original_url,
+                code,
+                "redirect to unapproved host rejected",
+                headers,
+                fp,
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)

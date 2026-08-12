@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Header
 
-from app.api.security import review_response
+from app.api.security import review_response, strict_json_bool
 from app.services import ConversationAdapter
 from legal.verifiers.citation_parser import extract_citations
 from legal.verifiers.citation_resolver import SourceAuthorityIndex
@@ -35,7 +35,7 @@ def verify_citations(
         source_cards=payload.get("source_cards") or None,
         quotes=payload.get("quotes"),
         claims=payload.get("claims"),
-        auto_extract_claims=bool(payload.get("auto_extract_claims", False)),
+        auto_extract_claims=strict_json_bool(payload, "auto_extract_claims", default=False),
     )
     response = adapter.for_citation_verification(
         payload,

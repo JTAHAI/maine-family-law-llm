@@ -24,6 +24,37 @@ class BM25LexicalSearch:
         self.k1 = k1
         self.b = b
         self.expand_queries = expand_queries
+        self._prepared_signature: tuple[int, ...] = ()
+        self._prepared_counts: list[Counter[str]] = []
+        self._prepared_lengths: list[int] = []
+        self._prepared_idf: dict[str, float] = {}
+        self._prepared_average_length = 0.0
+
+    def _prepare(self, documents: Sequence[RetrievalDocument]) -> None:
+        signature = tuple(id(document) for document in documents)
+        if signature == self._prepared_signature:
+            return
+        counts: list[Counter[str]] = []
+        lengths: list[int] = []
+        doc_frequency: dict[str, int] = defaultdict(int)
+        for document in documents:
+            field_text = " ".join(
+                part for part in (document.title, document.citation or "", document.text) if part
+            )
+            token_counts = Counter(tokenize(field_text))
+            counts.append(token_counts)
+            lengths.append(sum(token_counts.values()))
+            for token in token_counts:
+                doc_frequency[token] += 1
+        total = len(documents)
+        self._prepared_signature = signature
+        self._prepared_counts = counts
+        self._prepared_lengths = lengths
+        self._prepared_average_length = sum(lengths) / max(total, 1)
+        self._prepared_idf = {
+            token: math.log(1 + (total - count + 0.5) / (count + 0.5))
+            for token, count in doc_frequency.items()
+        }
 
     def _idf(self, documents: Sequence[RetrievalDocument]) -> dict[str, float]:
         doc_freq: dict[str, int] = defaultdict(int)
@@ -68,18 +99,13 @@ class BM25LexicalSearch:
         if not query_terms and not extract_citations(query):
             return []
 
-        idf = self._idf(normalized_documents)
-        avg_len = sum(len(tokenize(document.text)) for document in normalized_documents) / max(
-            len(normalized_documents), 1
-        )
+        self._prepare(normalized_documents)
+        idf = self._prepared_idf
+        avg_len = self._prepared_average_length
         results: list[RetrievalResult] = []
-        for document in normalized_documents:
-            field_text = " ".join(
-                part for part in (document.title, document.citation or "", document.text) if part
-            )
-            doc_tokens = tokenize(field_text)
-            token_counts = Counter(doc_tokens)
-            doc_len = max(len(doc_tokens), 1)
+        for index, document in enumerate(normalized_documents):
+            token_counts = self._prepared_counts[index]
+            doc_len = max(self._prepared_lengths[index], 1)
             score = 0.0
             matched_terms: list[str] = []
             for term in query_terms:

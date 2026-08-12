@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -11,8 +12,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from legal.connectors import OfficialAuthorityIngestor, OfficialSourceFetcher, load_official_source_targets
+from legal.connectors.base import RetrievedSource, SourceTarget
 from legal.connectors.official_source_catalog import load_source_targets_from_file
-from legal.data_boundaries import StoreName
+from legal.data_boundaries import StoreName, default_external_data_root, ensure_external_authority_root
 
 
 def _merge_manifest_records(existing: list[dict], incoming: list[dict]) -> list[dict]:
@@ -40,12 +42,73 @@ def _merge_manifest_records(existing: list[dict], incoming: list[dict]) -> list[
     return [merged[key] for key in order]
 
 
+_FIXTURE_BY_SOURCE_CLASS = {
+    "statute_title_index": "mrs-title-19a-domestic-relations.html",
+    "statute_title_pdf": "mrs-title-19a-domestic-relations.html",
+    "court_rules_index": "maine-rules-civil-family-division.html",
+    "court_policy_index": "maine-rules-civil-family-division.html",
+    "court_forms_index": "maine-court-forms-family.html",
+    "law_court_opinion_index": "maine-judicial-branch-appeals.html",
+    "law_court_opinion_file": "maine-judicial-branch-appeals.html",
+    "child_support_guidance": "maine-child-support-services.html",
+    "secondary": "sample-secondary-family-law-overview.html",
+}
+
+
+class _FixtureFetcher:
+    def __init__(self, fixtures_dir: Path) -> None:
+        self.fixtures_dir = fixtures_dir
+
+    def fetch(self, target: SourceTarget) -> RetrievedSource:
+        fixture_name = _FIXTURE_BY_SOURCE_CLASS.get(target.source_class)
+        if not fixture_name:
+            raise FileNotFoundError(f"fixture missing for source class {target.source_class}")
+        path = self.fixtures_dir / fixture_name
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        content = path.read_bytes()
+        content_type = "application/pdf" if target.expected_content_type.lower() == "application/pdf" else "text/html"
+        return RetrievedSource(
+            target=target,
+            content=content,
+            retrieved_at=datetime.now(timezone.utc),
+            content_type=content_type,
+            status_code=200,
+            final_url=target.url,
+            fetch_metadata={
+                "fixture_mode": True,
+                "fixture_name": fixture_name,
+                "byte_count": len(content),
+                "retry_count": 0,
+                "robots_policy_result": "fixture_mode",
+            },
+        )
+
+
+def _human_report(result: dict[str, object]) -> str:
+    lines = [
+        f"Status: {result.get('status', 'unknown')}",
+        f"Targets: {result.get('target_count', 0)}",
+        f"Ingested: {result.get('ingested_count', 0)}",
+        f"Failed: {result.get('failed_count', 0)}",
+        f"Manifest: {result.get('manifest_path', '')}",
+        f"Failure report: {result.get('failure_report_path', '')}",
+    ]
+    failures = result.get("failures") or []
+    if isinstance(failures, list) and failures:
+        lines.append("Failures:")
+        for failure in failures:
+            if isinstance(failure, dict):
+                lines.append(f"  - {failure.get('target_id', 'unknown')}: {failure.get('failure_code', 'unknown')} - {failure.get('message', '')}")
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest official Maine authority snapshots.")
     parser.add_argument(
         "--data-root",
         type=Path,
-        default=ROOT.parent / "maine-family-law-llm-data",
+        default=default_external_data_root(ROOT),
         help="External data root. Defaults outside the source repository.",
     )
     parser.add_argument(
@@ -59,6 +122,12 @@ def main() -> int:
         type=Path,
         default=None,
         help="Optional JSON source-target catalog, for example official_authority_store/derived_authority_targets.json.",
+    )
+    parser.add_argument(
+        "--source-class",
+        action="append",
+        default=[],
+        help="Limit ingestion to one or more source_class values from the selected catalog.",
     )
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--delay", type=float, default=1.0)
@@ -85,6 +154,26 @@ def main() -> int:
         help="Validate target catalog and external data root without network fetches or snapshots.",
     )
     parser.add_argument(
+        "--fixture-mode",
+        action="store_true",
+        help="Use committed offline fixtures instead of live network fetches.",
+    )
+    parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Refresh snapshots even when an existing manifest is present.",
+    )
+    parser.add_argument(
+        "--json-summary",
+        action="store_true",
+        help="Emit the machine-readable summary JSON (default on stdout).",
+    )
+    parser.add_argument(
+        "--human-report",
+        action="store_true",
+        help="Emit a readable report after the JSON summary.",
+    )
+    parser.add_argument(
         "--max-targets",
         type=int,
         default=None,
@@ -101,16 +190,13 @@ def main() -> int:
     args = parser.parse_args()
 
     project_root = ROOT.resolve()
-    data_root = args.data_root.resolve()
     try:
-        data_root.relative_to(project_root)
-    except ValueError:
-        pass
-    else:
+        data_root = ensure_external_authority_root(args.data_root, project_root=project_root)
+    except ValueError as exc:
         raise SystemExit(
-            "Refusing to ingest official authority into the source repository. "
-            "Use --data-root outside the repo."
-        )
+            "Refusing to ingest official authority into the source repository: "
+            f"{exc}"
+        ) from exc
 
     targets = load_source_targets_from_file(args.target_catalog) if args.target_catalog else load_official_source_targets()
     if args.target_id:
@@ -119,6 +205,9 @@ def main() -> int:
         missing = wanted - {target.target_id for target in targets}
         if missing:
             raise SystemExit(f"Unknown target IDs: {sorted(missing)}")
+    if args.source_class:
+        wanted_classes = {value.strip() for value in args.source_class if value.strip()}
+        targets = [target for target in targets if target.source_class in wanted_classes]
     if args.max_targets is not None:
         targets = targets[: max(0, args.max_targets)]
 
@@ -129,9 +218,12 @@ def main() -> int:
             "mode": "dry_run",
             "target_count": len(targets),
             "target_ids": [target.target_id for target in targets],
+            "source_classes": sorted({target.source_class for target in targets}),
             "target_problems": target_problems,
             "data_root": str(data_root),
             "official_store": str(data_root / StoreName.OFFICIAL_AUTHORITY.value),
+            "fixture_mode": bool(args.fixture_mode),
+            "force_refresh": bool(args.force_refresh),
         }
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0 if not target_problems else 1
@@ -139,7 +231,7 @@ def main() -> int:
         raise SystemExit(f"Invalid source targets: {target_problems}")
 
     official_store = data_root / StoreName.OFFICIAL_AUTHORITY.value
-    fetcher = OfficialSourceFetcher(
+    fetcher = _FixtureFetcher(ROOT / "data" / "fixtures") if args.fixture_mode else OfficialSourceFetcher(
         timeout_seconds=args.timeout,
         min_delay_seconds=args.delay,
         max_retries=args.max_retries,
@@ -168,6 +260,10 @@ def main() -> int:
         "target_count": len(targets),
         "ingested_count": len(ingested),
         "failed_count": len(ingestor.failed),
+        "target_ids": [target.target_id for target in targets],
+        "source_classes": sorted({target.source_class for target in targets}),
+        "fixture_mode": bool(args.fixture_mode),
+        "force_refresh": bool(args.force_refresh),
         "manifest_path": str(manifest_path),
         "prior_manifest_count": prior_manifest_count,
         "manifest_record_count": len(manifest_records),
@@ -176,8 +272,12 @@ def main() -> int:
         "run_report_path": str(run_report_path),
         "official_store": str(official_store),
         "sources": [item.to_dict() for item in ingested],
+        "failures": [failure.to_dict() for failure in ingestor.failed],
     }
-    print(json.dumps(result, indent=2))
+    if args.json_summary or not args.human_report:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    if args.human_report:
+        print(_human_report(result))
     return 0 if not ingestor.failed else 2
 
 

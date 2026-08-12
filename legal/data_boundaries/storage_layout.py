@@ -16,6 +16,27 @@ class StorePath:
 
 
 _ENCRYPTED_STORES = {StoreName.MATTER, StoreName.AUDIT}
+_DEFAULT_EXTERNAL_DATA_ROOT_ENV = "MAINE_FAMILY_LAW_DATA_ROOT"
+
+
+def _local_appdata_root() -> Path:
+    base = os.environ.get("LOCALAPPDATA", "").strip()
+    if base:
+        return Path(base)
+    return Path.home() / "AppData" / "Local"
+
+
+def default_external_data_root(
+    project_root: Path | str = ".",
+    *,
+    env_var: str = _DEFAULT_EXTERNAL_DATA_ROOT_ENV,
+    app_name: str = "MaineFamilyLawLLM",
+    leaf_name: str = "authority-data",
+) -> Path:
+    configured = os.environ.get(env_var)
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (_local_appdata_root() / app_name / leaf_name).resolve()
 
 
 def data_root(project_root: Path | str = ".", env_var: str = "MAINE_FAMILY_LAW_DATA_ROOT") -> Path:
@@ -48,6 +69,40 @@ def is_inside_project_repo(path: Path | str, project_root: Path | str = ".") -> 
     except ValueError:
         return False
     return True
+
+
+def is_inside_any(path: Path | str, roots: tuple[Path | str, ...]) -> bool:
+    candidate = Path(path).resolve()
+    for root in roots:
+        try:
+            candidate.relative_to(Path(root).resolve())
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def ensure_external_authority_root(
+    path: Path | str,
+    *,
+    project_root: Path | str = ".",
+    extra_forbidden_roots: tuple[Path | str, ...] = (),
+) -> Path:
+    root = Path(path).expanduser().resolve()
+    if is_inside_project_repo(root, project_root):
+        raise ValueError("authority data root must be outside the source repository")
+    forbidden_roots = list(extra_forbidden_roots)
+    if os.name == "nt":
+        forbidden_roots.extend(
+            [
+                os.environ.get("WINDIR", r"C:\\Windows"),
+                os.environ.get("ProgramFiles", r"C:\\Program Files"),
+                os.environ.get("ProgramFiles(x86)", r"C:\\Program Files (x86)"),
+            ]
+        )
+    if forbidden_roots and is_inside_any(root, tuple(forbidden_roots)):
+        raise ValueError("authority data root may not be inside a forbidden workspace or system directory")
+    return root
 
 
 def create_store_layout(project_root: Path | str = ".") -> list[StorePath]:

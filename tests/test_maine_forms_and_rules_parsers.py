@@ -43,6 +43,19 @@ def test_form_text_parser_extracts_version_date():
     assert form.retrieved_freshness_status == "known_version_date"
 
 
+def test_form_text_parser_accepts_official_two_digit_revision_year():
+    form, audit = parse_form_text(
+        "FM-171, Rev. 05/22 Abstract of Divorce Decree",
+        source_id="form-fm-171",
+        url="https://mjbportal.courts.maine.gov/CourtForms/FormsLists/DownloadForm?strFormNumber=FM-171",
+    )
+
+    assert audit.status == "parsed"
+    assert audit.warnings == []
+    assert form.version_date == "05/22"
+    assert form.stale_form_risk == "version_date_extracted"
+
+
 def test_rules_index_parser_extracts_rule_references():
     rules, audit = parse_rules_index(
         RULES_HTML,

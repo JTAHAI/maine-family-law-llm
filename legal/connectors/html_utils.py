@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from html.parser import HTMLParser
-from typing import Any
 
 from legal.corpus.source_normalizer import normalize_url, normalize_whitespace
 

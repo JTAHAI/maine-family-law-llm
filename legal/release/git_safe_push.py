@@ -6,7 +6,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 
 FOCUSED_PUSH_TESTS = (
     "tests/test_public_source_pre_push_gate_v191.py",

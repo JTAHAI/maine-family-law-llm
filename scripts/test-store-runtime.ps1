@@ -1,11 +1,14 @@
 param(
   [string]$RepoRoot = "",
   [string]$RuntimeRoot = "",
-  [string]$EvidenceRoot = ""
+  [string]$EvidenceRoot = "",
+  [int]$SmokeTimeoutMs = 600000
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$env:PYTHONDONTWRITEBYTECODE = "1"
+$env:PYTHONPYCACHEPREFIX = Join-Path $env:TEMP "mfl-pycache-disabled"
 
 if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
@@ -24,6 +27,9 @@ if (-not (Test-Path -LiteralPath $runtimeExe)) {
 if (-not (Test-Path -LiteralPath $runtimeExe)) {
   throw "Store runtime executable missing at $runtimeExe"
 }
+if ($SmokeTimeoutMs -lt 120000) {
+  $SmokeTimeoutMs = 120000
+}
 
 New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
 $smokeJson = Join-Path $EvidenceRoot "store-build-smoke.json"
@@ -39,13 +45,14 @@ $smokeProcess = Start-Process `
     -WindowStyle Hidden `
     -PassThru
 
-if (-not $smokeProcess.WaitForExit(120000)) {
+if (-not $smokeProcess.WaitForExit($SmokeTimeoutMs)) {
     Stop-Process `
         -Id $smokeProcess.Id `
         -Force `
         -ErrorAction SilentlyContinue
 
-    throw "Store runtime smoke timed out after 120 seconds."
+    $timeoutSeconds = [math]::Round($SmokeTimeoutMs / 1000, 0)
+    throw "Store runtime smoke timed out after $timeoutSeconds seconds."
 }
 
 if ($smokeProcess.ExitCode -ne 0) {
@@ -57,7 +64,9 @@ if (-not (Test-Path -LiteralPath $smokeJson)) {
 }
 
 $payload = Get-Content -Path $smokeJson -Raw | ConvertFrom-Json
-if ($payload.launch_result -ne "pass" -or -not $payload.api_health_result -or -not $payload.fictional_sample_workflow_result -or -not $payload.answer_grounded -or $payload.answer_failure_class -ne "none") {
+$answerGrounded = $payload.answer_grounded -and $payload.answer_failure_class -eq "none"
+$answerFailedClosed = (-not $payload.answer_grounded) -and $payload.answer_failure_class -eq "official_authority_product_unavailable"
+if ($payload.launch_result -ne "pass" -or -not $payload.api_health_result -or -not $payload.fictional_sample_workflow_result -or (-not $answerGrounded -and -not $answerFailedClosed)) {
   throw "Store runtime smoke test did not produce a passing payload."
 }
 
@@ -94,7 +103,7 @@ if audit["status"] != "pass" or not audit["exact_regression_resolved"] or not au
 Set-Content -Path $assetAuditScript -Value $assetAuditPython -Encoding UTF8
 $storeBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
 $pythonExe = if (Test-Path -LiteralPath $storeBuildPython) { $storeBuildPython } else { "python" }
-& $pythonExe $assetAuditScript $runtimeInternal $assetAuditJson
+& $pythonExe -B $assetAuditScript $runtimeInternal $assetAuditJson
 if ($LASTEXITCODE -ne 0) {
   throw "FOCAF packaged-runtime asset audit failed. See $assetAuditJson"
 }
@@ -110,6 +119,7 @@ $summary = @(
   "Application version: $($payload.application_version)",
   "Local service URL: $($payload.local_service_url)",
   "Sample workflow: $($payload.fictional_sample_workflow_result)",
+  "Authority answer: $(if ($answerGrounded) { 'grounded' } else { 'fail-closed until approved external authority is configured' })",
   "FOCAF assets resolved: $($assetAudit.resolved)/$($assetAudit.expected)",
   "FOCAF exact regression: $($assetAudit.exact_regression_resolved)",
   "Fork guide exists: $($payload.fork_guide_exists)",

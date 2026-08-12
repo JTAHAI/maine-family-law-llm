@@ -17,7 +17,19 @@
     "admission_status"
   ],
   "allowed_privacy_statuses": ["local_only", "private_cloud_reviewed", "hosted_optional_no_training", "blocked_unknown"],
-  "allowed_admission_statuses": ["candidate", "admitted_for_dev", "admitted_for_staging", "admitted_for_production", "blocked"],
+  "allowed_license_statuses": ["approved", "reviewed", "allowlisted", "redistributable"],
+  "allowed_admission_statuses": [
+    "candidate",
+    "testing",
+    "admitted_for_dev",
+    "admitted_with_limits",
+    "admitted_for_staging",
+    "admitted_for_production",
+    "rejected",
+    "quarantined",
+    "superseded",
+    "unavailable"
+  ],
   "production_requirements": {
     "requires_benchmark_scores": true,
     "requires_failure_profile": true,

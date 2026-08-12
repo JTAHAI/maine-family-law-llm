@@ -64,11 +64,18 @@ class DependencyAuditReport:
 RULES: tuple[DependencyRule, ...] = (
     DependencyRule(
         "pypdf",
-        "6.14.2",
+        "6.15.0",
         "core",
         True,
-        "Current hardened pypdf floor; excludes known decompression memory-exhaustion releases and includes later parser hardening.",
+        "Current hardened pypdf floor; excludes known decompression memory-exhaustion and malformed-stream releases.",
         ("GHSA-7hfw-26vp-jp8m", "GHSA-jfx9-29x2-rv3j"),
+    ),
+    DependencyRule(
+        "cryptography",
+        "50.0.0",
+        "core",
+        True,
+        "Current cryptography floor used for encrypted matter storage and signed authority updates.",
     ),
     DependencyRule(
         "pypdfium2",
@@ -126,6 +133,13 @@ RULES: tuple[DependencyRule, ...] = (
         "api",
         False,
         "Current stable HTTPX floor used by tests and optional local integrations.",
+    ),
+    DependencyRule(
+        "h2",
+        "4.4.1",
+        "api",
+        False,
+        "Patched HTTP/2 protocol floor used by the optional local HTTP client stack.",
     ),
     DependencyRule(
         "Pillow",

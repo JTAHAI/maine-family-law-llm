@@ -7,7 +7,6 @@ import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
-from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -18,9 +17,18 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from app.local_api_service import ensure_local_service, run_local_service, stop_local_service
-from app.runtime_support import build_runtime_context, configure_runtime_environment, local_about_links, log_exception, open_path_or_url
-from maine_family_law_llm.case_corpus_builder import create_sample_case_build
+from app.runtime_support import build_runtime_context, configure_runtime_environment, local_about_links, log_exception
 from maine_family_law_llm.version import APP_DISPLAY_NAME, GITHUB_REPOSITORY_URL, STORE_MISSION_TAGLINE, VERSION
+
+
+def _is_outside_root(path: Path, root: Path) -> bool:
+    """Return True only when *path* is outside *root* by path components.
+
+    String-prefix checks are unsafe for sibling names such as ``bundle-old``
+    versus ``bundle`` and behave differently across platforms.
+    """
+
+    return not path.resolve().is_relative_to(root.resolve())
 
 
 def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
@@ -40,7 +48,12 @@ def _run_smoke_workflow(output_path: Path | None = None) -> dict[str, object]:
     # an installed package.
     context = configure_runtime_environment(build_runtime_context())
     service = ensure_local_service(context)
-    smoke_case_root = context.writable_root / "smoke" / "example_case_build"
+    from maine_family_law_llm.case_corpus_builder import create_sample_case_build
+
+    # Smoke fixtures are runtime data in every mode.  Keeping them under the
+    # mode-specific LocalAppData root prevents source qualification from
+    # contaminating the repository or a future package payload.
+    smoke_case_root = context.runtime_data_root / "smoke" / "example_case_build"
     if smoke_case_root.exists():
         shutil.rmtree(smoke_case_root)
     sample = create_sample_case_build(
@@ -71,7 +84,7 @@ def _run_smoke_workflow(output_path: Path | None = None) -> dict[str, object]:
         "privacy_policy_exists": links["privacy_policy"].exists(),
         "answer_grounded": bool(answer_payload.get("grounded")),
         "answer_failure_class": str(answer_payload.get("failure_class", "")),
-        "external_data_boundary_verification": not str(sample.case_root).startswith(str(context.bundle_root)),
+        "external_data_boundary_verification": _is_outside_root(sample.case_root, context.bundle_root),
         "store_message": STORE_MISSION_TAGLINE,
     }
     if output_path is not None:
@@ -87,9 +100,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--smoke-json", default="")
+    parser.add_argument(
+        "--document-intelligence-worker",
+        nargs=2,
+        metavar=("ADAPTER", "INPUT"),
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument("--document-intelligence-output", default="", help=argparse.SUPPRESS)
     args, _ = parser.parse_known_args(argv)
 
     context = configure_runtime_environment(build_runtime_context(mode="store"))
+    if args.document_intelligence_worker:
+        from legal.document_intelligence.worker import main as document_worker_main
+
+        worker_argv = list(args.document_intelligence_worker)
+        if args.document_intelligence_output:
+            worker_argv.extend(("--output", args.document_intelligence_output))
+        return document_worker_main(worker_argv)
     try:
         if args.serve_local_api:
             return run_local_service(args.port, context)

@@ -1,0 +1,50 @@
+{
+  "schema_version": "maine_local_agent_policy_v1",
+  "version": "7.0.0",
+  "enabled_by_default": false,
+  "remote_providers_enabled": false,
+  "allowed_endpoint_schemes": ["http", "https"],
+  "endpoint_rule": "literal_loopback_ip_only",
+  "supported_providers": [
+    {
+      "provider_id": "ollama",
+      "default_endpoint": "http://127.0.0.1:11434",
+      "request_path": "/api/generate"
+    },
+    {
+      "provider_id": "openai_compatible_local",
+      "default_endpoint": "http://127.0.0.1:1234",
+      "request_path": "/v1/chat/completions"
+    }
+  ],
+  "context": {
+    "max_items": 24,
+    "max_chars": 80000,
+    "exact_manifest_approval_required": true,
+    "source_text_is_untrusted_data": true,
+    "separate_legal_and_record_lanes": true
+  },
+  "tools": {
+    "host_executed_only": true,
+    "read_only": true,
+    "max_calls_per_run": 12,
+    "denied_capabilities": [
+      "filesystem_unrestricted",
+      "shell_execution",
+      "package_installation",
+      "arbitrary_network",
+      "credential_access",
+      "record_modification",
+      "record_deletion",
+      "court_filing",
+      "email_send",
+      "payment"
+    ]
+  },
+  "output": {
+    "review_required": true,
+    "may_certify_legal_correctness": false,
+    "may_certify_filing_readiness": false,
+    "provenance_receipt_required": true
+  }
+}

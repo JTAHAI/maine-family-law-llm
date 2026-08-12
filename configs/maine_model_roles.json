@@ -20,6 +20,18 @@
       "requires_grounding": true,
       "may_generate_legal_prose": false
     },
+    "maine_query_expander": {
+      "allowed_tasks": ["query_expansion"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_retrieval_reranker_assistant": {
+      "allowed_tasks": ["retrieval_reranking"],
+      "prohibited_tasks": ["draft_generation", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
     "maine_citation_resolver_assistant": {
       "allowed_tasks": ["citation_resolution_assist"],
       "prohibited_tasks": ["citation_validity_certification", "filing_ready_certification"],
@@ -32,9 +44,39 @@
       "requires_grounding": true,
       "may_generate_legal_prose": false
     },
+    "maine_document_structure_assistant": {
+      "allowed_tasks": ["document_structure_analysis"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_event_extractor": {
+      "allowed_tasks": ["event_extraction"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_claim_extractor": {
+      "allowed_tasks": ["claim_extraction"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
     "maine_claim_support_evaluator": {
       "allowed_tasks": ["claim_support_evaluation"],
       "prohibited_tasks": ["filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_contradiction_finder": {
+      "allowed_tasks": ["contradiction_detection"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_privacy_candidate_assistant": {
+      "allowed_tasks": ["privacy_candidate_identification"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
       "requires_grounding": true,
       "may_generate_legal_prose": false
     },
@@ -71,6 +113,18 @@
     "maine_plain_language_explainer": {
       "allowed_tasks": ["plain_language_explanation"],
       "prohibited_tasks": ["legal_advice", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": true
+    },
+    "maine_omission_hunter": {
+      "allowed_tasks": ["omission_detection"],
+      "prohibited_tasks": ["final_legal_answer", "filing_ready_certification"],
+      "requires_grounding": true,
+      "may_generate_legal_prose": false
+    },
+    "maine_synthesis_worker": {
+      "allowed_tasks": ["synthesis_generation"],
+      "prohibited_tasks": ["citation_validity_certification", "quote_validity_certification", "authority_validity_certification", "filing_ready_certification"],
       "requires_grounding": true,
       "may_generate_legal_prose": true
     },

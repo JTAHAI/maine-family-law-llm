@@ -63,4 +63,7 @@ def test_matter_store_allows_external_store(tmp_path):
     matter = Matter(matter_id="matter_003")
     matter_dir = store.create_matter(matter)
     assert matter_dir.exists()
-    assert (matter_dir / "matter.json").exists()
+    assert (matter_dir / "matter.json.enc").exists()
+    assert not (matter_dir / "matter.json").exists()
+    loaded = store.load_matter(matter_dir)
+    assert loaded["matter_id"] == matter.matter_id

@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.0.0 - Verified-scope freeze and fail-closed release hardening
+
+- Froze the public source release at 7.0.0 and the Windows package target at 7.0.0.0 while preserving the Microsoft Store identity, publisher, x64 architecture, and `en-us` language.
+- Reduced the advertised product to 16 source/frozen-runtime-verified capabilities; slices 21-44 and other incomplete installed workflows remain hidden or development-only.
+- Activated an external immutable official-authority generation with direct statute, rule, current form, and Law Court opinion records plus exact citation/source-span verification.
+- Consolidated final-like exports behind a canonical fail-closed filing gate; the 16-case release attack set produced zero false passes.
+- Hardened Local-only networking, matter isolation, untrusted-document handling, privacy, audit integrity, backup/restore, runtime startup, and error-path behavior.
+- Built and audited the self-contained 7.0.0.0 x64 MSIX and its packaged local document/OCR/privacy engines without placing private matters or authority products in the package.
+- Recorded the v7 Store package as blocked pending clean isolated AppX installation and WACK; no v7 Store certification, publication, attorney validation, controlled pilot, or Enterprise GA is claimed.
+
 ## 5.2.0 - Answer-first evidence, guarded drafting, and tracked Word review
 
 - Moved answer-specific evidence into the large main chat response with clickable official links, secure private-record actions, page controls, previews, and copy actions; the evidence rail remains an optional persistent workspace.

@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "states": [
+    "draft_scope",
+    "awaiting_local_confirmation",
+    "queued",
+    "running_independent",
+    "aligning_claims",
+    "cross_review",
+    "rebuttal",
+    "omission_hunt",
+    "final_positions",
+    "verifying",
+    "synthesizing",
+    "completed_review_required",
+    "partial_worker_failure",
+    "budget_exhausted",
+    "cancelling",
+    "cancelled",
+    "failed_closed"
+  ],
+  "allowed_transitions": {
+    "draft_scope": ["awaiting_local_confirmation", "cancelled", "failed_closed"],
+    "awaiting_local_confirmation": ["queued", "cancelled", "failed_closed"],
+    "queued": ["running_independent", "cancelling", "cancelled", "failed_closed"],
+    "running_independent": ["aligning_claims", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "aligning_claims": ["cross_review", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "cross_review": ["rebuttal", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "rebuttal": ["omission_hunt", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "omission_hunt": ["final_positions", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "final_positions": ["verifying", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "verifying": ["synthesizing", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "synthesizing": ["completed_review_required", "partial_worker_failure", "budget_exhausted", "cancelling", "cancelled", "failed_closed"],
+    "completed_review_required": [],
+    "partial_worker_failure": ["aligning_claims", "cross_review", "rebuttal", "omission_hunt", "final_positions", "verifying", "synthesizing", "cancelling", "cancelled", "failed_closed"],
+    "budget_exhausted": ["cancelled", "failed_closed"],
+    "cancelling": ["cancelled", "failed_closed"],
+    "cancelled": [],
+    "failed_closed": []
+  }
+}

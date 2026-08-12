@@ -23,6 +23,11 @@ DEFAULT_DIR_NAMES = {
     "build",
     "dist",
     ".eggs",
+    "model_store",
+    "model_registry",
+    "benchmark_runs",
+    "runtime_profiles",
+    "quarantine",
 }
 
 DEFAULT_FILE_NAMES = {

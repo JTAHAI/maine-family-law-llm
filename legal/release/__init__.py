@@ -11,6 +11,11 @@ from legal.release.ga_release import (
     build_release_artifact_fixture,
 )
 from legal.release.release_manifest import ReleaseFinding, ReleaseManifest
+
+from legal.release.release_candidate_operations import (
+    GAReleaseCandidateError,
+    GAReleaseCandidateOperationsStore,
+)
 from legal.release.post_ga_review import BuildPathStage, PostGARepoReviewReport, PostGARepoReviewer
 from legal.release.public_repo_readiness import PublicRepoReadinessAuditor, PublicRepoReadinessReport
 from legal.release.attribution import AttributionKitBuilder, AttributionKitReport
@@ -20,6 +25,8 @@ __all__ = [
     "AttributionKitReport",
     "GAShipmentAuditReport",
     "GAShipmentAuditor",
+    "GAReleaseCandidateError",
+    "GAReleaseCandidateOperationsStore",
     "ReleaseArtifact",
     "ReleaseBlocker",
     "ReleaseCandidateAuditReport",

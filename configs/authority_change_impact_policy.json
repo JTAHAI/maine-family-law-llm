@@ -1,0 +1,29 @@
+{
+  "algorithm_version": "5.15.0-authority-impact-v1",
+  "artifact_rules": {
+    "content_addressed": true,
+    "document_revision_bound": true,
+    "manifest_verified": true,
+    "opaque_download_capabilities": true,
+    "tamper_refusal": true
+  },
+  "authority_root_policy": "external_only",
+  "generation_requirements": {
+    "active_generation_not_assumed_current_law": true,
+    "different_builds_required": true,
+    "verified_immutable_builds_only": true
+  },
+  "limits": {
+    "max_document_references": 5000,
+    "max_generations": 200,
+    "max_source_rows": 250000
+  },
+  "product_version": "7.0.0",
+  "review_rules": {
+    "filing_ready_certification_allowed": false,
+    "human_revalidation_required": true,
+    "prior_approval_carried_forward": false,
+    "source_hash_change_is_legal_conclusion": false
+  },
+  "schema_version": "authority_change_impact_policy_v1"
+}

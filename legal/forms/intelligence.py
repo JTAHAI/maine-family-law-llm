@@ -109,7 +109,13 @@ class FormCatalogBuilder:
         if not form_id:
             return None
         version_date = record.get("version_date") or self._extract_version_date(text)
-        freshness_status, warning = self._freshness_status(form_id, version_date, current_versions)
+        explicit_freshness = str(record.get("freshness_status") or "").strip().lower()
+        if explicit_freshness in {"current", "fresh", "verified_current"}:
+            freshness_status, warning = "current", None
+        elif explicit_freshness in {"stale", "superseded", "expired"}:
+            freshness_status, warning = "stale", f"{form_id} is marked {explicit_freshness} by the admitted authority generation."
+        else:
+            freshness_status, warning = self._freshness_status(form_id, version_date, current_versions)
         filing_context = self.classify_filing_context(f"{title}\n{text}")
         issue_labels = tuple(sorted(set(record.get("issue_labels") or self._issue_labels_for_context(filing_context))))
         return FormCatalogEntry(
@@ -186,9 +192,9 @@ class FormCatalogBuilder:
             "signature": ("signature", "signed"),
             "date": ("date",),
         }
-        for field, terms in known.items():
+        for field_name, terms in known.items():
             if any(term in lowered for term in terms):
-                fields.add(field)
+                fields.add(field_name)
         return sorted(field for field in fields if 2 < len(field) <= 50)
 
     def extract_dependencies(self, text: str) -> list[str]:

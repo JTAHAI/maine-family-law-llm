@@ -34,6 +34,7 @@ def test_chat_and_evidence_cards_expose_document_actions() -> None:
         'function importRecordToWorkspace(',
         "'/api/document-workspace/import-record'",
         "'/api/document-workspace/documents'",
+        'Canonical filing gate',
     ):
         assert marker in js
 

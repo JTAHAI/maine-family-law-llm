@@ -20,6 +20,7 @@ github_url: https://github.com/JTAHAI/maine-family-law-llm
 header_pages:
   - index.md
   - features.md
+  - RELEASE_STATUS_v7.0.0.md
   - safety.md
   - fork-your-state.md
   - privacy.md

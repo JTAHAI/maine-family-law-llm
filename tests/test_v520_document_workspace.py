@@ -13,7 +13,6 @@ from legal.documents.workspace import (
     commit_soft_delete,
     create_document,
     find_preserved_source,
-    get_document,
     list_documents,
     propose_revision,
     request_soft_delete,
@@ -182,7 +181,12 @@ def test_workspace_refuses_symlink_root(tmp_path: Path) -> None:
     case_root.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
-    (case_root / "19_DOCUMENT_WORKSPACE").symlink_to(outside, target_is_directory=True)
+    try:
+        (case_root / "19_DOCUMENT_WORKSPACE").symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable")
+        raise
     with pytest.raises(DocumentWorkspaceError) as refused:
         create_document(case_root, title="Draft", content="Text")
     assert refused.value.code == "workspace_symlink_refused"

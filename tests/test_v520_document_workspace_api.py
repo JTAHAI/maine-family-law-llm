@@ -55,10 +55,13 @@ def test_document_api_create_propose_commit_and_export(monkeypatch, tmp_path: Pa
     txt = client.get(f"/api/document-workspace/documents/{document_id}/export?format=txt")
     assert txt.status_code == 200
     assert b"Revised line" in txt.content
+    assert txt.headers["x-mfll-filing-gate-status"] == "review_required"
+    assert txt.headers["x-mfll-filing-gate-blockers"] == "review_packet_missing"
     word = client.get(f"/api/document-workspace/documents/{document_id}/export?format=docx")
     assert word.status_code == 200
     assert word.content.startswith(b"PK")
     assert word.headers["x-content-type-options"] == "nosniff"
+    assert word.headers["x-mfll-filing-gate-status"] == "review_required"
 
 
 def test_document_api_soft_delete_is_two_phase_and_restoreable(monkeypatch, tmp_path: Path) -> None:

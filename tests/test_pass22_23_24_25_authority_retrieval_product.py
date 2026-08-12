@@ -8,7 +8,7 @@ from pathlib import Path
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
 from legal.evals.retrieval_smoke import RetrievalSmokeEvalRunner
 from legal.production.retrieval_failure_triage import RetrievalFailureTriage
-from legal.retrieval import RetrievalPipeline
+from legal.retrieval import RetrievalDocument, RetrievalPipeline
 from legal.retrieval.index_builder import RetrievalIndexBuilder
 from legal.verifiers import SourceAuthorityIndex, extract_citations
 
@@ -142,6 +142,52 @@ def test_pass23_builds_external_retrieval_indexes_and_lookup_artifacts(tmp_path)
     assert response["retrieved_sources"][0]["source_id"] == "form-fm-002"
 
 
+def test_direct_statute_pinpoint_and_retrieval_card_preserve_exact_provenance(tmp_path):
+    data_root = tmp_path / "external_data"
+    text = "19-A M.R.S. § 1653. 1. Purpose text. 3. Best interest of child."
+    _write_jsonl(
+        data_root / "parsed_authority_store" / "statutes" / "statute_sections.jsonl",
+        [
+            {
+                "record_id": "statute-19a-1653",
+                "source_id": "snapshot-statute",
+                "source_hash": "a" * 64,
+                "source_class": "statute_section",
+                "authority_kind": "statute_section",
+                "jurisdiction": "maine",
+                "freshness_status": "fresh",
+                "parser_status": "parsed",
+                "source_span": {"start_offset": 0, "end_offset": len(text)},
+                "source_url_or_path": "https://legislature.maine.gov/statutes/19-a/title19-Asec1653.html",
+                "title": "Parental rights and responsibilities",
+                "citation": "19-A M.R.S. § 1653",
+                "text": text,
+                "subsections": ["1. Purpose text.", "3. Best interest of child."],
+            }
+        ],
+    )
+
+    ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
+    index_rows = json.loads((data_root / "authority_layer" / "citation_index.json").read_text(encoding="utf-8"))
+    resolution = SourceAuthorityIndex.from_rows(index_rows).resolve(
+        extract_citations("19-A M.R.S. § 1653(3)")[0]
+    )
+    assert resolution.status == "found"
+    assert resolution.metadata["pinpoint"] == "19-A M.R.S. § 1653(3)"
+    assert text[resolution.metadata["source_span"]["start_offset"] : resolution.metadata["source_span"]["end_offset"]] == "3. Best interest of child."
+
+    RetrievalIndexBuilder(data_root=data_root).build()
+    cards = [
+        json.loads(line)
+        for line in (data_root / "embedding_store" / "hybrid" / "source_cards.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert cards[0]["hash_value"] == "a" * 64
+    assert cards[0]["start_offset"] == 0
+    assert cards[0]["end_offset"] == len(text)
+    exact = json.loads((data_root / "embedding_store" / "hybrid" / "exact_citation_lookup.json").read_text(encoding="utf-8"))
+    assert exact["19-A M.R.S. § 1653(3)"] == "statute-19a-1653"
+
+
 def test_pass24_runs_measured_retrieval_smoke_eval(tmp_path):
     data_root = _fixture_data_root(tmp_path)
     ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
@@ -174,6 +220,55 @@ def test_pass24_retrieval_smoke_caps_source_derived_cases_and_writes_progress(tm
     assert progress["completed_cases"] == 2
     assert progress["total_cases"] == 2
     assert (data_root / "retrieval_smoke_report.json").exists()
+
+
+def test_source_derived_smoke_treats_duplicate_citation_rows_as_equivalent() -> None:
+    documents = [
+        RetrievalDocument(
+            source_id=source_id,
+            document_id=source_id,
+            title=f"Rule 120 copy {source_id}",
+            text="Post-judgment relief.",
+            citation="M.R. Civ. P. 120",
+            source_class="court_rules_index",
+        )
+        for source_id in ("rule-120-a", "rule-120-b")
+    ]
+
+    cases = RetrievalSmokeEvalRunner._build_cases(documents, max_case_count=10)
+
+    assert len(cases) == 1
+    assert cases[0].relevant_source_ids == {"rule-120-a", "rule-120-b"}
+
+
+def test_admitted_exact_citation_precedes_substring_false_positives() -> None:
+    documents = [
+        RetrievalDocument(
+            source_id="rule-1",
+            document_id="rule-1",
+            title="Rule 1 - Scope",
+            text="Scope of rules.",
+            citation="M.R. Civ. P. 1",
+            source_class="court_rule",
+            authority_status="verified_official_maine",
+        ),
+        RetrievalDocument(
+            source_id="rule-10",
+            document_id="rule-10",
+            title="Rule 10 - Pleadings",
+            text="M.R. Civ. P. 10 governs pleadings.",
+            citation="M.R. Civ. P. 10",
+            source_class="court_rule",
+            authority_status="verified_official_maine",
+        ),
+    ]
+    authority = SourceAuthorityIndex()
+    authority.add_rule("M.R. Civ. P. 1", "rule-1")
+
+    response = RetrievalPipeline(documents, authority_index=authority).retrieve("M.R. Civ. P. 1", top_k=2)
+
+    assert response["retrieved_sources"][0]["source_id"] == "rule-1"
+    assert response["retrieved_sources"][0]["method"] == "admitted_exact_citation"
 
 
 def test_pass25_triages_retrieval_failures_into_fix_tickets(tmp_path):

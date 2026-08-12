@@ -23,10 +23,11 @@ def ocr_prerequisite_status(*, platform_name: str | None = None) -> dict[str, An
     platform = platform_name or os.name
     engine = local_ocr_engine_status()
     winget = shutil.which("winget") if platform == "nt" else ""
+    store_runtime = os.environ.get("MFL_RUNTIME_MODE", "").strip().lower() == "store"
     return {
         "status": "ready" if engine.get("available") and engine.get("pdf_ocr_available") else "missing",
         "platform": "windows" if platform == "nt" else platform,
-        "one_click_available": bool(platform == "nt" and winget),
+        "one_click_available": bool(platform == "nt" and winget and not store_runtime),
         "winget_available": bool(winget),
         "engine": engine,
         "package_id": TESSERACT_WINGET_ID,

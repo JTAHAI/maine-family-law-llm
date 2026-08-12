@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import random
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -233,27 +234,98 @@ class GoldAnnotationQueueBuilder:
         reviewer_ids: list[str] | None = None,
         double_review: bool = True,
         csv_output_path: str | Path | None = None,
+        dataset_filter: list[str] | None = None,
+        source_class_filter: list[str] | None = None,
+        issue_filter: list[str] | None = None,
+        posture_filter: list[str] | None = None,
+        target_dataset_type: str | None = None,
+        seed: int | str | None = None,
+        dry_run: bool = False,
+        include_fixture_candidates: bool = False,
+        summary_output_path: str | Path | None = None,
     ) -> dict[str, Any]:
         manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
         if not isinstance(manifest, list):
             raise ValueError("source manifest must be a JSON array")
         source_records = [item for item in manifest if isinstance(item, dict)]
+        if not include_fixture_candidates:
+            source_records = [
+                item
+                for item in source_records
+                if not any(
+                    marker in str(item.get(field, "")).casefold()
+                    for field in ("source_class", "source_id", "source_url_or_path")
+                    for marker in ("fixture", "example", "sample")
+                )
+            ]
+        if source_class_filter:
+            wanted = {str(item).casefold() for item in source_class_filter if str(item).strip()}
+            source_records = [
+                item
+                for item in source_records
+                if str(item.get("source_class", "")).casefold() in wanted
+            ]
+        if issue_filter:
+            wanted = {str(item).casefold() for item in issue_filter if str(item).strip()}
+            source_records = [
+                item
+                for item in source_records
+                if wanted.intersection({str(label).casefold() for label in item.get("issue_labels", []) if label})
+            ]
+        if posture_filter:
+            wanted = {str(item).casefold() for item in posture_filter if str(item).strip()}
+            source_records = [
+                item
+                for item in source_records
+                if wanted.intersection({str(label).casefold() for label in item.get("posture_labels", []) if label})
+            ]
+        if dataset_filter:
+            wanted = {str(item).casefold() for item in dataset_filter if str(item).strip()}
+            source_records = [
+                item
+                for item in source_records
+                if str(item.get("promoted_gold_dataset") or _dataset_for_task_type(str(item.get("task_type", "")))).casefold()
+                in wanted
+            ]
+        if seed is not None:
+            rng = random.Random(str(seed))
+            rng.shuffle(source_records)
         task_types = list(self.policy.get("annotation_queue_task_types", []))
+        if target_dataset_type:
+            task_types = [task_type for task_type in task_types if _dataset_for_task_type(task_type) == target_dataset_type or task_type == target_dataset_type]
         reviewers = [item for item in (reviewer_ids or []) if item]
         rows: list[dict[str, Any]] = []
         now = datetime.now(timezone.utc).isoformat()
+        seen: set[str] = set()
         for task_type in task_types:
             for item_index, record in enumerate(source_records[:max_items_per_task_type]):
                 source_id = str(record.get("source_id", ""))
                 source_class = str(record.get("source_class", ""))
                 text_seed = f"{task_type}|{source_id}|{record.get('hash', '')}"
+                if text_seed in seen:
+                    continue
+                seen.add(text_seed)
                 primary, secondary = _reviewer_pair(reviewers, len(rows), double_review)
+                dataset = _dataset_for_task_type(task_type)
+                row_id = _stable_queue_id(text_seed)
                 row = {
-                    "queue_id": _stable_queue_id(text_seed),
+                    "row_id": row_id,
+                    "queue_id": row_id,
+                    "schema_version": self.policy.get("schema_version", "attorney_review_studio_queue_v1"),
+                    "dataset_type": dataset,
                     "task_type": task_type,
                     "source_id": source_id,
                     "source_class": source_class,
                     "jurisdiction": record.get("jurisdiction", "maine"),
+                    "authority_build_id": record.get("authority_build_id") or record.get("build_id") or record.get("source_manifest_build_id"),
+                    "source_hash": record.get("hash"),
+                    "source_span": record.get("source_span") or record.get("text_span") or record.get("span"),
+                    "question": record.get("question") or record.get("prompt") or record.get("query") or "",
+                    "expected_result": record.get("expected_result") or record.get("expected_labels") or record.get("expected"),
+                    "accepted_labels": record.get("accepted_labels") or record.get("label") or [],
+                    "rejected_labels": record.get("rejected_labels") or [],
+                    "issue_tags": record.get("issue_tags") or record.get("issue_labels") or [],
+                    "posture_tags": record.get("posture_tags") or record.get("posture_labels") or [],
                     "source_url_or_path": record.get("source_url_or_path"),
                     "snapshot_path": record.get("snapshot_path"),
                     "snapshot_hash": record.get("hash"),
@@ -263,26 +335,41 @@ class GoldAnnotationQueueBuilder:
                     "review_workflow_status": "queued",
                     "primary_reviewer_id": primary,
                     "secondary_reviewer_id": secondary,
+                    "reviewer_safe_id": primary,
+                    "second_reviewer_safe_id": secondary,
                     "double_review_required": bool(double_review),
+                    "independent_review_status": "pending" if double_review else "single_review",
                     "conflict_status": "not_started",
                     "conflict_resolver_id": None,
-                    "promoted_gold_dataset": _dataset_for_task_type(task_type),
+                    "adjudication_status": "not_started",
+                    "promoted_gold_dataset": dataset,
+                    "promoted_to_gold": False,
+                    "synthetic": bool(record.get("synthetic", False)),
+                    "seed": bool(record.get("seed", False)),
+                    "attorney_reviewed": False,
+                    "row_hash": None,
+                    "supersedes_row_id": None,
+                    "notes": record.get("notes"),
                     "private_data_allowed_for_training": False,
                     "created_at": now,
                     "assignment_batch": _stable_queue_id(f"batch|{task_type}|{item_index}|{now}"),
+                    "assignment_seed": str(seed) if seed is not None else None,
                     "instructions": _task_instructions(task_type),
+                    "audit_chain_reference": _stable_queue_id(f"audit|{task_type}|{source_id}|{now}"),
                 }
+                row["row_hash"] = hashlib.sha256(json.dumps(row, sort_keys=True, default=str).encode("utf-8")).hexdigest()
                 rows.append(row)
         output = Path(output_path)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with output.open("w", encoding="utf-8") as handle:
-            for row in rows:
-                handle.write(json.dumps(row, sort_keys=True) + "\n")
+        if not dry_run:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            with output.open("w", encoding="utf-8") as handle:
+                for row in rows:
+                    handle.write(json.dumps(row, sort_keys=True) + "\n")
         csv_output = None
-        if csv_output_path:
+        if csv_output_path and not dry_run:
             csv_output = Path(csv_output_path)
             export_annotation_queue_csv(rows, csv_output)
-        return {
+        summary = {
             "status": "pass",
             "manifest_path": str(manifest_path),
             "output_path": str(output),
@@ -294,7 +381,21 @@ class GoldAnnotationQueueBuilder:
             "double_review_required": bool(double_review),
             "assigned_rows": sum(1 for row in rows if row.get("primary_reviewer_id")),
             "conflict_resolution_status": "not_started",
+            "dry_run": bool(dry_run),
+            "dataset_filter": sorted({str(item) for item in (dataset_filter or [])}),
+            "source_class_filter": sorted({str(item) for item in (source_class_filter or [])}),
+            "issue_filter": sorted({str(item) for item in (issue_filter or [])}),
+            "posture_filter": sorted({str(item) for item in (posture_filter or [])}),
+            "target_dataset_type": target_dataset_type,
+            "seed": str(seed) if seed is not None else None,
+            "include_fixture_candidates": bool(include_fixture_candidates),
         }
+        if summary_output_path:
+            summary_path = Path(summary_output_path)
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True), encoding="utf-8")
+            summary["summary_output_path"] = str(summary_path)
+        return summary
 
 
 @dataclass(frozen=True)

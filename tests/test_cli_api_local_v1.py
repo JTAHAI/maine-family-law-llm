@@ -75,7 +75,7 @@ def test_api_endpoints_use_same_safety_and_sources() -> None:
     assert inspect["official"] is True
 
 
-def test_local_scripts_exist_parse_and_doctor_json() -> None:
+def test_local_scripts_exist_parse_and_doctor_json(tmp_path: Path) -> None:
     shell = shutil.which("pwsh") or shutil.which("powershell")
     scripts = [
         ROOT / "START_LOCAL_TEST.ps1",
@@ -111,8 +111,18 @@ def test_local_scripts_exist_parse_and_doctor_json() -> None:
         )
         assert result.returncode == 0, result.stderr + result.stdout
 
-    _run(["python", "scripts/clean-local-artifacts.py", "--repo-root", str(ROOT)])
-    doctor = _run(["python", "scripts/doctor-local-repo.py", "--repo-root", str(ROOT), "--json"])
+    disposable_root = tmp_path / "repo-copy"
+    shutil.copytree(
+        ROOT,
+        disposable_root,
+        ignore=shutil.ignore_patterns(".git", ".pytest_cache", ".ruff_cache", "__pycache__", "dist", "build"),
+    )
+    disposable_dist = disposable_root / "dist" / "generated"
+    disposable_dist.mkdir(parents=True)
+    clean = _run(["python", "scripts/clean-local-artifacts.py", "--repo-root", str(disposable_root)])
+    assert clean.returncode == 0
+    assert not (disposable_root / "dist").exists()
+    doctor = _run(["python", "scripts/doctor-local-repo.py", "--repo-root", str(disposable_root), "--json"])
     payload = json.loads(doctor.stdout)
     assert payload["status"] == "pass"
     assert payload["safe_to_push"] is True

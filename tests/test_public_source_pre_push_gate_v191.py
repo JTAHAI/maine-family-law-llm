@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,8 +12,31 @@ from legal.release.pre_push_gate import run_pre_push_gate
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_public_source_pre_push_gate_passes_source_hygiene_without_claiming_ga() -> None:
-    report = run_pre_push_gate(ROOT).as_dict()
+def _clean_source_copy(destination: Path) -> Path:
+    shutil.copytree(
+        ROOT,
+        destination,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".mfl_work",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".semgrep",
+            ".venv",
+            "venv",
+            "__pycache__",
+            "dist",
+            "build",
+        ),
+    )
+    return destination
+
+
+def test_public_source_pre_push_gate_passes_source_hygiene_without_claiming_ga(
+    tmp_path: Path,
+) -> None:
+    source_root = _clean_source_copy(tmp_path / "repo-copy")
+    report = run_pre_push_gate(source_root).as_dict()
 
     assert report["status"] == "pass"
     assert report["safe_to_push"] is True
@@ -45,13 +69,14 @@ def test_package_version_metadata_is_consistent_and_current() -> None:
 
 
 def test_public_source_preflight_cli_writes_report(tmp_path: Path) -> None:
+    source_root = _clean_source_copy(tmp_path / "repo-copy")
     output = tmp_path / "public_source_pre_push_gate.json"
     result = subprocess.run(
         [
             sys.executable,
             "scripts/run-public-source-preflight.py",
             "--repo-root",
-            str(ROOT),
+            str(source_root),
             "--output",
             str(output),
             "--require-ready",

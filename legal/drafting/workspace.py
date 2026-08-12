@@ -6,6 +6,7 @@ from typing import Any
 from legal.drafting.draft_generator import DraftGenerator
 from legal.drafting.draft_reviewer import DraftReviewer
 from legal.drafting.filing_ready_gate import FilingReadyGate
+from legal.drafting.provenance import validate_provenance_receipt
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class DraftWorkspaceBuilder:
         procedure_posture_report: dict[str, Any] | None = None,
         forms_report: dict[str, Any] | None = None,
         human_review_complete: bool = False,
+        provenance_receipt: dict[str, Any] | None = None,
     ) -> DraftWorkspace:
         draft = DraftGenerator().generate_review_required_draft(
             template_id=template_id,
@@ -67,6 +69,7 @@ class DraftWorkspaceBuilder:
         draft["source_card_sidebar"] = self._source_card_sidebar(draft.get("source_cards", []))
         draft["procedure_posture_report"] = procedure_posture_report or {}
         draft["forms_report"] = forms_report or {}
+        draft["generation_provenance"] = validate_provenance_receipt(provenance_receipt)
         draft["human_review_complete"] = human_review_complete
         draft["review_required"] = True
         draft["filing_ready"] = False
@@ -87,6 +90,7 @@ class DraftWorkspaceBuilder:
             "missing_facts": draft["missing_fact_sidebar"],
             "citation_report": draft["citation_report"],
             "quote_report": draft["quote_report"],
+            "generation_provenance": draft["generation_provenance"],
         }
         return DraftWorkspace(draft=draft, sidebars=sidebars, review=review, filing_ready_gate=gate)
 

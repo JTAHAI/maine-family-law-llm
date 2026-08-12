@@ -10,6 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 import json
 from pathlib import Path
+import sys
 import tomllib
 from typing import Any
 
@@ -24,27 +25,28 @@ def runtime_health_snapshot() -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     version_values: dict[str, str] = {"runtime": PACKAGE_VERSION}
-    try:
-        pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-        version_values["pyproject"] = f"{pyproject['project']['version']}.0"
-    except Exception:
-        version_values["pyproject"] = "unreadable"
-    identity_example = root / "store" / "msix" / "identity.example.json"
-    try:
-        payload = json.loads(identity_example.read_text(encoding="utf-8"))
-        version_values["identity.example.json"] = str(payload.get("package_version") or "")
-    except Exception:
-        version_values["identity.example.json"] = "unreadable"
-    # identity.local.json is operator-specific and intentionally omitted from clean
-    # source ZIPs. Validate it when present, but do not degrade a clean checkout
-    # merely because the optional local identity file has not been created yet.
-    identity_local = root / "store" / "msix" / "identity.local.json"
-    if identity_local.is_file():
+    if not getattr(sys, "frozen", False):
         try:
-            payload = json.loads(identity_local.read_text(encoding="utf-8"))
-            version_values["identity.local.json"] = str(payload.get("package_version") or "")
+            pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+            version_values["pyproject"] = f"{pyproject['project']['version']}.0"
         except Exception:
-            version_values["identity.local.json"] = "unreadable"
+            version_values["pyproject"] = "unreadable"
+        identity_example = root / "store" / "msix" / "identity.example.json"
+        try:
+            payload = json.loads(identity_example.read_text(encoding="utf-8"))
+            version_values["identity.example.json"] = str(payload.get("package_version") or "")
+        except Exception:
+            version_values["identity.example.json"] = "unreadable"
+        # identity.local.json is operator-specific and intentionally omitted from clean
+        # source ZIPs. Validate it when present, but do not degrade a clean checkout
+        # merely because the optional local identity file has not been created yet.
+        identity_local = root / "store" / "msix" / "identity.local.json"
+        if identity_local.is_file():
+            try:
+                payload = json.loads(identity_local.read_text(encoding="utf-8"))
+                version_values["identity.local.json"] = str(payload.get("package_version") or "")
+            except Exception:
+                version_values["identity.local.json"] = "unreadable"
     version_ok = all(value == PACKAGE_VERSION for value in version_values.values())
     checks.append(
         {
@@ -54,6 +56,7 @@ def runtime_health_snapshot() -> dict[str, Any]:
                 "product_version": VERSION,
                 "package_version": PACKAGE_VERSION,
                 "all_package_versions_match": version_ok,
+                "validation_scope": "embedded_runtime" if getattr(sys, "frozen", False) else "source_release_metadata",
             },
         }
     )

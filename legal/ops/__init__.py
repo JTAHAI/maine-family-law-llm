@@ -22,7 +22,6 @@ from legal.ops.production_promotion import (
 )
 from legal.ops.sre import BackupRestoreRunbook, ReliabilitySREAuditor, SLOMeasurement
 from legal.ops.supply_chain import SupplyChainAuditor, SupplyChainFinding, SupplyChainReport
-
 from legal.ops.full_ga_workbench import (
     FullGAEvidenceFile,
     FullGAPhase,
@@ -69,5 +68,40 @@ __all__ = [
     "SupplyChainAuditor",
     "SupplyChainFinding",
     "SupplyChainReport",
+    "ReleaseControlCenterReport",
+    "ReleaseControlCenterService",
     "FullGAEvidenceFile",
 ]
+
+
+def __getattr__(name: str):
+    if name in {"ReleaseControlCenterReport", "ReleaseControlCenterService"}:
+        from legal.ops.release_control_center import ReleaseControlCenterReport, ReleaseControlCenterService
+
+        return {
+            "ReleaseControlCenterReport": ReleaseControlCenterReport,
+            "ReleaseControlCenterService": ReleaseControlCenterService,
+        }[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+from legal.ops.release_pilot_hardening import (
+    AttorneySandboxStore,
+    MatterBackupRestoreDrill,
+    OpenTelemetryLocalBridge,
+    PrivacySafeObservabilityStore,
+    ReleaseEvidenceAuditor,
+    ReleasePilotHardeningError,
+    ReleasePilotHardeningService,
+    find_source_root,
+)
+
+__all__.extend([
+    "AttorneySandboxStore",
+    "MatterBackupRestoreDrill",
+    "OpenTelemetryLocalBridge",
+    "PrivacySafeObservabilityStore",
+    "ReleaseEvidenceAuditor",
+    "ReleasePilotHardeningError",
+    "ReleasePilotHardeningService",
+    "find_source_root",
+])

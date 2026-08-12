@@ -62,6 +62,7 @@ def test_registry_admits_dev_model_and_orchestrator_runs_worker():
         latency_profile={"p95_ms": 1},
         eval_regression_history=[{"suite": "smoke", "status": "pass"}],
         admission_status="admitted_for_dev",
+        license_status="approved",
     )
 
     assert registry.register(record) == []

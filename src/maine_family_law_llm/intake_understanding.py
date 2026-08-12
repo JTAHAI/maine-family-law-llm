@@ -14,6 +14,8 @@ from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 
+from .search_normalization import normalize_search_query
+
 MAX_INTAKE_CHARS = 12_000
 
 TYPO_NORMALIZATION = {
@@ -275,6 +277,13 @@ def _clean_user_text(value: str) -> tuple[str, bool, int]:
 def normalize_intake_text(value: str) -> str:
     text, _, _ = _clean_user_text(value)
     lowered = text.casefold()
+    # Normalize common Word/PDF/OCR dash variants for routing while preserving
+    # punctuation needed by the ordinary question-form fallback.
+    lowered = lowered.translate(str.maketrans({
+        "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",
+        "\u2014": "-", "\u2015": "-", "\u2043": "-", "\u2212": "-",
+        "\ufe58": "-", "\ufe63": "-", "\uff0d": "-", "\u00ad": "",
+    }))
     for wrong, replacement in TYPO_NORMALIZATION.items():
         lowered = lowered.replace(wrong, replacement)
     return lowered
@@ -368,6 +377,26 @@ def _continuation_requested(text: str) -> bool:
     return any(compact.startswith(pattern + " ") for pattern in CONTINUATION_PATTERNS)
 
 
+def _direct_record_search_command(text: str) -> bool:
+    """Recognize list/show commands whose object is the selected matter records."""
+
+    compact = normalize_search_query(text).canonical
+    if not compact:
+        return False
+    explicit_record_object = re.fullmatch(
+        r"(?:please )?(?:show|give|display|list|pull|find)(?: me)? "
+        r"(?:a list of )?(?:all |every |everything )?.+ "
+        r"(?:records?|documents?|files?|pdfs?)",
+        compact,
+    )
+    broad_list_command = re.fullmatch(
+        r"(?:please )?(?:show|give|display|list|pull)(?: me)? "
+        r"(?:a list of )?(?:all|every|everything) .+",
+        compact,
+    )
+    return bool(explicit_record_object or broad_list_command)
+
+
 def _task(text: str) -> tuple[str, float, list[str]]:
     # Safety must outrank every routine routing signal, including service papers.
     if _immediate_safety_present(text):
@@ -376,6 +405,10 @@ def _task(text: str) -> tuple[str, float, list[str]]:
         return "child_safety", 0.97, ["explicit child-safety language"]
     if _source_followup(text):
         return "source_card_followup", 0.98, ["explicit request to reopen prior source cards"]
+    # A command such as “show me a list of everything contempt-related” is a
+    # record-search request, not a request to decide whether contempt exists.
+    if _direct_record_search_command(text):
+        return "record_search", 0.95, ["explicit command to list or show matching matter records"]
     for task, terms in TASK_PATTERNS:
         if _contains_any(text, terms, negation_aware=True):
             return task, 0.92, [f"matched {task.replace('_', ' ')} language"]
@@ -389,8 +422,8 @@ def _search_target(original: str, normalized: str, task: str) -> str:
         return ""
     quoted = re.search(r'["“](.+?)["”]', original)
     if quoted:
-        return quoted.group(1).strip()[:240]
-    target = normalized
+        return normalize_search_query(quoted.group(1)).canonical[:240]
+    target = normalize_search_query(normalized).canonical
     patterns = (
         r"^(?:please\s+)?find\s+all\s+mentions\s+of\s+",
         r"^(?:please\s+)?find\s+mentions\s+of\s+",
@@ -400,9 +433,17 @@ def _search_target(original: str, normalized: str, task: str) -> str:
         r"^(?:please\s+)?find\s+(?:in\s+my\s+records\s+)?",
         r"^(?:please\s+)?look\s+for\s+",
         r"^where\s+does\s+it\s+say\s+",
+        r"^(?:please\s+)?(?:show|give|display|list|pull)\s+(?:me\s+)?"
+        r"(?:a\s+)?(?:list\s+of\s+)?(?:all|every|everything)\s+",
+        r"^(?:please\s+)?(?:show|give|display|list|pull|find)\s+(?:me\s+)?"
+        r"(?:a\s+)?(?:list\s+of\s+)?",
     )
     for pattern in patterns:
         target = re.sub(pattern, "", target).strip(" .?!:")
+    target = re.sub(r"\s+(?:records?|documents?|files?|pdfs?)$", "", target).strip()
+    # “contempt-related” describes the requested set; “related” itself is not
+    # a meaningful content token and must not suppress exact contempt matches.
+    target = re.sub(r"\s+related$", "", target).strip()
     return target[:240]
 
 

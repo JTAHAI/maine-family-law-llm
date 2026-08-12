@@ -54,43 +54,40 @@ class ModelOrchestrator:
         *,
         require_production: bool = False,
         preferred_model_id: str | None = None,
+        fallback_mode: str = "deterministic",
     ) -> OrchestrationResult:
-        if task in {
-            "citation_validity_certification",
-            "quote_validity_certification",
-            "authority_validity_certification",
-            "filing_ready_certification",
-        }:
+        route = self.route_task(
+            task,
+            require_production=require_production,
+            preferred_model_id=preferred_model_id,
+            fallback_mode=fallback_mode,
+        )
+        if route["status"] == "blocked":
             return OrchestrationResult(
                 task=task,
-                role="system_gate",
+                role=route["role"],
                 model_id=None,
                 status="blocked",
                 output={},
-                blockers=["models_may_not_certify_legal_validity"],
-                audit=self._audit(task, None, "system_gate", "blocked"),
+                blockers=list(route["blockers"]),
+                audit=self._audit(task, None, route["role"], "blocked"),
             )
 
-        candidates = self.registry.select_for_task(task, require_production=require_production)
-        if preferred_model_id:
-            candidates = [candidate for candidate in candidates if candidate.model_id == preferred_model_id]
-
-        if not candidates:
-            roles = self.registry.role_catalog.roles_for_task(task)
-            role_name = roles[0].role if roles else "unassigned"
-            fallback = DeterministicFallbackWorker(role_name)
+        chosen_id = route["selected_model_id"]
+        if chosen_id is None:
+            fallback = DeterministicFallbackWorker(route["role"])
             output = fallback.run(payload)
             return OrchestrationResult(
                 task=task,
-                role=role_name,
+                role=route["role"],
                 model_id=None,
                 status="fallback_review_required",
                 output=output,
-                blockers=["no_admitted_model_for_task"],
-                audit=self._audit(task, None, role_name, "fallback_review_required"),
+                blockers=list(route["blockers"]),
+                audit=self._audit(task, None, route["role"], "fallback_review_required"),
             )
 
-        chosen = candidates[0]
+        chosen = self.registry.get_record(chosen_id)
         worker = self.workers.get(chosen.model_id, DeterministicFallbackWorker(chosen.role))
         output = worker.run(payload)
         status = str(output.get("status", "completed_review_required"))
@@ -103,6 +100,61 @@ class ModelOrchestrator:
             blockers=[] if chosen.model_id in self.workers else ["worker_not_registered_used_fallback"],
             audit=self._audit(task, chosen.model_id, chosen.role, status),
         )
+
+    def route_task(
+        self,
+        task: str,
+        *,
+        require_production: bool = False,
+        preferred_model_id: str | None = None,
+        fallback_mode: str = "deterministic",
+    ) -> dict[str, Any]:
+        if task in {
+            "citation_validity_certification",
+            "quote_validity_certification",
+            "authority_validity_certification",
+            "filing_ready_certification",
+        }:
+            return {
+            "task": task,
+            "role": "system_gate",
+            "selected_model_id": None,
+            "status": "blocked",
+            "blockers": ["models_may_not_certify_legal_validity"],
+            "candidates": [],
+            "fallback_mode": "deterministic_system_gate",
+            "available_fallbacks": ["deterministic", "lexical_only", "rules_only"],
+        }
+
+        candidates = self.registry.select_for_task(task, require_production=require_production)
+        if preferred_model_id:
+            candidates = [candidate for candidate in candidates if candidate.model_id == preferred_model_id]
+
+        if not candidates:
+            roles = self.registry.role_catalog.roles_for_task(task)
+            role_name = roles[0].role if roles else "unassigned"
+            return {
+                "task": task,
+                "role": role_name,
+                "selected_model_id": None,
+                "status": "fallback_review_required",
+                "blockers": ["no_admitted_model_for_task"],
+                "candidates": [candidate.model_id for candidate in candidates],
+                "fallback_mode": fallback_mode,
+                "available_fallbacks": ["deterministic", "lexical_only", "rules_only"],
+            }
+
+        chosen = candidates[0]
+        return {
+            "task": task,
+            "role": chosen.role,
+            "selected_model_id": chosen.model_id,
+            "status": "ready",
+            "blockers": [],
+            "candidates": [candidate.model_id for candidate in candidates],
+            "fallback_mode": "model_worker_or_deterministic_fallback",
+            "available_fallbacks": ["deterministic", "lexical_only", "rules_only"],
+        }
 
     @staticmethod
     def _audit(task: str, model_id: str | None, role: str, status: str) -> dict[str, Any]:

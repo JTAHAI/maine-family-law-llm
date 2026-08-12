@@ -1,0 +1,21 @@
+{
+  "schema_version": "reviewed_filing_packet_policy_v1",
+  "product_version": "7.0.0",
+  "root_folder": "20_REVIEWED_FILING_PACKET",
+  "max_assignments": 2000,
+  "artifact_ttl_seconds": 3600,
+  "rules": {
+    "prior_approval_never_carried_forward": true,
+    "changed_revision_stales_prior_review": true,
+    "reviewer_identity_is_local_metadata_only": true,
+    "exclusive_assignment_conflicts_fail_closed": true,
+    "packet_export_is_review_work_product": true,
+    "source_lifecycle_blockers_are_immutable": true,
+    "absolute_paths_are_never_exposed": true
+  },
+  "artifacts": [
+    "reviewed-filing-packet.json",
+    "reviewed-filing-packet.html",
+    "reviewed-filing-packet-receipt.json"
+  ]
+}

@@ -2,17 +2,18 @@ from legal.security.dependency_floor import audit_dependency_floors, version_at_
 
 
 def test_version_comparison_handles_stable_and_prerelease():
-    assert version_at_least("6.14.2", "6.14.2")
-    assert version_at_least("6.14.3", "6.14.2")
-    assert not version_at_least("6.1.3", "6.14.2")
+    assert version_at_least("6.15.0", "6.15.0")
+    assert version_at_least("6.15.1", "6.15.0")
+    assert not version_at_least("6.14.2", "6.15.0")
     assert not version_at_least("1.3.1rc1", "1.3.1")
 
 
 def test_safe_core_and_api_versions_pass():
     report = audit_dependency_floors(
         {
-            "pypdf": "6.14.2",
+            "pypdf": "6.15.0",
             "pypdfium2": "5.12.1",
+            "cryptography": "50.0.0",
             "python-docx": "1.2.0",
             "defusedxml": "0.7.1",
             "docx-editor": "0.7.1",
@@ -20,6 +21,7 @@ def test_safe_core_and_api_versions_pass():
             "starlette": "1.3.1",
             "uvicorn": "0.51.0",
             "httpx": "0.28.1",
+            "h2": "4.4.1",
         },
         include_api=True,
     )
@@ -32,6 +34,7 @@ def test_known_vulnerable_pdf_and_api_versions_are_blocked():
         {
             "pypdf": "5.9.0",
             "pypdfium2": "5.12.1",
+            "cryptography": "49.0.0",
             "python-docx": "1.1.0",
             "defusedxml": "0.7.1",
             "docx-editor": "0.6.0",
@@ -39,6 +42,7 @@ def test_known_vulnerable_pdf_and_api_versions_are_blocked():
             "starlette": "0.50.0",
             "uvicorn": "0.48.0",
             "httpx": "0.28.1",
+            "h2": "4.4.0",
         },
         include_api=True,
     )
@@ -50,12 +54,15 @@ def test_known_vulnerable_pdf_and_api_versions_are_blocked():
     assert "CVE-2026-48710" in findings["starlette"].advisory_ids
     assert findings["python-docx"].status == "blocked"
     assert findings["docx-editor"].status == "blocked"
+    assert findings["cryptography"].status == "blocked"
+    assert findings["h2"].status == "blocked"
 
 
 def test_optional_build_packages_can_be_strictly_checked():
     versions = {
-        "pypdf": "6.14.2",
+        "pypdf": "6.15.0",
         "pypdfium2": "5.12.1",
+        "cryptography": "50.0.0",
         "python-docx": "1.2.0",
         "defusedxml": "0.7.1",
         "docx-editor": "0.7.1",

@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import json
-from collections import defaultdict
+import os
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from legal.authority_store.authority_layer import ParsedAuthorityRecord, load_parsed_authority_records
+from legal.authority_store.authority_layer import (
+    ParsedAuthorityRecord,
+    _statute_pinpoints,
+    load_parsed_authority_records,
+)
 from legal.retrieval.embedding_adapter import DeterministicEmbeddingAdapter
 from legal.retrieval.models import RetrievalDocument
-from legal.verifiers.citation_parser import extract_citations
+from legal.verifiers.citation_parser import citation_aliases, extract_citations
 
 
 @dataclass
@@ -75,29 +81,32 @@ class RetrievalIndexBuilder:
             findings.append({"code": "no_retrieval_documents", "message": "No parsed authority records were indexable."})
 
         self._reset_store()
-        exact_lookup: dict[str, str] = {}
-        form_lookup: dict[str, str] = {}
-        case_lookup: dict[str, str] = {}
-        statute_lookup: dict[str, str] = {}
+        exact_lookup: dict[str, str | list[str]] = {}
+        exact_candidates: dict[str, list[str]] = {}
+        form_lookup: dict[str, str | list[str]] = {}
+        case_lookup: dict[str, str | list[str]] = {}
+        statute_lookup: dict[str, str | list[str]] = {}
         source_cards: list[dict[str, Any]] = []
         parent_child_rows: list[dict[str, Any]] = []
 
         for document in documents:
             if document.citation:
                 for citation in extract_citations(document.citation):
-                    exact_lookup[citation.normalized] = document.source_id
+                    for alias in citation_aliases(citation):
+                        self._add_lookup_candidate(exact_lookup, alias, document.source_id)
+                        self._add_candidate_list(exact_candidates, alias, document.source_id)
                     if citation.kind == "maine_statute" and citation.title and citation.section:
-                        statute_lookup[f"{citation.title}:{citation.section}"] = document.source_id
+                        self._add_lookup_candidate(statute_lookup, f"{citation.title}:{citation.section}", document.source_id)
                     if citation.kind == "maine_case":
-                        case_lookup[citation.normalized] = document.source_id
+                        self._add_lookup_candidate(case_lookup, citation.normalized, document.source_id)
                     if citation.kind == "maine_form" and citation.form_id:
-                        form_lookup[citation.form_id] = document.source_id
+                        self._add_lookup_candidate(form_lookup, citation.form_id, document.source_id)
             if document.source_class in {"court_form", "court_forms_index"} or document.metadata.get("form_id"):
                 form_id = str(document.metadata.get("form_id") or document.citation or "").strip()
                 if form_id:
-                    form_lookup[form_id.upper()] = document.source_id
+                    self._add_lookup_candidate(form_lookup, form_id.upper(), document.source_id)
             if document.title:
-                case_lookup.setdefault(document.title.lower(), document.source_id)
+                self._add_lookup_candidate(case_lookup, document.title.lower(), document.source_id)
             source_cards.append(document.source_card().__dict__)
             parent_child_rows.append(
                 {
@@ -109,9 +118,23 @@ class RetrievalIndexBuilder:
                 }
             )
 
+        for record in records:
+            for pinpoint, _span in _statute_pinpoints(record):
+                for citation in extract_citations(pinpoint):
+                    for alias in citation_aliases(citation):
+                        self._add_lookup_candidate(exact_lookup, alias, record.canonical_source_id)
+                        self._add_candidate_list(exact_candidates, alias, record.canonical_source_id)
+
+        documents_by_id = {document.source_id: document for document in documents}
+        for lookup in (exact_lookup, form_lookup, case_lookup, statute_lookup):
+            self._rank_lookup_values(lookup, documents_by_id)
+        for values in exact_candidates.values():
+            values.sort(key=lambda source_id: self._candidate_rank(documents_by_id.get(source_id), source_id))
+
         outputs = self._write_outputs(
             documents=documents,
             exact_lookup=exact_lookup,
+            exact_candidates=exact_candidates,
             form_lookup=form_lookup,
             case_lookup=case_lookup,
             statute_lookup=statute_lookup,
@@ -134,13 +157,16 @@ class RetrievalIndexBuilder:
         )
         manifest = report.as_dict()
         manifest["indexes"] = ["bm25", "vector", "hybrid"]
+        manifest["artifact_hashes"] = {
+            str(Path(path).resolve().relative_to(self.embedding_store.resolve())): self._sha256_file(Path(path))
+            for label, path in outputs.items()
+            if label not in {"retrieval_index_manifest", "index_manifest"} and Path(path).is_file()
+        }
+        manifest["artifact_hash_algorithm"] = "sha256"
+        manifest["lookup_value_contract"] = "single_source_id_or_ranked_source_id_list"
         manifest_text = json.dumps(manifest, indent=2, sort_keys=True)
-        (self.embedding_store / "retrieval_index_manifest.json").write_text(
-            manifest_text, encoding="utf-8"
-        )
-        (self.embedding_store / "index_manifest.json").write_text(
-            manifest_text, encoding="utf-8"
-        )
+        self._atomic_write_text(self.embedding_store / "retrieval_index_manifest.json", manifest_text)
+        self._atomic_write_text(self.embedding_store / "index_manifest.json", manifest_text)
         return report
 
     def load_documents(self) -> list[RetrievalDocument]:
@@ -163,10 +189,11 @@ class RetrievalIndexBuilder:
         self,
         *,
         documents: list[RetrievalDocument],
-        exact_lookup: dict[str, str],
-        form_lookup: dict[str, str],
-        case_lookup: dict[str, str],
-        statute_lookup: dict[str, str],
+        exact_lookup: dict[str, str | list[str]],
+        exact_candidates: dict[str, list[str]],
+        form_lookup: dict[str, str | list[str]],
+        case_lookup: dict[str, str | list[str]],
+        statute_lookup: dict[str, str | list[str]],
         source_cards: list[dict[str, Any]],
         parent_child_rows: list[dict[str, Any]],
     ) -> dict[str, str]:
@@ -176,6 +203,7 @@ class RetrievalIndexBuilder:
         parent_child = self.embedding_store / "hybrid" / "parent_child_chunks.jsonl"
         source_cards_path = self.embedding_store / "hybrid" / "source_cards.jsonl"
         exact_path = self.embedding_store / "hybrid" / "exact_citation_lookup.json"
+        exact_candidates_path = self.embedding_store / "hybrid" / "exact_citation_candidates.json"
         form_path = self.embedding_store / "hybrid" / "form_id_lookup.json"
         case_path = self.embedding_store / "hybrid" / "case_name_lookup.json"
         statute_path = self.embedding_store / "hybrid" / "statute_section_lookup.json"
@@ -207,11 +235,12 @@ class RetrievalIndexBuilder:
                 fh.write(json.dumps(row, sort_keys=True) + "\n")
         for path, lookup in (
             (exact_path, exact_lookup),
+            (exact_candidates_path, exact_candidates),
             (form_path, form_lookup),
             (case_path, case_lookup),
             (statute_path, statute_lookup),
         ):
-            path.write_text(json.dumps(lookup, indent=2, sort_keys=True), encoding="utf-8")
+            self._atomic_write_text(path, json.dumps(lookup, indent=2, sort_keys=True))
 
         return {
             "bm25_documents": str(bm25_docs),
@@ -219,6 +248,7 @@ class RetrievalIndexBuilder:
             "hybrid_documents": str(hybrid_docs),
             "parent_child_chunks": str(parent_child),
             "exact_citation_lookup": str(exact_path),
+            "exact_citation_candidates": str(exact_candidates_path),
             "form_id_lookup": str(form_path),
             "case_name_lookup": str(case_path),
             "statute_section_lookup": str(statute_path),
@@ -260,8 +290,8 @@ class RetrievalIndexBuilder:
     def _document_text(record: ParsedAuthorityRecord) -> str:
         row = record.row
         parts = [record.title, record.citation or ""]
-        for field in ("text", "summary", "holding", "holdings", "instructions", "filing_context"):
-            value = row.get(field)
+        for field_name in ("text", "summary", "holding", "holdings", "instructions", "filing_context"):
+            value = row.get(field_name)
             if isinstance(value, list):
                 parts.append(" ".join(str(item) for item in value))
             elif value:
@@ -309,6 +339,101 @@ class RetrievalIndexBuilder:
             "procedural_postures": list(document.procedural_postures),
             "metadata": document.metadata,
         }
+
+    @staticmethod
+    def _candidate_rank(document: RetrievalDocument | None, source_id: str) -> tuple[int, int, int, str]:
+        if document is None:
+            return (9, 9, 9, source_id)
+        authority_rank = {
+            "verified_official_maine": 0,
+            "verified_maine_law_court": 1,
+            "verified_federal": 2,
+            "verified_public_api": 3,
+            "user_provided_only": 7,
+            "stale_unknown": 8,
+        }.get(str(document.authority_status), 6)
+        source_rank = {
+            "statute_section": 0,
+            "court_rule": 0,
+            "law_court_opinion": 0,
+            "court_form": 0,
+            "federal_authority": 1,
+            "statute_title_index": 4,
+            "court_rules_index": 4,
+            "court_forms_index": 4,
+            "law_court_opinions_index": 4,
+        }.get(str(document.source_class), 2)
+        freshness_rank = {
+            "fresh": 0,
+            "current": 0,
+            "superseded": 6,
+            "stale": 7,
+            "unknown": 8,
+        }.get(str(document.freshness_status).lower(), 5)
+        return (authority_rank, freshness_rank, source_rank, source_id)
+
+    @classmethod
+    def _rank_lookup_values(
+        cls,
+        lookup: dict[str, str | list[str]],
+        documents_by_id: dict[str, RetrievalDocument],
+    ) -> None:
+        for key, value in list(lookup.items()):
+            if not isinstance(value, list):
+                continue
+            ranked = sorted(
+                set(value),
+                key=lambda source_id: cls._candidate_rank(documents_by_id.get(source_id), source_id),
+            )
+            lookup[key] = ranked[0] if len(ranked) == 1 else ranked
+
+    @staticmethod
+    def _add_lookup_candidate(lookup: dict[str, str | list[str]], key: str, source_id: str) -> None:
+        normalized_key = str(key).strip()
+        if not normalized_key:
+            return
+        existing = lookup.get(normalized_key)
+        if existing is None:
+            lookup[normalized_key] = source_id
+            return
+        if isinstance(existing, str):
+            if existing != source_id:
+                lookup[normalized_key] = [existing, source_id]
+            return
+        if source_id not in existing:
+            existing.append(source_id)
+            existing.sort()
+
+    @staticmethod
+    def _add_candidate_list(lookup: dict[str, list[str]], key: str, source_id: str) -> None:
+        values = lookup.setdefault(str(key).strip(), [])
+        if source_id not in values:
+            values.append(source_id)
+            values.sort()
+
+    @staticmethod
+    def _sha256_file(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    @staticmethod
+    def _atomic_write_text(path: Path, text: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(text)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        finally:
+            try:
+                Path(temporary).unlink()
+            except FileNotFoundError:
+                pass
 
     @staticmethod
     def _is_relative_to(path: Path, possible_parent: Path) -> bool:

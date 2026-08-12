@@ -1,0 +1,154 @@
+{
+  "artifact_inventory_hash": "9d22cf942f20a69eee17c2206f620d3bf32589f301fa83e3ef5274bb179e65e6",
+  "artifacts": [
+    {
+      "artifact_type": "external_data_build_manifest",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "External data build manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/data-build-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "gold_eval_pack_manifest",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Gold eval pack manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/gold-eval-pack-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "parsed_authority_manifest",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Parsed authority manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/parsed-authority-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "pilot_evidence_packet",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Pilot evidence packet",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/pilot-evidence-packet.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "release_metrics_json",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Release metrics JSON",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/release-metrics.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "release_notes",
+      "external": false,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Release notes",
+      "path_or_uri": "docs/release-notes.md",
+      "present": true,
+      "sha256": "sha256:a7847a7f5629bcfdfc5ccbc3b45a114ab1c954072075a7e4131c9b9926481948",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "retrieval_index_manifest",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Retrieval index manifest",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/retrieval-index-manifest.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "rollback_package",
+      "external": false,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Rollback package",
+      "path_or_uri": "dist/rollback-1.18.0-pass50-pass51-ga-release-controls.tar.gz",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "security_evidence_packet",
+      "external": true,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Security evidence packet",
+      "path_or_uri": "s3://mfl/1.18.0-pass50-pass51-ga-release-controls/security-evidence-packet.json",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    },
+    {
+      "artifact_type": "source_repo_zip",
+      "external": false,
+      "generated_at": "2026-08-09T19:08:01.460710+00:00",
+      "immutable": true,
+      "name": "Source repository ZIP",
+      "path_or_uri": "dist/maine-family-law-llm-1.18.0-pass50-pass51-ga-release-controls.zip",
+      "present": true,
+      "sha256": "sha256:fixture",
+      "version": "1.18.0-pass50-pass51-ga-release-controls"
+    }
+  ],
+  "audit_enterprise_readiness_status": "pass",
+  "blockers": [],
+  "generated_at": "2026-08-09T19:08:01.645878+00:00",
+  "open_p0_p1_blockers": [],
+  "release_candidate_frozen": true,
+  "release_name": "maine-family-law-llm",
+  "signoffs": [
+    {
+      "notes": "",
+      "role": "legal",
+      "signed_at": "2026-08-09T19:08:01.462602+00:00",
+      "signer": "legal-owner",
+      "status": "approved"
+    },
+    {
+      "notes": "",
+      "role": "ops",
+      "signed_at": "2026-08-09T19:08:01.462602+00:00",
+      "signer": "ops-owner",
+      "status": "approved"
+    },
+    {
+      "notes": "",
+      "role": "product",
+      "signed_at": "2026-08-09T19:08:01.462602+00:00",
+      "signer": "product-owner",
+      "status": "approved"
+    },
+    {
+      "notes": "",
+      "role": "security",
+      "signed_at": "2026-08-09T19:08:01.462602+00:00",
+      "signer": "security-owner",
+      "status": "approved"
+    }
+  ],
+  "source_repo_clean": true,
+  "status": "pass",
+  "version": "1.18.0-pass50-pass51-ga-release-controls"
+}

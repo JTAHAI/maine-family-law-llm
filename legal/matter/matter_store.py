@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import asdict
 from pathlib import Path
 
 from legal.matter.models import Matter, MatterDocument
+from legal.security.durable_io import atomic_write_bytes
 from legal.security.local_encryption import LocalEnvelopeEncryptor
 
 
@@ -34,6 +36,20 @@ class MatterStore:
         key = encryption_key or os.environ.get("MAINE_MATTER_STORE_KEY") or "local-development-key-change-me"
         self.encryptor = LocalEnvelopeEncryptor(key)
 
+    @property
+    def encryption_key_id(self) -> str:
+        return hashlib.sha256(self.encryptor.passphrase).hexdigest()[:16]
+
+    def _envelope_metadata(self, *, payload_kind: str, record_id: str) -> dict[str, str]:
+        return {
+            "encryption_algorithm": self.encryptor.algorithm,
+            "encryption_kdf": self.encryptor.kdf,
+            "encryption_key_id": self.encryption_key_id,
+            "encryption_version": "1",
+            "payload_kind": payload_kind,
+            "record_id": record_id,
+        }
+
     def _validate_external_root(self) -> None:
         blocked_names = {
             "official_authority_store",
@@ -52,9 +68,30 @@ class MatterStore:
     def create_matter(self, matter: Matter) -> Path:
         matter_dir = self.root / matter.tenant_id / matter.matter_id
         matter_dir.mkdir(parents=True, exist_ok=True)
-        metadata_path = matter_dir / "matter.json"
-        metadata_path.write_text(json.dumps(asdict(matter), indent=2, sort_keys=True), encoding="utf-8")
+        legacy_metadata_path = matter_dir / "matter.json"
+        if legacy_metadata_path.exists():
+            legacy_metadata_path.unlink()
+        metadata_path = matter_dir / "matter.json.enc"
+        payload = asdict(matter)
+        payload["storage_encryption_status"] = "encrypted_local_envelope"
+        payload["encryption_metadata"] = self._envelope_metadata(payload_kind="matter", record_id=matter.matter_id)
+        envelope = self.encryptor.encrypt_json(payload)
+        atomic_write_bytes(metadata_path, json.dumps(envelope, indent=2, sort_keys=True).encode("utf-8"))
         return matter_dir
+
+    def load_matter(self, matter_path: str | Path) -> dict:
+        path = Path(matter_path)
+        if path.is_dir():
+            encrypted = path / "matter.json.enc"
+            legacy = path / "matter.json"
+            if encrypted.exists():
+                path = encrypted
+            elif legacy.exists():
+                path = legacy
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if str(path).endswith(".enc"):
+            return self.encryptor.decrypt_json(payload)
+        return payload
 
     def store_document(self, document: MatterDocument) -> Path:
         matter_dir = self.root / document.tenant_id / document.matter_id
@@ -62,8 +99,9 @@ class MatterStore:
         document_path = matter_dir / f"{document.document_id}.json.enc"
         payload = asdict(document)
         payload["storage_encryption_status"] = "encrypted_local_envelope"
+        payload["encryption_metadata"] = self._envelope_metadata(payload_kind="document", record_id=document.document_id)
         envelope = self.encryptor.encrypt_json(payload)
-        document_path.write_text(json.dumps(envelope, indent=2, sort_keys=True), encoding="utf-8")
+        atomic_write_bytes(document_path, json.dumps(envelope, indent=2, sort_keys=True).encode("utf-8"))
         self._append_manifest(document, document_path)
         return document_path
 

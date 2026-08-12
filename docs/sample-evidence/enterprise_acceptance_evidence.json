@@ -3,7 +3,7 @@
   "expected_windows_data_root": "C:\\dev\\ME_FM_LLM_data",
   "expected_windows_repo_root": "C:\\dev\\ME_FM_LLM",
   "findings": [],
-  "generated_at": "2026-06-14T21:43:48.415354+00:00",
+  "generated_at": "2026-08-09T19:08:00.906128+00:00",
   "interpretation": "Source acceptance is separate from production legal readiness. A public/source-ready tree still cannot be used as a production legal product until every external evidence marker is satisfied.",
   "only_one_txt_file": true,
   "production_blockers": [
@@ -16,20 +16,20 @@
     "owner_signoffs_attached"
   ],
   "production_legal_ready": false,
-  "project_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
+  "project_root": "D:\\dev\\Maine-Family-Law-LLM-v6.0.3",
   "public_source_ready": true,
   "release_lock_present": false,
   "required_file_count": 31,
   "source_hashes": {
-    "PASS_CHANGES.txt": "df9e7e45c15016cf3a6c3dbcf3d28cd1d78b5df28f5d8bdab2b64ca95267baf0",
-    "README.md": "5488163d25eea21e7f2c6361a87caa9c030def6fc7f52043115bf0cbfb2752b1",
+    "PASS_CHANGES.txt": "dbfa248abdd26224a849df308413525d71b5006dd3026008fb7d4cd3fcee1be9",
+    "README.md": "3ede60e6d4cf75a42b55aed1a86b013e8fd2adb66cc9f86b412f6cdf79e8c228",
     "configs/maine_enterprise_acceptance_policy.json": "e94816f9db2267eba830a7f710d6ae928bffb97c940306b121454f8c8ccf7137",
-    "configs/maine_public_release_policy.json": "4968529b6c5019f9363fc75458200c3f8f5039cf714cef2c6726fc813b5e7f6e",
+    "configs/maine_public_release_policy.json": "5cfca1cde15116ae3e277f1754e4990eae1a9b5d864437c05423209f1c2f1f71",
     "docs/enterprise-acceptance-and-github-publish.md": "47e58fb8e99d71673bc492badda8b5dfe5f323e54b68f3e5a94950b81394059a",
-    "pyproject.toml": "0320fcbc30935d328686277cf25a0f7d02d4157ecf8a82fb9440f9fd8660df14",
+    "pyproject.toml": "75b9e12740e8c81ee8d4df6142571ea19e20cc8f9bcba1c5a7166fd4edcc1e4c",
     "scripts/collect-enterprise-resources.py": "b13c855130f6eb1c4eb42aa1f6c8e390a04def130c02f6b6221637e3663b193b",
     "scripts/run-enterprise-preflight.py": "096e407ad1934317658fce65cf4051262046f4c488e770e2013af2b7a6a13fb2",
-    "scripts/run-quality-checks.py": "870a50ff70add77f74aeecbe70b8a77858fbad33530e0d8d6b15b075ea3b5696"
+    "scripts/run-quality-checks.py": "46e0b939b98999f039fe0db98e3b285177db4ed002089c61ca11b2187687e81d"
   },
   "status": "pass"
 }

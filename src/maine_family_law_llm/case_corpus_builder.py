@@ -7,7 +7,6 @@ import json
 import os
 import shutil
 import sqlite3
-import textwrap
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email import policy
@@ -20,7 +19,7 @@ from pypdf import PdfReader, PdfWriter
 from .legal_matter_classifier import classify_legal_matter
 from .local_corpus_index import rebuild_local_content_index, search_local_content_index, summarize_local_search
 from .privacy_classifier import classify_privacy
-from .question_bank import generate_builtin_question_bank, write_question_bank
+from .question_bank import write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
 from .case_workspace import write_case_source_roots
 from .version import VERSION
@@ -1401,6 +1400,15 @@ def answer_case_question(case_root: Path, question: str, role: str = "court") ->
                         "exact_content_match": bool(row.get("exact_content_match")),
                         "match_type": row.get("match_type", ""),
                         "matched_terms": row.get("matched_terms", []),
+                        "match_normalization": row.get("match_normalization", "direct"),
+                        "normalized_search_target": row.get("normalized_search_target", ""),
+                        "source_hash": row.get("source_hash", ""),
+                        "duplicate_of": row.get("duplicate_of", ""),
+                        "canonical_document_key": row.get("canonical_document_key", ""),
+                        "canonical_evidence_id": row.get("canonical_evidence_id", ""),
+                        "duplicate_copy_count": int(row.get("duplicate_copy_count") or 1),
+                        "duplicate_source_ids": list(row.get("duplicate_source_ids") or []),
+                        "duplicate_basenames": list(row.get("duplicate_basenames") or []),
                         "source_lane": "private_record",
                         "official": False,
                         "proposition": "Shows where the requested words appear in a selected private record; it does not establish a legal conclusion.",

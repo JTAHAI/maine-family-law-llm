@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +13,16 @@ class ModelRolePolicy:
     prohibited_tasks: tuple[str, ...]
     requires_grounding: bool
     may_generate_legal_prose: bool
+    permitted_input_lanes: tuple[str, ...] = ()
+    output_schema: dict[str, Any] = field(default_factory=dict)
+    required_evidence: tuple[str, ...] = ()
+    prohibited_actions: tuple[str, ...] = ()
+    max_context_tokens: int = 0
+    required_privacy_statuses: tuple[str, ...] = ()
+    requires_cancellation_support: bool = False
+    requires_human_review: bool = True
+    fallback_behavior: str = "deterministic_fallback"
+    verifier_role: str = ""
 
     def allows(self, task: str) -> bool:
         return task in self.allowed_tasks and task not in self.prohibited_tasks
@@ -33,6 +43,16 @@ class RoleCatalog:
                 prohibited_tasks=tuple(value.get("prohibited_tasks", [])),
                 requires_grounding=bool(value.get("requires_grounding", True)),
                 may_generate_legal_prose=bool(value.get("may_generate_legal_prose", False)),
+                permitted_input_lanes=tuple(value.get("permitted_input_lanes", [])),
+                output_schema=dict(value.get("output_schema", {})),
+                required_evidence=tuple(value.get("required_evidence", [])),
+                prohibited_actions=tuple(value.get("prohibited_actions", [])),
+                max_context_tokens=int(value.get("max_context_tokens", 0) or 0),
+                required_privacy_statuses=tuple(value.get("required_privacy_statuses", [])),
+                requires_cancellation_support=bool(value.get("requires_cancellation_support", False)),
+                requires_human_review=bool(value.get("requires_human_review", True)),
+                fallback_behavior=str(value.get("fallback_behavior", "deterministic_fallback")),
+                verifier_role=str(value.get("verifier_role", "")),
             )
             for name, value in data.get("roles", {}).items()
         }
@@ -64,6 +84,16 @@ class RoleCatalog:
                     "prohibited_tasks": list(policy.prohibited_tasks),
                     "requires_grounding": policy.requires_grounding,
                     "may_generate_legal_prose": policy.may_generate_legal_prose,
+                    "permitted_input_lanes": list(policy.permitted_input_lanes),
+                    "output_schema": dict(policy.output_schema),
+                    "required_evidence": list(policy.required_evidence),
+                    "prohibited_actions": list(policy.prohibited_actions),
+                    "max_context_tokens": policy.max_context_tokens,
+                    "required_privacy_statuses": list(policy.required_privacy_statuses),
+                    "requires_cancellation_support": policy.requires_cancellation_support,
+                    "requires_human_review": policy.requires_human_review,
+                    "fallback_behavior": policy.fallback_behavior,
+                    "verifier_role": policy.verifier_role,
                 }
                 for name, policy in sorted(self.roles.items())
             },

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -96,9 +97,15 @@ class PostGARepoReviewer:
 
     def review(self, *, output_path: str | Path | None = None) -> PostGARepoReviewReport:
         pass_log = self.project_root / "PASS_CHANGES.txt"
-        numbered_complete = pass_log.exists() and "Current completed implementation pass number: 51" in pass_log.read_text(
-            encoding="utf-8"
-        )
+        pass_number = 0
+        if pass_log.exists():
+            match = re.search(
+                r"Current completed implementation pass number:\s*(\d+)",
+                pass_log.read_text(encoding="utf-8"),
+            )
+            if match:
+                pass_number = int(match.group(1))
+        numbered_complete = pass_number >= 51
         txt_files = [path for path in self.project_root.rglob("*.txt") if self._is_repo_file(path)]
         only_one_pass_txt = len([path for path in txt_files if "pass" in path.name.lower()]) == 1
         single_pass_log_present = pass_log.exists() and pass_log in txt_files

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -55,6 +56,8 @@ def test_docx_media_extraction_is_bounded_and_uses_safe_basename(tmp_path: Path)
 
 
 def test_skill_packager_rejects_executables(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("Windows does not preserve POSIX executable mode bits for data files")
     module = _load_script("package-workflow-skill.py")
     skill = tmp_path / "maine-test-executable"
     skill.mkdir()

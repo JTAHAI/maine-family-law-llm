@@ -8,6 +8,14 @@ from legal.pilot.evidence_templates import (
     build_launch_evidence_templates,
     write_launch_evidence_starter_kit,
 )
+from legal.pilot.real_matter_operations import (
+    LimitedRealMatterPilotError,
+    LimitedRealMatterPilotOperationsStore,
+)
+from legal.pilot.sandbox_operations import (
+    AttorneySandboxOperationsError,
+    AttorneySandboxOperationsStore,
+)
 from legal.pilot.launch_ops import (
     AttorneyPilotParticipant,
     AttorneySandboxPilot,
@@ -26,9 +34,13 @@ __all__ = [
     "AttorneyReviewQuestion",
     "AttorneySandboxReviewKitBuilder",
     "AttorneySandboxPilot",
+    "AttorneySandboxOperationsError",
+    "AttorneySandboxOperationsStore",
     "CorrectionWorkflow",
     "LaunchReadinessAuditor",
     "LimitedRealMatterPilot",
+    "LimitedRealMatterPilotError",
+    "LimitedRealMatterPilotOperationsStore",
     "PilotFeedbackItem",
     "PilotRunbook",
     "PilotStage",

@@ -16,6 +16,24 @@ class DeterministicSemanticSearch:
 
     def __init__(self, adapter: DeterministicEmbeddingAdapter | None = None) -> None:
         self.adapter = adapter or DeterministicEmbeddingAdapter()
+        self._prepared_signature: tuple[int, ...] = ()
+        self._prepared_vectors: list[dict[str, float]] = []
+
+    def _prepare(self, documents) -> None:
+        signature = tuple(id(document) for document in documents)
+        if signature == self._prepared_signature:
+            return
+        self._prepared_signature = signature
+        self._prepared_vectors = [
+            self.adapter.embed(
+                " ".join(
+                    part
+                    for part in (document.title, document.citation or "", document.text)
+                    if part
+                )
+            )
+            for document in documents
+        ]
 
     def search(
         self,
@@ -27,11 +45,10 @@ class DeterministicSemanticSearch:
         normalized_documents = coerce_many(tuple(documents))
         expanded_query = " ".join(expand_query(query)) or query
         query_vector = self.adapter.embed(expanded_query)
+        self._prepare(normalized_documents)
         results: list[RetrievalResult] = []
-        for document in normalized_documents:
-            document_vector = self.adapter.embed(
-                " ".join(part for part in (document.title, document.citation or "", document.text) if part)
-            )
+        for index, document in enumerate(normalized_documents):
+            document_vector = self._prepared_vectors[index]
             score = self.adapter.cosine(query_vector, document_vector)
             if score <= 0:
                 continue

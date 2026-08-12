@@ -17,7 +17,7 @@ if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
 if (-not $PackagePath) {
-  $PackagePath = Join-Path $RepoRoot "dist\store\msix\MaineFamilyLawLLM_x64.msix"
+  $PackagePath = Join-Path $RepoRoot "dist\release\v7.0.0\msix\MaineFamilyLawLLM_7.0.0.0_x64.msix"
 }
 if (-not $CertificatePath) {
   $certHint = Join-Path $RepoRoot "dist\store\msix\dev-certificate-path.txt"

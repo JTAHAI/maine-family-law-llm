@@ -19,6 +19,7 @@ import sqlite3
 import subprocess
 import tempfile
 import zipfile
+import sys
 from dataclasses import dataclass, field
 from email import policy
 from email.parser import BytesParser
@@ -30,6 +31,12 @@ from pypdf import PdfReader
 
 from .intake_understanding import parse_intake
 from .local_only_boundary import local_only_network_boundary
+from .search_normalization import (
+    build_search_alias_text,
+    normalize_search_query,
+    normalized_match_text,
+    normalized_snippet,
+)
 
 
 MAX_MEMBER_BYTES = 64 * 1024 * 1024
@@ -39,6 +46,8 @@ MAX_DECOMPRESSION_RATIO = 200.0
 INDEX_NAME = "private_content_index.sqlite"
 INVENTORY_JSONL = "FULL_LOCAL_INVENTORY.jsonl"
 INVENTORY_CSV = "FULL_LOCAL_INVENTORY.csv"
+MAX_COMPATIBILITY_SCAN_RECORDS = 50_000
+MAX_COMPATIBILITY_SCAN_CHARS = 256 * 1024 * 1024
 
 
 _SEARCHABLE_TEXT_STATUSES = {
@@ -346,8 +355,26 @@ def parse_bytes(data: bytes, *, suffix: str, locator: str, depth: int = 0) -> Pa
     suffix = suffix.lower()
     if len(data) > MAX_MEMBER_BYTES:
         return ParsedContent(parser_status="quarantined", text_status="not_available", metadata={"reason": "member_size_limit"})
+    if data.startswith(b"MZ"):
+        return ParsedContent(
+            parser_status="quarantined",
+            text_status="not_available",
+            metadata={"reason": "executable_content_blocked"},
+        )
     if suffix == ".pdf":
+        if not data.lstrip().startswith(b"%PDF-"):
+            return ParsedContent(
+                parser_status="quarantined",
+                text_status="not_available",
+                metadata={"reason": "extension_content_mismatch"},
+            )
         text, page_count, pages = _pdf_text(data)
+        if page_count == 0:
+            return ParsedContent(
+                parser_status="unreadable",
+                text_status="not_available",
+                metadata={"reason": "malformed_pdf"},
+            )
         image_only_pages = sum(1 for page in pages if not page["native_text"])
         if text and image_only_pages:
             text_status = "partial_native_text"
@@ -389,8 +416,19 @@ def parse_bytes(data: bytes, *, suffix: str, locator: str, depth: int = 0) -> Pa
     if suffix == ".rtf":
         return ParsedContent(text=_rtf_to_text(data.decode("utf-8", errors="replace")))
     if suffix in {".docx", ".xlsx", ".pptx"}:
+        if not zipfile.is_zipfile(io.BytesIO(data)):
+            return ParsedContent(
+                parser_status="quarantined",
+                text_status="not_available",
+                metadata={"reason": "extension_content_mismatch"},
+            )
         text = _office_xml_text(data, suffix)
-        return ParsedContent(text=text, text_status="available" if text else "not_available")
+        return ParsedContent(
+            text=text,
+            parser_status="parsed" if text else "unreadable",
+            text_status="available" if text else "not_available",
+            metadata={} if text else {"reason": "malformed_office_document"},
+        )
     if suffix in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".heic"}:
         return ParsedContent(parser_status="metadata_only", text_status="not_available", ocr_status="ocr_not_run", metadata={"media_kind": "image"})
     if suffix in {".mp3", ".m4a", ".wav", ".mp4", ".mov", ".avi", ".webm"}:
@@ -569,12 +607,14 @@ def _write_fts(path: Path, rows: list[dict[str, Any]]) -> None:
             "CREATE VIRTUAL TABLE records USING fts5("
             "evidence_id UNINDEXED, title, source_type UNINDEXED, source_locator UNINDEXED, "
             "parent_evidence_id UNINDEXED, page_number UNINDEXED, parser_status UNINDEXED, "
-            "ocr_status UNINDEXED, document_kind, issue_lanes, dates_detected, case_numbers, text)"
+            "ocr_status UNINDEXED, document_kind, issue_lanes, dates_detected, case_numbers, "
+            "text, normalized_text)"
         )
         for row in rows:
             metadata = dict(row.get("parser_metadata") or {})
+            source_text = str(row.get("text_content") or "")
             connection.execute(
-                "INSERT INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     row["evidence_id"],
                     row.get("title", ""),
@@ -588,7 +628,8 @@ def _write_fts(path: Path, rows: list[dict[str, Any]]) -> None:
                     ", ".join(row.get("issue_lanes", []) or metadata.get("issue_signals", []) or []),
                     " ".join(metadata.get("dates_detected", []) or []),
                     " ".join(metadata.get("case_numbers_detected", []) or []),
-                    row.get("text_content", ""),
+                    source_text,
+                    build_search_alias_text(source_text),
                 ),
             )
         connection.commit()
@@ -738,6 +779,15 @@ def _first_existing_executable(candidates: Iterable[str | Path]) -> str:
     return ""
 
 
+def _bundled_tesseract_candidates() -> list[Path]:
+    root = Path(__file__).resolve().parents[2]
+    return [
+        root / "store" / "tesseract" / "tesseract.exe",
+        root / "tesseract" / "tesseract.exe",
+        root / "bin" / "tesseract.exe",
+    ]
+
+
 def _windows_tesseract_candidates() -> list[Path]:
     roots = [
         os.environ.get("LOCALAPPDATA", ""),
@@ -769,13 +819,12 @@ def _pdfium_available() -> bool:
 def local_ocr_engine_status() -> dict[str, Any]:
     """Describe local OCR dependencies without making a network request."""
 
-    tesseract = (
-        os.environ.get("MFL_LOCAL_TESSERACT", "").strip()
-        or shutil.which("tesseract")
-        or _first_existing_executable(_windows_tesseract_candidates())
-    )
-    pdftoppm = os.environ.get("MFL_LOCAL_PDFTOPPM", "").strip() or shutil.which("pdftoppm") or ""
-    mutool = os.environ.get("MFL_LOCAL_MUTOOL", "").strip() or shutil.which("mutool") or ""
+    frozen = getattr(sys, "frozen", False)
+    tesseract = os.environ.get("MFL_LOCAL_TESSERACT", "").strip() or _first_existing_executable(_bundled_tesseract_candidates())
+    if not frozen and not tesseract:
+        tesseract = shutil.which("tesseract") or _first_existing_executable(_windows_tesseract_candidates())
+    pdftoppm = os.environ.get("MFL_LOCAL_PDFTOPPM", "").strip() or ("" if frozen else shutil.which("pdftoppm")) or ""
+    mutool = os.environ.get("MFL_LOCAL_MUTOOL", "").strip() or ("" if frozen else shutil.which("mutool")) or ""
     pdfium = _pdfium_available()
     version = ""
     if tesseract:
@@ -887,22 +936,39 @@ def _email_attachment_bytes(data: bytes, name: str) -> bytes:
 
 def _candidate_bytes(row: dict[str, Any]) -> tuple[bytes, str]:
     source_path = Path(str(row.get("source_path") or ""))
-    if not source_path.is_file():
+    if source_path.is_symlink() or not source_path.is_file():
         raise FileNotFoundError("source_file_missing")
+    if source_path.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise ValueError("source_file_too_large")
     data = source_path.read_bytes()
     suffix = source_path.suffix.lower()
     locator = str(row.get("source_locator") or source_path.name)
     parts = locator.split("!")
+    if len(parts) > 3:
+        raise ValueError("archive_depth_limit")
     for member_name in parts[1:]:
         if suffix == ".zip":
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
+                infos = archive.infolist()
+                if len(infos) > MAX_ARCHIVE_MEMBERS or sum(info.file_size for info in infos) > MAX_ARCHIVE_BYTES:
+                    raise ValueError("archive_limits")
                 info = archive.getinfo(member_name)
                 member = Path(info.filename)
-                if member.is_absolute() or ".." in member.parts or info.file_size > MAX_MEMBER_BYTES:
+                ratio = float(info.file_size) / max(int(info.compress_size or 0), 1)
+                if (
+                    member.is_absolute()
+                    or ".." in member.parts
+                    or info.is_dir()
+                    or info.flag_bits & 0x1
+                    or info.file_size > MAX_MEMBER_BYTES
+                    or ratio > MAX_DECOMPRESSION_RATIO
+                ):
                     raise ValueError("unsafe_archive_member")
                 data = archive.read(info)
         elif suffix == ".eml":
             data = _email_attachment_bytes(data, member_name)
+            if len(data) > MAX_MEMBER_BYTES:
+                raise ValueError("unsafe_email_attachment")
         else:
             raise ValueError("nested_member_unsupported")
         suffix = Path(member_name).suffix.lower()
@@ -1234,132 +1300,283 @@ def run_local_ocr(
     return summary | {"proof_path": str(proof_path)}
 
 def _fts_terms(value: str) -> list[str]:
-    stopwords = {
-        "about", "all", "and", "does", "from", "have", "into", "mentions", "records",
-        "search", "show", "tell", "that", "the", "this", "what", "where", "with",
-        "would", "could", "should", "please", "find", "look", "contents", "document",
-        "documents", "files", "pages", "inside", "selected", "matter", "my",
-    }
-    return [
-        term.lower()
-        for term in re.findall(r"[A-Za-z0-9_'-]{2,}", value)
-        if len(term) >= 3 and term.lower() not in stopwords
-    ]
+    return list(normalize_search_query(value).terms)
 
 
 def _clean_snippet(value: str) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
+def _fts_columns(connection: sqlite3.Connection) -> set[str]:
+    try:
+        return {str(row[1]) for row in connection.execute("PRAGMA table_info(records)").fetchall()}
+    except sqlite3.DatabaseError:
+        return set()
+
+
 def _search_rows(connection: sqlite3.Connection, expression: str, limit: int) -> list[sqlite3.Row]:
+    normalized_select = (
+        "normalized_text" if "normalized_text" in _fts_columns(connection) else "'' AS normalized_text"
+    )
     return connection.execute(
         "SELECT evidence_id, title, source_type, source_locator, parent_evidence_id, "
         "page_number, parser_status, ocr_status, document_kind, issue_lanes, text, "
-        "snippet(records, 12, '', '', ' … ', 36) AS snippet "
+        f"{normalized_select}, snippet(records, 12, '', '', ' … ', 36) AS snippet "
         "FROM records WHERE records MATCH ? ORDER BY bm25(records) LIMIT ?",
-        (expression, max(1, min(limit, 100))),
+        (expression, max(1, min(limit, 300))),
     ).fetchall()
 
 
+def _inventory_rows(case_root: Path) -> list[dict[str, Any]]:
+    path = case_root / "04_INDEXES" / "private_search_index.json"
+    if not path.exists():
+        return []
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return [dict(row) for row in value if isinstance(row, dict)]
+
+
+def _matches_record_type(row: dict[str, Any], record_type_filter: str) -> bool:
+    if record_type_filter != "pdf":
+        return True
+    source_type = str(row.get("source_type") or "").lower()
+    document_kind = str(row.get("document_kind") or dict(row.get("parser_metadata") or {}).get("document_kind") or "").lower()
+    locator = str(row.get("source_locator") or "").lower()
+    return source_type in {"pdf", "pdf_page"} or document_kind == "pdf" or ".pdf" in locator
+
+
+def _match_details(text: str, target: str, terms: list[str]) -> tuple[bool, list[str], str, float, str]:
+    aliases = normalized_match_text(text)
+    raw_canonical = normalize_search_query(text).canonical
+    phrase = normalize_search_query(target).canonical
+    matched_terms = [
+        term for term in terms if re.search(rf"(?<!\w){re.escape(term)}(?!\w)", aliases)
+    ]
+    exact_phrase = bool(phrase and phrase in aliases)
+    required_terms = 1 if len(terms) <= 1 else min(2, len(terms))
+    if not exact_phrase and len(matched_terms) < required_terms:
+        return False, [], "", 0.0, ""
+    if exact_phrase:
+        match_type = "exact_phrase"
+    elif len(matched_terms) == 1:
+        match_type = "exact_token"
+    else:
+        match_type = "token_set"
+    match_coverage = round(len(set(matched_terms)) / max(len(set(terms)), 1), 3)
+    normalization = "direct"
+    if exact_phrase and phrase not in raw_canonical:
+        normalization = "hyphen_or_ocr_alias"
+    return exact_phrase, matched_terms, match_type, match_coverage, normalization
+
+
+def _enrich_inventory_fields(result: dict[str, Any], inventory: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    evidence_id = str(result.get("evidence_id") or "")
+    source = dict(inventory.get(evidence_id) or {})
+    parent_id = str(result.get("parent_evidence_id") or source.get("parent_evidence_id") or "")
+    parent = dict(inventory.get(parent_id) or {}) if parent_id else {}
+    root = parent or source
+    source_hash = str(source.get("source_hash") or root.get("source_hash") or "")
+    duplicate_of = str(root.get("duplicate_of") or source.get("duplicate_of") or "")
+    canonical_id = duplicate_of or parent_id or evidence_id
+    canonical_key = f"sha256:{source_hash}" if source_hash else f"record:{canonical_id}"
+    result.update(
+        {
+            "source_hash": source_hash,
+            "duplicate_of": duplicate_of,
+            "canonical_document_key": canonical_key,
+            "canonical_evidence_id": canonical_id,
+        }
+    )
+    return result
+
+
+def _result_from_row(
+    row: dict[str, Any],
+    *,
+    query: str,
+    target: str,
+    terms: list[str],
+    record_type_filter: str,
+    inventory: dict[str, dict[str, Any]],
+    sqlite_snippet: str = "",
+) -> dict[str, Any] | None:
+    if not _matches_record_type(row, record_type_filter):
+        return None
+    text = str(row.get("text") if "text" in row else row.get("text_content") or "")
+    if not text.strip():
+        return None
+    exact_phrase, matched_terms, match_type, coverage, normalization = _match_details(
+        text, target, terms
+    )
+    if not match_type:
+        return None
+    result = dict(row)
+    snippet = normalized_snippet(text, target)
+    if normalization == "direct" and sqlite_snippet:
+        snippet = sqlite_snippet
+    result.update(
+        {
+            "query": query,
+            "search_target": target,
+            "normalized_search_target": normalize_search_query(target).canonical,
+            "exact_content_match": exact_phrase,
+            "exact_phrase_match": exact_phrase,
+            "exact_token_match": bool(matched_terms),
+            "match_type": match_type,
+            "matched_terms": matched_terms,
+            "match_coverage": coverage,
+            "match_normalization": normalization,
+            "snippet": _clean_snippet(snippet or text[:500]),
+            "ocr_derived": str(row.get("ocr_status") or "") == "ocr_completed",
+            "source_lane": "private_record",
+            "authority_status": "private_record_not_legal_authority",
+            "duplicate_copy_count": 1,
+            "duplicate_source_ids": [str(row.get("evidence_id") or "")],
+            "duplicate_basenames": [Path(str(row.get("source_locator") or "")).name],
+        }
+    )
+    return _enrich_inventory_fields(result, inventory)
+
+
+def _collapse_duplicate_results(rows: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    collapsed: dict[tuple[str, int, str], dict[str, Any]] = {}
+    order: list[tuple[str, int, str]] = []
+    for row in rows:
+        canonical_key = str(row.get("canonical_document_key") or row.get("evidence_id") or "")
+        page = int(row.get("page_number") or 0)
+        snippet_key = normalize_search_query(str(row.get("snippet") or "")).canonical[:500]
+        key = (canonical_key, page, snippet_key)
+        if key not in collapsed:
+            collapsed[key] = row
+            order.append(key)
+            continue
+        current = collapsed[key]
+        source_ids = list(current.get("duplicate_source_ids") or [])
+        for source_id in row.get("duplicate_source_ids") or [row.get("evidence_id")]:
+            if source_id and source_id not in source_ids:
+                source_ids.append(source_id)
+        basenames = list(current.get("duplicate_basenames") or [])
+        for basename in row.get("duplicate_basenames") or [Path(str(row.get("source_locator") or "")).name]:
+            if basename and basename not in basenames:
+                basenames.append(basename)
+        current["duplicate_source_ids"] = source_ids
+        current["duplicate_basenames"] = basenames
+        current["duplicate_copy_count"] = len(source_ids)
+    return [collapsed[key] for key in order[: max(1, min(limit, 100))]]
+
+
 def search_local_content_index(case_root: Path, query: str, limit: int = 20) -> list[dict[str, Any]]:
-    """Search actual local content with explicit phrase/token match classification."""
+    """Search local content across hyphen, spacing, Unicode-dash, and OCR variants."""
 
     path = case_root / "04_INDEXES" / INDEX_NAME
     intake = parse_intake(query)
     target = intake.search_target or query
     record_type_filter = str(getattr(intake, "record_type_filter", "") or "")
-    terms = _fts_terms(target)
-    phrase = " ".join(target.lower().split()).strip(' "“”')
-    if not path.exists() or (not terms and not phrase):
+    normalized_query = normalize_search_query(target)
+    terms = list(normalized_query.terms)
+    phrase = normalized_query.canonical.strip(' "“”')
+    if not terms and not phrase:
         return []
-    connection = sqlite3.connect(path)
-    connection.row_factory = sqlite3.Row
-    try:
-        rows: list[sqlite3.Row] = []
-        seen: set[str] = set()
-        if len(phrase) >= 3:
-            escaped = phrase.replace('"', '""')
-            try:
-                rows.extend(_search_rows(connection, f'"{escaped}"', limit))
-            except sqlite3.OperationalError:
-                pass
-        if terms:
-            token_expression = " OR ".join(f'"{term.replace(chr(34), "")}"' for term in terms[:16])
-            try:
-                rows.extend(_search_rows(connection, token_expression, limit * 2))
-            except sqlite3.OperationalError:
-                pass
-        results: list[dict[str, Any]] = []
-        for row in rows:
-            key = str(row["evidence_id"])
-            if key in seen:
-                continue
-            seen.add(key)
-            text = str(row["text"] or "")
-            lowered = text.lower()
-            matched_terms = [term for term in terms if re.search(rf"(?<!\w){re.escape(term)}(?!\w)", lowered)]
-            exact_phrase = bool(phrase and phrase in lowered)
-            exact_token = bool(matched_terms)
-            # FTS5 OR queries can otherwise surface a document because one
-            # generic word happens to occur.  Require meaningful token coverage
-            # for multi-term questions and never label a stemmer-only hit as a
-            # content match without an inspectable matching term.
-            required_terms = 1 if len(terms) <= 1 else min(2, len(terms))
-            if not exact_phrase and len(matched_terms) < required_terms:
-                continue
-            match_coverage = round(len(set(matched_terms)) / max(len(set(terms)), 1), 3)
-            if exact_phrase:
-                match_type = "exact_phrase"
-            elif len(matched_terms) == 1:
-                match_type = "exact_token"
-            else:
-                match_type = "token_set"
-            parser_metadata = {}
-            result = dict(row)
-            if record_type_filter == "pdf":
-                source_type = str(result.get("source_type") or "").lower()
-                document_kind = str(result.get("document_kind") or "").lower()
-                locator = str(result.get("source_locator") or "").lower()
-                if source_type not in {"pdf", "pdf_page"} and document_kind != "pdf" and ".pdf" not in locator:
+
+    inventory_rows = _inventory_rows(case_root)
+    inventory = {str(row.get("evidence_id") or ""): row for row in inventory_rows}
+    candidates: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    normalized_index_available = False
+    if path.exists():
+        connection = sqlite3.connect(path)
+        connection.row_factory = sqlite3.Row
+        try:
+            normalized_index_available = "normalized_text" in _fts_columns(connection)
+            rows: list[sqlite3.Row] = []
+            if len(phrase) >= 3:
+                escaped = phrase.replace('"', '""')
+                try:
+                    rows.extend(_search_rows(connection, f'"{escaped}"', limit * 3))
+                except sqlite3.OperationalError:
+                    pass
+            if terms:
+                token_expression = " OR ".join(
+                    f'"{term.replace(chr(34), "")}"' for term in terms[:16]
+                )
+                try:
+                    rows.extend(_search_rows(connection, token_expression, limit * 6))
+                except sqlite3.OperationalError:
+                    pass
+            for sqlite_row in rows:
+                raw = dict(sqlite_row)
+                evidence_id = str(raw.get("evidence_id") or "")
+                if evidence_id in seen_ids:
                     continue
-            result.update(
-                {
-                    "query": query,
-                    "search_target": target,
-                    "exact_content_match": exact_phrase,
-                    "exact_phrase_match": exact_phrase,
-                    "exact_token_match": exact_token,
-                    "match_type": match_type,
-                    "matched_terms": matched_terms,
-                    "match_coverage": match_coverage,
-                    "snippet": _clean_snippet(row["snippet"] or text[:500]),
-                    "ocr_derived": str(row["ocr_status"] or "") == "ocr_completed",
-                    "source_lane": "private_record",
-                    "authority_status": "private_record_not_legal_authority",
-                }
-            )
-            # Do not let empty page records count as content matches.
-            if not text.strip():
-                continue
-            results.append(result)
-            if len(results) >= max(3, min(limit * 3, 300)):
+                seen_ids.add(evidence_id)
+                result = _result_from_row(
+                    raw,
+                    query=query,
+                    target=target,
+                    terms=terms,
+                    record_type_filter=record_type_filter,
+                    inventory=inventory,
+                    sqlite_snippet=str(raw.get("snippet") or ""),
+                )
+                if result:
+                    candidates.append(result)
+        finally:
+            connection.close()
+
+    # Compatibility and OCR fallback: older v5.2 indexes do not contain the
+    # normalized alias column. Scan the already-derived local inventory only;
+    # originals are not reopened and no network access is possible. The scan is
+    # bounded so a pathological matter cannot turn one query into unbounded work.
+    if not normalized_index_available:
+        scanned_records = 0
+        scanned_chars = 0
+        for row in inventory_rows:
+            if scanned_records >= MAX_COMPATIBILITY_SCAN_RECORDS or scanned_chars >= MAX_COMPATIBILITY_SCAN_CHARS:
                 break
-        page_parents = {
-            str(row.get("parent_evidence_id") or "")
-            for row in results
-            if row.get("source_type") == "pdf_page" and row.get("parent_evidence_id")
-        }
-        filtered = [
-            row
-            for row in results
-            if not (
-                row.get("source_type") != "pdf_page"
-                and str(row.get("evidence_id") or "") in page_parents
+            evidence_id = str(row.get("evidence_id") or "")
+            if evidence_id in seen_ids:
+                continue
+            source_text = str(row.get("text_content") or "")
+            scanned_records += 1
+            scanned_chars += len(source_text)
+            result = _result_from_row(
+                row,
+                query=query,
+                target=target,
+                terms=terms,
+                record_type_filter=record_type_filter,
+                inventory=inventory,
             )
-        ]
-        return filtered[: max(1, min(limit, 100))]
-    finally:
-        connection.close()
+            if result:
+                result["compatibility_scan"] = True
+                candidates.append(result)
+                seen_ids.add(evidence_id)
+
+    page_parents = {
+        str(row.get("parent_evidence_id") or "")
+        for row in candidates
+        if row.get("source_type") == "pdf_page" and row.get("parent_evidence_id")
+    }
+    candidates = [
+        row
+        for row in candidates
+        if not (
+            row.get("source_type") != "pdf_page"
+            and str(row.get("evidence_id") or "") in page_parents
+        )
+    ]
+    candidates.sort(
+        key=lambda row: (
+            0 if row.get("match_type") == "exact_phrase" else 1,
+            -float(row.get("match_coverage") or 0.0),
+            str(row.get("title") or "").casefold(),
+            int(row.get("page_number") or 0),
+        )
+    )
+    return _collapse_duplicate_results(candidates, limit)
 
 
 def summarize_local_search(query: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1371,17 +1588,29 @@ def summarize_local_search(query: str, rows: list[dict[str, Any]]) -> dict[str, 
     related = sum(1 for row in rows if row.get("match_type") == "fts_related")
     ocr = sum(1 for row in rows if row.get("ocr_derived"))
     documents = {
-        str(row.get("parent_evidence_id") or row.get("evidence_id") or "")
+        str(row.get("canonical_document_key") or row.get("parent_evidence_id") or row.get("evidence_id") or "")
         for row in rows
     }
     pages = {
-        (str(row.get("parent_evidence_id") or row.get("evidence_id") or ""), int(row.get("page_number") or 0))
+        (
+            str(row.get("canonical_document_key") or row.get("parent_evidence_id") or row.get("evidence_id") or ""),
+            int(row.get("page_number") or 0),
+        )
         for row in rows
         if int(row.get("page_number") or 0) > 0
     }
+    duplicate_collapsed = sum(max(0, int(row.get("duplicate_copy_count") or 1) - 1) for row in rows)
+    normalization = normalize_search_query(target)
     return {
         "query": query,
         "search_target": target,
+        "normalized_search_target": normalization.canonical,
+        "search_terms": list(normalization.terms),
+        "hyphen_normalization_applied": bool(
+            normalization.hyphen_variant_used
+            or normalize_search_query(query).hyphen_variant_used
+            or normalize_search_query(query).canonical != normalize_search_query(target).canonical
+        ),
         "record_type_filter": record_type_filter,
         "exact_phrase": exact_phrase,
         "exact_token": exact_token,
@@ -1390,6 +1619,7 @@ def summarize_local_search(query: str, rows: list[dict[str, Any]]) -> dict[str, 
         "result_count": len(rows),
         "document_count": len(documents),
         "page_count": len(pages),
+        "duplicate_copy_count_collapsed": duplicate_collapsed,
         "response_kind": "local_search_results",
     }
 

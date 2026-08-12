@@ -38,6 +38,7 @@ class RetrievedSource:
     content_type: str | None = None
     status_code: int | None = None
     final_url: str | None = None
+    fetch_metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def sha256(self) -> str:

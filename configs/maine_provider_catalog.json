@@ -1,0 +1,58 @@
+{
+  "schema_version": "maine_provider_catalog_v1",
+  "generated_at": "2026-08-08",
+  "official_docs_revalidated_at": "2026-08-08",
+  "providers": [
+    {
+      "provider_id": "openai",
+      "api_class": "responses_api",
+      "endpoint_class": "https_json_api",
+      "requested_retention_mode": "admin_data_retention_or_default_api_retention",
+      "region_data_controls": "us_or_europe_eligible_customer_controls",
+      "cost_estimate_basis": "operator_supplied_model_pricing",
+      "tool_support": ["read_only_host_mediated_tools"],
+      "compatibility_profile_version": "2026.08.06",
+      "last_successful_contract_test": "2026-08-08",
+      "admission_status": "admitted_with_limits",
+      "structured_output": true,
+      "streaming": true,
+      "cancellation": true,
+      "requires_manual_endpoint_configuration": true,
+      "retention_summary": "API retention is operator-controlled through the account policy surface; no training on API inputs by default."
+    },
+    {
+      "provider_id": "gemini",
+      "api_class": "generative_language_api",
+      "endpoint_class": "https_json_api",
+      "requested_retention_mode": "api_logging_retention_configurable_or_zdr_for_approved_projects",
+      "region_data_controls": "region_controls_available_for_eligible_workspaces",
+      "cost_estimate_basis": "operator_supplied_model_pricing",
+      "tool_support": ["read_only_host_mediated_tools"],
+      "compatibility_profile_version": "2026.08.06",
+      "last_successful_contract_test": "2026-08-08",
+      "admission_status": "admitted_with_limits",
+      "structured_output": true,
+      "streaming": true,
+      "cancellation": true,
+      "requires_manual_endpoint_configuration": true,
+      "retention_summary": "Developer API logging retention is configurable; zero-data-retention approval is project-dependent."
+    },
+    {
+      "provider_id": "xai",
+      "api_class": "responses_or_chat_completions_api",
+      "endpoint_class": "https_json_api",
+      "requested_retention_mode": "default_api_retention_with_zdr_available",
+      "region_data_controls": "team_scoped_api_keys",
+      "cost_estimate_basis": "operator_supplied_model_pricing",
+      "tool_support": ["read_only_host_mediated_tools"],
+      "compatibility_profile_version": "2026.08.06",
+      "last_successful_contract_test": "2026-08-08",
+      "admission_status": "admitted_with_limits",
+      "structured_output": true,
+      "streaming": true,
+      "cancellation": true,
+      "requires_manual_endpoint_configuration": true,
+      "retention_summary": "API inputs and outputs are retained under the provider policy surface; ZDR support is account-controlled where available."
+    }
+  ]
+}

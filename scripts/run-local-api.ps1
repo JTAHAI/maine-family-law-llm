@@ -2,13 +2,20 @@ param(
   [string]$RepoRoot = "",
   [string]$DataRoot = "",
   [string]$HostName = "127.0.0.1",
+  [ValidateRange(1, 65535)]
   [int]$Port = 8000,
+  [switch]$AllowNetworkHost,
   [ValidateSet("LocalWorkbench", "Enterprise")]
   [string]$ApiMode = "LocalWorkbench"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+$loopbackHosts = @("127.0.0.1", "::1", "localhost")
+if (-not $AllowNetworkHost -and $loopbackHosts -notcontains $HostName.ToLowerInvariant()) {
+  throw "Refusing to expose a local legal-workbench API on '$HostName'. Use a loopback host, or pass -AllowNetworkHost only after applying your own network access controls."
+}
 
 if (-not $RepoRoot) {
   $RepoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path

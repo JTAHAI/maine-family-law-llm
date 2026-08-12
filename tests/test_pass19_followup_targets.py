@@ -188,3 +188,34 @@ def test_followup_target_builder_percent_encodes_spaces_in_pdf_hrefs(tmp_path: P
 
     catalog = json.loads((data_root / "official_authority_store" / "derived_authority_targets.json").read_text(encoding="utf-8"))
     assert catalog["targets"][0]["url"] == "https://www.courts.maine.gov/rules/text/mrscp%202024-11-01.pdf"
+
+
+def test_followup_target_builder_corrects_fm171_download_identifier(tmp_path: Path) -> None:
+    data_root = tmp_path / "external_data"
+    parsed = data_root / "parsed_authority_store"
+    _write_jsonl(
+        parsed / "forms" / "forms_index.jsonl",
+        [
+            {
+                "authority_kind": "court_form_reference",
+                "record_id": "form-fm-171",
+                "source_id": "forms-index",
+                "source_hash": "hash",
+                "jurisdiction": "maine",
+                "freshness_status": "fresh",
+                "parser_status": "parsed",
+                "source_span": {"start_offset": 0, "end_offset": 120},
+                "source_url_or_path": "https://www.courts.maine.gov/forms/index.html",
+                "form_id": "FM-171",
+                "href": "https://mjbportal.courts.maine.gov/CourtForms/FormsLists/DownloadForm?strFormNumber=FM-261",
+            }
+        ],
+    )
+
+    report = AuthorityFollowupTargetBuilder(data_root=data_root).build(write=True)
+
+    catalog = json.loads((data_root / "official_authority_store" / "derived_authority_targets.json").read_text(encoding="utf-8"))
+    assert catalog["targets"][0]["url"].endswith("strFormNumber=FM-171")
+    assert catalog["targets"][0]["source_class"] == "court_form_pdf"
+    assert catalog["targets"][0]["parser_name"] == "maine_form_pdf"
+    assert any(item.code == "corrected_form_download_identifier" for item in report.findings)

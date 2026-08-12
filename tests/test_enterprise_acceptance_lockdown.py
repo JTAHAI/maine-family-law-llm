@@ -45,7 +45,31 @@ def test_release_lockfile_audit_passes_then_detects_source_drift(tmp_path: Path)
 
 def test_release_lockfile_excludes_runtime_external_artifacts(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
-    shutil.copytree(ROOT, repo, ignore=shutil.ignore_patterns(".pytest_cache", "__pycache__"))
+    # Exercise source-lock exclusions against a source-shaped checkout. Copying
+    # generated multi-gigabyte Store runtimes into a temporary repo makes this
+    # unit test scale with unrelated release artifacts and can exhaust disk.
+    shutil.copytree(
+        ROOT,
+        repo,
+        ignore=shutil.ignore_patterns(
+            ".pytest_cache",
+            "__pycache__",
+            "dist",
+            "build",
+            ".mfl_work",
+            "runtime",
+            "runtime_data",
+            "official_authority_store",
+            "parsed_authority_store",
+            "authority_product",
+            "indexes",
+            "eval_data",
+            "eval_store",
+            "model_cache",
+            "models",
+            "node_modules",
+        ),
+    )
     (repo / "runtime").mkdir()
     (repo / "runtime" / "private.db").write_text("runtime database", encoding="utf-8")
     (repo / ".mfl_work" / "cache").mkdir(parents=True, exist_ok=True)

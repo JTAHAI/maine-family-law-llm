@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,33 @@ TEXT_FIELDS_FOR_CITATION_DISCOVERY = (
     "filing_context",
     "disposition",
 )
+
+
+def _statute_pinpoints(record: "ParsedAuthorityRecord") -> list[tuple[str, dict[str, int]]]:
+    """Return admitted subsection aliases with exact offsets into parsed text."""
+    if record.authority_kind != "statute_section" or not record.citation:
+        return []
+    text = str(record.row.get("text") or "")
+    subsections = record.row.get("subsections")
+    if not text or not isinstance(subsections, list):
+        return []
+    results: list[tuple[str, dict[str, int]]] = []
+    for subsection in subsections:
+        value = str(subsection).strip()
+        match = re.match(r"(?P<number>\d+[A-Z]?)\.\s+", value, re.I)
+        if not match:
+            continue
+        start = text.find(value)
+        if start < 0:
+            continue
+        number = match.group("number").upper()
+        results.append(
+            (
+                f"{record.citation}({number})",
+                {"start_offset": start, "end_offset": start + len(value)},
+            )
+        )
+    return results
 
 
 @dataclass(frozen=True)
@@ -139,9 +167,29 @@ class ParsedAuthorityIndexBuilder:
             if not citations and record.row.get("form_id"):
                 citations = extract_citations(str(record.row.get("form_id")))
             for citation in citations:
+                metadata = {
+                    "snapshot_source_id": record.snapshot_source_id,
+                    "title": record.title,
+                    "source_class": record.source_class,
+                    "authority_kind": record.authority_kind,
+                    "freshness_status": record.freshness_status,
+                    "source_hash": record.source_hash,
+                    "source_span": record.source_span,
+                }
                 index.add(
                     kind=citation.kind,
                     normalized_citation=citation.normalized,
+                    source_id=record.canonical_source_id,
+                    authority_status=record.authority_status,
+                    metadata=metadata,
+                )
+            for pinpoint, pinpoint_span in _statute_pinpoints(record):
+                parsed_pinpoints = extract_citations(pinpoint)
+                if not parsed_pinpoints:
+                    continue
+                index.add(
+                    kind="maine_statute",
+                    normalized_citation=parsed_pinpoints[0].normalized,
                     source_id=record.canonical_source_id,
                     authority_status=record.authority_status,
                     metadata={
@@ -151,7 +199,8 @@ class ParsedAuthorityIndexBuilder:
                         "authority_kind": record.authority_kind,
                         "freshness_status": record.freshness_status,
                         "source_hash": record.source_hash,
-                        "source_span": record.source_span,
+                        "source_span": pinpoint_span,
+                        "pinpoint": pinpoint,
                     },
                 )
         return index

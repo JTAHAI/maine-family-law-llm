@@ -1,0 +1,6 @@
+{
+  "schema_version": "authority_update_trust_v1",
+  "trusted_keys": {},
+  "provisioning_status": "release_public_key_required",
+  "notes": "Production release signing public keys must be provisioned through the release ceremony; private keys never belong in this repository."
+}

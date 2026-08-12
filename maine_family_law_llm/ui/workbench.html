@@ -8,14 +8,20 @@
 <link href="/brand-assets/assets/favicon/favicon.ico" rel="icon" sizes="any"/>
 <link href="/brand-assets/assets/favicon/apple-touch-icon.png" rel="apple-touch-icon"/>
 <link href="/brand-assets/assets/favicon/site.webmanifest" rel="manifest"/>
-<meta content="#06152f" name="theme-color"/>
+<meta content="#0b2630" name="theme-color"/>
 <meta content="focaf_family_law_llm_brand_kit" name="brand-kit"/>
 <link href="/brand-assets/css/tokens.css" rel="stylesheet"/>
 <link href="/brand-assets/css/focaf-family-law-llm-theme.css" rel="stylesheet"/>
 <link href="/ui-assets/workbench.css?v={{UI_VERSION}}" rel="stylesheet"/>
 </head>
-<body data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}" data-drawer="open" data-layout="full">
-<div class="app-shell v5-workbench" data-brand-assets="/brand-assets" data-ui-generation="v5-premium-workbench" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
+<body class="v6-workbench" data-production-ui="workbench" data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}" data-drawer="open" data-layout="full">
+<a class="skip-link" href="#main-workbench">Skip to the family justice workbench</a>
+<div aria-live="polite" class="connection-banner" hidden id="connection-banner" role="status">
+  <strong>Local service disconnected.</strong>
+  <span>Your draft remains on this device. Reconnect the local service before sending or changing records.</span>
+  <button class="secondary compact-action" id="connection-retry" type="button">Retry connection</button>
+</div>
+<div class="app-shell v5-workbench" data-brand-assets="/brand-assets" data-ui-generation="v5-premium-workbench" data-visual-generation="v6-visual-design-refresh" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
 <header class="hero-banner constitutional-bar" data-brand-kit-mounted="expected" id="focaf-brand-hero">
   <div class="v5-brand-lockup">
     <button aria-controls="constitutional-popover" aria-describedby="constitutional-popover" aria-expanded="false" class="constitutional-identity v5-brand-mark" id="constitutional-identity" type="button">
@@ -47,6 +53,7 @@
       </div>
     </div>
     <span>Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span>
+    <span aria-label="Version 6 visual design refresh" class="v6-release-chip">v6 visual refresh</span>
   </div>
   <button aria-label="Open matter setup. Current matter: General Maine law" class="constitutional-context v5-focaf-lockup civic-tooltip" data-tooltip="The authority belongs to the source, not the model." id="matter-shortcut-button" type="button">
     <span aria-hidden="true" class="focaf-people-icon"><i></i><i></i></span>
@@ -56,10 +63,11 @@
 
 <section aria-label="Conversation controls" class="v5-control-bar">
   <div class="v5-control-field"><label for="audience">Role</label><select id="audience" title="Choose the audience lane."><option value="parent">Parent</option><option value="lawyer">Lawyer / advocate</option><option value="caregiver">Caregiver / relative</option><option value="counselor">Counselor</option><option value="therapist">Therapist / clinician</option></select></div>
-  <div class="v5-control-field"><label for="answer-style">Answer style</label><select id="answer-style" title="Choose the answer format."><option value="plain_language">Plain language</option><option value="checklist">Checklist</option><option value="source_first">Source-first</option><option value="intake">Intake triage</option><option value="professional_boundary">Professional boundary</option><option value="source_card_table">Source-card table</option><option value="questions_to_ask">Questions to ask</option><option value="missing_information">Missing information</option></select></div>
+  <div class="v5-control-field"><label for="answer-style">Answer style</label><select id="answer-style" title="Choose the answer format."><option value="plain_language">Plain language</option><option value="checklist">Checklist</option><option value="source_first">Source-first</option><option value="research_brief">Research brief</option><option value="intake">Intake triage</option><option value="professional_boundary">Professional boundary</option><option value="source_card_table">Source-card table</option><option value="questions_to_ask">Questions to ask</option><option value="missing_information">Missing information</option></select></div>
   <div class="v5-control-field"><label for="topic-filter">Topic filter</label><select id="topic-filter" title="Filter starter prompts and packs."><option value="all">All topics</option></select></div>
   <div class="v5-control-field v5-focus-field"><label for="matter-context">Focus context</label><input id="matter-context" placeholder="e.g., parental rights, PFA, support…" title="Optional short issue framing."/></div>
   <button class="compact-action command-hint v5-command-button" id="command-palette-button" title="Open the command palette" type="button"><span aria-hidden="true">⌕</span><span class="action-label">Search / Command</span><kbd>Ctrl K</kbd></button>
+  <button class="compact-action civic-action" id="local-workbench-button" title="Open the local AI control center" type="button"><span aria-hidden="true" class="action-glyph">✦</span><span class="action-label">AI controls</span></button>
   <button class="compact-action civic-action" id="privacy-button" title="Open privacy information" type="button"><span aria-hidden="true" class="action-glyph">⌾</span><span class="action-label">Privacy</span></button>
   <button class="compact-action civic-action v5-matter-button" id="matter-button" title="Choose the active matter" type="button"><span aria-hidden="true" class="action-glyph">▣</span><span><small>Matter</small><strong id="active-matter-label">General Maine law</strong></span></button>
   <button aria-controls="evidence-drawer" aria-expanded="true" class="primary-action compact-action v5-evidence-button" id="focus-mode-button" type="button"><span aria-hidden="true">▣</span> Evidence &amp; tools</button>
@@ -67,7 +75,33 @@
   <button class="compact-action civic-action v5-icon-button" id="new-chat-button" title="New chat" type="button"><span aria-hidden="true" class="action-glyph">＋</span><span class="sr-only action-label">New chat</span></button>
 </section>
 
-<div class="main-stage v5-main-stage">
+<nav aria-label="Guided local workspaces" class="workflow-navigator" id="workflow-navigator">
+  <div class="workflow-navigator-copy">
+    <span class="workflow-navigator-kicker">Guided workspace</span>
+    <strong>Move from a question to a review-required work product.</strong>
+    <p aria-live="polite" id="workflow-status">Research starts with a question and ends with sources you can inspect.</p>
+  </div>
+  <div aria-label="Choose a guided workspace" class="workflow-actions" role="group">
+    <button aria-pressed="true" class="workflow-action is-active" data-workflow-action="research" type="button"><span>01</span><strong>Research</strong><small>Ask and inspect sources</small></button>
+    <button aria-pressed="false" class="workflow-action" data-workflow-action="matter" type="button"><span>02</span><strong>Records</strong><small>Select a private matter</small></button>
+    <button aria-pressed="false" class="workflow-action" data-workflow-action="authority" type="button"><span>03</span><strong>Authority</strong><small>Verify official Maine sources</small></button>
+    <button aria-pressed="false" class="workflow-action" data-workflow-action="intelligence" type="button"><span>04</span><strong>Intelligence</strong><small>OCR and privacy review</small></button>
+    <button aria-pressed="false" class="workflow-action" data-workflow-action="draft" type="button"><span>05</span><strong>Draft</strong><small>Revise without overwriting</small></button>
+    <button aria-pressed="false" class="workflow-action" data-workflow-action="privacy" type="button"><span>06</span><strong>Privacy</strong><small>Check local boundaries</small></button>
+  </div>
+</nav>
+
+<section aria-label="Source lanes and review status" class="trust-status-strip" id="trust-status-strip">
+  <div class="trust-status-heading"><strong>Trust status</strong><span class="trust-review-badge" id="trust-review-badge">Review required</span></div>
+  <div class="trust-lane-grid">
+    <div class="trust-lane trust-lane-authority" data-trust-state="checking"><span>Official authority</span><strong id="trust-authority-status">Checking local authority…</strong><small id="trust-authority-detail">Freshness and verifier state will appear here.</small><button class="trust-lane-action" id="trust-authority-action" type="button">Review authority</button></div>
+    <div class="trust-lane trust-lane-records" data-trust-state="neutral"><span>Private records</span><strong id="trust-record-status">General Maine law</strong><small id="trust-record-detail">No private matter selected.</small><button class="trust-lane-action" id="trust-record-action" type="button">Choose matter</button></div>
+    <div class="trust-lane trust-lane-analysis" data-trust-state="neutral"><span>Model analysis</span><strong id="trust-model-status">Analysis only</strong><small>Never legal authority or a factual finding.</small></div>
+    <div class="trust-lane trust-lane-review" data-trust-state="blocked"><span>Human review</span><strong id="trust-review-status">Required before reliance or export</strong><small id="trust-review-detail">Inspect sources, freshness, unsupported claims, and privacy blockers.</small><button class="trust-lane-action" id="trust-review-action" type="button">Review blockers</button></div>
+  </div>
+</section>
+
+<main aria-labelledby="chat-heading" class="main-stage v5-main-stage" id="main-workbench" tabindex="-1">
 <section aria-labelledby="chat-heading" class="chat-panel panel" data-chat-layout="primary">
   <div class="chat-header">
     <div class="chat-heading-copy v5-chat-title"><span aria-hidden="true" class="chat-seed-icon">AI</span><div><div class="section-kicker">Maine Family Law LLM</div><h2 id="chat-heading">Family justice chat</h2></div></div>
@@ -80,9 +114,9 @@
         <strong>Maine Family Law LLM</strong>
         <p>Hi, I’m your Maine family-law research assistant. I can help you understand Maine law, review your private records when available, and show the next useful steps. Everything stays on your device.</p>
         <div aria-label="Common starting points" class="starter-actions">
-          <button class="starter-chip example" data-example="I was served with family court papers. What should I do first?">I was served</button>
-          <button class="starter-chip example" data-example="What if I need protection from abuse?">Someone may be unsafe</button>
-          <button class="starter-chip example" data-example="How do I organize evidence for family court?">Organize records</button>
+          <button type="button" class="starter-chip example" data-example="I was served with family court papers. What should I do first?">I was served</button>
+          <button type="button" class="starter-chip example" data-example="What if I need protection from abuse?">Someone may be unsafe</button>
+          <button type="button" class="starter-chip example" data-example="How do I organize evidence for family court?">Organize records</button>
           <button class="starter-chip" id="more-starters-button" type="button">More starting points</button>
         </div>
         <div aria-live="polite" class="session-summary" id="session-summary">Maine law · Parent · Plain language · General Maine law · Local-only</div>
@@ -98,10 +132,10 @@
       <div aria-label="Search source lane" class="search-mode-segmented" role="radiogroup"><button aria-checked="true" class="search-mode-option is-selected" data-search-mode="maine_law" role="radio" type="button">Maine law</button><button aria-checked="false" class="search-mode-option" data-search-mode="my_records" role="radio" type="button">My records</button><button aria-checked="false" class="search-mode-option" data-search-mode="both" role="radio" type="button">Both</button></div>
       <select class="sr-only" id="search-mode" title="Choose the source lane."><option value="maine_law">Maine law</option><option value="my_records">My records</option><option value="both">Both</option></select>
       <label class="child-impact-toggle" title="Adds a neutral child-centered planning lens without making custody predictions."><span class="switch"><input id="child-impact-lens" type="checkbox"/><i></i></span> Child Impact Lens <span aria-hidden="true">ⓘ</span></label>
-      <div class="composer-submit-actions"><button class="secondary compact-action" disabled="" hidden="" id="stop-button" type="button">Stop</button><button class="primary-action" id="ask-button"><span aria-hidden="true">➤</span><span>Send<small>Shift+Enter</small></span></button></div>
+      <div class="composer-submit-actions"><button class="secondary compact-action" disabled="" hidden="" id="stop-button" type="button">Stop</button><button type="button" class="primary-action" id="ask-button"><span aria-hidden="true">➤</span><span>Send<small>Shift+Enter</small></span></button></div>
     </div>
     <div class="composer-toolbar">
-      <div class="composer-actions"><button class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
+      <div class="composer-actions"><button type="button" class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
       <div class="composer-meta">Press <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for a new line · <strong>Ctrl+K</strong> for commands</div>
     </div>
   </div>
@@ -110,25 +144,25 @@
 <aside aria-label="Workbench shortcuts" class="workbench-rail">
   <section class="rail-panel v5-status-card"><div class="rail-title">Status</div><div class="v5-local-status"><span aria-hidden="true">⬟</span><div><strong>Local only</strong><small>All records stay on this device.</small></div></div></section>
   <section class="rail-panel v5-shortcut-card"><div class="rail-title"><span aria-hidden="true">✦</span> Prompt shortcuts</div><div class="examples v5-action-list">
-    <button class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best interest factors <span>›</span></button>
-    <button class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best interest prep <span>›</span></button>
-    <button class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary <span>›</span></button>
-    <button class="secondary example" data-example="What should I gather for child support?">Child support checklist <span>›</span></button>
-    <button class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing <span>›</span></button>
-    <button class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers <span>›</span></button>
-    <button class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence <span>›</span></button>
-    <button class="secondary example" data-example="What should a counselor include in a careful court-related letter?">Counselor court letter <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What are Maine's best-interest factors under 19-A M.R.S. § 1653?">Best interest factors <span>›</span></button>
+    <button type="button" class="secondary example" data-example="How do I use the best-interest factors in my parenting case?">Parent best interest prep <span>›</span></button>
+    <button type="button" class="secondary example" data-example="Can a therapist decide whether visits happen?">Therapist / contact boundary <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What should I gather for child support?">Child support checklist <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What if I need protection from abuse?">Safety / PFA routing <span>›</span></button>
+    <button type="button" class="secondary example" data-example="I was served with family court papers. What should I do first?">Served papers <span>›</span></button>
+    <button type="button" class="secondary example" data-example="How do I organize evidence for family court?">Organize evidence <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What should a counselor include in a careful court-related letter?">Counselor court letter <span>›</span></button>
   </div></section>
   <section class="rail-panel v5-question-card"><div class="rail-title"><span aria-hidden="true">?</span> Question starters</div><div class="v5-action-list">
-    <button class="secondary example" data-example="What is a parenting plan?">What is a parenting plan? <span>›</span></button>
-    <button class="secondary example" data-example="How is child support calculated in Maine?">How is child support calculated? <span>›</span></button>
-    <button class="secondary example" data-example="What is a guardian ad litem and what is their role?">What is a GAL and their role? <span>›</span></button>
-    <button class="secondary example" data-example="Can I move with my child under Maine law?">Can I move with my child? <span>›</span></button>
-    <button class="secondary example" data-example="How do I file an appeal in a Maine family matter?">How do I file an appeal? <span>›</span></button>
-    <button class="secondary example" data-example="What court handles family-law appeals in Maine?">What court handles appeals? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What is a parenting plan?">What is a parenting plan? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="How is child support calculated in Maine?">How is child support calculated? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What is a guardian ad litem and what is their role?">What is a GAL and their role? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="Can I move with my child under Maine law?">Can I move with my child? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="How do I file an appeal in a Maine family matter?">How do I file an appeal? <span>›</span></button>
+    <button type="button" class="secondary example" data-example="What court handles family-law appeals in Maine?">What court handles appeals? <span>›</span></button>
   </div></section>
   <section class="rail-panel v5-starter-card"><div class="rail-title"><span aria-hidden="true">▰</span> Starter packs</div><label class="sr-only" for="prompt-pack-select">Starter pack</label><select class="sr-only" id="prompt-pack-select"><option value="auto">Best pack for selected role</option></select><div class="library-list v5-pack-list" id="prompt-pack-list">Loading starter packs…</div><button class="v5-text-link" id="open-all-starters" type="button">Browse all packs</button></section>
-  <section class="rail-panel v5-quick-actions"><div class="rail-title"><span aria-hidden="true">ϟ</span> Quick actions</div><button id="quick-new-corpus" type="button">▱ Create new case corpus</button><button id="quick-open-workspace" type="button">▢ Open case workspace</button><button id="quick-export-chat" type="button">⇩ Export chat / transcript</button></section>
+  <section class="rail-panel v5-quick-actions"><div class="rail-title"><span aria-hidden="true">ϟ</span> Quick actions</div><button id="quick-new-corpus" type="button">▱ Set up a case corpus</button><button id="quick-open-workspace" type="button">▢ Open case workspace</button><button id="quick-local-workbench" type="button">✦ Local AI control center</button><button id="quick-export-chat" type="button">⇩ Export chat / transcript</button></section>
 </aside>
 
 <aside aria-hidden="false" aria-label="Research controls and evidence" class="right-rail evidence-drawer" id="evidence-drawer" role="complementary" tabindex="-1">
@@ -136,8 +170,9 @@
   <div aria-label="Evidence drawer sections" class="drawer-tabs" role="tablist"><button aria-selected="false" class="drawer-tab" data-drawer-tab="setup" role="tab" type="button">Setup</button><button aria-selected="true" class="drawer-tab is-active" data-drawer-tab="evidence" role="tab" type="button">Evidence</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="review" role="tab" type="button">Review</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="starters" role="tab" type="button">Starters</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="printables" role="tab" type="button">Printables</button></div>
   <div class="drawer-scroll">
     <section class="rail-panel v5-corpus-card" data-drawer-panel="setup" hidden><div class="rail-title">Corpus library</div><label for="corpus-select">Active case corpus</label><select id="corpus-select" title="Switch between saved family or client corpora."><option value="">General Maine law workbench only</option></select><div class="row"><button class="primary-action" id="activate-corpus-button" type="button">Use selected corpus</button><button class="secondary" id="refresh-corpus-button" type="button">Refresh corpora</button></div><div class="status-strip" id="corpus-status">No private case corpus is active yet. The general Maine-law workbench remains available.</div><div aria-live="polite" class="status-strip" id="inventory-status">Local inventory: Not indexed. Select a matter, then use the desktop intake wizard to grant permission before files are read.</div><div class="ocr-primary-action" id="ocr-primary-action" hidden><button class="primary-action" id="ocr-action-button" type="button">OCR scanned pages locally</button><div class="field-hint">OCR is never automatic and never uploads selected records.</div></div><div class="row"><button class="secondary" id="review-inventory-button" type="button">Review inventory</button><button class="secondary" id="rebuild-index-button" type="button">Rebuild local index</button><button class="secondary" id="delete-index-button" type="button">Delete local index</button></div><button class="secondary rail-action" id="sources-button" type="button">Load source list</button><div class="external-resource-links"><a href="https://focaf.jtforme.com/" rel="noreferrer noopener" target="_blank">FOCAF family resources</a><a href="https://focaf.jtforme.com/download-library/" rel="noreferrer noopener" target="_blank">FOCAF download library</a></div></section>
+    <section class="rail-panel v5-authority-card" data-drawer-panel="setup" hidden><div class="rail-title">Maine Authority Library</div><div aria-live="polite" class="status-strip" id="authority-library-status">Connect an external authority root to browse official Maine sources.</div><div class="authority-library-summary"><div><small>Active build</small><strong id="authority-library-build-id">Not loaded</strong><span id="authority-library-last-update">No successful update yet.</span></div><div><small>Source counts</small><strong id="authority-library-counts">0 total</strong><span id="authority-library-class-counts">No official sources indexed.</span></div></div><label for="authority-source-class-filter">Source class</label><select id="authority-source-class-filter"><option value="">All official sources</option><option value="statutes">Statutes</option><option value="rules">Rules and standing orders</option><option value="forms">Forms and packets</option><option value="opinions">Opinions</option><option value="federal">Federal</option></select><label for="authority-freshness-filter">Freshness</label><select id="authority-freshness-filter"><option value="">Any freshness</option><option value="fresh">Fresh</option><option value="stale">Stale</option><option value="unknown">Unknown</option><option value="superseded">Superseded</option><option value="retrieval_failed">Retrieval failed</option><option value="parser_failed">Parser failed</option></select><label for="authority-issue-filter">Issue tag</label><input id="authority-issue-filter" placeholder="parental rights, Rule 52, PFA…"/><label for="authority-search">Search official sources</label><input id="authority-search" placeholder="title, citation, issue, form id…"/><div class="row"><label class="document-intelligence-option"><input checked id="authority-fixture-mode" type="checkbox"/> Fixture mode for tests</label><label class="document-intelligence-option"><input id="authority-dry-run" type="checkbox"/> Dry run</label><label class="document-intelligence-option"><input id="authority-force-refresh" type="checkbox"/> Force refresh</label><label class="document-intelligence-option"><input id="authority-network-ack" type="checkbox"/> I understand live updates may use the network</label></div><div class="row"><button class="primary-action" id="authority-update-button" type="button">Update official sources</button><button class="secondary" id="authority-update-cancel-button" type="button">Cancel update</button><button class="secondary" id="authority-update-refresh-button" type="button">Refresh status</button></div><div aria-live="polite" class="status-strip" id="authority-update-progress">No authority update is running.</div><div class="field-hint">Updating official sources may use the network. Never click update unless you want to refresh the external Maine authority root.</div></section>
     <section class="rail-panel v5-evidence-summary" data-drawer-panel="evidence"><div class="rail-title">Corpus status</div><div class="v5-corpus-summary"><div><small>Active corpus</small><strong id="drawer-active-corpus">General Maine law</strong><span id="drawer-corpus-count">No private corpus selected</span></div><span class="v5-ready-badge">Local</span></div><div class="v5-progress-label"><span>OCR progress</span><strong id="drawer-ocr-percent">—</strong></div><div class="v5-progress"><i></i></div><button class="secondary v5-refresh-button" id="drawer-refresh-corpus" type="button">↻ Refresh corpus</button></section>
-    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><input id="record-card-filter" placeholder="Search records…"/><button type="button">Filter</button></div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" hidden id="source-inspector">Source details open in the universal local document inspector.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
+    <section class="rail-panel" data-drawer-panel="evidence"><div class="rail-title">Evidence inventory</div><div class="badges" id="answer-badges"><span class="badge">waiting</span></div><div aria-live="polite" class="answer v5-answer-summary" id="answer">Ask a question to test the local source-grounded workbench.</div><div class="v5-record-search"><label class="sr-only" for="record-card-filter">Filter source cards</label><input aria-describedby="record-card-filter-status" id="record-card-filter" placeholder="Search source cards…" type="search"/><button aria-label="Clear source card filter" id="record-card-filter-clear" type="button">Clear</button></div><div aria-live="polite" class="sr-only" id="record-card-filter-status">No source cards to filter.</div><div class="muted v5-source-cards" id="source-cards">No source cards yet. Matching private records will appear here as clickable cards.</div><div class="muted" hidden id="source-inspector">Source details open in the universal local document inspector.</div><button class="secondary" id="copy-sources-bottom" type="button">Copy source cards</button></section>
     <section class="rail-panel" data-drawer-panel="review" hidden><div class="rail-title">Reviewer handoff</div><div aria-live="polite" class="answer" id="handoff-panel">Ask a question to see missing facts, follow-up questions, and reviewer handoff metadata.</div><div class="status-strip" data-runtime-diagnostics="loading" id="runtime-diagnostics">Runtime diagnostics loading. Expected UI: {{UI_FOOTER_LABEL}}.</div></section>
     <section class="rail-panel" data-drawer-panel="starters" hidden><div class="rail-title">Question library</div><div class="mini-grid"><div><label for="library-search">Search starter questions</label><input id="library-search" placeholder="evidence, served papers, therapist, child support"/></div><div><label for="library-topic-search">Quick topic</label><input id="library-topic-search" placeholder="safety_pfa, parental_rights, appeal"/></div></div><div class="library-list" id="library-list">Loading question library…</div></section>
     <section class="rail-panel" data-drawer-panel="printables" hidden><div class="rail-title">Family printables</div><p class="muted">Optional FOCAF family resources. They are not legal authority, official court forms, or proof of disputed facts.</p><label for="printable-search">Search printables</label><div class="row"><input id="printable-search" placeholder="court day, school update, calm message…"/><button class="secondary" id="printable-search-button" type="button">Search</button></div><div class="library-list" id="printable-results">Search the local printable library by situation, title, county, or page text.</div></section>
@@ -172,15 +207,287 @@
     </div>
   </div>
   <div class="record-inspector-layout">
-    <main aria-live="polite" class="record-inspector-viewer" id="record-inspector-viewer"><div class="record-inspector-loading">Loading verified local source…</div></main>
+    <div aria-live="polite" class="record-inspector-viewer" id="record-inspector-viewer"><div class="record-inspector-loading">Loading verified local source…</div></div>
     <aside class="record-inspector-details" id="record-inspector-details"></aside>
   </div>
   <footer class="record-inspector-actions">
     <button class="primary-action" id="record-inspector-open-original" type="button">Open original</button>
     <button class="secondary" id="record-inspector-download" type="button">Download verified copy</button>
     <button class="secondary" id="record-inspector-copy-details" type="button">Copy safe details</button>
+    <button class="secondary" id="record-inspector-document-intelligence" type="button">Document intelligence</button>
+    <button class="secondary" id="record-inspector-retrieval-workbench" type="button">Retrieval workbench</button>
+    <button class="secondary" id="record-inspector-release-pilot-hardening" type="button">Release &amp; pilot</button>
     <span class="record-inspector-privacy">Local-only · hash verified · no filesystem path exposed</span>
   </footer>
+</section>
+<div aria-hidden="true" class="record-inspector-backdrop" hidden id="document-intelligence-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="document-intelligence-title" aria-modal="true" class="document-intelligence-modal" hidden id="document-intelligence-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Local document intelligence</span><strong id="document-intelligence-title">Structure, OCR, and privacy review</strong><span>Derived work only · original remains immutable</span></div>
+    <button aria-label="Close document intelligence" class="source-preview-close" id="document-intelligence-close" type="button">×</button>
+  </header>
+  <div aria-label="Document intelligence workflow" class="local-operation-flow">
+    <span><b>1</b> Confirm the verified record</span><span><b>2</b> Choose local checks</span><span><b>3</b> Approve analysis</span><span><b>4</b> Review exact output</span>
+  </div>
+  <div class="document-intelligence-layout">
+    <aside class="document-intelligence-controls">
+      <div class="status-strip" id="document-intelligence-status">Checking optional local adapters…</div>
+      <div class="document-intelligence-adapters" id="document-intelligence-adapters"></div>
+      <label class="document-intelligence-option"><input checked id="document-intelligence-use-docling" type="checkbox"/> Use Docling when installed</label>
+      <label class="document-intelligence-option"><input checked id="document-intelligence-use-presidio" type="checkbox"/> Compare with Presidio when installed</label>
+      <label class="document-intelligence-option"><input id="document-intelligence-approved" type="checkbox"/> I approve local analysis of this verified record.</label>
+      <button class="primary-action" disabled id="document-intelligence-analyze" type="button">Analyze verified record</button>
+      <hr/>
+      <label>OCR language<input id="document-intelligence-ocr-language" maxlength="15" value="eng"/></label>
+      <label class="document-intelligence-option"><input id="document-intelligence-ocr-approved" type="checkbox"/> Create a separate searchable PDF copy. Never overwrite the original.</label>
+      <button class="secondary" disabled id="document-intelligence-ocr" type="button">Create searchable preservation copy</button>
+      <p class="record-inspector-note">Automated structure, OCR, and privacy detection may be incomplete or wrong. Review exact source pages before relying on any passage or disclosure decision.</p>
+    </aside>
+    <div aria-live="polite" class="document-intelligence-results" id="document-intelligence-results">Choose the approved local checks, then analyze this record.</div>
+  </div>
+</section>
+<div aria-hidden="true" class="retrieval-workbench-backdrop" hidden id="retrieval-workbench-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="retrieval-workbench-title" aria-modal="true" class="retrieval-workbench-modal" hidden id="retrieval-workbench-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Local hybrid retrieval</span><strong id="retrieval-workbench-title">Explainable search and attorney-gold evaluation</strong><span>SQLite FTS5 baseline · optional sqlite-vec · Qdrant loopback only</span></div>
+    <button aria-label="Close retrieval workbench" class="source-preview-close" id="retrieval-workbench-close" type="button">×</button>
+  </header>
+  <div aria-label="Retrieval workflow" class="local-operation-flow">
+    <span><b>1</b> Select search lanes</span><span><b>2</b> Run local search</span><span><b>3</b> Inspect ranked matches</span><span><b>4</b> Keep review separate</span>
+  </div>
+  <div class="retrieval-workbench-layout">
+    <aside class="retrieval-workbench-controls">
+      <div class="status-strip" id="retrieval-workbench-status">Checking local retrieval backends…</div>
+      <div class="retrieval-workbench-backends" id="retrieval-workbench-backends"></div>
+      <label>Search query<textarea id="retrieval-workbench-query" rows="5" maxlength="2000" placeholder="19-A M.R.S. § 1653 best interest factors"></textarea></label>
+      <label class="document-intelligence-option"><input checked id="retrieval-workbench-private" type="checkbox"/> Search indexed private records</label>
+      <label class="document-intelligence-option"><input checked id="retrieval-workbench-authority" type="checkbox"/> Search verified external authority when configured</label>
+      <label>Maximum results<input id="retrieval-workbench-limit" type="number" min="1" max="100" value="10"/></label>
+      <button class="primary-action" id="retrieval-workbench-search" type="button">Run local hybrid search</button>
+      <hr/>
+      <label>Attorney-reviewed minimum<input id="retrieval-workbench-eval-min" type="number" min="1" max="5000" value="1"/></label>
+      <button class="secondary" id="retrieval-workbench-evaluate" type="button">Run configured attorney-gold eval</button>
+      <p class="record-inspector-note">Retrieval rank does not establish legal correctness, factual truth, authenticity, credibility, or filing readiness. Generated, seed, synthetic, and non-attorney rows cannot satisfy the attorney-gold gate.</p>
+    </aside>
+    <div aria-live="polite" class="retrieval-workbench-results" id="retrieval-workbench-results">Enter a query to inspect local ranking and match explanations.</div>
+  </div>
+</section>
+<div aria-hidden="true" class="release-pilot-hardening-backdrop" hidden id="release-pilot-hardening-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="release-pilot-hardening-title" aria-modal="true" class="release-pilot-hardening-modal" hidden id="release-pilot-hardening-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Local release control plane</span><strong id="release-pilot-hardening-title">Supply chain, backup, observability, and controlled pilots</strong><span>Evidence required · no automatic certification</span></div>
+    <button aria-label="Close release and pilot hardening" class="source-preview-close" id="release-pilot-hardening-close" type="button">×</button>
+  </header>
+  <div aria-label="Release control workflow" class="local-operation-flow local-operation-flow-warning">
+    <span><b>1</b> Gather external evidence</span><span><b>2</b> Audit local controls</span><span><b>3</b> Record review</span><span><b>4</b> Do not self-certify</span>
+  </div>
+  <div class="release-pilot-hardening-layout">
+    <aside class="release-pilot-hardening-controls">
+      <div class="status-strip" id="release-pilot-hardening-status">Checking external evidence and local controls…</div>
+      <button class="secondary" id="release-pilot-hardening-refresh" type="button">Refresh status</button>
+      <button class="secondary" id="release-pilot-hardening-audit" type="button">Audit configured release evidence</button>
+      <button class="secondary" id="release-pilot-hardening-observability" type="button">Run privacy-safe metrics self-test</button>
+      <button class="secondary" id="release-pilot-hardening-backup" type="button">Run approved backup/restore rehearsal</button>
+      <hr/>
+      <h3>Attorney sandbox participant</h3>
+      <label>Participant ID<input id="release-pilot-participant-id" maxlength="128" placeholder="reviewer-001"/></label>
+      <label>Role<input id="release-pilot-role" maxlength="128" value="attorney_reviewer"/></label>
+      <label>Verification evidence SHA-256<input id="release-pilot-verification-hash" maxlength="64" placeholder="64-character evidence hash"/></label>
+      <label class="document-intelligence-option"><input id="release-pilot-bar-verified" type="checkbox"/> Operator has verified bar status and recorded evidence.</label>
+      <label class="document-intelligence-option"><input id="release-pilot-terms" type="checkbox"/> Terms and sandbox limits accepted.</label>
+      <label class="document-intelligence-option"><input id="release-pilot-training" type="checkbox"/> All required training modules completed.</label>
+      <button class="secondary" id="release-pilot-register" type="button">Record participant eligibility</button>
+      <hr/>
+      <h3>Sandbox session</h3>
+      <label>Participant ID<input id="release-pilot-session-participant" maxlength="128" placeholder="reviewer-001"/></label>
+      <label>Allowed data<select id="release-pilot-data-class"><option value="synthetic">Synthetic only</option><option value="public_authority">Public authority only</option></select></label>
+      <button class="secondary" id="release-pilot-start-session" type="button">Start approved sandbox session</button>
+      <hr/>
+      <h3>Feedback</h3>
+      <label>Participant ID<input id="release-pilot-feedback-participant" maxlength="128" placeholder="reviewer-001"/></label>
+      <label>Session ID<input id="release-pilot-feedback-session" maxlength="128" placeholder="sandbox-…"/></label>
+      <label>Category<select id="release-pilot-feedback-category"><option value="legal_accuracy">Legal accuracy</option><option value="citation">Citation</option><option value="retrieval">Retrieval</option><option value="workflow" selected>Workflow</option><option value="privacy">Privacy</option><option value="security">Security</option><option value="accessibility">Accessibility</option><option value="other">Other</option></select></label>
+      <label>Severity<select id="release-pilot-feedback-severity"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+      <label>Description<textarea id="release-pilot-feedback-description" maxlength="2000" rows="4" placeholder="Describe the issue without private matter data."></textarea></label>
+      <button class="secondary" id="release-pilot-submit-feedback" type="button">Record review-required feedback</button>
+      <hr/>
+      <details class="sandbox-operations-details" open>
+        <summary><strong>Pass 48 operations</strong></summary>
+        <p class="record-inspector-note">Create a bounded public/synthetic review program, assign verified participants, record structured reviews, and build an immutable evidence packet. This does not complete Pass 48.</p>
+        <button class="secondary" id="sandbox-operations-refresh" type="button">Refresh Pass 48 operations</button>
+        <label>Program ID<input id="sandbox-operations-program-id" maxlength="128" value="pass48-attorney-sandbox"/></label>
+        <label>Question count<input id="sandbox-operations-question-count" min="1" max="48" type="number" value="12"/></label>
+        <button class="secondary" id="sandbox-operations-create-program" type="button">Create approved review program</button>
+        <label>Cohort ID<input id="sandbox-operations-cohort-id" maxlength="128" value="cohort-1"/></label>
+        <label>Participant IDs, comma separated<input id="sandbox-operations-cohort-participants" maxlength="2000" placeholder="reviewer-001, reviewer-002"/></label>
+        <button class="secondary" id="sandbox-operations-create-cohort" type="button">Create approved cohort</button>
+        <label>Assignment participant<input id="sandbox-operations-assignment-participant" maxlength="128" placeholder="reviewer-001"/></label>
+        <label>Question IDs, comma separated<input id="sandbox-operations-question-ids" maxlength="4000" placeholder="question-id-1, question-id-2"/></label>
+        <label>Allowed data<select id="sandbox-operations-data-class"><option value="synthetic">Synthetic only</option><option value="public_authority">Public authority only</option></select></label>
+        <button class="secondary" id="sandbox-operations-create-assignment" type="button">Create assignment and session</button>
+        <label>Review participant<input id="sandbox-operations-review-participant" maxlength="128" placeholder="reviewer-001"/></label>
+        <label>Session ID<input id="sandbox-operations-review-session" maxlength="128" placeholder="sandbox-…"/></label>
+        <label>Question ID<input id="sandbox-operations-review-question" maxlength="128" placeholder="question-id"/></label>
+        <label>Disposition<select id="sandbox-operations-review-disposition"><option value="approved_for_sandbox">Approved for sandbox</option><option value="needs_fix" selected>Needs fix</option><option value="needs_more_authority">Needs more authority</option><option value="unsafe_blocker">Unsafe blocker</option><option value="not_in_scope">Not in scope</option></select></label>
+        <div class="sandbox-operations-ratings">
+          <label>Grounding<input id="sandbox-operations-rating-grounding" min="1" max="5" type="number" value="3"/></label>
+          <label>Accuracy<input id="sandbox-operations-rating-accuracy" min="1" max="5" type="number" value="3"/></label>
+          <label>Usefulness<input id="sandbox-operations-rating-usefulness" min="1" max="5" type="number" value="3"/></label>
+          <label>Safety<input id="sandbox-operations-rating-safety" min="1" max="5" type="number" value="3"/></label>
+          <label>Citations<input id="sandbox-operations-rating-citations" min="1" max="5" type="number" value="3"/></label>
+        </div>
+        <label>Finding codes, comma separated<input id="sandbox-operations-finding-codes" maxlength="2000" placeholder="unsupported_claim, retrieval_miss"/></label>
+        <label>Response artifact SHA-256<input id="sandbox-operations-response-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Verifier report SHA-256<input id="sandbox-operations-verifier-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Review comment<textarea id="sandbox-operations-comment" maxlength="2000" rows="3" placeholder="Public/synthetic review comment only."></textarea></label>
+        <button class="secondary" id="sandbox-operations-submit-review" type="button">Record structured review</button>
+        <button class="secondary" id="sandbox-operations-complete-session" type="button">Complete fully reviewed session</button>
+        <button class="secondary" id="sandbox-operations-build-evidence" type="button">Build immutable Pass 48 evidence packet</button>
+      </details>
+      <details class="sandbox-operations-details" id="limited-real-matter-pilot-controls">
+        <summary><strong>Pass 49 limited real-matter pilot</strong></summary>
+        <p class="record-inspector-note">Record only opaque IDs, SHA-256 evidence references, enumerated outcomes, and control status. Do not enter party names, addresses, dates of birth, allegations, source excerpts, or other private matter text.</p>
+        <button class="secondary" id="real-matter-pilot-refresh" type="button">Refresh Pass 49 status</button>
+        <label>Program ID<input id="real-matter-pilot-program-id" maxlength="128" value="pass49-limited-pilot"/></label>
+        <label>Allowed tenant IDs, comma separated<input id="real-matter-pilot-tenants" maxlength="2000" placeholder="tenant-001"/></label>
+        <label>External Pass 48 evidence SHA-256<input id="real-matter-pilot-pass48-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="real-matter-pilot-create-program" type="button">Create approved limited-pilot program</button>
+        <hr/>
+        <label>Opaque matter ID<input id="real-matter-pilot-matter-id" maxlength="128" placeholder="pilot-matter-001"/></label>
+        <label>Tenant ID<input id="real-matter-pilot-tenant-id" maxlength="128" placeholder="tenant-001"/></label>
+        <label>Attorney participant ID<input id="real-matter-pilot-participant-id" maxlength="128" placeholder="reviewer-001"/></label>
+        <label>Consent version<input id="real-matter-pilot-consent-version" maxlength="128" value="pilot-consent-v1"/></label>
+        <label>Client consent evidence SHA-256<input id="real-matter-pilot-consent-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Privacy notice SHA-256<input id="real-matter-pilot-privacy-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Matter-store manifest SHA-256<input id="real-matter-pilot-store-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Tenant-isolation evidence SHA-256<input id="real-matter-pilot-isolation-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Encryption evidence SHA-256<input id="real-matter-pilot-encryption-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Retention policy version<input id="real-matter-pilot-retention-version" maxlength="128" value="limited-pilot-v1"/></label>
+        <label class="document-intelligence-option"><input id="real-matter-pilot-consent-approved" type="checkbox"/> Explicit real-matter consent and privacy notice are documented.</label>
+        <label class="document-intelligence-option"><input id="real-matter-pilot-export-ack" type="checkbox"/> Export restrictions are acknowledged; every export remains review required.</label>
+        <button class="secondary" id="real-matter-pilot-enroll" type="button">Enroll approved opaque matter</button>
+        <hr/>
+        <label>Work-product hashes as JSON<textarea id="real-matter-pilot-artifacts" maxlength="8000" rows="5" placeholder='{"issue_tree":"…","posture_summary":"…","timeline":"…","evidence_map":"…","authority_matrix":"…","red_flag_report":"…"}'></textarea></label>
+        <button class="secondary" id="real-matter-pilot-work-product" type="button">Record work-product hashes</button>
+        <label>Daily review date<input id="real-matter-pilot-review-date" type="date"/></label>
+        <label>Usefulness<select id="real-matter-pilot-usefulness"><option value="useful">Useful</option><option value="partially_useful" selected>Partially useful</option><option value="not_useful">Not useful</option><option value="not_yet_determined">Not yet determined</option></select></label>
+        <label>Daily-review evidence SHA-256<input id="real-matter-pilot-review-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Blocker codes, comma separated<input id="real-matter-pilot-blockers" maxlength="2000" placeholder="missing_authority"/></label>
+        <button class="secondary" id="real-matter-pilot-daily-review" type="button">Record completed daily review</button>
+        <label>Signoff evidence SHA-256<input id="real-matter-pilot-signoff-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label class="document-intelligence-option"><input id="real-matter-pilot-signoff-complete" type="checkbox"/> Attorney signoff is documented in the referenced external evidence.</label>
+        <button class="secondary" id="real-matter-pilot-signoff" type="button">Record matter signoff</button>
+        <button class="secondary" id="real-matter-pilot-build-evidence" type="button">Build immutable Pass 49 evidence packet</button>
+      </details>
+      <details class="sandbox-operations-details" id="ga-release-candidate-controls">
+        <summary><strong>Pass 50 GA release candidate</strong></summary>
+        <p class="record-inspector-note">Freeze a versioned artifact inventory, record external signoff references, track P0/P1 blockers, and build immutable evidence. This application does not create legal, security, product, ops, Store, or GA approval.</p>
+        <button class="secondary" id="ga-release-candidate-refresh" type="button">Refresh Pass 50 status</button>
+        <label>Candidate ID<input id="ga-release-candidate-id" maxlength="128" value="v5-18-0-rc1"/></label>
+        <label>Product version<input id="ga-release-candidate-version" maxlength="64" value="5.18.0"/></label>
+        <label>Source ZIP filename<input id="ga-release-candidate-source-name" maxlength="180" value="Maine-Family-Law-LLM-v5.18.0-ga-release-candidate-full-source.zip"/></label>
+        <label>Source ZIP SHA-256<input id="ga-release-candidate-source-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-release-candidate-create" type="button">Create immutable candidate</button>
+        <hr/>
+        <label>Artifact type<select id="ga-release-candidate-artifact-type"><option value="source_repo_zip">Source repository ZIP</option><option value="external_data_build_manifest">External data build manifest</option><option value="parsed_authority_manifest">Parsed authority manifest</option><option value="retrieval_index_manifest">Retrieval index manifest</option><option value="gold_eval_pack_manifest">Gold eval pack manifest</option><option value="release_metrics_json">Release metrics JSON</option><option value="security_evidence_packet">Security evidence packet</option><option value="pilot_evidence_packet">Pilot evidence packet</option><option value="rollback_package">Rollback package</option><option value="release_notes">Release notes</option></select></label>
+        <label>Artifact version<input id="ga-release-candidate-artifact-version" maxlength="64" value="5.18.0"/></label>
+        <label>Opaque reference or URI<input id="ga-release-candidate-artifact-reference" maxlength="512" placeholder="artifact-ref-v1 or urn:sha256:…"/></label>
+        <label>Artifact SHA-256<input id="ga-release-candidate-artifact-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label class="document-intelligence-option"><input checked id="ga-release-candidate-artifact-external" type="checkbox"/> Artifact remains outside the source repository.</label>
+        <button class="secondary" id="ga-release-candidate-record-artifact" type="button">Record immutable artifact</button>
+        <hr/>
+        <label>Signoff role<select id="ga-release-candidate-signoff-role"><option value="security">Security</option><option value="legal">Legal</option><option value="product">Product</option><option value="ops">Operations</option></select></label>
+        <label>Signer label<input id="ga-release-candidate-signer" maxlength="128" placeholder="security-reviewer-1"/></label>
+        <label>Signoff status<select id="ga-release-candidate-signoff-status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
+        <label>Signed at<input id="ga-release-candidate-signed-at" type="datetime-local"/></label>
+        <label>Signoff evidence SHA-256<input id="ga-release-candidate-signoff-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-release-candidate-record-signoff" type="button">Record external signoff reference</button>
+        <hr/>
+        <label>Blocker ID<input id="ga-release-candidate-blocker-id" maxlength="128" placeholder="release-blocker-1"/></label>
+        <label>Severity<select id="ga-release-candidate-blocker-severity"><option value="P0">P0</option><option value="P1" selected>P1</option><option value="P2">P2</option><option value="P3">P3</option></select></label>
+        <label>Status<select id="ga-release-candidate-blocker-status"><option value="open">Open</option><option value="mitigated_pending_retest">Mitigated pending retest</option><option value="closed">Closed</option></select></label>
+        <label>Description code<input id="ga-release-candidate-blocker-description" maxlength="128" placeholder="missing-signed-msix"/></label>
+        <label>Blocker evidence SHA-256<input id="ga-release-candidate-blocker-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-release-candidate-record-blocker" type="button">Record blocker state</button>
+        <label>Enterprise-readiness audit<select id="ga-release-candidate-readiness"><option value="blocked">Blocked</option><option value="pass">Pass</option><option value="fail">Fail</option></select></label>
+        <button class="secondary" id="ga-release-candidate-freeze" type="button">Evaluate and freeze candidate</button>
+        <button class="secondary" id="ga-release-candidate-build-evidence" type="button">Build immutable Pass 50 evidence packet</button>
+      </details>
+      <details class="sandbox-operations-details" id="ga-shipment-readiness-controls">
+        <summary><strong>Pass 51 GA shipment readiness</strong></summary>
+        <p class="record-inspector-note">Bind the frozen release candidate to the final shipment inventory, GA-definition controls, release-channel qualification, rollback evidence, and immutable distribution receipts. This application does not create Store approval or claim that GA shipped.</p>
+        <button class="secondary" id="ga-shipment-readiness-refresh" type="button">Refresh Pass 51 status</button>
+        <label>Shipment ID<input id="ga-shipment-readiness-id" maxlength="128" value="v5-19-0-ga1"/></label>
+        <label>Product version<input id="ga-shipment-readiness-version" maxlength="64" value="7.0.0"/></label>
+        <label>Source ZIP filename<input id="ga-shipment-readiness-source-name" maxlength="180" value="Maine-Family-Law-LLM-v7.0.0-ga-full-source.zip"/></label>
+        <label>Source ZIP SHA-256<input id="ga-shipment-readiness-source-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Pass 50 candidate ID<input id="ga-shipment-readiness-rc-id" maxlength="128" value="v5-18-0-rc1"/></label>
+        <label>Pass 50 report SHA-256<input id="ga-shipment-readiness-rc-report-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Pass 50 inventory hash<input id="ga-shipment-readiness-rc-inventory-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Release channel<select id="ga-shipment-readiness-channel"><option value="source_release">Source release</option><option value="microsoft_store">Microsoft Store</option><option value="enterprise_managed">Enterprise managed</option></select></label>
+        <button class="secondary" id="ga-shipment-readiness-create" type="button">Create immutable shipment manifest</button>
+        <hr/>
+        <label>GA artifact type<select id="ga-shipment-readiness-artifact-type"><option value="clean_source_zip">Clean source ZIP</option><option value="external_legal_data_product_manifest">External legal data product manifest</option><option value="parsed_authority_build_manifest">Parsed authority build manifest</option><option value="retrieval_indexes_manifest">Retrieval indexes manifest</option><option value="gold_eval_pack_manifest">Gold eval pack manifest</option><option value="smoke_evidence_json">Smoke/evidence JSON</option><option value="release_metrics_json">Release metrics JSON</option><option value="security_governance_packet">Security/governance packet</option><option value="admin_guide">Admin guide</option><option value="user_guide">User guide</option><option value="attorney_reviewer_guide">Attorney reviewer guide</option><option value="incident_rollback_runbook">Incident/rollback runbook</option><option value="source_update_runbook">Source update runbook</option><option value="model_update_runbook">Model update runbook</option></select></label>
+        <label>Artifact version<input id="ga-shipment-readiness-artifact-version" maxlength="64" value="7.0.0"/></label>
+        <label>Opaque reference or URI<input id="ga-shipment-readiness-artifact-reference" maxlength="512" placeholder="artifact-ref-v1 or urn:sha256:…"/></label>
+        <label>Artifact SHA-256<input id="ga-shipment-readiness-artifact-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label class="document-intelligence-option"><input checked id="ga-shipment-readiness-artifact-external" type="checkbox"/> Artifact remains outside the source repository.</label>
+        <button class="secondary" id="ga-shipment-readiness-record-artifact" type="button">Record immutable GA artifact</button>
+        <hr/>
+        <label>GA control<select id="ga-shipment-readiness-control"><option value="runs_from_clean_deployment">Runs from clean deployment</option><option value="uses_real_official_maine_authority">Uses real official Maine authority</option><option value="attorney_reviewed_evals_present">Attorney-reviewed evals present</option><option value="release_metrics_pass">Release metrics pass</option><option value="unsupported_filing_ready_output_blocked">Unsupported filing-ready output blocked</option><option value="private_matter_data_protected">Private matter data protected</option><option value="audit_trails_present">Audit trails present</option><option value="security_controls_present">Security controls present</option><option value="pilot_evidence_present">Pilot evidence present</option><option value="rollback_and_maintenance_operations_present">Rollback and maintenance operations present</option></select></label>
+        <label class="document-intelligence-option"><input id="ga-shipment-readiness-control-satisfied" type="checkbox"/> Control is satisfied by the referenced external evidence.</label>
+        <label>Control evidence SHA-256<input id="ga-shipment-readiness-control-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-shipment-readiness-record-control" type="button">Record GA control evidence</button>
+        <hr/>
+        <label>Channel status<select id="ga-shipment-readiness-channel-status"><option value="planned">Planned</option><option value="qualified">Qualified</option><option value="released">Released</option><option value="revoked">Revoked</option></select></label>
+        <label>Distributed package SHA-256<input id="ga-shipment-readiness-package-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Qualification evidence SHA-256<input id="ga-shipment-readiness-qualification-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Rollback evidence SHA-256<input id="ga-shipment-readiness-rollback-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <label>Distribution reference<input id="ga-shipment-readiness-distribution-reference" maxlength="512" placeholder="urn:release:…"/></label>
+        <label>Distribution receipt SHA-256<input id="ga-shipment-readiness-receipt-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-shipment-readiness-record-channel" type="button">Record release-channel evidence</button>
+        <hr/>
+        <label>Shipment blocker ID<input id="ga-shipment-readiness-blocker-id" maxlength="128" placeholder="shipment-blocker-1"/></label>
+        <label>Severity<select id="ga-shipment-readiness-blocker-severity"><option value="P0">P0</option><option value="P1" selected>P1</option><option value="P2">P2</option><option value="P3">P3</option></select></label>
+        <label>Status<select id="ga-shipment-readiness-blocker-status"><option value="open">Open</option><option value="mitigated_pending_retest">Mitigated pending retest</option><option value="closed">Closed</option></select></label>
+        <label>Description code<input id="ga-shipment-readiness-blocker-description" maxlength="128" placeholder="store-receipt-missing"/></label>
+        <label>Blocker evidence SHA-256<input id="ga-shipment-readiness-blocker-hash" maxlength="64" placeholder="64-character hash"/></label>
+        <button class="secondary" id="ga-shipment-readiness-record-blocker" type="button">Record shipment blocker</button>
+        <hr/>
+        <label>Pass 50 status<select id="ga-shipment-readiness-rc-status"><option value="blocked">Blocked</option><option value="pass">Pass</option><option value="fail">Fail</option></select></label>
+        <label class="document-intelligence-option"><input id="ga-shipment-readiness-rc-frozen" type="checkbox"/> Pass 50 candidate is frozen in the referenced external evidence.</label>
+        <button class="secondary" id="ga-shipment-readiness-evaluate" type="button">Evaluate final ship/no-ship gate</button>
+        <button class="secondary" id="ga-shipment-readiness-build-evidence" type="button">Build immutable Pass 51 evidence packet</button>
+      </details>
+      <p class="record-inspector-note">This source workbench cannot independently verify a law license, consent validity, attorney signoff, a real-matter pilot, release signoff authority, Store approval, production deployment, or legal usefulness. Passes 49–51 remain external evidence gates.</p>
+    </aside>
+    <div aria-live="polite" class="release-pilot-hardening-results" id="release-pilot-hardening-results">Configure external evidence roots to begin qualification. Missing evidence remains a blocker.</div>
+  </div>
+</section>
+<div aria-hidden="true" class="evidence-work-product-backdrop" hidden id="evidence-work-product-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="evidence-work-product-title" aria-modal="true" class="evidence-work-product-modal" hidden id="evidence-work-product-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Local evidence work product</span><strong id="evidence-work-product-title">Timeline, enforcement ledger, contradictions, and packet</strong><span>Indexed record text only · every item remains review required</span></div>
+    <button aria-label="Close evidence work product" class="source-preview-close" id="evidence-work-product-close" type="button">×</button>
+  </header>
+  <div aria-label="Evidence work product workflow" class="local-operation-flow">
+    <span><b>1</b> Set local scope</span><span><b>2</b> Approve the build</span><span><b>3</b> Create immutable packet</span><span><b>4</b> Review source spans</span>
+  </div>
+  <div class="evidence-work-product-layout">
+    <aside class="evidence-work-product-controls">
+      <div class="status-strip" id="evidence-work-product-status">Checking the active local matter…</div>
+      <div class="evidence-work-product-scope" id="evidence-work-product-scope">Open an indexed record or build from the full active matter.</div>
+      <label class="document-intelligence-option"><input checked id="evidence-work-product-all-records" type="checkbox"/> Include all indexed records in the active matter</label>
+      <label>Focus terms<textarea id="evidence-work-product-focus" rows="5" placeholder="contempt
+payment
+contact schedule"></textarea></label>
+      <label class="document-intelligence-option"><input id="evidence-work-product-approved" type="checkbox"/> I approve creating a local, review-required work product from the selected indexed records.</label>
+      <button class="primary-action" disabled id="evidence-work-product-build" type="button">Build immutable work product</button>
+      <button class="secondary" id="evidence-work-product-load-active" type="button">Load active work product</button>
+      <p class="record-inspector-note">A timeline entry or record match does not prove an event occurred. The enforcement ledger does not decide contempt, willfulness, notice, ability to comply, or entitlement to relief.</p>
+    </aside>
+    <div aria-live="polite" class="evidence-work-product-results" id="evidence-work-product-results">Approve the local scope, then build the work product.</div>
+  </div>
 </section>
 
 <div aria-hidden="true" class="document-workspace-backdrop" hidden id="document-workspace-backdrop"></div>
@@ -189,14 +496,20 @@
     <div><span class="source-preview-kicker">Local document handling</span><strong id="document-workspace-title-heading">Documents &amp; drafting</strong><span>Draft, revise, review, and export without overwriting original evidence.</span></div>
     <button aria-label="Close document workspace" class="source-preview-close" id="document-workspace-close" type="button">×</button>
   </header>
-  <div class="document-workspace-safety"><strong>Review required.</strong> Drafts are not filing-ready. Imported records remain immutable; tracked Word edits always create a new copy.</div>
+  <div class="document-workspace-safety"><strong>Review required.</strong> Drafts are not filing-ready. Imported records remain immutable; draft revisions and exports create separate copies.</div>
+  <nav aria-label="Document workflow stages" class="document-workspace-stages" id="document-workspace-stages">
+    <button class="is-active" data-document-stage="compose" type="button"><span>01</span>Compose</button>
+    <button data-document-stage="revision" type="button"><span>02</span>Revision</button>
+    <button data-document-stage="filing" type="button"><span>03</span>Filing review</button>
+  </nav>
   <div class="document-workspace-layout">
     <aside class="document-workspace-library">
       <div class="document-workspace-library-head"><strong>Your documents</strong><div><button class="secondary compact-action" id="document-workspace-refresh" type="button">Refresh</button><button class="primary-action compact-action" id="document-workspace-new" type="button">New</button></div></div>
       <div aria-live="polite" class="document-workspace-list" id="document-workspace-list">Open a local matter to use drafting.</div>
+      <section class="document-review-queue-panel"><div class="document-workspace-library-head"><strong>Review queue</strong><button class="secondary compact-action" id="document-review-queue-refresh" type="button">Refresh</button></div><div class="document-review-queue" id="document-review-queue">Queue not loaded.</div></section>
       <div class="document-workspace-audit" id="document-workspace-audit">Audit status not checked.</div>
     </aside>
-    <main class="document-workspace-editor-pane">
+    <div class="document-workspace-editor-pane" data-document-stage-target="compose">
       <div class="document-workspace-fields">
         <label>Title<input id="document-workspace-title" maxlength="240" placeholder="Document title"/></label>
         <label>Type<select id="document-workspace-type"><option value="draft">Draft</option><option value="memo">Memo</option><option value="letter">Letter</option><option value="motion">Motion</option><option value="affidavit">Affidavit</option><option value="parenting_plan">Parenting plan</option><option value="court_form_notes">Court-form notes</option><option value="attorney_review_packet">Attorney review packet</option><option value="other">Other</option></select></label>
@@ -214,15 +527,67 @@
         <button class="secondary" disabled hidden id="document-workspace-restore" type="button">Restore</button>
       </div>
       <div aria-live="polite" class="document-workspace-status" id="document-workspace-status">Ready.</div>
-    </main>
+    </div>
     <aside class="document-workspace-review-pane">
-      <section class="document-review-card">
+      <section class="document-review-card" data-document-stage-target="revision" tabindex="-1">
         <div class="document-review-heading"><div><span>Revision review</span><strong id="document-workspace-review-title">No pending change</strong></div><span class="badge warn">Explicit approval</span></div>
         <div class="document-workspace-diff" id="document-workspace-diff">Edit the document, then choose “Propose revision” to see every changed line before committing.</div>
         <div class="document-review-actions"><button class="primary-action" disabled id="document-workspace-commit" type="button">Commit reviewed changes</button><button class="secondary" disabled id="document-workspace-reject" type="button">Reject proposal</button></div>
       </section>
+      <section class="document-review-card document-filing-review" data-document-stage-target="filing" tabindex="-1">
+        <div class="document-review-heading"><div><span>Evidence &amp; filing review</span><strong>Sign the exact revision and reports</strong></div><span class="badge warn" id="document-review-ledger-status">Not reviewed</span></div>
+        <p>Enter material facts one per line. The host maps them to already-indexed private records and binds that report to the current revision and Maine-authority verification receipt.</p>
+        <label>Facts to verify<textarea id="document-review-facts" rows="4" placeholder="On 01/03/2026 the child changed schools.&#10;The current order requires…"></textarea></label>
+        <button class="secondary" disabled id="document-review-prepare" type="button">Build revision-bound review packet</button>
+        <div class="document-review-packet" id="document-review-packet">No review packet prepared.</div>
+        <div class="document-claim-annotations" id="document-claim-annotations">Claim-by-claim review controls appear after a packet is built.</div>
+        <div class="document-review-signoff-grid">
+          <label>Reviewer<input id="document-reviewer-name" maxlength="160" placeholder="Name or local reviewer ID"/></label>
+          <label>Role<select id="document-reviewer-role"><option value="attorney">Attorney</option><option value="paralegal">Paralegal</option><option value="advocate">Advocate</option><option value="self_represented">Self-represented user</option><option value="other_reviewer">Other reviewer</option></select></label>
+          <label>Decision<select id="document-review-decision"><option value="approve_review">Review complete</option><option value="request_changes">Request changes</option><option value="reject">Reject draft</option></select></label>
+        </div>
+        <label>Review notes<textarea id="document-review-notes" rows="3" maxlength="4000"></textarea></label>
+        <label class="document-review-attestation"><input id="document-review-attested" type="checkbox"/> I reviewed this exact revision, its authority report, fact-to-record map, and listed blockers.</label>
+        <button class="primary-action" disabled id="document-review-commit" type="button">Record immutable review decision</button>
+        <div class="document-review-history" id="document-review-history">No review decisions recorded.</div>
+      </section>
+      <section class="document-review-card document-findings-forms-card" data-document-stage-target="findings" hidden tabindex="-1">
+        <div class="document-review-heading"><div><span>Maine findings &amp; forms</span><strong>Rule 52 matrix and current-form working copy</strong></div><span class="badge warn" id="findings-forms-status-badge">Not checked</span></div>
+        <p>Review this exact revision for best-interest findings, contact restrictions, PFA overlap, third-party delegation, and current official form requirements.</p>
+        <label>Posture<select id="findings-forms-posture"><option value="final_order">Final or proposed order</option><option value="post_judgment">Post-judgment</option><option value="initial_complaint">Initial complaint</option><option value="temporary_order">Temporary order</option><option value="remand">Remand</option></select></label>
+        <div class="findings-forms-catalog" id="findings-forms-catalog">Open a saved document to load the verified current-form catalog.</div>
+        <label class="document-review-attestation"><input id="findings-forms-approved" type="checkbox"/> I approve a local review of this exact revision and selected form metadata.</label>
+        <button class="secondary" disabled id="findings-forms-build" type="button">Build immutable findings &amp; forms review</button>
+        <div class="findings-forms-results" id="findings-forms-results">No findings/forms review built.</div>
+        <div class="findings-forms-fields" id="findings-forms-fields">Required form fields appear after a review is built.</div>
+        <button class="primary-action" disabled id="findings-forms-complete" type="button">Create review-required form working copy</button>
+        <div class="findings-forms-artifacts" id="findings-forms-artifacts"></div>
+      </section>
+      <section class="document-review-card reviewed-filing-packet-card">
+        <div class="document-review-heading"><div><span>Reviewed filing packet</span><strong>Incremental re-review, assignment, lifecycle, and export</strong></div><span class="badge warn" id="filing-packet-status-badge">Not built</span></div>
+        <p>Changed claims, facts, citations, forms, and procedure assumptions are isolated for review. Unchanged prior approvals remain historical references and are never carried forward.</p>
+        <div class="filing-packet-assignment-grid"><label>Reviewer label<input id="filing-packet-reviewer-label" maxlength="160" placeholder="Local reviewer ID or display label"/></label><label>Role<select id="filing-packet-reviewer-role"><option value="attorney">Attorney</option><option value="paralegal">Paralegal</option><option value="advocate">Advocate</option><option value="self_represented">Self-represented</option><option value="other_reviewer">Other reviewer</option></select></label></div>
+        <label class="document-review-attestation"><input id="filing-packet-exclusive" type="checkbox" checked/> Create an exclusive assignment for the current revision.</label>
+        <button class="secondary" disabled id="filing-packet-assign" type="button">Assign current revision</button>
+        <button class="secondary" disabled id="filing-packet-refresh" type="button">Refresh incremental re-review</button>
+        <label class="document-review-attestation"><input id="filing-packet-approved" type="checkbox"/> I approve generating a deterministic review packet for this exact revision.</label>
+        <button class="primary-action" disabled id="filing-packet-build" type="button">Build reviewed filing packet</button>
+        <div class="filing-packet-results" id="filing-packet-results">Open a saved document to inspect incremental review units.</div>
+        <div class="filing-packet-artifacts" id="filing-packet-artifacts"></div>
+      </section>
+      <section class="document-review-card authority-change-impact-card">
+        <div class="document-review-heading"><div><span>Authority change impact</span><strong>Generation diff and matter revalidation</strong></div><span class="badge warn" id="authority-impact-status-badge">Not checked</span></div>
+        <p>Compare two verified external authority generations, map changed official sources to this exact revision and its last review, and invalidate affected approval without treating a source hash change as a legal conclusion.</p>
+        <div class="authority-impact-generation-grid"><label>Reviewed generation<select id="authority-impact-base"><option value="">Load verified generations</option></select></label><label>Target generation<select id="authority-impact-target"><option value="">Load verified generations</option></select></label></div>
+        <button class="secondary" disabled id="authority-impact-refresh" type="button">Refresh verified generations</button>
+        <button class="secondary" disabled id="authority-impact-analyze" type="button">Analyze impact</button>
+        <label class="document-review-attestation"><input id="authority-impact-approved" type="checkbox"/> I approve creating an immutable revalidation packet for this exact revision and the selected verified generations.</label>
+        <button class="primary-action" disabled id="authority-impact-build" type="button">Build authority revalidation packet</button>
+        <div class="authority-impact-results" id="authority-impact-results">Open a saved document and configure an external authority data root.</div>
+        <div class="authority-impact-artifacts" id="authority-impact-artifacts"></div>
+      </section>
       <section class="document-review-card"><div class="document-review-heading"><div><span>Revision history</span><strong>Append-only local record</strong></div></div><div class="document-workspace-history" id="document-workspace-history">No document selected.</div></section>
-      <section class="document-review-card document-word-tools">
+      <section class="document-review-card document-word-tools" data-document-stage-target="word" hidden tabindex="-1">
         <div class="document-review-heading"><div><span>Tracked Word editing</span><strong>New copy with Word revisions</strong></div><span class="badge" id="document-workspace-docx-status">Checking engine…</span></div>
         <p>Available for imported DOCX records. Paragraph hashes prevent editing the wrong passage.</p>
         <button class="secondary" disabled id="document-workspace-docx-load" type="button">Load Word paragraphs</button>
@@ -235,7 +600,126 @@
     </aside>
   </div>
 </section>
+
+<div aria-hidden="true" class="local-agent-backdrop" hidden id="local-agent-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="local-agent-title" aria-modal="true" class="local-agent-modal" hidden id="local-agent-modal" role="dialog">
+  <header class="local-agent-header">
+    <div><span class="source-preview-kicker">Optional local model</span><strong id="local-agent-title">Review exactly what the model will receive</strong><span>Loopback-only. Disabled by default. No remote provider connection is allowed.</span></div>
+    <button aria-label="Close local model review" class="source-preview-close" id="local-agent-close" type="button">×</button>
+  </header>
+  <div class="local-agent-safety"><strong>The source remains the authority.</strong> The local model is an optional worker. It cannot certify legal correctness, evidence, or filing readiness.</div>
+  <div class="local-agent-layout">
+    <aside class="local-agent-settings">
+      <label>Provider<select id="local-agent-provider"><option value="ollama">Ollama</option><option value="openai_compatible_local">OpenAI-compatible local server</option></select></label>
+      <label>Loopback endpoint<input id="local-agent-endpoint" value="http://127.0.0.1:11434" spellcheck="false"/></label>
+      <label>Model name<input id="local-agent-model" value="qwen2.5:7b" spellcheck="false"/></label>
+      <div class="local-agent-policy-list"><span>✓ Literal 127.0.0.1 / ::1 only</span><span>✓ Exact context hash approval</span><span>✓ Source instructions quarantined</span><span>✓ Review required</span></div>
+      <button class="secondary" id="local-agent-refresh-preview" type="button">Rebuild preview</button>
+    </aside>
+    <div class="local-agent-preview">
+      <div class="local-agent-preview-summary" id="local-agent-preview-summary">Preparing the exact local context manifest…</div>
+      <div class="local-agent-context-list" id="local-agent-context-list"></div>
+      <details class="local-agent-hash-details"><summary>Hashes and security report</summary><pre id="local-agent-security-report"></pre></details>
+    </div>
+  </div>
+  <footer class="local-agent-actions">
+    <button class="primary-action" disabled id="local-agent-run" type="button">Approve exact context &amp; run local model</button>
+    <button class="secondary" id="local-agent-cancel" type="button">Cancel</button>
+    <span id="local-agent-status">Nothing has been transmitted.</span>
+  </footer>
+</section>
+
+<div aria-hidden="true" class="authority-verification-backdrop" hidden id="authority-verification-backdrop"></div>
+<section aria-hidden="true" aria-labelledby="authority-verification-title" aria-modal="true" class="authority-verification-modal" hidden id="authority-verification-modal" role="dialog">
+  <header class="authority-verification-header">
+    <div><span class="source-preview-kicker">Deterministic source review</span><strong id="authority-verification-title">Verify answer support</strong><span>Checks the answer against the active immutable Maine-law generation. Model confidence is never accepted as verification.</span></div>
+    <button aria-label="Close answer verification" class="source-preview-close" id="authority-verification-close" type="button">×</button>
+  </header>
+  <div class="authority-verification-summary" id="authority-verification-summary">Preparing a source-bound verification report…</div>
+  <div class="authority-verification-body" id="authority-verification-body"></div>
+  <footer class="authority-verification-actions">
+    <button class="secondary" disabled id="authority-verification-copy" type="button">Copy verification receipt</button>
+    <button class="primary-action" id="authority-verification-done" type="button">Back to the answer</button>
+    <span id="authority-verification-status">No legal conclusion is self-certified.</span>
+  </footer>
+</section>
+</main>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="matter-command-center-overlay">
+<section aria-labelledby="matter-command-center-title" aria-modal="true" class="overlay-card matter-command-center-card" id="matter-command-center-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Whole-matter review command center</span><strong id="matter-command-center-title">Full-record coverage and exportable packet</strong><span>Freeze the matter, compare packet versions, and keep the audit trail separate.</span></div>
+    <button aria-label="Close command center" class="source-preview-close" id="matter-command-center-close" type="button">×</button>
+  </header>
+  <div aria-live="polite" class="status-strip" id="matter-command-center-status">Open a local matter to inspect coverage, snapshots, and exportable packets.</div>
+  <div class="matter-command-center-layout">
+    <aside class="matter-command-center-controls">
+      <label for="matter-command-center-snapshot-records">Snapshot scope record IDs<textarea id="matter-command-center-snapshot-records" placeholder="ORDER-1&#10;EMAIL-1"></textarea></label>
+      <label for="matter-command-center-variant">Snapshot variant<select id="matter-command-center-variant"><option value="metadata_only">Metadata only</option><option value="redacted">Redacted</option><option value="full">Full</option></select></label>
+      <label class="document-intelligence-option"><input id="matter-command-center-approved" type="checkbox"/> I approve freezing or exporting this exact matter scope.</label>
+      <div class="row">
+        <button class="primary-action" id="matter-command-center-freeze" type="button">Freeze review snapshot</button>
+        <button class="primary-action" id="matter-command-center-build" type="button">Build evidence packet</button>
+      </div>
+      <button class="secondary" id="matter-command-center-refresh" type="button">Refresh command center</button>
+      <details open>
+        <summary>Packet compare</summary>
+        <div class="matter-command-center-compare-grid">
+          <label for="matter-command-center-compare-left">Left packet<select id="matter-command-center-compare-left"><option value="">No packet yet</option></select></label>
+          <label for="matter-command-center-compare-right">Right packet<select id="matter-command-center-compare-right"><option value="">No packet yet</option></select></label>
+        </div>
+        <button class="secondary" id="matter-command-center-compare" type="button">Compare packets</button>
+        <div aria-live="polite" class="matter-command-center-compare-status" id="matter-command-center-compare-status">Compare output appears here after you select two packet versions.</div>
+      </details>
+    </aside>
+    <div aria-live="polite" class="matter-command-center-body" id="matter-command-center-body">Open a local matter to inspect coverage, snapshots, and packet history.</div>
+  </div>
+</section>
 </div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="matter-intake-overlay">
+<section aria-labelledby="matter-intake-title" aria-modal="true" class="overlay-card matter-intake-card" id="matter-intake-modal" role="dialog">
+  <header class="record-inspector-header">
+    <div class="record-inspector-heading"><span class="source-preview-kicker">Local, review-first intake</span><strong id="matter-intake-title">Matter intake and issue tree</strong><span>Unknown and disputed information stays visible. This workspace does not give legal advice or predict an outcome.</span></div>
+    <button aria-label="Close matter intake" class="source-preview-close" id="matter-intake-close" type="button">×</button>
+  </header>
+  <div aria-live="polite" class="status-strip" id="matter-intake-status">Select a local matter, then create or resume an encrypted intake.</div>
+  <div class="matter-intake-layout">
+    <aside class="matter-intake-steps" aria-label="Matter intake steps"><ol><li>Purpose and privacy</li><li>Matter type</li><li>People and child-safe identities</li><li>Court and procedural posture</li><li>Orders and hearings</li><li>Record scope</li><li>Issues and disputed facts</li><li>Missing records</li><li>Privacy and sharing</li><li>Review summary</li><li>Intake receipt</li></ol><p class="muted">Every answer can be known, unknown, disputed, not applicable, or needs reviewer. No answer is required to save.</p></aside>
+    <div class="matter-intake-body">
+      <div class="matter-intake-grid">
+        <label for="matter-intake-id">Safe intake ID<input autocomplete="off" id="matter-intake-id" maxlength="80" pattern="[a-z][a-z0-9_-]{2,79}" placeholder="matter_abc123"/></label>
+        <label for="matter-intake-type">Matter type<select id="matter-intake-type"><option value="unknown_other">Unknown / other</option><option value="divorce">Divorce</option><option value="parental_rights_responsibilities">Parental rights and responsibilities</option><option value="parentage">Parentage</option><option value="child_support">Child support</option><option value="post_judgment_modification">Post-judgment modification</option><option value="enforcement_or_alleged_noncompliance">Enforcement / alleged noncompliance</option><option value="protection_from_abuse_overlap">Protection-from-abuse overlap</option><option value="guardianship_or_third_party_care">Guardianship / third-party care</option><option value="interstate_uccjea">Interstate / UCCJEA</option><option value="appeal_or_record_review">Appeal / record review</option><option value="form_completion">Form completion</option><option value="research_only">Research only</option></select></label>
+        <label for="matter-intake-court">Court (if known)<input id="matter-intake-court" maxlength="256"/></label>
+        <label for="matter-intake-county">County (if known)<input id="matter-intake-county" maxlength="128"/></label>
+        <label for="matter-intake-posture">Procedural posture<select id="matter-intake-posture"><option value="unknown">Unknown</option><option value="pre_filing">Pre-filing</option><option value="initial_complaint">Initial complaint</option><option value="service_pending">Service pending</option><option value="temporary_order_stage">Temporary-order stage</option><option value="discovery_disclosure">Discovery / disclosure</option><option value="mediation">Mediation</option><option value="hearing_scheduled">Hearing scheduled</option><option value="final_order_entered">Final order entered</option><option value="post_judgment">Post-judgment</option><option value="enforcement">Enforcement</option><option value="findings_or_reconsideration">Findings / reconsideration</option><option value="appeal">Appeal</option><option value="remand">Remand</option></select></label>
+        <label for="matter-intake-answer-state">Current answer state<select id="matter-intake-answer-state"><option value="unknown">Unknown</option><option value="known">Known</option><option value="disputed">Disputed</option><option value="not_applicable">Not applicable</option><option value="needs_reviewer">Needs reviewer</option></select></label>
+      </div>
+      <label for="matter-intake-workflow">Requested workflow<textarea id="matter-intake-workflow" maxlength="1000" placeholder="For example: organize the record and identify questions for a reviewer."></textarea></label>
+      <label for="matter-intake-concern">Issue or disputed factual concern<textarea id="matter-intake-concern" maxlength="2000" placeholder="State the concern neutrally. Do not use this tool to label a person or predict an outcome."></textarea></label>
+      <div class="matter-intake-grid">
+        <label for="matter-intake-issue-id">Issue safe ID<input autocomplete="off" id="matter-intake-issue-id" maxlength="80" placeholder="issue_parenting_time"/></label>
+        <label for="matter-intake-source-id">Source record safe ID (optional)<input autocomplete="off" id="matter-intake-source-id" maxlength="80" placeholder="order_001"/></label>
+      </div>
+      <fieldset class="matter-intake-privacy"><legend>Privacy and sharing</legend><label><input id="matter-intake-sealed" type="checkbox"/> Sealed / juvenile / confidential record involved</label><label><input checked id="matter-intake-local-only" type="checkbox"/> Keep this intake local only; external sharing disabled</label></fieldset>
+      <div class="row"><button class="secondary" id="matter-intake-create" type="button">Create / resume intake</button><button class="secondary" id="matter-intake-save" type="button">Save this step</button><button class="secondary" id="matter-intake-coverage" type="button">Check record scope</button><button class="primary-action" id="matter-intake-complete" type="button">Prepare review summary</button><button class="secondary" id="matter-intake-receipt" type="button">View receipt</button></div>
+      <section aria-live="polite" class="matter-intake-results" id="matter-intake-results">Nothing has been sent outside this device. Select a local matter, then create an intake to begin.</section>
+    </div>
+  </div>
+</section>
+</div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="orders-workspace-overlay"><section aria-labelledby="orders-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Source-bound order review</span><strong id="orders-workspace-title">Orders &amp; obligations</strong><span>Candidate relationships and terms require human review. This tool never decides what order governs or whether anyone is in contempt.</span></div><button aria-label="Close orders workspace" class="source-preview-close" id="orders-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="orders-workspace-status">Select a local matter before recording order candidates.</div><div class="orders-workspace-layout"><aside><ol><li>Order inventory</li><li>Order timeline</li><li>Supersession graph</li><li>Term explorer</li><li>Side-by-side diff</li><li>Operative-candidate review</li><li>Obligation ledger</li><li>Missing orders</li><li>Review history</li><li>Export</li></ol></aside><div><div class="matter-intake-grid"><label>Order safe ID<input id="orders-order-id" placeholder="order_final_001"/></label><label>Source record safe ID<input id="orders-source-id" placeholder="order_source_001"/></label><label>Term safe ID<input id="orders-term-id" placeholder="term_contact_001"/></label><label>Term subject<select id="orders-term-subject"><option value="other">Other</option><option value="contact_schedule">Contact schedule</option><option value="child_support">Child support</option><option value="decision_making">Decision-making</option><option value="deadlines">Deadlines</option></select></label></div><label>Exact order language<textarea id="orders-exact-language" maxlength="20000" placeholder="Copy the exact order language and keep the source record/page available for review."></textarea></label><div class="row"><button class="secondary" id="orders-add" type="button">Add source-bound order</button><button class="secondary" id="orders-refresh" type="button">Refresh inventory</button><button class="secondary" id="orders-receipt" type="button">Export receipt</button></div><section aria-live="polite" class="matter-intake-results" id="orders-workspace-results">No operative status is assigned automatically.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="calendar-workspace-overlay"><section aria-labelledby="calendar-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local date review</span><strong id="calendar-workspace-title">Dates, service &amp; hearings</strong><span>Candidate dates require source and reviewer confirmation. No external calendar account is changed.</span></div><button aria-label="Close dates workspace" class="source-preview-close" id="calendar-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="calendar-workspace-status">Select a local matter before recording dates.</div><div class="orders-workspace-layout"><aside><ol><li>Event timeline</li><li>Service tracker</li><li>Deadline candidates</li><li>Hearing calendar</li><li>Conflicts and missing notice</li><li>Rule/source inspector</li><li>Calculation receipt</li><li>Local reminders</li><li>Review history</li></ol></aside><div><div class="matter-intake-grid"><label>Event safe ID<input id="calendar-event-id" placeholder="hearing_001"/></label><label>Event type<select id="calendar-event-kind"><option value="hearing">Hearing</option><option value="notice">Notice</option><option value="completed_service_candidate">Completed service candidate</option><option value="service_attempt">Service attempt</option><option value="user_reminder">Local reminder</option><option value="unknown">Unknown</option></select></label><label>Date/time<input id="calendar-date-time" placeholder="2026-01-02T09:30:00"/></label><label>Source record safe ID<input id="calendar-source-id" placeholder="notice_001"/></label></div><label>Document or notice<input id="calendar-document" maxlength="512"/></label><div class="row"><button class="secondary" id="calendar-add" type="button">Add source-bound event</button><button class="secondary" id="calendar-refresh" type="button">Refresh timeline</button><button class="secondary" id="calendar-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="calendar-workspace-results">Dates are review candidates, not deadline advice.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="docket-workspace-overlay"><section aria-labelledby="docket-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local court-record reconciliation</span><strong id="docket-workspace-title">Docket &amp; court record</strong><span>Imports only user-provided records. The app does not log in, scrape court systems, file, or declare the official record complete.</span></div><button aria-label="Close docket workspace" class="source-preview-close" id="docket-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="docket-workspace-status">Select a local matter before importing docket entries.</div><div class="orders-workspace-layout"><aside><ol><li>Docket import</li><li>Entry list</li><li>Local record comparison</li><li>Missing documents</li><li>Rejected filings</li><li>Orders and notices</li><li>Sealed/confidential warnings</li><li>Reconciliation decisions</li><li>Review history</li><li>Export report</li></ol></aside><div><div class="matter-intake-grid"><label>Docket entry safe ID<input id="docket-entry-id" placeholder="docket_001"/></label><label>Source record safe ID<input id="docket-source-id" placeholder="docket_export_001"/></label><label>Sequence<input id="docket-sequence" maxlength="64" placeholder="1"/></label><label>Filed/entered date<input id="docket-date" maxlength="64" placeholder="2026-01-02"/></label></div><label>Entry description<textarea id="docket-description" maxlength="2000" placeholder="Copy a short, exact docket entry description from the imported record."></textarea></label><div class="row"><button class="secondary" id="docket-add" type="button">Import source-bound entry</button><button class="secondary" id="docket-reconcile" type="button">Reconcile local records</button><button class="secondary" id="docket-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="docket-workspace-results">All matches are reviewer-required; local-only material is never inferred to have been filed.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="discovery-workspace-overlay"><section aria-labelledby="discovery-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local discovery tracking</span><strong id="discovery-workspace-title">Discovery &amp; disclosure</strong><span>Source-bound requests, responses, objections, and productions for review. Nothing is served, subpoenaed, or filed automatically.</span></div><button aria-label="Close discovery workspace" class="source-preview-close" id="discovery-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="discovery-workspace-status">Select a local matter before recording discovery items.</div><div class="orders-workspace-layout"><aside><ol><li>Sets and requests</li><li>Responses and objections</li><li>Productions</li><li>Deficiencies</li><li>Privilege/confidentiality review</li><li>Deadline candidates</li><li>Supplements</li><li>Review history</li><li>Exports</li></ol></aside><div><div class="matter-intake-grid"><label>Item safe ID<input id="discovery-item-id" placeholder="request_001"/></label><label>Item type<select id="discovery-kind"><option value="interrogatory">Interrogatory</option><option value="request_for_production">Request for production</option><option value="request_for_admission">Request for admission</option><option value="initial_disclosure">Initial disclosure</option><option value="informal_request">Informal request</option><option value="unknown">Unknown</option></select></label><label>Source record safe ID<input id="discovery-source-id" placeholder="discovery_001"/></label><label>Set/item number<input id="discovery-item-number" maxlength="64" placeholder="Set 1 / 1"/></label></div><label>Exact request text<textarea id="discovery-request-text" maxlength="20000" placeholder="Copy the exact request text and retain its source record for review."></textarea></label><div class="row"><button class="secondary" id="discovery-add" type="button">Add source-bound item</button><button class="secondary" id="discovery-gaps" type="button">Review gaps</button><button class="secondary" id="discovery-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="discovery-workspace-results">Privilege, compliance, and deadlines remain review questions.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="exhibits-workspace-overlay"><section aria-labelledby="exhibits-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Immutable-source exhibit preparation</span><strong id="exhibits-workspace-title">Exhibits, labels &amp; binder</strong><span>Labels and control numbering exist only on review-required derivatives. This tool does not decide authenticity, admissibility, or evidentiary weight.</span></div><button aria-label="Close exhibits workspace" class="source-preview-close" id="exhibits-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="exhibits-workspace-status">Select a local matter before adding exhibit candidates.</div><div class="orders-workspace-layout"><aside><ol><li>Candidate records</li><li>Labels</li><li>Duplicates/versions</li><li>Redaction review</li><li>Bates/control numbering</li><li>Binder order</li><li>Preview</li><li>Hash manifest</li><li>Provenance ledger</li><li>Export and receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Exhibit safe ID<input id="exhibits-id" placeholder="exhibit_001"/></label><label>Original record safe ID<input id="exhibits-record-id" placeholder="record_001"/></label><label>Original SHA-256<input id="exhibits-hash" maxlength="64" placeholder="64-character source hash"/></label><label>Proposed label<input id="exhibits-label" maxlength="64" placeholder="Exhibit A"/></label><label>Page count<input id="exhibits-pages" min="1" type="number" value="1"/></label></div><label>Description<textarea id="exhibits-description" maxlength="2000" placeholder="Brief source-bound description; privacy and redaction review remain required."></textarea></label><div class="row"><button class="secondary" id="exhibits-add" type="button">Add candidate</button><button class="secondary" id="exhibits-refresh" type="button">Refresh ledger</button><button class="secondary" id="exhibits-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="exhibits-workspace-results">Originals remain immutable; export and numbering require reviewer actions.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="statements-workspace-overlay"><section aria-labelledby="statements-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Source-bound witness review</span><strong id="statements-workspace-title">Witnesses &amp; statements</strong><span>Compare exact wording and context without credibility scores, deception inferences, identity inference, or testimony coaching.</span></div><button aria-label="Close statements workspace" class="source-preview-close" id="statements-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="statements-workspace-status">Select a local matter before recording a statement.</div><div class="orders-workspace-layout"><aside><ol><li>People/roles</li><li>Statement inventory</li><li>Topic groups</li><li>Side-by-side comparison</li><li>Date and context conflicts</li><li>Source drill-down</li><li>Exhibit links</li><li>Clarification outline</li><li>Review history</li><li>Export</li></ol></aside><div><div class="matter-intake-grid"><label>Statement safe ID<input id="statements-id" placeholder="statement_001"/></label><label>Speaker safe ID<input id="statements-speaker-id" placeholder="person_001"/></label><label>Confirmed role<input id="statements-role" maxlength="128" placeholder="witness"/></label><label>Source record safe ID<input id="statements-source-id" placeholder="source_001"/></label><label>Statement type<select id="statements-kind"><option value="testimony">Testimony</option><option value="affidavit">Affidavit</option><option value="interview">Interview</option><option value="message">Message</option><option value="prior_statement">Prior statement</option><option value="unknown">Unknown</option></select></label></div><label>Exact source text<textarea id="statements-exact-text" maxlength="20000" placeholder="Preserve exact quoted wording; context, OCR, and translation uncertainty remain visible."></textarea></label><div class="row"><button class="secondary" id="statements-add-person" type="button">Confirm person/role</button><button class="secondary" id="statements-add" type="button">Add statement</button><button class="secondary" id="statements-refresh" type="button">Refresh inventory</button><button class="secondary" id="statements-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="statements-workspace-results">People and roles are user-confirmed; statements preserve exact source wording and context.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="hearing-workspace-overlay"><section aria-labelledby="hearing-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local hearing review</span><strong id="hearing-workspace-title">Hearing preparation</strong><span>Build a source-bound review pack; it never predicts an outcome, offers improper tactics, or files anything.</span></div><button aria-label="Close hearing workspace" class="source-preview-close" id="hearing-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="hearing-workspace-status">Select a local matter before adding a hearing.</div><div class="orders-workspace-layout"><aside><ol><li>Hearing details</li><li>Issues</li><li>Orders</li><li>Authority</li><li>Evidence</li><li>Exhibits</li><li>Witnesses</li><li>Findings</li><li>Deadlines/service</li><li>Missing proof</li><li>Pack preview</li><li>Courtroom notes</li><li>Receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Hearing safe ID<input id="hearing-id" placeholder="hearing_001"/></label><label>Notice record safe ID<input id="hearing-notice-id" placeholder="notice_001"/></label><label>Date/time/location-safe label<input id="hearing-when" placeholder="2026-01-02 9:00 AM, courtroom unknown"/></label><label>Hearing type candidate<input id="hearing-type" placeholder="motion hearing"/></label></div><div class="row"><button class="secondary" id="hearing-add" type="button">Add hearing</button><button class="secondary" id="hearing-refresh" type="button">Review inventory</button><button class="secondary" id="hearing-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="hearing-workspace-results">Issues, authority, evidence, and procedure require reviewer confirmation.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="appellate-workspace-overlay"><section aria-labelledby="appellate-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local appellate review</span><strong id="appellate-workspace-title">Appellate preservation &amp; record</strong><span>Organize source-bound preservation and citations. It does not determine waiver, appeal merit, reversal, or a final deadline.</span></div><button aria-label="Close appellate workspace" class="source-preview-close" id="appellate-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="appellate-workspace-status">Select a local matter before creating an appellate record.</div><div class="orders-workspace-layout"><aside><ol><li>Judgment and posture</li><li>Deadline candidates</li><li>Issues</li><li>Preservation matrix</li><li>Standard of review</li><li>Record inventory</li><li>Transcripts/media</li><li>Exhibits/appendix</li><li>Record-citation verifier</li><li>Missing record</li><li>Review history</li><li>Appellate review packet</li></ol></aside><div><div class="matter-intake-grid"><label>Appeal safe ID<input id="appellate-id" placeholder="appeal_001"/></label><label>Judgment record safe ID<input id="appellate-judgment-id" placeholder="judgment_001"/></label><label>Entry date candidate<input id="appellate-date" placeholder="2026-01-02"/></label></div><div class="row"><button class="secondary" id="appellate-add" type="button">Add appellate record</button><button class="secondary" id="appellate-refresh" type="button">Review inventory</button><button class="secondary" id="appellate-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="appellate-workspace-results">Unresolved citations and record components block final-like exports.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="uccjea-workspace-overlay"><section aria-labelledby="uccjea-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Privacy-preserving interstate review</span><strong id="uccjea-workspace-title">Interstate jurisdiction</strong><span>State-level facts and source records only. Exact addresses remain masked; jurisdiction and relocation legality are not decided.</span></div><button aria-label="Close interstate workspace" class="source-preview-close" id="uccjea-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="uccjea-workspace-status">Select a local matter before recording state connections.</div><div class="orders-workspace-layout"><aside><ol><li>Child state history</li><li>Proceedings/orders</li><li>Jurisdiction factors</li><li>State map</li><li>Timeline</li><li>Relocation</li><li>Conflicts</li><li>Missing records</li><li>Authority</li><li>Review history</li><li>Packet</li></ol></aside><div><div class="matter-intake-grid"><label>Connection safe ID<input id="uccjea-connection-id" placeholder="connection_001"/></label><label>Child safe ID<input id="uccjea-child-id" placeholder="child_001"/></label><label>State/territory/country<input id="uccjea-state" placeholder="Maine"/></label><label>Source record safe ID<input id="uccjea-source-id" placeholder="record_001"/></label></div><div class="row"><button class="secondary" id="uccjea-add" type="button">Add state connection</button><button class="secondary" id="uccjea-refresh" type="button">Review state timeline</button><button class="secondary" id="uccjea-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="uccjea-workspace-results">The map is state-level only; no exact home address is shown.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="icwa-workspace-overlay"><section aria-labelledby="icwa-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Sensitive local inquiry review</span><strong id="icwa-workspace-title">ICWA inquiry &amp; notice review</strong><span>Record only documented inquiry, notice, response, and court material. The app never infers identity, membership, eligibility, or tribal status, and never sends notice.</span></div><button aria-label="Close ICWA workspace" class="source-preview-close" id="icwa-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="icwa-workspace-status">Select a local matter before adding an inquiry record.</div><div class="orders-workspace-layout"><aside><ol><li>Child-safe profile</li><li>Inquiry steps</li><li>Source records</li><li>Notice review</li><li>Responses</li><li>Court findings</li><li>Missing records</li><li>Authority</li><li>Review history</li><li>Packet</li><li>Receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Inquiry safe ID<input id="icwa-inquiry-id" placeholder="inquiry_001"/></label><label>Child safe ID<input id="icwa-child-id" placeholder="child_001"/></label><label>Person safe ID<input id="icwa-person-id" placeholder="person_001"/></label><label>Source record safe ID<input id="icwa-source-id" placeholder="record_001"/></label></div><label>Exact inquiry question<textarea id="icwa-question" maxlength="8000"></textarea></label><div class="row"><button class="secondary" id="icwa-add" type="button">Add documented inquiry</button><button class="secondary" id="icwa-refresh" type="button">Review completeness</button><button class="secondary" id="icwa-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="icwa-workspace-results">Inquiry and notice status remain review-required; tribal determinations are external.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="care-workspace-overlay"><section aria-labelledby="care-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local pathway and record review</span><strong id="care-workspace-title">Guardianship, adoption &amp; care pathways</strong><span>Organize records and official source requirements without deciding eligibility, fitness, consent, best interests, or outcome.</span></div><button aria-label="Close care pathways workspace" class="source-preview-close" id="care-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="care-workspace-status">Select a local matter before adding a pathway.</div><div class="orders-workspace-layout"><aside><ol><li>Pathway records</li><li>Official requirements</li><li>Consents/notices</li><li>Home-study records</li><li>Orders</li><li>Missing records</li><li>Privacy review</li><li>Review history</li><li>Packet</li><li>Receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Pathway safe ID<input id="care-pathway-id" placeholder="pathway_001"/></label><label>Child safe ID<input id="care-child-id" placeholder="child_001"/></label><label>Pathway type<select id="care-kind"><option value="guardianship">Guardianship</option><option value="adoption">Adoption</option><option value="probate">Probate</option><option value="third_party_care">Third-party care</option><option value="consent">Consent record</option></select></label><label>Source record safe ID<input id="care-source-id" placeholder="record_001"/></label></div><div class="row"><button class="secondary" id="care-add" type="button">Add source-bound pathway</button><button class="secondary" id="care-refresh" type="button">Review records</button><button class="secondary" id="care-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="care-workspace-results">Eligibility, consent validity, fitness, and best interests require independent review.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="safety-workspace-overlay"><section aria-labelledby="safety-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Trauma-informed local record review</span><strong id="safety-workspace-title">Safety &amp; protection records</strong><span>This is not an emergency service. For immediate danger, use local emergency services. The app does not decide whether abuse occurred or recommend confrontation.</span></div><button aria-label="Close safety workspace" class="source-preview-close" id="safety-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="safety-workspace-status">Select a local matter before adding a safety record.</div><div class="orders-workspace-layout"><aside><ol><li>Protection records</li><li>Orders/conditions</li><li>Incidents/communications</li><li>Child impacts</li><li>Service</li><li>Missing records</li><li>Official support resources</li><li>Safety boundaries</li><li>Review history</li><li>Receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Safety record safe ID<input id="safety-record-id" placeholder="safety_001"/></label><label>Record type<input id="safety-kind" placeholder="protection order candidate"/></label><label>Source record safe ID<input id="safety-source-id" placeholder="record_001"/></label></div><label>Source-bound summary<textarea id="safety-summary" maxlength="8000"></textarea></label><div class="row"><button class="secondary" id="safety-add" type="button">Add source-bound record</button><button class="secondary" id="safety-refresh" type="button">Review records</button><button class="secondary" id="safety-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="safety-workspace-results">No abuse conclusion, risk score, emergency-service response, or confrontation advice is generated.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="schedule-workspace-overlay"><section aria-labelledby="schedule-workspace-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Neutral local schedule scenarios</span><strong id="schedule-workspace-title">Parenting schedule &amp; logistics</strong><span>Create transparent scenarios from exact source terms; this app does not interpret orders, give legal advice, or modify calendars.</span></div><button aria-label="Close schedule workspace" class="source-preview-close" id="schedule-workspace-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="schedule-workspace-status">Select a local matter before adding a schedule term.</div><div class="orders-workspace-layout"><aside><ol><li>Source order terms</li><li>Regular schedule</li><li>Holidays</li><li>Exchanges</li><li>Transportation</li><li>School/care logistics</li><li>Conflicts</li><li>Scenario comparison</li><li>Calendar preview</li><li>Review history</li><li>Receipt</li></ol></aside><div><div class="matter-intake-grid"><label>Term safe ID<input id="schedule-term-id" placeholder="schedule_term_001"/></label><label>Topic<input id="schedule-topic" placeholder="holiday schedule"/></label><label>Source record safe ID<input id="schedule-source-id" placeholder="order_001"/></label></div><label>Exact term language<textarea id="schedule-language" maxlength="8000"></textarea></label><div class="row"><button class="secondary" id="schedule-add" type="button">Add exact source term</button><button class="secondary" id="schedule-refresh" type="button">Review schedule terms</button><button class="secondary" id="schedule-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="schedule-workspace-results">Scenarios and conflicts remain reviewer-required; no account calendar is changed.</section></div></div></section></div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="late-review-overlay"><section aria-labelledby="late-review-title" aria-modal="true" class="overlay-card orders-workspace-card" role="dialog"><header class="record-inspector-header"><div class="record-inspector-heading"><span class="source-preview-kicker">Local review-only workspace</span><strong id="late-review-title">Matter review center</strong><span id="late-review-description">Select a workbench.</span></div><button aria-label="Close matter review center" class="source-preview-close" id="late-review-close" type="button">×</button></header><div aria-live="polite" class="status-strip" id="late-review-status">Select a local matter before reviewing local records.</div><div class="orders-workspace-layout"><aside><ol><li>Inventory</li><li>Source records</li><li>Missing items</li><li>Review history</li><li>Hash receipt</li></ol></aside><div><div class="row"><button class="secondary" id="late-review-refresh" type="button">Refresh local inventory</button><button class="secondary" id="late-review-receipt" type="button">View receipt</button></div><section aria-live="polite" class="matter-intake-results" id="late-review-results">No external action is available from this workspace.</section></div></div></section></div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="welcome-overlay">
 <div aria-labelledby="welcome-title" aria-modal="true" class="overlay-card" role="dialog">
 <div class="overlay-kicker">Welcome screen</div>
@@ -371,6 +855,22 @@
 <div class="overlay-actions"><button class="primary-action" id="close-privacy-button" type="button">Back to the chat</button><div class="overlay-meta">Local-first does not mean risk-free. Protect exported files like any other sensitive family record.</div></div>
 </div>
 </div>
+<div aria-hidden="true" class="overlay-shell" hidden="" id="local-workbench-overlay">
+<div aria-labelledby="local-workbench-title" aria-modal="true" class="overlay-card local-workbench-card" role="dialog">
+<div class="overlay-kicker">Local AI control center</div>
+<h3 id="local-workbench-title">Your workbench, clearly in your control</h3>
+<p>See what this PC can run, what local AI is available, and what requires your explicit approval. This panel never downloads a model or enables a connector on its own.</p>
+<div aria-live="polite" class="status-strip" id="local-workbench-status">Checking local readiness…</div>
+<div class="local-workbench-grid" id="local-workbench-summary"></div>
+<div class="local-workbench-controls">
+<label for="local-workbench-reading-level">Reading level<select id="local-workbench-reading-level"><option value="plain_language">Plain language</option><option value="standard">Standard</option><option value="detailed">Detailed</option></select></label>
+<label class="child-impact-toggle"><span class="switch"><input id="local-workbench-reduced-motion" type="checkbox"/><i></i></span> Reduce motion</label>
+<label class="child-impact-toggle"><span class="switch"><input id="local-workbench-screen-reader" type="checkbox"/><i></i></span> Screen reader mode</label>
+</div>
+<div class="overlay-actions"><button class="secondary" id="local-workbench-refresh" type="button">Refresh status</button><button class="secondary" id="local-workbench-release-readiness" type="button">Check GA evidence</button><button class="secondary" id="local-workbench-save-preferences" type="button">Save preferences</button><button class="primary-action" id="local-workbench-close" type="button">Back to the chat</button></div>
+<div class="overlay-meta">CPU fallback remains the baseline. Hardware acceleration improves responsiveness; it never changes your data boundary.</div>
+</div>
+</div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="shortcuts-overlay">
 <div aria-labelledby="shortcuts-title" aria-modal="true" class="overlay-card compact-overlay-card" role="dialog">
 <div class="overlay-kicker">Keyboard shortcuts</div>
@@ -395,7 +895,7 @@
 <div><dt>Product</dt><dd>{{PRODUCT_VERSION}}</dd></div>
 <div><dt>Build</dt><dd>{{BUILD_NUMBER}}</dd></div>
 <div><dt>Package target</dt><dd>{{PACKAGE_VERSION}}</dd></div>
-<div><dt>UI track</dt><dd>Family justice chat</dd></div>
+<div><dt>UI track</dt><dd>Visual design refresh</dd></div>
 </dl>
 <blockquote>“The authority belongs to the source, not the model.”</blockquote>
 <div class="overlay-actions"><button class="primary-action" id="close-build-button" type="button">Back to the chat</button></div>
@@ -417,7 +917,7 @@
 </div>
 </div>
 <div aria-live="polite" class="toast" hidden="" id="toast" role="status"></div>
-<div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · {{UI_FOOTER_LABEL}} · /api/question-topics · /api/missing-information-prompts · /api/runtime-diagnostics · /api/corpus-library · /api/activate-corpus · fetch('/ask') · fetchJson · non-JSON response · data-source-card · answer-callout · section-nav · source-card-badges · source-snippet · Open source link · Reviewer handoff copied. · Grounded answer ready. · renderBadges · renderLatestAnswer · renderParagraphBlocks · renderHandoff · renderPromptPacks · renderQuestionLibrary(libraryItems) · loadPromptPacks · inspectSource · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg · welcome role chooser · evidence drawer · Copy query link · Focus mode · Help &amp; tips · Choose how you want to begin · class="hero-banner" · class="right-rail" · Prompt shortcuts · Prompt packs · Source cards · Latest answer · Reviewer handoff · html, body { overflow: hidden; chat-scroll { overflow: auto; · populateTopicFilter · Latest payload metadata: · Latest source cards: · data-copy-source · source_card_table · enter_submit_clears_input · reviewer_handoff · Copy reviewer handoff JSON · local_chat_transcript_v3 · /api/starter-prompt-packs · data-pack-prompt · questions_to_ask · data-inspect-source · libraryItems · /api/question-library · premium-workbench · evidence-inventory · clickable-record-cards · class="app-shell" · class="hero-banner" · class="main-stage" · class="right-rail" · Prompt packs · Source cards · Latest answer · data-example="What court handles appeals?"</div>
+<div class="sr-only" id="compatibility-markers">Local source-backed chat workbench · Download transcript · Retrieved source cards · Brand assets loaded from /brand-assets · Best-interest factors · {{UI_FOOTER_LABEL}} · /api/question-topics · /api/missing-information-prompts · /api/runtime-diagnostics · /api/authority/status · /api/authority/verify-answer · Verify support · /api/document-workspace/documents/{document_id}/review/prepare · revision-bound review ledger · reviewer queue · claim-by-claim annotations · procedure posture report · current form checks · document intelligence · /api/document-intelligence/status · /api/document-intelligence/analyze · /api/document-intelligence/ocr-preservation · evidence work product · /api/evidence-work-product/status · /api/evidence-work-product/build · /api/evidence-work-product/verify · Maine findings forms · /api/findings-forms/status · /api/findings-forms/complete · Rule 52 factor matrix · /api/corpus-library · /api/activate-corpus · fetch('/ask') · fetchJson · non-JSON response · data-source-card · answer-callout · section-nav · source-card-badges · source-snippet · Open source link · Reviewer handoff copied. · Grounded answer ready. · renderBadges · renderLatestAnswer · renderParagraphBlocks · renderHandoff · renderPromptPacks · renderQuestionLibrary(libraryItems) · loadPromptPacks · inspectSource · /brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg · /brand-assets/assets/social/focaf-family-law-llm-social-card.svg · welcome role chooser · evidence drawer · Copy query link · Focus mode · Help &amp; tips · Choose how you want to begin · class="hero-banner" · class="right-rail" · Prompt shortcuts · Prompt packs · Source cards · Latest answer · Reviewer handoff · html, body { overflow: hidden; chat-scroll { overflow: auto; · populateTopicFilter · Latest payload metadata: · Latest source cards: · data-copy-source · source_card_table · enter_submit_clears_input · reviewer_handoff · Copy reviewer handoff JSON · local_chat_transcript_v3 · /api/starter-prompt-packs · data-pack-prompt · questions_to_ask · data-inspect-source · libraryItems · /api/question-library · premium-workbench · evidence-inventory · clickable-record-cards · class="app-shell" · class="hero-banner" · class="main-stage" · class="right-rail" · Prompt packs · Source cards · Latest answer · data-example="What court handles appeals?"</div>
 <div class="sr-only" id="viewport-proof">viewport proof pending</div>
 <img alt="Maine Family Law LLM horizontal logo compatibility asset" class="sr-only" src="/brand-assets/assets/logo/focaf-family-law-llm-horizontal.svg"/>
 <div class="footerbar"><button class="footer-privacy" id="footer-privacy-button" title="Your family’s matter stays on this device." type="button">⬟ Local-only</button><span>Source-cited when found&nbsp;&nbsp;•&nbsp;&nbsp;Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span><span class="footer-spacer"></span><span>Your data never leaves this device</span><button aria-label="Version {{UI_FOOTER_LABEL}}. Triple-click for a local build card." class="footer-version" data-build="{{BUILD_NUMBER}}" id="footer-version" type="button">{{UI_FOOTER_LABEL}}</button></div>

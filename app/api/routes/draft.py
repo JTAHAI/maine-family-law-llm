@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Header
 
-from app.api.security import review_response
+from app.api.security import review_response, strict_json_bool
 from app.services import ConversationAdapter
 from legal.drafting.workspace import DraftWorkspaceBuilder
 
@@ -28,7 +28,8 @@ def draft(
         missing_facts=payload.get("missing_facts"),
         procedure_posture_report=payload.get("procedure_posture_report"),
         forms_report=payload.get("forms_report"),
-        human_review_complete=bool(payload.get("human_review_complete", False)),
+        human_review_complete=strict_json_bool(payload, "human_review_complete", default=False),
+        provenance_receipt=payload.get("provenance_receipt"),
     ).to_dict()
     workspace["review_status"] = "review_required"
     workspace["blocked_export_explanation"] = workspace.get("filing_ready_gate", {}).get("blockers", [])

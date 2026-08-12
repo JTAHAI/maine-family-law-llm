@@ -1,10 +1,14 @@
-## v5.2.0 — Answer-first evidence and protected document drafting
+## v7.0.0 — Verified scope and release hardening
 
-- Evidence and source actions now appear directly in the main chat response.
-- Added local in-app document creation, answer-to-draft, record-to-draft import, revision review, exports, audit history, and recoverable trash.
-- Added new-copy-only Word tracked changes through the MIT-licensed `pablospe/docx-editor` engine.
-- Added explicit commit/delete approval gates, immutable originals, optimistic concurrency, and a fail-closed hash-chained document audit.
-- Credited Lê Minh Hiếu/Paparusi and Pablo Speciale with retained MIT notices.
-- Product version: 5.2.0. Microsoft Store package target: 5.2.0.0.
+- Product version: 7.0.0. Microsoft Store package target: 7.0.0.0.
+- Publishes a smaller 16-feature source/frozen-runtime-verified scope and keeps slices 21-44 plus incomplete installed workflows hidden.
+- Adds the admitted external official-authority generation, exact-source verification, fail-closed filing gate, Local-only hardening, and self-contained offline document/OCR/privacy runtime.
+- The exact v7 package candidate passed package, privacy, sealed-payload, bundled-engine, and frozen-runtime offline audits.
+- Store qualification remains blocked pending isolated clean-install/restart/uninstall evidence and WACK. No v7 upload, certification, or Enterprise GA is claimed.
+- Full details: [v7 release notes](RELEASE_NOTES_v7.0.0.md) and [release status](RELEASE_STATUS_v7.0.0.md).
 
-See `docs/release-notes-v5.2.0.md` for the full release notes.
+## v6.0.4 — Release-clean MSIX packaging
+
+- Product version: 6.0.4. Microsoft Store package target: 6.0.4.0.
+- Adds cross-process evidence-ledger locking, race-resistant bounded file reads, durable directory sync, streaming request-body caps, authenticated local-service identity checks, redirect-free health probes, and a no-exec package shim.
+- The release adds sealed, self-contained MSIX payload qualification and offline engine verification.

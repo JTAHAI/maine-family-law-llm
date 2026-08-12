@@ -1,0 +1,29 @@
+{
+  "schema_version": "evidence_work_product_policy_v1",
+  "product_version": "7.0.0",
+  "local_only": true,
+  "review_required": true,
+  "originals_immutable": true,
+  "legal_conclusion": "not_determined",
+  "limits": {
+    "records": 10000,
+    "total_text_characters": 30000000,
+    "record_text_characters": 500000,
+    "timeline_events": 5000,
+    "enforcement_rows": 2000,
+    "contradiction_candidates": 500,
+    "focus_terms": 50
+  },
+  "required_controls": [
+    "explicit_local_approval",
+    "matter_scoped_inputs",
+    "metadata_path_redaction",
+    "source_and_text_hashes",
+    "content_addressed_builds",
+    "atomic_activation",
+    "independent_verification",
+    "opaque_artifact_capabilities",
+    "no_legal_conclusion"
+  ],
+  "disclaimer": "Record text and extracted events do not prove allegations, authenticity, credibility, intent, contempt, or legal entitlement."
+}

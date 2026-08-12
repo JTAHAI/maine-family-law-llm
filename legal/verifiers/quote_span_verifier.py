@@ -100,7 +100,6 @@ class QuoteSpanVerifier:
             )
 
         best_ratio = 0.0
-        quote_length = max(len(normalized_quote), 1)
         words = normalized_source.split()
         quote_word_count = max(len(normalized_quote.split()), 1)
         window_sizes = sorted({quote_word_count, quote_word_count + 2, max(quote_word_count - 2, 1)})

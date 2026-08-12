@@ -88,7 +88,14 @@ class RetrievalSmokeEvalRunner:
         for index, case in enumerate(cases, start=1):
             response = pipeline.retrieve(case.query, top_k=top_k, include_text=False)
             retrieved_ids = [row["source_id"] for row in response["retrieved_sources"]]
-            metrics = summarize_ranked_retrieval(retrieved_ids, case.relevant_source_ids, ks=(5, 10, 20))
+            qrels = case.relevant_source_ids
+            if case.case_type == "exact_citation_lookup" and len(qrels) > 1:
+                # Duplicate index rows for the same normalized citation are
+                # alternative correct answers, not multiple documents that a
+                # single citation query must retrieve simultaneously.
+                matched = [source_id for source_id in retrieved_ids if source_id in qrels]
+                qrels = {matched[0]} if matched else {sorted(qrels)[0]}
+            metrics = summarize_ranked_retrieval(retrieved_ids, qrels, ks=(5, 10, 20))
             metric_rows.append({"case": case.as_dict(), "retrieved_source_ids": retrieved_ids, "metrics": metrics})
             if metrics["recall_at_20"] < 1.0:
                 failures.append(
@@ -158,22 +165,26 @@ class RetrievalSmokeEvalRunner:
         identifiers; add issue-label cases only when room remains.
         """
         cap = max_case_count if max_case_count is not None and max_case_count > 0 else None
-        exact_cases: list[RetrievalEvalCase] = []
+        exact_cases_by_query: dict[str, RetrievalEvalCase] = {}
         issue_cases: list[RetrievalEvalCase] = []
         seen_queries: set[str] = set()
         for document in documents:
             if document.citation and extract_citations(document.citation):
                 query = document.citation
-                if query not in seen_queries:
-                    exact_cases.append(
-                        RetrievalEvalCase(
-                            query=query,
-                            relevant_source_ids={document.source_id},
-                            case_type="exact_citation_lookup",
-                            expected_source_class=document.source_class,
-                        )
+                existing = exact_cases_by_query.get(query)
+                if existing is None:
+                    exact_cases_by_query[query] = RetrievalEvalCase(
+                        query=query,
+                        relevant_source_ids={document.source_id},
+                        case_type="exact_citation_lookup",
+                        expected_source_class=document.source_class,
                     )
                     seen_queries.add(query)
+                else:
+                    # Multiple official index rows may represent the same rule
+                    # or citation. Any equivalent source row is relevant; do
+                    # not manufacture a miss by selecting one arbitrary ID.
+                    existing.relevant_source_ids.add(document.source_id)
             for label in document.issue_labels[:1]:
                 query = label.replace("_", " ")
                 key = f"issue:{query}:{document.source_id}"
@@ -187,7 +198,7 @@ class RetrievalSmokeEvalRunner:
                         )
                     )
                     seen_queries.add(key)
-        cases = exact_cases + issue_cases
+        cases = list(exact_cases_by_query.values()) + issue_cases
         return cases[:cap] if cap is not None else cases
 
     def _write_progress(

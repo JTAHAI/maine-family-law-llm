@@ -1,0 +1,35 @@
+{
+  "activation": "materialize_verify_then_atomic_pointer",
+  "active_pointer": "authority_product/ACTIVE_BUILD.json",
+  "allow_paths_outside_data_root": false,
+  "allow_symlinks": false,
+  "api": {
+    "caller_supplied_authority_metadata_admitted": false,
+    "citation_text_max_characters": 100000,
+    "expose_absolute_paths": false,
+    "json_max_bytes": 67108864,
+    "jsonl_line_max_bytes": 2097152,
+    "jsonl_row_maximum": 250000,
+    "source_text_max_characters": 50000,
+    "verification_claim_maximum": 128,
+    "verification_quote_maximum": 128,
+    "verification_source_maximum": 64,
+    "verification_text_max_characters": 200000
+  },
+  "build_manifest": "authority_product/builds/{build_id}/authority_product_manifest.json",
+  "external_data_root_required": true,
+  "hash_algorithm": "sha256",
+  "materialize_derived_artifacts": true,
+  "materialize_source_snapshots": true,
+  "max_artifact_count": 250000,
+  "max_control_file_bytes": 67108864,
+  "required_control_artifacts": [
+    "official_authority_store/source_manifest.json",
+    "parsed_authority_store/parsed_authority_manifest.json",
+    "authority_layer/authority_layer_report.json",
+    "embedding_store/retrieval_index_manifest.json",
+    "source_update_report.json"
+  ],
+  "schema_version": "1.1",
+  "version": "7.0.0"
+}

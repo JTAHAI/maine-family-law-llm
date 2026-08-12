@@ -19,7 +19,7 @@
     "D:\\tmp\\maine-family-law-llm-post-ga-quality-hardening\\release_evidence"
   ],
   "forbidden_source_paths_present": [],
-  "generated_at": "2026-06-14T21:43:43.059186+00:00",
+  "generated_at": "2026-08-09T19:07:52.776054+00:00",
   "interpretation": "Reboot-safe means the source tree, required scripts/configs, external data-root layout, write permissions, and PASS_CHANGES-only TXT discipline are valid for local testing. It does not mean legal production readiness; live official authority, attorney-reviewed evals, real metrics, pilot/security evidence, and signoffs are still required.",
   "networked_collection_commands": [
     "py -3.11 scripts\\collect-enterprise-resources.py --data-root C:\\dev\\ME_FM_LLM_data",
@@ -40,7 +40,7 @@
   "production_legal_ready": false,
   "python_version": "3.14.3",
   "reboot_safe_for_local_testing": true,
-  "repo_root": "D:\\dev\\maine-family-law-llm-universal-full-case-builder",
+  "repo_root": "D:\\dev\\Maine-Family-Law-LLM-v6.0.3",
   "required_files_missing": [],
   "status": "pass",
   "txt_files": [

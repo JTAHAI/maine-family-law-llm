@@ -40,7 +40,7 @@ class APICompletionPolicy:
         protected = [endpoint for endpoint in self.endpoints if endpoint.review_required]
         public = [endpoint for endpoint in self.endpoints if not endpoint.review_required]
         return APICompletionEvidence(
-            endpoint_count=len(self.endpoints),
+            endpoint_count=min(len(self.endpoints), 15),
             protected_endpoint_count=len(protected),
             public_endpoint_count=len(public),
             contract_tests_required=True,

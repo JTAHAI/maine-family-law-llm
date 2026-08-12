@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
 
 from legal.connectors.base import ParserAuditEvent
 from legal.connectors.html_utils import collect_links_and_text

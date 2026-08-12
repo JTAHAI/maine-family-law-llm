@@ -242,6 +242,23 @@ class NetworkedSourceGateAuditor:
             source_class = str(row.get("source_class") or row.get("class") or "unknown")
             source_counts[source_class] = source_counts.get(source_class, 0) + 1
 
+        # Federal family-law sources are collected under research_resources rather
+        # than copied into the Maine authority manifest.  Count only successfully
+        # downloaded entries here so a failed (or merely planned) resource cannot
+        # satisfy the external-source gate.
+        research_manifest_path = self.data_root / "research_resources" / "resource_manifest.json"
+        if research_manifest_path.is_file():
+            try:
+                research_rows = json.loads(research_manifest_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                research_rows = []
+            if isinstance(research_rows, list):
+                for row in research_rows:
+                    if not isinstance(row, dict) or row.get("status") != "downloaded":
+                        continue
+                    source_class = str(row.get("source_class") or "unknown")
+                    source_counts[source_class] = source_counts.get(source_class, 0) + 1
+
         minimum_total = int(self.policy.get("minimum_total_sources", 0))
         if len(sources) < minimum_total:
             blockers.append("minimum_total_sources_not_met")

@@ -1,0 +1,22 @@
+{
+  "schema_version": "maine_findings_forms_policy_v1",
+  "product_version": "7.0.0",
+  "local_only": true,
+  "review_required": true,
+  "original_forms_immutable": true,
+  "official_pdf_completion_claim_allowed": false,
+  "filing_ready_claim_allowed": false,
+  "authority_source": "verified_active_immutable_generation",
+  "unknown_or_stale_form_blocks": true,
+  "missing_best_interest_factor_blocks_when_material": true,
+  "third_party_parenting_decision_delegation_blocks": true,
+  "pfa_family_independent_analysis_required": true,
+  "artifacts": [
+    "maine-findings-forms-review.json",
+    "maine-findings-forms-review.html",
+    "maine-findings-forms-receipt.json",
+    "form-working-copy.json",
+    "form-working-copy.txt",
+    "form-completion-receipt.json"
+  ]
+}

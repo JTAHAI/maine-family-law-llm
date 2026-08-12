@@ -1,0 +1,31 @@
+{
+  "version": "2.0-v5.16.0",
+  "stage": "attorney_only_sandbox_operations",
+  "minimum_eligible_reviewers": 2,
+  "minimum_completed_sessions": 2,
+  "minimum_completed_reviews": 12,
+  "maximum_review_questions": 48,
+  "allowed_data": [
+    "synthetic",
+    "public_authority"
+  ],
+  "forbidden_data": [
+    "real_private_matter",
+    "sealed_record",
+    "juvenile_record",
+    "client_confidential_material",
+    "private_training_data"
+  ],
+  "required_external_attestations": [
+    "identity_audit",
+    "program_signoff"
+  ],
+  "review_dispositions": [
+    "approved_for_sandbox",
+    "needs_fix",
+    "needs_more_authority",
+    "unsafe_blocker",
+    "not_in_scope"
+  ],
+  "exit_rule": "Operational evidence may become ready for the external Pass 48 launch gate only after the minimum real reviewer activity, complete assigned-review coverage, no unresolved safety blockers, and external identity/program attestations. The application never independently proves attorney identity or completes Pass 48."
+}

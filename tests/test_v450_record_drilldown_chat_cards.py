@@ -22,7 +22,6 @@ import zipfile
 from email.message import EmailMessage
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 
@@ -83,14 +82,14 @@ def _client_for(monkeypatch, case_root: Path, rows: list[dict]) -> TestClient:
 
 def test_v450_version_and_store_package_advance() -> None:
     """Version constants must reflect the current release while retaining v4.5 drill-down behavior."""
-    assert VERSION == "5.2.0"
-    assert PACKAGE_VERSION == "5.2.0.0"
-    assert BUILD_NUMBER == 29
-    assert UI_PASS_MARKER == "v5.2.0-answer-first-evidence-security"
+    assert VERSION == "7.0.0"
+    assert PACKAGE_VERSION == "7.0.0.0"
+    assert BUILD_NUMBER == 52
+    assert UI_PASS_MARKER == "v7.0.0-ga"
     identity = json.loads(
         (Path(__file__).parents[1] / "store" / "msix" / "identity.example.json").read_text(encoding="utf-8")
     )
-    assert identity["package_version"] == "5.2.0.0"
+    assert identity["package_version"] == "7.0.0.0"
 
 
 # ---------------------------------------------------------------------------

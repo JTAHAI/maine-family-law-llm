@@ -186,7 +186,19 @@ class EnterpriseDataProductAuditor:
     def _scan_for_forbidden_runtime_artifacts(self) -> list[str]:
         patterns = self.policy.get("runtime_artifacts_forbidden_in_repo", [])
         findings: list[str] = []
-        ignored_dirs = {".git", ".pytest_cache", "__pycache__"}
+        # Generated release evidence and build/install staging are audited by
+        # the package-specific private-data scanner. They are not source-tree
+        # contents and must not make this repository-boundary gate depend on
+        # whatever synthetic E2E run happened most recently.
+        ignored_dirs = {
+            ".git",
+            ".pytest_cache",
+            ".venv",
+            "__pycache__",
+            "build",
+            "dist",
+            "node_modules",
+        }
         for path in self.project_root.rglob("*"):
             rel = path.relative_to(self.project_root).as_posix()
             if any(part in ignored_dirs for part in path.parts):

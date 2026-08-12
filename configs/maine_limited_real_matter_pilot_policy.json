@@ -1,16 +1,23 @@
 {
-  "version": "1.0-pass49",
-  "stage": "limited_real_matter_pilot",
+  "version": "2.0-v7.0.0",
+  "product_version": "7.0.0",
+  "stage": "limited_real_matter_pilot_operations",
+  "minimum_matter_count": 1,
+  "minimum_daily_reviews_per_matter": 1,
+  "maximum_matter_count": 100,
   "allowed_users": "limited_named_attorney_tenant_group_only",
   "required_controls": [
+    "external_pass48_evidence_hash",
     "explicit_privacy_consent",
     "limited_tenant_allowlist",
-    "matter_level_isolation",
-    "local_encryption",
+    "matter_level_isolation_evidence",
+    "local_encryption_evidence",
+    "retention_policy",
     "human_review_required",
     "export_restrictions",
     "incident_process",
-    "daily_pilot_review"
+    "daily_pilot_review",
+    "attorney_signoff"
   ],
   "required_work_product_artifacts": [
     "issue_tree",
@@ -20,18 +27,27 @@
     "authority_matrix",
     "red_flag_report"
   ],
+  "permanently_blocking_events": [
+    "data_leakage",
+    "cross_matter_access",
+    "unsupported_filing_ready_export_attempt"
+  ],
   "forbidden_conditions": [
     "private_data_training_enabled",
     "data_leakage_detected",
+    "cross_matter_access_detected",
     "unsupported_filing_ready_export",
-    "open_incident_without_blocker",
+    "open_incident",
     "missing_attorney_signoff"
   ],
   "exit_criteria": [
     "no_data_leakage",
+    "no_cross_matter_access",
     "no_unsupported_filing_ready_exports",
-    "matter_workflows_produce_useful_artifacts",
+    "matter_workflows_produce_required_artifacts",
+    "daily_human_review_complete",
     "pilot_attorneys_sign_off_or_list_blockers"
   ],
-  "launch_rule": "Real-matter pilot stays limited, consented, encrypted, isolated, and human-reviewed; it cannot graduate to GA without release-candidate signoffs."
+  "evidence_boundary": "The application records opaque IDs, hashes, enumerated outcomes, and control evidence only. It does not store private matter prose in the pilot ledger, independently validate consent or licensure, or complete Pass 49.",
+  "launch_rule": "The real-matter pilot stays limited, explicitly consented, encrypted, tenant-isolated, export-restricted, incident-monitored, and human-reviewed. Software readiness remains separate from external Pass 49 evidence."
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -284,22 +285,31 @@ class ReleaseLockfileBuilder:
         ".git",
         ".pytest_cache",
         ".ruff_cache",
+        ".mypy_cache",
+        ".tox",
         ".venv",
         ".mfl_work",
         "__pycache__",
         "node_modules",
         "dist",
+        "build",
         ".proofs",
         "runtime",
+        "runtime_data",
         "uploads",
         "corpora",
         "vectorstores",
         "official_authority_store",
         "parsed_authority_store",
+        "authority_product",
         "embedding_store",
+        "indexes",
+        "eval_data",
         "eval_store",
         "matter_store",
         "model_store",
+        "model_cache",
+        "models",
         "model_registry",
         "audit_store",
         "ME_FM_LLM_data",
@@ -315,22 +325,32 @@ class ReleaseLockfileBuilder:
 
     def _artifacts(self) -> list[dict[str, Any]]:
         artifacts: list[dict[str, Any]] = []
-        for path in sorted(self.project_root.rglob("*")):
-            if not path.is_file():
-                continue
-            rel = path.relative_to(self.project_root)
-            rel_posix = rel.as_posix()
-            if rel_posix in self.excluded_files or path.name in self.excluded_files:
-                continue
-            if any(part in self.excluded_parts for part in rel.parts):
-                continue
-            artifacts.append(
-                {
-                    "path": rel_posix,
-                    "sha256": _sha256_file(path),
-                    "bytes": path.stat().st_size,
-                }
+        for directory, child_dirs, filenames in os.walk(self.project_root, topdown=True):
+            directory_path = Path(directory)
+            child_dirs[:] = sorted(
+                name
+                for name in child_dirs
+                if name not in self.excluded_parts
+                and not (directory_path / name).is_symlink()
             )
+            for filename in sorted(filenames):
+                path = directory_path / filename
+                if path.is_symlink() or not path.is_file():
+                    continue
+                rel = path.relative_to(self.project_root)
+                rel_posix = rel.as_posix()
+                if rel_posix in self.excluded_files or path.name in self.excluded_files:
+                    continue
+                if any(part in self.excluded_parts for part in rel.parts):
+                    continue
+                artifacts.append(
+                    {
+                        "path": rel_posix,
+                        "sha256": _sha256_file(path),
+                        "bytes": path.stat().st_size,
+                    }
+                )
+        artifacts.sort(key=lambda item: item["path"])
         return artifacts
 
     @staticmethod

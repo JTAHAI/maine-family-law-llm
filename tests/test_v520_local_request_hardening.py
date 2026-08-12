@@ -14,7 +14,11 @@ from maine_family_law_llm import api
 
 
 def test_loopback_firewall_allows_local_browser_and_test_client() -> None:
-    for host, client in (("127.0.0.1:8000", "127.0.0.1"), ("[::1]:8000", "::1"), ("testserver", "testclient")):
+    for host, client in (
+        ("127.0.0.1:8000", "127.0.0.1"),
+        ("[::1]:8000", "::1"),
+        ("testserver", "testclient"),
+    ):
         decision = evaluate_local_request(
             method="GET",
             path="/health",
@@ -44,6 +48,25 @@ def test_loopback_firewall_blocks_rebinding_cross_origin_and_cross_site_post() -
     )
     assert cross_origin.allowed is False
     assert cross_origin.code == "cross_origin_blocked"
+
+    cross_port_loopback = evaluate_local_request(
+        method="POST",
+        path="/ask",
+        client_host="127.0.0.1",
+        host_header="127.0.0.1:8000",
+        origin_header="http://127.0.0.1:8111",
+    )
+    assert cross_port_loopback.allowed is False
+    assert cross_port_loopback.code == "cross_origin_blocked"
+
+    same_origin_loopback = evaluate_local_request(
+        method="POST",
+        path="/ask",
+        client_host="127.0.0.1",
+        host_header="127.0.0.1:8000",
+        origin_header="http://127.0.0.1:8000",
+    )
+    assert same_origin_loopback.allowed is True
 
     cross_site = evaluate_local_request(
         method="POST",

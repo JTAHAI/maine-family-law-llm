@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "presets": [
+    {
+      "preset_id": "quick_local_second_opinion",
+      "label": "Quick local second opinion",
+      "description": "Two deterministic mock workers, one cross-review pass, then verification.",
+      "worker_set": ["mock_scope_scout", "mock_counterpoint_scout"],
+      "worker_roles": ["scope_scout", "counterpoint_scout"],
+      "source_lanes": ["legal_authority", "private_record"],
+      "max_rounds": 3,
+      "tool_call_limit": 8,
+      "required_tools": ["authority.search", "verification.check_claims"]
+    },
+    {
+      "preset_id": "full_local_omission_hunt",
+      "label": "Full local omission hunt",
+      "description": "Multiple deterministic mock workers with critique, rebuttal, omission hunt, and verification.",
+      "worker_set": ["mock_scope_scout", "mock_counterpoint_scout", "mock_record_checker", "mock_omission_hunter"],
+      "worker_roles": ["scope_scout", "counterpoint_scout", "record_checker", "omission_hunter"],
+      "source_lanes": ["legal_authority", "private_record", "deterministic_verifier_output"],
+      "max_rounds": 5,
+      "tool_call_limit": 12,
+      "required_tools": ["authority.search", "authority.verify_citation", "authority.verify_quote", "records.search", "evidence.map_claim", "verification.check_claims"]
+    },
+    {
+      "preset_id": "authority_challenge",
+      "label": "Authority challenge",
+      "description": "Verified legal packet, contrary authority, stale-law, and procedural-defect challenge.",
+      "worker_set": ["mock_scope_scout", "mock_counterpoint_scout", "mock_contrary_authority", "mock_verifier"],
+      "worker_roles": ["scope_scout", "counterpoint_scout", "contrary_authority", "verifier"],
+      "source_lanes": ["legal_authority"],
+      "max_rounds": 4,
+      "tool_call_limit": 10,
+      "required_tools": ["authority.search", "authority.get_span", "authority.verify_citation", "verification.check_claims"]
+    },
+    {
+      "preset_id": "record_contradiction_review",
+      "label": "Record contradiction review",
+      "description": "Selected record slices, support, contradiction, alternative explanation, and missing context.",
+      "worker_set": ["mock_record_checker", "mock_counterpoint_scout", "mock_missing_context_hunter"],
+      "worker_roles": ["record_checker", "counterpoint_scout", "missing_context_hunter"],
+      "source_lanes": ["private_record", "deterministic_verifier_output"],
+      "max_rounds": 4,
+      "tool_call_limit": 10,
+      "required_tools": ["records.search", "records.get_slice", "records.get_metadata", "evidence.map_claim", "verification.check_claims"]
+    }
+  ]
+}

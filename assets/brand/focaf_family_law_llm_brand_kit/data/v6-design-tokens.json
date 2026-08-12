@@ -1,0 +1,20 @@
+{
+  "name": "Maine Family Law LLM v6 visual refresh",
+  "version": "7.0.0",
+  "source": "configs/maine_v6_visual_design_policy.json",
+  "tokens": {
+    "atlantic_950": "#071d27",
+    "atlantic_900": "#0b2630",
+    "atlantic_700": "#18526a",
+    "tide_500": "#2f8ca3",
+    "pine_700": "#155a4d",
+    "pine_500": "#2a8872",
+    "gold_500": "#c68b34",
+    "berry_600": "#963e56",
+    "paper_50": "#fcfbf8",
+    "paper_100": "#f5f1e9",
+    "ink_950": "#102129",
+    "ink_650": "#465b63"
+  },
+  "notes": "Atlantic, pine, tide, warm-paper, gold, and berry accents; system fonts only."
+}

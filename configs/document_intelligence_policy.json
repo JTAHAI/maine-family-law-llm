@@ -1,0 +1,41 @@
+{
+  "schema_version": "maine_document_intelligence_policy_v1",
+  "product_version": "7.0.0",
+  "default_mode": "local_only",
+  "automatic_install": false,
+  "automatic_model_download": false,
+  "originals_immutable": true,
+  "derived_artifacts_external_to_repo": true,
+  "source_size_limit_bytes": 134217728,
+  "structured_block_limit": 20000,
+  "text_character_limit": 8000000,
+  "adapters": {
+    "docling": {
+      "package_range": ">=2.114.0,<3",
+      "license": "MIT",
+      "model_licenses_require_separate_review": true,
+      "mode": "isolated_subprocess_offline",
+      "required": false
+    },
+    "presidio": {
+      "package_range": ">=2.2.363,<3",
+      "license": "MIT",
+      "mode": "isolated_subprocess_offline",
+      "required": false,
+      "complete_detection_guaranteed": false
+    },
+    "ocrmypdf": {
+      "package_range": ">=17.8.1,<18",
+      "license": "MPL-2.0",
+      "mode": "isolated_subprocess_explicit_approval",
+      "required": false,
+      "overwrite_original": false
+    }
+  },
+  "network_policy": {
+    "worker_python_network_denied": true,
+    "proxy_environment_cleared": true,
+    "remote_endpoints_allowed": []
+  },
+  "review_required": true
+}

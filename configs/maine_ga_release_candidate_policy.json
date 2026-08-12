@@ -1,0 +1,23 @@
+{
+  "policy_name": "maine_ga_release_candidate_policy",
+  "version": "1.0-v5.18.0",
+  "product_version": "5.18.0",
+  "pass_number": 50,
+  "required_artifact_types": [
+    "source_repo_zip",
+    "external_data_build_manifest",
+    "parsed_authority_manifest",
+    "retrieval_index_manifest",
+    "gold_eval_pack_manifest",
+    "release_metrics_json",
+    "security_evidence_packet",
+    "pilot_evidence_packet",
+    "rollback_package",
+    "release_notes"
+  ],
+  "required_signoff_roles": ["security", "legal", "product", "ops"],
+  "blocking_severities": ["P0", "P1"],
+  "external_evidence_required": true,
+  "application_may_self_certify_pass50": false,
+  "private_matter_content_allowed": false
+}

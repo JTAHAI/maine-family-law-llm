@@ -9,7 +9,7 @@ from typing import Any
 from legal.connectors.base import ParserAuditEvent, RetrievedSource, SourceFetcher, SourceTarget
 from legal.connectors.http_fetcher import OfficialSourceFetchError
 from legal.connectors.maine_forms import parse_form_text, parse_forms_index
-from legal.connectors.maine_revisor import parse_revisor_html
+from legal.connectors.maine_revisor import parse_revisor_html, parse_revisor_section_html
 from legal.connectors.maine_rules import parse_rules_index, parse_rules_text
 from legal.connectors.pdf_text import extract_pdf_text
 from legal.connectors.maine_sjc_opinions import parse_law_court_opinion_index, parse_law_court_opinion_text
@@ -145,7 +145,12 @@ class OfficialAuthorityIngestor:
 
         text = retrieved.text
         if target.parser_name in {"maine_revisor_title_index", "maine_revisor_section"}:
-            document, audit = parse_revisor_html(text, source_id=source_id, url=target.url)
+            if target.parser_name == "maine_revisor_section":
+                document, audit = parse_revisor_section_html(
+                    text, source_id=source_id, url=target.url
+                )
+            else:
+                document, audit = parse_revisor_html(text, source_id=source_id, url=target.url)
             canonical_count = len(getattr(document, "section_links", [])) or 1
             freshness_status = document.retrieved_freshness_status
             examples = getattr(document, "section_links", [])[:3]
@@ -224,6 +229,10 @@ class OfficialAuthorityIngestor:
                 "content_type": retrieved.content_type,
                 "status_code": retrieved.status_code,
                 "final_url": retrieved.final_url,
+                "byte_count": len(retrieved.content),
+                "previous_sha256": snapshot.previous_sha256 or None,
+                "fetch_metadata": retrieved.fetch_metadata,
+                "snapshot_relative_path": str(Path(snapshot.raw_path).relative_to(self.snapshotter.base_dir).as_posix()),
                 "expected_content_type": target.expected_content_type,
                 "freshness_strategy": target.freshness_strategy,
             },
@@ -233,7 +242,7 @@ class OfficialAuthorityIngestor:
             snapshot_path=str(snapshot.raw_path),
             parser_audit=audit,
             canonical_count=canonical_count,
-            canonical_examples=examples,
+            canonical_examples=[{**example, "previous_sha256": snapshot.previous_sha256 or None} for example in examples],
         )
 
     def ingest_all(

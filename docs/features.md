@@ -1,80 +1,116 @@
 ---
 layout: default
-title: What it does
-description: Capabilities and workflow of the Maine Family Law LLM local-first legal-information workbench.
+title: Verified v7 Features
+description: Evidence-backed public scope of the Maine Family Law LLM v7 local-first workbench.
 permalink: /features/
 ---
 
 <section class="page-hero">
   <div class="shell">
-    <div class="eyebrow">What it does</div>
-    <h1>A structured workbench for Maine family-law records.</h1>
-    <p class="lead">The project combines local document organization, Maine-specific issue spotting, source retrieval, citation review, evidence mapping, and review-required drafting. It is designed to show its work rather than hide behind a polished answer.</p>
+    <div class="eyebrow">Verified v7 public scope</div>
+    <h1>Capabilities are public only after the full path works.</h1>
+    <p class="lead">A backend class, API route, navigation label, static shell, or focused unit test is not enough. Public v7 features require coherent source and frozen-runtime behavior with matter protection, provenance, review-required status, and tests.</p>
   </div>
 </section>
 
 <div class="content-wrap">
-  <h2>Core user workflows</h2>
+  <h2>Records and privacy</h2>
 
   <div class="grid-2">
     <article class="card">
-      <h3>Ask a Maine family-law question</h3>
-      <p>Searches available authority and returns a structured answer with source cards, source scope, freshness information, and review warnings.</p>
+      <h3>Matter and corpus workspaces</h3>
+      <p>Create, select, reopen, and isolate a user-controlled matter/corpus. The active context remains visible and wrong-matter access fails closed.</p>
     </article>
     <article class="card">
-      <h3>Upload and review documents</h3>
-      <p>Identifies likely issues, procedural posture, missing information, privacy concerns, and red flags from the files the user selects.</p>
+      <h3>Mixed-record import</h3>
+      <p>Inventory selected PDF, DOCX, text, image, and communication records with hashes, parser state, privacy status, and source identity.</p>
     </article>
     <article class="card">
-      <h3>Build a timeline</h3>
-      <p>Extracts events and dates into a reviewable chronology that links back to the original document and text span.</p>
+      <h3>OCR searchable derivatives</h3>
+      <p>Run local OCR against image-only records, preserve the original, and create a distinct searchable derivative and receipt.</p>
     </article>
     <article class="card">
-      <h3>Map facts to evidence</h3>
-      <p>Connects a factual statement to supporting or conflicting records, source locations, dates, and confidence notes.</p>
+      <h3>Document intelligence</h3>
+      <p>Use deterministic parsing and packaged local engines for structure and privacy review without a silent runtime download.</p>
     </article>
     <article class="card">
-      <h3>Review citations and quotes</h3>
-      <p>Parses legal citations, checks whether sources exist, verifies quote spans, and reports missing or unresolved support.</p>
+      <h3>Privacy and redaction</h3>
+      <p>Review sensitive-data findings before producing a separate redacted derivative. Originals remain immutable.</p>
     </article>
     <article class="card">
-      <h3>Create working drafts</h3>
-      <p>Produces review-required motions, affidavits, letters, objections, proposed findings, checklists, and plain-language explainers.</p>
+      <h3>Duplicate and changed-copy review</h3>
+      <p>Distinguish exact duplicates from changed copies using hashes and bounded comparisons rather than filename assumptions.</p>
     </article>
   </div>
 
-  <h2>Designed outputs</h2>
+  <h2>Research and exact sources</h2>
+
+  <div class="grid-2">
+    <article class="card">
+      <h3>Ask Maine Family Law</h3>
+      <p>Research against an admitted external official-authority generation. When authority is unavailable or stale, current-law wording fails closed.</p>
+    </article>
+    <article class="card">
+      <h3>Source cards and exact preview</h3>
+      <p>Open the official source, freshness and jurisdiction metadata, citation, and exact supporting span instead of relying on a summary alone.</p>
+    </article>
+    <article class="card">
+      <h3>Citation and pinpoint resolution</h3>
+      <p>Resolve real Maine statutes, subdivisions, court rules, current forms, and Law Court opinions. Fake citations return not found.</p>
+    </article>
+    <article class="card">
+      <h3>Quote and claim verification</h3>
+      <p>Expose exact, normalized, fuzzy-review-required, and not-found quote states plus supported, partial, unsupported, contradicted, stale, and wrong-jurisdiction claim states.</p>
+    </article>
+  </div>
+
+  <h2>Drafting and review</h2>
+
+  <div class="grid-2">
+    <article class="card">
+      <h3>Review-required drafts</h3>
+      <p>Create working drafts from selected authority and evidence while keeping unsupported claims, citations, privacy, and human-review blockers visible.</p>
+    </article>
+    <article class="card">
+      <h3>Immutable revision history</h3>
+      <p>Preserve the original and each committed revision. Proposed edits remain distinct until accepted or rejected.</p>
+    </article>
+    <article class="card">
+      <h3>Revision comparison</h3>
+      <p>Inspect additions and removals before accepting a working revision.</p>
+    </article>
+    <article class="card">
+      <h3>Review packets and receipts</h3>
+      <p>Generate packets that retain review-required status, exact blockers, artifact receipts, and restart-safe state.</p>
+    </article>
+  </div>
+
+  <h2>Fail-closed safeguards</h2>
 
   <ul class="check-list">
-    <li>Issue tree and procedural-posture summary</li>
-    <li>Authority matrix with source cards</li>
-    <li>Fact-to-evidence map and case timeline</li>
-    <li>Red-flag report and missing-record checklist</li>
-    <li>Citation and quote-span verification tables</li>
-    <li>Draft packet and unsupported-claim report</li>
-    <li>Filing-readiness blocker report</li>
-    <li>Human-review checklist and plain-language client explainer</li>
+    <li>Local-only behavior is the default.</li>
+    <li>Official authority, private evidence, and model analysis remain separate lanes.</li>
+    <li>Private matter records are not legal authority.</li>
+    <li>A verifier error cannot produce a green or filing-ready status.</li>
+    <li>Unsupported claims, fake citations, stale authority, mismatched quotes, incomplete privacy review, and missing human review remain blockers.</li>
+    <li>Backup and restore use synthetic acceptance fixtures; private matter data stays outside the repository.</li>
   </ul>
 
-  <h2>Maine-specific issue coverage</h2>
+  <h2>Hidden or deferred</h2>
 
-  <p>The project ontology includes topics such as divorce, parental rights and responsibilities, primary residence, contact schedules, child support, parentage, post-judgment motions, enforcement, contempt, protection from abuse, grandparent visitation, guardianship, GAL issues, UCCJEA jurisdiction, Rule 52 findings, best-interest factor gaps, appeal preservation, transcript problems, Maine eCourts access, and third-party delegation concerns.</p>
-
-  <h2>Authority before generation</h2>
-
-  <div class="callout callout--teal">
-    <p><strong>The generator does not decide whether legal authority is valid.</strong> Authority status comes from the source registry, citation resolver, freshness checks, quote verifier, claim-support checks, and human review.</p>
+  <div class="callout">
+    <p><strong>Not advertised in v7:</strong> slices 21–44, timeline correction, claim-disposition, current guided forms, installed tracked-DOCX, whole-matter command center/snapshots, and missing-attachment coverage. Their code may remain for development and non-destructive data compatibility, but that is not a production feature claim.</p>
   </div>
 
-  <h2>Current release truth</h2>
+  <h2>Package qualification boundary</h2>
 
-  <p>The public repository already supports local Windows launch, corpus-building workflows, source-backed chat surfaces, evidence-oriented work products, and release-control evidence. The project remains under active development. Microsoft Store packaging, real external official-source builds, attorney-reviewed evaluation packs, security hardening, and production release gates must be completed and measured before any claim of general availability.</p>
+  <p>The v7 source, frozen runtime, authority product, filing gate, privacy checks, and exact MSIX package audits passed. Clean isolated AppX installation and WACK did not run in the available environment, so v7 remains blocked from an upload-ready claim.</p>
 
   <div class="cta-band">
     <div>
-      <h2>Inspect the implementation.</h2>
-      <p>The public repository contains code, policies, tests, release evidence, and the roadmap toward enterprise-grade legal-source verification.</p>
+      <h2>Inspect the release evidence boundary.</h2>
+      <p>See what passed, what was not executed, and what must happen before v7 can move to Partner Center.</p>
     </div>
-    <a class="button button--warm" href="https://github.com/JTAHAI/maine-family-law-llm">Open GitHub</a>
+    <a class="button button--warm" href="{{ '/release-status/' | relative_url }}">Read v7 status</a>
   </div>
 </div>

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import shutil
 import subprocess
 
 
@@ -79,9 +80,30 @@ def test_only_pass_changes_txt_is_packaged() -> None:
     ]
 
 
-def test_strict_doctor_marks_repo_safe_to_push() -> None:
+def test_strict_doctor_marks_repo_safe_to_push(tmp_path: Path) -> None:
+    disposable_root = tmp_path / "repo-copy"
+    shutil.copytree(
+        ROOT,
+        disposable_root,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".venv",
+            "venv",
+            "__pycache__",
+            "dist",
+            "build",
+        ),
+    )
     subprocess.run(
-        ["python", "scripts/clean-local-artifacts.py", "--repo-root", str(ROOT), "--include-venv"],
+        [
+            "python",
+            "scripts/clean-local-artifacts.py",
+            "--repo-root",
+            str(disposable_root),
+            "--include-venv",
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -89,7 +111,7 @@ def test_strict_doctor_marks_repo_safe_to_push() -> None:
         check=False,
     )
     result = subprocess.run(
-        ["python", "scripts/doctor-local-repo.py", "--repo-root", str(ROOT), "--json"],
+        ["python", "scripts/doctor-local-repo.py", "--repo-root", str(disposable_root), "--json"],
         cwd=ROOT,
         text=True,
         capture_output=True,

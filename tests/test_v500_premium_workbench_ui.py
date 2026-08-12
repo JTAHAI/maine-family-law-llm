@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_v500_release_identity_and_store_version_are_aligned() -> None:
-    assert VERSION == "5.2.0"
-    assert PACKAGE_VERSION == "5.2.0.0"
-    assert BUILD_NUMBER == 29
-    assert UI_PASS_MARKER == "v5.2.0-answer-first-evidence-security"
-    assert UI_VERSION.endswith("-b29")
+    assert VERSION == "7.0.0"
+    assert PACKAGE_VERSION == "7.0.0.0"
+    assert BUILD_NUMBER == 52
+    assert UI_PASS_MARKER == "v7.0.0-ga"
+    assert UI_VERSION.endswith("-b52")
     identity_path = ROOT / "store/msix/identity.local.json"
     if not identity_path.is_file():
         identity_path = ROOT / "store/msix/identity.example.json"
@@ -79,11 +79,13 @@ def test_v500_css_has_desktop_density_and_responsive_drawer() -> None:
 
 def test_v500_javascript_renders_rich_chat_sources_and_clickable_records() -> None:
     js = read_workbench_asset("workbench.js")
-    assert "function renderChatSourceSummary(payload)" in js
+    assert "function renderInlineEvidence(payload)" in js
+    assert "function renderRecordGroups(groups)" in js
     assert "function addMessage(role, text, payload = null)" in js
     assert "renderRecordGroups(payload.record_groups)" in js
     assert "bindRecordOpenActions(wrapper)" in js
-    assert "data-chat-open-evidence" in js
+    assert "data-inline-open-workspace" in js
+    assert "data-message-evidence-jump" in js
     assert "syncResponsiveLayout({initial: true})" in js
     assert "window.matchMedia('(min-width: 960px)')" in js
     assert "window.matchMedia('(min-width: 1360px)')" in js

@@ -1,0 +1,44 @@
+{
+  "schema_version": "maine_release_pilot_hardening_policy_v1",
+  "release": {
+    "external_evidence_root_env": "MAINE_FAMILY_LAW_RELEASE_EVIDENCE_ROOT",
+    "required_files": [
+      "sbom.cyclonedx.json",
+      "sbom.spdx.json",
+      "grype.json",
+      "pip-audit.json",
+      "semgrep.json",
+      "msix-qualification.json",
+      "backup-restore.json"
+    ],
+    "block_critical_vulnerabilities": true,
+    "block_high_vulnerabilities": true,
+    "signed_msix_required_for_store": true,
+    "wack_pass_required_for_store": true
+  },
+  "observability": {
+    "local_only": true,
+    "remote_exporters_enabled": false,
+    "private_payload_logging_enabled": false,
+    "max_rows": 10000,
+    "max_bytes": 5242880
+  },
+  "backup_restore": {
+    "external_backup_root_env": "MAINE_FAMILY_LAW_BACKUP_ROOT",
+    "restore_mode": "isolated_temporary_rehearsal",
+    "original_matter_mutation_allowed": false,
+    "symlinks_allowed": false
+  },
+  "attorney_sandbox": {
+    "external_pilot_root_env": "MAINE_FAMILY_LAW_PILOT_ROOT",
+    "allowed_data": [
+      "synthetic",
+      "public_authority"
+    ],
+    "real_matter_allowed": false,
+    "private_data_allowed_for_training": false,
+    "external_identity_and_pilot_audit_required": true,
+    "source_workbench_records_count_as_ga_evidence": false
+  },
+  "product_version": "7.0.0"
+}

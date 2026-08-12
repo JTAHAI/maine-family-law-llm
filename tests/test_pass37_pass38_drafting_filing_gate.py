@@ -20,6 +20,7 @@ def _complete_payload():
     return {
         "review_required": True,
         "human_review_complete": True,
+        "privacy_review_complete": True,
         "authority_matrix": [_authority()],
         "citation_report": [
             {"citation": "19-A M.R.S. § 1653", "source_id": "statute-19a-1653", "status": "resolved"}
@@ -90,6 +91,7 @@ def test_pass38_gate_allows_only_when_all_mandatory_checks_are_proven_and_review
         "facts_mapped_to_evidence": True,
         "procedure_posture_checked": True,
         "forms_current": True,
+        "privacy_review_complete": True,
         "human_review_complete": True,
     }
     assert result["gate_report"]["immutable_report_hash"]
@@ -113,3 +115,18 @@ def test_pass38_gate_blocks_unsupported_claim_stale_form_and_attorney_override()
     assert "claim_not_supported:claim-bad" in result["blockers"]
     assert "stale_form:FM-001" in result["blockers"]
     assert result["gate_report"]["attorney_override"]["effect"] == "logged_only_export_remains_blocked_unless_all_gate_checks_pass"
+    assert result["blocked_export_explanation"] == result["blockers"]
+    assert result["blocker_panel"]["panel_title"] == "Filing gate blockers"
+    assert result["blocker_panel"]["immutable_report_hash"] == result["gate_report"]["immutable_report_hash"]
+
+
+def test_pass38_gate_accepts_workflow_blockers_and_keeps_exact_report_shape():
+    payload = _complete_payload()
+    payload["workflow_blockers"] = ["review_ledger_unverified", "active_reviewer_assignment_missing"]
+
+    result = FilingReadyGate().evaluate(payload)
+
+    assert result["filing_ready"] is False
+    assert "review_ledger_unverified" in result["blockers"]
+    assert "active_reviewer_assignment_missing" in result["blockers"]
+    assert result["blocker_panel"]["blockers"] == result["blockers"]

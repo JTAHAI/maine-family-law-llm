@@ -1,0 +1,394 @@
+{
+  "draft_review": {
+    "appellate_red_flags": [
+      "missing Rule 52 findings",
+      "unsupported best-interest findings"
+    ],
+    "blockers": [
+      "appellate_red_flag:missing Rule 52 findings",
+      "appellate_red_flag:unsupported best-interest findings"
+    ],
+    "export_status": "blocked",
+    "filing_ready": false,
+    "findings_review": null,
+    "human_review_checklist": [],
+    "missing_sections": [],
+    "ready_for_human_review": true,
+    "review_required": true
+  },
+  "findings_review": {
+    "blockers": [
+      "best_interest_factor_missing:child_age",
+      "best_interest_factor_missing:cooperation",
+      "best_interest_factor_missing:family_support",
+      "best_interest_factor_missing:history_of_care",
+      "best_interest_factor_missing:medical_needs",
+      "best_interest_factor_missing:other_relevant",
+      "best_interest_factor_missing:parent_capacity",
+      "best_interest_factor_missing:parent_relationship",
+      "best_interest_factor_missing:preference",
+      "best_interest_factor_missing:school_community",
+      "best_interest_factor_missing:sibling_relationships",
+      "best_interest_factor_missing:special_needs",
+      "best_interest_factor_missing:stability",
+      "best_interest_factor_missing:substance_use",
+      "contact_restriction_without_supported_findings",
+      "pfa_family_overlap_independent_analysis_missing",
+      "rule52:best_interest_analysis_too_sparse",
+      "rule52:findings_of_fact_section_missing"
+    ],
+    "contact_restriction_report": {
+      "candidate_record_spans": [],
+      "restriction_detected": true,
+      "restriction_spans": [
+        {
+          "end_offset": 119,
+          "start_offset": 81,
+          "terms": [
+            "supervised contact"
+          ],
+          "text": "Father shall have supervised contact."
+        }
+      ],
+      "restriction_terms": [
+        "supervised contact"
+      ],
+      "review_required": true,
+      "support_detected": false,
+      "support_spans": [],
+      "support_terms": []
+    },
+    "delegation_report": {
+      "delegation_detected": false,
+      "review_required": false,
+      "spans": []
+    },
+    "factor_coverage": {
+      "child_age": false,
+      "cooperation": false,
+      "domestic_abuse": true,
+      "family_support": false,
+      "history_of_care": false,
+      "medical_needs": false,
+      "other_relevant": false,
+      "parent_capacity": false,
+      "parent_relationship": false,
+      "preference": false,
+      "safety": true,
+      "school_community": false,
+      "sibling_relationships": false,
+      "special_needs": false,
+      "stability": false,
+      "substance_use": false
+    },
+    "factor_matrix": [
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "child_age",
+        "label": "child age",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "parent_relationship",
+        "label": "parent relationship",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "preference",
+        "label": "preference",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "stability",
+        "label": "stability",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "school_community",
+        "label": "school community",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "sibling_relationships",
+        "label": "sibling relationships",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "cooperation",
+        "label": "cooperation",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [
+          {
+            "end_offset": 81,
+            "matched_terms": [
+              "protection from abuse"
+            ],
+            "start_offset": 31,
+            "text": "The prior protection from abuse order is adopted."
+          }
+        ],
+        "factor_id": "domestic_abuse",
+        "label": "domestic abuse",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "addressed",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [
+          {
+            "end_offset": 119,
+            "matched_terms": [
+              "supervised contact"
+            ],
+            "start_offset": 81,
+            "text": "Father shall have supervised contact."
+          }
+        ],
+        "factor_id": "safety",
+        "label": "safety",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "addressed",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "medical_needs",
+        "label": "medical needs",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "special_needs",
+        "label": "special needs",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "history_of_care",
+        "label": "history of care",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "parent_capacity",
+        "label": "parent capacity",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "substance_use",
+        "label": "substance use",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "family_support",
+        "label": "family support",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      },
+      {
+        "does_not_prove": "A text match does not establish that the factor was legally sufficient, credible, or correctly weighed.",
+        "draft_spans": [],
+        "factor_id": "other_relevant",
+        "label": "other relevant",
+        "record_support_status": "no_candidate_span_found",
+        "review_required": true,
+        "status": "missing",
+        "supporting_record_spans": []
+      }
+    ],
+    "missing_best_interest_factors": [
+      "child_age",
+      "parent_relationship",
+      "preference",
+      "stability",
+      "school_community",
+      "sibling_relationships",
+      "cooperation",
+      "medical_needs",
+      "special_needs",
+      "history_of_care",
+      "parent_capacity",
+      "substance_use",
+      "family_support",
+      "other_relevant"
+    ],
+    "missing_findings": [
+      "findings_of_fact_section_missing",
+      "best_interest_analysis_too_sparse"
+    ],
+    "pfa_family_overlap_warning": "PFA facts are used in a family-law contact/residence context without an express independent family-case analysis.",
+    "proposed_findings_checklist": [
+      "Identify posture, requested relief, and governing Maine family-law authority.",
+      "Make express findings of fact tied to record evidence for each contested issue.",
+      "Address every best-interest factor material to parental rights, residence, and contact.",
+      "Explain any restriction on parent-child contact with exact evidence and safety findings.",
+      "Do not delegate contact or residence decisions to a GAL, therapist, or another third party.",
+      "If PFA facts overlap, make an independent family-case analysis rather than importing findings.",
+      "Tie every factual finding to testimony, exhibit, stipulation, or admitted document.",
+      "State how materially conflicting evidence was resolved or why it was not material."
+    ],
+    "red_flags": [
+      "PFA-to-family-case independent-analysis warning",
+      "best-interest factors require review",
+      "contact restriction without sourced findings",
+      "missing Rule 52 findings"
+    ],
+    "review_required": true,
+    "schema_version": "maine_findings_review_v2",
+    "status": "review_required"
+  },
+  "form_catalog": {
+    "context_counts": {
+      "family_matter": 1
+    },
+    "dependency_graph": {
+      "FM-001": [
+        "19-A M.R.S. \u00a7 1653",
+        "FM-001",
+        "M.R. Civ. P. 120"
+      ]
+    },
+    "entries": [
+      {
+        "dependencies": [
+          "19-A M.R.S. \u00a7 1653",
+          "FM-001",
+          "M.R. Civ. P. 120"
+        ],
+        "filing_context": "family_matter",
+        "form_id": "FM-001",
+        "freshness_status": "stale",
+        "issue_labels": [
+          "divorce",
+          "parental_rights_responsibilities"
+        ],
+        "required_fields": [
+          "child_name",
+          "defendant",
+          "defendant_name",
+          "docket_number",
+          "plaintiff",
+          "plaintiff_name",
+          "signature"
+        ],
+        "source_id": "form-fm-001",
+        "stale_form_warning": "FM-001 appears stale: extracted 01/2024, expected 01/2026.",
+        "title": "FM-001 Complaint for Divorce with Children",
+        "version_date": "01/2024"
+      }
+    ],
+    "form_count": 1,
+    "stale_forms": [
+      "FM-001"
+    ],
+    "status": "pass"
+  },
+  "generated_at": "2026-08-09T19:07:46.036650+00:00",
+  "law_court_brief": {
+    "appellate_red_flags": [
+      "missing Rule 52 findings",
+      "unsupported best-interest findings"
+    ],
+    "caption": "Smith v. Smith",
+    "citation": "2026 ME 99",
+    "court": "Maine Supreme Judicial Court sitting as the Law Court",
+    "decision_date": "May 1, 2026",
+    "disposition": "remanded",
+    "docket_number": "FAM-25-12",
+    "extracted_signals": {
+      "mentions_best_interest": true,
+      "mentions_findings": true,
+      "mentions_improper_delegation": false,
+      "mentions_pfa_family_overlap": false,
+      "mentions_preservation": false,
+      "mentions_remand_reason": true,
+      "mentions_rule_52": true,
+      "mentions_standard_of_review": true,
+      "mentions_transcript_record": false
+    },
+    "holding": "We vacate and remand because the lack of findings prevents appellate review.",
+    "issue_labels": [
+      "Rule_52_findings",
+      "best_interest_factor_gap",
+      "parental_rights_responsibilities"
+    ],
+    "preservation_status": "unknown",
+    "procedural_posture": "post_judgment_appeal",
+    "red_flags": [
+      "missing Rule 52 findings",
+      "unsupported best-interest findings"
+    ],
+    "remand_reason": "We vacate and remand because the lack of findings prevents appellate review.",
+    "review_explanation": "disposition:remanded; standard:mixed; red_flags:missing Rule 52 findings,unsupported best-interest findings",
+    "source_id": "case-smoke",
+    "standard_of_review": "mixed"
+  },
+  "readiness": "Pass 32-34 deterministic Maine appellate, forms, and findings intelligence is runnable. Attorney review and live official-source execution remain required for legal sufficiency claims.",
+  "stage": "enterprise_pass_32_33_34_maine_specific_intelligence",
+  "status": "pass"
+}

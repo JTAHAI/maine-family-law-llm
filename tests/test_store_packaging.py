@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -21,9 +22,13 @@ def test_store_packaging_files_exist() -> None:
         REPO_ROOT / "docs" / "MICROSOFT_STORE_RELEASE.md",
         REPO_ROOT / "docs" / "MSIX_ARCHITECTURE.md",
         REPO_ROOT / "docs" / "MSIX_PRIVACY_BOUNDARIES.md",
+        REPO_ROOT / "docs" / "RUNTIME_FEATURE_DEPENDENCY_MATRIX.md",
         REPO_ROOT / "docs" / "STORE_CERTIFICATION_CHECKLIST.md",
         REPO_ROOT / "scripts" / "build-store-runtime.ps1",
         REPO_ROOT / "scripts" / "test-store-runtime.ps1",
+        REPO_ROOT / "scripts" / "prepare_msix_staging.py",
+        REPO_ROOT / "scripts" / "store_payload_hygiene.py",
+        REPO_ROOT / "scripts" / "audit_msix_staging.py",
         REPO_ROOT / "scripts" / "build-msix.ps1",
         REPO_ROOT / "scripts" / "install-test-msix.ps1",
         REPO_ROOT / "scripts" / "uninstall-test-msix.ps1",
@@ -36,6 +41,16 @@ def test_store_packaging_files_exist() -> None:
 
 def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
+    authority_root = tmp_path / "external-authority"
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(authority_root))
+    monkeypatch.setenv("MFL_AUTHORITY_DATA_ROOT", str(authority_root))
+    # configure_runtime_environment intentionally mutates the process for the
+    # lifetime of a frozen app. Register every mutation with monkeypatch so a
+    # Store-runtime test cannot leak Store mode into later source-mode tests.
+    monkeypatch.setenv("MFL_RUNTIME_MODE", "source")
+    monkeypatch.setenv("MFL_CASE_LIBRARY_PATH", str(tmp_path / "source-case-library.json"))
+    monkeypatch.setenv("MFL_LOCAL_API_STATE_PATH", str(tmp_path / "source-api.json"))
+    monkeypatch.setenv("MFL_RUNTIME_LOG_DIR", str(tmp_path / "source-logs"))
     from app.runtime_support import build_runtime_context, configure_runtime_environment
 
     context = configure_runtime_environment(build_runtime_context(mode="store"))
@@ -47,6 +62,21 @@ def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_
     assert context.api_state_path.parent == context.writable_root / "state"
     assert context.api_state_path.name == "local_api-store.json"
     assert context.logs_root == context.writable_root / "logs"
+    assert os.environ["MAINE_FAMILY_LAW_DATA_ROOT"] == str(context.runtime_data_root)
+    assert os.environ["MFL_AUTHORITY_DATA_ROOT"] == str(authority_root)
+
+
+def test_authority_services_prefer_store_external_authority_boundary(monkeypatch, tmp_path) -> None:
+    runtime_root = tmp_path / "runtime-data"
+    authority_root = tmp_path / "external-authority"
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(runtime_root))
+    monkeypatch.setenv("MFL_AUTHORITY_DATA_ROOT", str(authority_root))
+    monkeypatch.setenv("MFL_RUNTIME_MODE", "store")
+
+    from app.services import AuthorityLibraryService, AuthorityProductService
+
+    assert AuthorityLibraryService().data_root == authority_root.resolve()
+    assert AuthorityProductService().data_root == authority_root.resolve()
 
 
 def test_store_launch_path_does_not_download_or_install_prerequisites() -> None:
@@ -89,6 +119,19 @@ def test_store_privacy_policy_and_state_fork_guide_cover_required_boundaries() -
     assert "Maine authority as if it applies in another state" in fork
 
 
+def test_runtime_feature_dependency_matrix_covers_advertised_advanced_engines() -> None:
+    matrix = (REPO_ROOT / "docs" / "RUNTIME_FEATURE_DEPENDENCY_MATRIX.md").read_text(encoding="utf-8")
+    for marker in (
+        "Presidio privacy detection",
+        "Docling document parsing",
+        "OCRmyPDF searchable-copy generation",
+        "SQLite vector retrieval",
+        "Qdrant loopback retrieval client",
+        "dist/store/evidence/bundled-engine-inventory.json",
+    ):
+        assert marker in matrix
+
+
 def test_manifest_template_is_valid_xml_after_placeholder_substitution() -> None:
     template = (REPO_ROOT / "store" / "msix" / "AppxManifest.xml.in").read_text(encoding="utf-8")
     rendered = (
@@ -100,6 +143,8 @@ def test_manifest_template_is_valid_xml_after_placeholder_substitution() -> None
     )
     root = ElementTree.fromstring(rendered)
     assert root.tag.endswith("Package")
+    assert "<Resources>" in rendered
+    assert 'Language="en-us"' in rendered
     assert "Windows.FullTrustApplication" in rendered
     assert "runFullTrust" in rendered
     assert "MaineFamilyLawLLM.exe" in rendered
@@ -164,9 +209,33 @@ def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None
     assert "PublisherDisplayName" in script
     assert "PackageDisplayName" in script
     assert "package-file-manifest.json" in script
-    assert "package-sha256.txt" in script
+    assert "sealed-msix-payload.json" in script
     assert "private-data-audit.json" in script
-    assert "store-build-smoke.json" in script
+    assert "msix-staging-manifest.json" in script
+    assert "msix-path-audit.json" in script
+    assert "package-map.txt" in script
+    assert "test-store-runtime.ps1" in script
+    assert "bundled-engine-inventory.json" in script
+    assert "PYTHONDONTWRITEBYTECODE" in script
+    assert "bytecode-regeneration-trace.json" in script
+    assert "final-runtime-cleanup.json" in script
+    assert "final-staging-cleanup.json" in script
+    assert "verify-archive" in script
+
+
+def test_msix_staging_map_uses_staged_payload_paths() -> None:
+    script = (REPO_ROOT / "scripts" / "audit_msix_staging.py").read_text(encoding="utf-8")
+    assert "destination_path" in script
+    assert 'f"\\"{entry[\'destination_path\']}\\" \\"{entry[\'package_relative_path\']}\\""' in script
+    assert "\"{entry['source_path']}\"" not in script
+    assert "package_relative_path" in script
+    assert '"appxmanifest.xml"' in script
+
+
+def test_msix_staging_skips_redundant_docx_template_tree() -> None:
+    script = (REPO_ROOT / "scripts" / "prepare_msix_staging.py").read_text(encoding="utf-8")
+    assert "default-docx-template" in script
+    assert "python-docx loads its runtime default template from templates/default.docx" in script
 
 
 def test_install_msix_script_imports_dev_certificate_into_trusted_stores() -> None:
@@ -185,6 +254,11 @@ def test_store_pyinstaller_spec_collects_corpus_package_modules() -> None:
     assert "README_FOR_NONTECHNICAL_USERS.html" in spec
     assert '"sqlite3"' in spec
     assert '"_sqlite3"' in spec
+    assert 'collect_source_package_files(ROOT / "legal", destination="src/legal")' in spec
+    assert "legal.ops.release_pilot_hardening" in spec
+    assert "legal.pilot.real_matter_operations" in spec
+    assert "legal.pilot.sandbox_operations" in spec
+    assert "legal.release.release_candidate_operations" in spec
 
 
 def test_build_store_runtime_script_stops_existing_packaged_runtime_processes() -> None:
@@ -194,11 +268,92 @@ def test_build_store_runtime_script_stops_existing_packaged_runtime_processes() 
     assert "Stop-Process -Id $process.Id -Force" in script
     assert "MaineFamilyLawLLM\\build-venvs\\store" in script
     assert 'Join-Path $RepoRoot ".venv-store-build"' not in script
+    assert "PYTHONPYCACHEPREFIX" in script
+    assert "-B -m PyInstaller" in script
+
+
+def test_frozen_smoke_accepts_only_grounded_or_explicit_fail_closed_authority() -> None:
+    script = (REPO_ROOT / "scripts" / "test-store-runtime.ps1").read_text(encoding="utf-8")
+    assert "$answerGrounded" in script
+    assert "$answerFailedClosed" in script
+    assert '"official_authority_product_unavailable"' in script
+    assert "(-not $answerGrounded -and -not $answerFailedClosed)" in script
+
+
+def test_payload_hygiene_seals_and_rejects_bytecode_regeneration() -> None:
+    script = (REPO_ROOT / "scripts" / "store_payload_hygiene.py").read_text(encoding="utf-8")
+    assert "bytecode_regeneration_trace_v1" in script
+    assert "sealed_msix_payload_v1" in script
+    assert "__pycache__" in script
+    assert "verify_archive" in script
+
+
+def test_bundled_engine_inventory_script_covers_required_offline_stack() -> None:
+    script = (REPO_ROOT / "scripts" / "generate_bundled_engine_inventory.py").read_text(encoding="utf-8")
+    for marker in (
+        "presidio-analyzer",
+        "en-core-web-lg",
+        "sqlite-vec",
+        "docling",
+        "ocrmypdf",
+        "pypdfium2",
+        "pikepdf",
+        "fpdf2",
+        "uharfbuzz",
+        "qdrant-client",
+        "bundled_engine_inventory_v1",
+    ):
+        assert marker in script
+    assert '_internal/en_core_web_lg' in script
+    assert "enable_load_extension(True)" in script
+    assert "_run_frozen_document_worker" in script
+    assert '"--document-intelligence-worker"' in script
+    assert "use_threads=True" in script
 
 
 def test_store_package_audit_allows_bundled_certifi_ca_bundle() -> None:
     script = (REPO_ROOT / "scripts" / "audit_store_package.py").read_text(encoding="utf-8")
     assert "_internal/certifi/cacert.pem" in script
+    assert "_internal/grpc/_cython/_credentials/roots.pem" in script
+
+
+def test_store_package_audit_allows_only_scoped_public_model_weights(tmp_path) -> None:
+    from scripts.audit_store_package import audit_stage
+
+    public_model = tmp_path / "store" / "docling" / "models" / "layout" / "model.safetensors"
+    public_model.parent.mkdir(parents=True)
+    public_model.write_bytes(b"public model fixture")
+    assert audit_stage(tmp_path, [])["status"] == "pass"
+
+    unscoped_model = tmp_path / "private-model.safetensors"
+    unscoped_model.write_bytes(b"not an approved package path")
+    audit = audit_stage(tmp_path, [])
+    assert audit["status"] == "fail"
+    assert "private-model.safetensors" in audit["blocked_files"]
+
+
+def test_store_package_audit_returns_nonzero_when_audit_fails() -> None:
+    script = (REPO_ROOT / "scripts" / "audit_store_package.py").read_text(encoding="utf-8")
+    assert 'return 0 if audit["status"] == "pass" else 2' in script
+
+
+def test_store_pyinstaller_spec_filters_package_test_submodules() -> None:
+    spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
+    assert "collect_runtime_submodules" in spec
+    assert "module_name.startswith(\"torch.testing._internal\")" in spec
+    assert "part == \"tests\"" in spec
+    assert '"presidio_analyzer", "tldextract", "docling"' in spec
+    assert "presidio_anonymizer" not in spec
+    assert "collect_data_files(package_name)" in spec
+    assert '"docling-slim", "docling-core", "docling-ibm-models"' in spec
+
+
+def test_store_runtime_prefetches_real_docling_artifacts() -> None:
+    script = (REPO_ROOT / "scripts" / "build-store-runtime.ps1").read_text(encoding="utf-8")
+    assert "docling.utils.model_downloader" in script
+    assert "docling-project--docling-layout-heron" in script
+    assert "docling-project--docling-models" in script
+    assert "with_code_formula=False" in script
 
 
 def test_build_msix_script_normalizes_package_versions_without_leading_zero_segments() -> None:

@@ -1,4 +1,16 @@
-Maine Family Law LLM v5.2.0
+Maine Family Law LLM v7.0.0
+
+Verified scope, official-source acceptance, and fail-closed release hardening
+
+- Product version 7.0.0; Microsoft Store manifest target 7.0.0.0.
+- Retained 16 source/frozen-runtime-verified public capabilities and hid incomplete slices 21-44.
+- Added admitted external authority generations with exact source, citation, quote, and claim verification.
+- Consolidated final-like outputs behind the canonical filing gate; the 16-case release set has zero false passes.
+- Hardened Local-only networking, matter isolation, untrusted-document handling, privacy, audit, and startup behavior.
+- Built and audited the self-contained x64 MSIX without private matters or authority data.
+- Store qualification remains blocked pending isolated clean installation and WACK; no Store certification or Enterprise GA is claimed.
+
+Historical v5.2.0 summary
 
 Answer-first evidence, protected document drafting, and tracked Word review
 

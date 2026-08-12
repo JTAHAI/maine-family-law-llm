@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-06-14T21:43:46.406967+00:00",
+  "generated_at": "2026-08-09T19:08:02.567576+00:00",
   "governance_compliance_packet": {
     "blockers": [],
-    "generated_at": "2026-06-14T21:43:46.406816+00:00",
+    "generated_at": "2026-08-09T19:08:02.567382+00:00",
     "nist_ai_600_1_mapping": {
       "confabulation_controls": [
         "citation_verifier",

@@ -48,7 +48,9 @@ def test_pass35_matter_store_encrypts_documents_and_keeps_plaintext_outside_repo
         encryption_key="unit-test-encryption-key",
     )
     matter = Matter(matter_id="matter-secure-2", tenant_id="tenant-a")
-    store.create_matter(matter)
+    matter_dir = store.create_matter(matter)
+    loaded_matter = store.load_matter(matter_dir)
+    assert loaded_matter["matter_id"] == matter.matter_id
     document = MatterDocumentIngestor().ingest_document(
         matter_id=matter.matter_id,
         tenant_id=matter.tenant_id,
@@ -62,7 +64,7 @@ def test_pass35_matter_store_encrypts_documents_and_keeps_plaintext_outside_repo
     assert "Parent A sent" not in encrypted_text
     assert "contact with the child" not in encrypted_text
     envelope = json.loads(encrypted_text)
-    assert envelope["algorithm"].startswith("local-pbkdf2")
+    assert envelope["algorithm"] == "aes-256-gcm"
     loaded = store.load_document(encrypted_path)
     assert loaded["document_id"] == document.document_id
     assert loaded["storage_encryption_status"] == "encrypted_local_envelope"

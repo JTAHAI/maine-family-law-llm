@@ -1,0 +1,32 @@
+{
+  "schema_version": "maine_retrieval_workbench_policy_v1",
+  "product_version": "7.0.0",
+  "default_mode": "embedded_local",
+  "lexical_backend": "sqlite_fts5",
+  "semantic_backends": ["sqlite_vec_optional", "deterministic_hash_dense_fallback"],
+  "qdrant_policy": {
+    "enabled_by_default": false,
+    "allowed_hosts": ["127.0.0.1", "localhost", "::1"],
+    "cloud_endpoints_allowed": false,
+    "automatic_discovery": false
+  },
+  "limits": {
+    "max_documents": 20000,
+    "max_document_chars": 250000,
+    "max_query_chars": 2000,
+    "max_results": 100,
+    "max_eval_rows": 5000
+  },
+  "evaluation": {
+    "dataset": "maine_rag_retrieval_gold.jsonl",
+    "external_eval_root_required": true,
+    "attorney_review_required": true,
+    "seed_rows_count_as_gold": false,
+    "synthetic_rows_count_as_gold": false,
+    "private_training_rows_allowed": false
+  },
+  "automatic_installation": false,
+  "automatic_model_download": false,
+  "remote_telemetry": false,
+  "review_required": true
+}

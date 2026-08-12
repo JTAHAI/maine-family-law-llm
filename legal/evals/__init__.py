@@ -28,7 +28,17 @@ from legal.evals.release_measurements import (
 )
 from legal.evals.conversation_eval import ConversationEvalCase, ConversationEvalReport, ConversationEvalRunner
 from legal.evals.conversation_quality_metrics import ConversationQualityRegressionReport, ConversationQualityRegressionRunner
+from legal.evals.external_eval_root import (
+    DEFAULT_EVAL_DIRNAME,
+    DEFAULT_EVAL_NAMESPACE,
+    ExternalEvalRootError,
+    ExternalEvalRootLayout,
+    default_external_eval_root,
+    external_eval_root_layout,
+    resolve_external_eval_root,
+)
 from legal.evals.retrieval_smoke import RetrievalEvalCase, RetrievalSmokeEvalReport, RetrievalSmokeEvalRunner
+from legal.evals.review_studio import EvalReviewStudio, EvalReviewStudioError, DATASET_NAMES
 from legal.evals.user_journey_eval import UserJourneyCase, UserJourneyEvalReport, UserJourneyEvalRunner
 
 __all__ = [
@@ -41,6 +51,13 @@ __all__ = [
     "ConversationEvalRunner",
     "ConversationQualityRegressionReport",
     "ConversationQualityRegressionRunner",
+    "DATASET_NAMES",
+    "DEFAULT_EVAL_DIRNAME",
+    "DEFAULT_EVAL_NAMESPACE",
+    "ExternalEvalRootLayout",
+    "ExternalEvalRootError",
+    "EvalReviewStudio",
+    "EvalReviewStudioError",
     "VerifierMetricReport",
     "StalenessJurisdictionMetricReport",
     "StalenessJurisdictionMetricRunner",
@@ -66,7 +83,10 @@ __all__ = [
     "RetrievalEvalCase",
     "RetrievalSmokeEvalReport",
     "RetrievalSmokeEvalRunner",
+    "default_external_eval_root",
+    "external_eval_root_layout",
     "UserJourneyCase",
     "UserJourneyEvalReport",
     "UserJourneyEvalRunner",
+    "resolve_external_eval_root",
 ]

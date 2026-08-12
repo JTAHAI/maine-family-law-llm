@@ -221,6 +221,16 @@ def _command_plan(
                 True,
             ),
             (
+                "publish_authority_product",
+                [py, _script("publish-authority-product.py"), "--data-root", str(data_root)],
+                True,
+            ),
+            (
+                "verify_authority_product",
+                [py, _script("verify-authority-product.py"), "--data-root", str(data_root)],
+                True,
+            ),
+            (
                 "run_retrieval_smoke_eval",
                 [
                     py,
@@ -443,6 +453,7 @@ def main() -> int:
             "Use --require-retrieval-smoke with explicit thresholds before treating Pass 24 measured retrieval evidence as a release gate.",
             "Use --require-gold-eval-pack only after attorney-reviewed JSONL minimums are met; generated annotation queues are not gold evidence.",
             "Use --require-release-metrics only after task-specific evaluators produce measured metrics from real gold files.",
+            "Verify the immutable authority_product/ACTIVE_BUILD.json pointer before serving current-law answers.",
             "Resolve any required-step blockers before claiming Pass 19+ complete.",
         ] + ([f"Optional steps failed: {', '.join(optional_failures)}"] if optional_failures else []),
     )

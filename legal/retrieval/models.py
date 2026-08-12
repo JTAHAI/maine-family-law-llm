@@ -29,6 +29,8 @@ class RetrievalDocument:
         return self.source_id or self.document_id
 
     def source_card(self) -> SourceCard:
+        source_span = self.metadata.get("source_span")
+        source_span = source_span if isinstance(source_span, dict) else {}
         return SourceCard(
             source_id=self.source_id,
             title=self.title,
@@ -39,6 +41,9 @@ class RetrievalDocument:
             freshness_status=self.freshness_status,
             url_or_path=self.url_or_path,
             document_id=self.document_id,
+            hash_value=self.metadata.get("hash"),
+            start_offset=source_span.get("start_offset"),
+            end_offset=source_span.get("end_offset"),
             review_required=True,
         )
 

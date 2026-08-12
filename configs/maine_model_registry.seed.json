@@ -14,6 +14,8 @@
       "cost_profile": {"unit_cost_usd": 0, "billing_unit": "local_call"},
       "latency_profile": {"p95_ms": 2},
       "fallback_behavior": "route_to_human_review_on_unknown_label",
+      "license_status": "approved",
+      "benchmark_evidence": {"dataset": "issue_classifier_smoke", "evidence_hash": "pass41-issue-smoke"},
       "eval_regression_history": [{"suite": "issue_classifier_smoke", "status": "pass", "run_id": "pass41-seed"}],
       "admission_status": "admitted_for_production"
     },
@@ -30,6 +32,8 @@
       "cost_profile": {"unit_cost_usd": 0, "billing_unit": "local_call"},
       "latency_profile": {"p95_ms": 5000},
       "fallback_behavior": "block_export_and_route_to_deterministic_reviewer_or_human_review",
+      "license_status": "approved",
+      "benchmark_evidence": {"dataset": "draft_review_required_contract", "evidence_hash": "pass41-draft-contract"},
       "eval_regression_history": [{"suite": "draft_review_required_contract", "status": "pass", "run_id": "pass41-seed"}],
       "admission_status": "admitted_for_staging"
     }

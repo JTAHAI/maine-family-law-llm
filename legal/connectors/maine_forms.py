@@ -10,7 +10,11 @@ from legal.documents.models import CourtForm, SourceLocation
 PARSER_VERSION = "maine_forms_parser_v1"
 _FORM_ID_RE = re.compile(r"\b(FM|PA|CV|PB)-?\s?(\d{3}[A-Z]?)\b", re.I)
 _PDF_RE = re.compile(r"\.pdf(?:$|[?#])", re.I)
-_VERSION_RE = re.compile(r"(?:Rev\.?|Revised|Version)\s*(?:date)?\s*[:\-]?\s*(\d{1,2}/\d{1,2}/\d{2,4}|\d{1,2}/\d{4}|[A-Za-z]+\s+\d{4})", re.I)
+_VERSION_RE = re.compile(
+    r"(?:Rev\.?|Revised|Version)\s*(?:date)?\s*[:\-]?\s*"
+    r"(\d{1,2}/\d{1,2}/\d{2,4}|\d{1,2}/\d{2,4}|[A-Za-z]+\s+\d{4})",
+    re.I,
+)
 
 
 def normalize_form_id(value: str) -> str:

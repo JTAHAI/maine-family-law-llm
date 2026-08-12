@@ -612,6 +612,7 @@ class EvaluationOrchestrator:
             fallback_behavior="route_to_rule_based_or_human_review",
             eval_regression_history=[{"suite": "pass11_smoke", "status": "pass"}],
             admission_status="admitted_for_dev",
+            license_status="allowlisted",
         )
         register_issues = registry.register(record)
         blocked_certification = ModelOrchestrator(registry).run_task("filing_ready_certification", {})
@@ -847,10 +848,10 @@ class EvaluationOrchestrator:
         ).run()
         checks = {
             "authority_build_auditor_runs": report.status == "pass",
-            "external_data_root_is_outside_repo": str(external_data_root).startswith(
-                str(self.project_root.resolve().parent)
-            )
-            and not str(external_data_root).startswith(str(self.project_root.resolve()) + "/"),
+            "external_data_root_is_outside_repo": (
+                external_data_root.resolve().parent == self.project_root.resolve().parent
+                and not external_data_root.resolve().is_relative_to(self.project_root.resolve())
+            ),
             "missing_external_manifest_blocks_production": report.production_ready is False
             and "manifest_missing" in report.blockers,
             "manifest_path_expected_under_official_store": report.official_store.endswith(
@@ -869,6 +870,8 @@ class EvaluationOrchestrator:
         queue_smoke: dict[str, Any]
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
+            snapshot_path = tmp_path / "fixture.html"
+            snapshot_path.write_text("Official-source fixture for queue construction.", encoding="utf-8")
             manifest_path = tmp_path / "source_manifest.json"
             manifest_path.write_text(
                 json.dumps(
@@ -879,7 +882,7 @@ class EvaluationOrchestrator:
                             "jurisdiction": "maine",
                             "hash": "fixture-hash",
                             "source_url_or_path": "https://legislature.maine.gov/statutes/19-a/title19-Ach0sec0.html",
-                            "snapshot_path": str(tmp_path / "fixture.html"),
+                            "snapshot_path": str(snapshot_path),
                             "parser_status": "parsed",
                             "freshness_status": "known_extracted_timestamp",
                         }
@@ -891,6 +894,7 @@ class EvaluationOrchestrator:
                 manifest_path=manifest_path,
                 output_path=tmp_path / "gold_annotation_queue.jsonl",
                 max_items_per_task_type=1,
+                include_fixture_candidates=True,
             )
         checks = {
             "gold_eval_pack_auditor_runs": report.status == "pass",

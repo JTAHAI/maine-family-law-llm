@@ -1,0 +1,40 @@
+{
+  "schema_version": "maine_v6_visual_design_policy_v1",
+  "product_version": "7.0.0",
+  "ui_build": 52,
+  "scope": "visual_refresh_without_workflow_rearchitecture",
+  "principles": [
+    "source_and_review_status_remain_visually_prominent",
+    "local_privacy_state_remains_visible",
+    "no_external_font_or_asset_dependency",
+    "keyboard_focus_is_always_visible",
+    "reduced_motion_and_forced_colors_are_supported",
+    "historical_workflow_selectors_remain_compatible"
+  ],
+  "palette": {
+    "atlantic_950": "#071d27",
+    "atlantic_900": "#0b2630",
+    "atlantic_700": "#18526a",
+    "tide_500": "#2f8ca3",
+    "pine_700": "#155a4d",
+    "pine_500": "#2a8872",
+    "gold_500": "#c68b34",
+    "berry_600": "#963e56",
+    "paper_50": "#fcfbf8",
+    "paper_100": "#f5f1e9",
+    "ink_950": "#102129",
+    "ink_650": "#465b63"
+  },
+  "minimums": {
+    "focus_outline_px": 3,
+    "primary_text_contrast_ratio": 7.0,
+    "interactive_target_height_px": 32,
+    "default_panel_radius_px": 18
+  },
+  "deferred": [
+    "navigation_rearchitecture",
+    "workflow_removal_or_renaming",
+    "remote_font_loading",
+    "automatic_theme_telemetry"
+  ]
+}

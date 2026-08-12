@@ -10,7 +10,16 @@ from legal.data_boundaries.data_classes import (
 from legal.data_boundaries.private_data_scanner import PrivateDataFinding, scan_path, scan_text
 from legal.data_boundaries.redaction import RedactionResult, redact_private_identifiers
 from legal.data_boundaries.retention import RetentionPolicy, retention_policy_for
-from legal.data_boundaries.storage_layout import all_store_paths, create_store_layout, data_root, store_path
+from legal.data_boundaries.storage_layout import (
+    all_store_paths,
+    create_store_layout,
+    data_root,
+    default_external_data_root,
+    ensure_external_authority_root,
+    is_inside_any,
+    is_inside_project_repo,
+    store_path,
+)
 
 __all__ = [
     "DataBoundaryDecision",
@@ -25,7 +34,11 @@ __all__ = [
     "can_train_by_default",
     "create_store_layout",
     "data_root",
+    "default_external_data_root",
+    "ensure_external_authority_root",
     "is_private_or_sensitive",
+    "is_inside_any",
+    "is_inside_project_repo",
     "redact_private_identifiers",
     "retention_policy_for",
     "scan_path",

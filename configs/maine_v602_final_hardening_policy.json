@@ -1,0 +1,28 @@
+{
+  "schema_version": "maine_v602_final_hardening_policy_v1",
+  "product_version": "6.0.2",
+  "package_version": "6.0.2.0",
+  "ui_build": 49,
+  "roadmap_pass": 7,
+  "implementation_pass": 65,
+  "scope": "final_security_integrity_and_release_hardening_without_workflow_expansion",
+  "hardened_controls": [
+    "server_generated_request_audit_identity",
+    "audit_error_and_response_identifier_consistency",
+    "bounded_component_safe_tenant_identifiers",
+    "component_boundary_admin_route_matching",
+    "non_overridable_review_rbac_and_audit_response_fields",
+    "strict_json_boolean_inputs_for_legacy_safety_fields",
+    "duplicate_key_and_non_finite_json_rejection",
+    "bounded_json_size_depth_and_item_count",
+    "strict_json_for_pass48_through_pass51_ledgers_and_packets",
+    "durable_flush_and_fsync_before_ledger_append_success"
+  ],
+  "non_negotiable_boundaries": {
+    "local_only_default_preserved": true,
+    "review_required_preserved": true,
+    "external_evidence_gates_preserved": true,
+    "no_private_data_in_source_release": true,
+    "no_ga_store_or_attorney_certification_claim": true
+  }
+}

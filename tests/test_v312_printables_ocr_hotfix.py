@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 from pathlib import Path
 
-import pytest
 
 from maine_family_law_llm.focaf_library import (
     audit_packaged_printables,
@@ -22,8 +20,8 @@ FAILING_PRINTABLE_ID = (
 
 
 def test_version_is_store_compatible_v312() -> None:
-    assert VERSION == "5.2.0"
-    assert PACKAGE_VERSION == "5.2.0.0"
+    assert VERSION == "7.0.0"
+    assert PACKAGE_VERSION == "7.0.0.0"
 
 
 def test_all_bundled_printables_resolve_and_hash_match() -> None:

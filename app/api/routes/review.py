@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Header
 
-from app.api.security import review_response
+from app.api.security import review_response, strict_json_bool
 from app.services import ConversationAdapter
 from legal.drafting.filing_ready_gate import FilingReadyGate
 from legal.verifiers.citation_resolver import SourceAuthorityIndex
@@ -26,7 +26,7 @@ def review(
         source_cards=payload.get("source_cards") or None,
         quotes=payload.get("quotes"),
         claims=payload.get("claims"),
-        auto_extract_claims=bool(payload.get("auto_extract_claims", True)),
+        auto_extract_claims=strict_json_bool(payload, "auto_extract_claims", default=True),
     )
     response = adapter.for_review(
         payload,

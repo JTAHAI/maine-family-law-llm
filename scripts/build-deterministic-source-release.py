@@ -20,6 +20,7 @@ EXCLUDED_DIRS = {
     ".venv", "venv", "node_modules", "dist", "build", "runtime", "uploads",
     "vectorstores", "corpora", "official_authority_store", "parsed_authority_store",
     "embedding_store", "matter_store", "eval_store", "audit_store", "model_registry",
+    "model_store", "benchmark_runs", "runtime_profiles", "quarantine",
     ".local_data", ".mfl_work", "models", "weights",
 }
 EXCLUDED_SUFFIXES = {

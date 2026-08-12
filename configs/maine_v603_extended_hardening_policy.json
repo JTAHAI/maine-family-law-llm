@@ -1,0 +1,20 @@
+{
+  "policy_name": "maine_v603_extended_hardening_policy",
+  "product_version": "7.0.0",
+  "package_version": "7.0.0.0",
+  "ui_build": 51,
+  "ui_track": "extended-hardening",
+  "required_controls": [
+    "cross_process_evidence_ledger_locking",
+    "bounded_regular_file_reads",
+    "symlink_and_identity_change_refusal",
+    "file_and_parent_directory_durability",
+    "streaming_request_body_limit",
+    "local_service_nonce_and_pid_binding",
+    "redirect_free_health_probe",
+    "no_dynamic_source_execution"
+  ],
+  "legal_review_required": true,
+  "external_ga_evidence_required": true,
+  "local_only_default": true
+}

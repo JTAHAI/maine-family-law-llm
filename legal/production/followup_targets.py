@@ -187,7 +187,16 @@ class AuthorityFollowupTargetBuilder:
 
         if kind == "court_form_reference":
             form_id = _clean_component(str(row.get("form_id") or row.get("citation") or record_id or "form"))
-            is_pdf = _looks_like_pdf(url)
+            if form_id == "fm-171" and "strFormNumber=FM-261" in url:
+                url = "https://mjbportal.courts.maine.gov/CourtForms/FormsLists/DownloadForm?strFormNumber=FM-171"
+                self.findings.append(
+                    DerivedTargetFinding(
+                        "corrected_form_download_identifier",
+                        "Corrected the official forms-index FM-171 row that linked to the FM-261 download identifier.",
+                        record_id,
+                    )
+                )
+            is_pdf = _looks_like_pdf(url) or "/DownloadForm?" in url
             return SourceTarget(
                 target_id=f"me-court-form-{form_id}",
                 source_class="court_form_pdf" if is_pdf else "court_form_text",

@@ -1,3 +1,9 @@
+from legal.production.authority_product import (
+    AuthorityProductFinding,
+    AuthorityProductPublisher,
+    AuthorityProductReport,
+    AuthorityProductVerifier,
+)
 from legal.production.authority_build import (
     AuthorityBuildAuditor,
     AuthorityBuildReport,
@@ -26,6 +32,10 @@ from legal.production.release_gates import (
 __all__ = [
     "DEFAULT_RELEASE_THRESHOLDS",
     "AuthorityBuildAuditor",
+    "AuthorityProductVerifier",
+    "AuthorityProductReport",
+    "AuthorityProductPublisher",
+    "AuthorityProductFinding",
     "AuthorityFollowupTargetBuilder",
     "AuthorityBuildReport",
     "AuthorityManifestFinding",

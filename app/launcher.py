@@ -17,23 +17,68 @@ if str(SRC_ROOT) not in sys.path:
 
 from app.local_api_service import ensure_local_service, stop_local_service
 from app.runtime_support import RuntimeContext, build_runtime_context, configure_runtime_environment, local_about_links, open_path_or_url
-from app.wizard_import_corpus import import_additional_corpus
-from app.wizard_new_case import default_case_build_root, launch_new_case_wizard, suggest_case_name
-from maine_family_law_llm.case_library import active_case_root, list_registered_case_roots, prune_missing_case_roots, set_active_case_root
-from maine_family_law_llm.case_corpus_builder import (
-    bootstrap_repository,
-    create_sample_case_build,
-    export_to_usb,
-)
-from maine_family_law_llm.case_workspace import (
-    append_case_ingest_history,
-    default_workspace_root,
-    inherit_case_ingest_history,
-    load_case_summary,
-    read_case_ingest_history,
-    read_case_source_roots,
-)
 from maine_family_law_llm.version import APP_DISPLAY_NAME, GITHUB_REPOSITORY_URL, STORE_MISSION_TAGLINE, VERSION
+
+
+def _case_library():
+    from maine_family_law_llm import case_library
+
+    return case_library
+
+
+def _case_corpus_builder():
+    from maine_family_law_llm import case_corpus_builder
+
+    return case_corpus_builder
+
+
+def _case_workspace():
+    from maine_family_law_llm import case_workspace
+
+    return case_workspace
+
+
+def _wizard_import_corpus():
+    from app import wizard_import_corpus
+
+    return wizard_import_corpus
+
+
+def _wizard_new_case():
+    from app import wizard_new_case
+
+    return wizard_new_case
+
+
+def bootstrap_repository(repo_root: Path):
+    """Compatibility seam for safe startup bootstrap and launcher tests."""
+
+    return _case_corpus_builder().bootstrap_repository(repo_root)
+
+
+def launch_new_case_wizard(**kwargs):
+    """Load the optional new-case wizard only when the user starts intake."""
+
+    return _wizard_new_case().launch_new_case_wizard(**kwargs)
+
+
+def import_additional_corpus(**kwargs):
+    """Load the optional corpus-import wizard only on an explicit action."""
+
+    return _wizard_import_corpus().import_additional_corpus(**kwargs)
+
+
+def prune_missing_case_roots():
+    return _case_library().prune_missing_case_roots()
+
+
+def active_case_root():
+    return _case_library().active_case_root()
+
+
+def list_registered_case_roots():
+    return _case_library().list_registered_case_roots()
+
 
 ACTION_SPECS = (
     ("Open Local AI Chat", "open_local_ai_chat"),
@@ -280,7 +325,7 @@ class CorpusBuildWizard(tk.Toplevel):
         for path in self.source_roots:
             self.sources_listbox.insert(tk.END, str(path))
         if self.source_roots and not self.case_name_var.get().strip():
-            self.case_name_var.set(suggest_case_name(self.source_roots))
+            self.case_name_var.set(_wizard_new_case().suggest_case_name(self.source_roots))
 
     def _add_source_folder(self) -> None:
         selected = filedialog.askdirectory(
@@ -356,7 +401,7 @@ class CorpusBuildWizard(tk.Toplevel):
         selected = filedialog.askdirectory(
             parent=self,
             title="Select Output Folder",
-            initialdir=self.output_root_var.get() or str(default_case_build_root()),
+            initialdir=self.output_root_var.get() or str(_wizard_new_case().default_case_build_root()),
         )
         if selected:
             self.output_root_var.set(selected)
@@ -382,7 +427,7 @@ class CorpusBuildWizard(tk.Toplevel):
         self.result = CorpusBuildPlan(
             source_roots=list(self.source_roots),
             output_root=Path(output_text),
-            case_name=self.case_name_var.get().strip() or suggest_case_name(self.source_roots),
+            case_name=self.case_name_var.get().strip() or _wizard_new_case().suggest_case_name(self.source_roots),
         )
         self.destroy()
 
@@ -703,9 +748,9 @@ class MaineFamilyLawLauncher(tk.Tk):
 
     def _set_case_root(self, case_root: Path, status_text: str) -> None:
         self.case_root_var.set(str(case_root))
-        set_active_case_root(case_root)
+        _case_library().set_active_case_root(case_root)
         self._refresh_case_library(selected_case_root=case_root)
-        summary = load_case_summary(case_root)
+        summary = _case_workspace().load_case_summary(case_root)
         last_import = str(summary.get("last_import_at", "")).replace("T", " ").replace("Z", " UTC").strip()
         missing_roots = int(summary.get("missing_source_root_count", 0) or 0)
         self.case_summary_var.set(
@@ -772,7 +817,7 @@ class MaineFamilyLawLauncher(tk.Tk):
         self.status_var.set(f"Opened selected case folder at {case_root}.")
 
     def _open_workspace_folder(self) -> None:
-        workspace_root = default_workspace_root()
+        workspace_root = _case_workspace().default_workspace_root()
         workspace_root.mkdir(parents=True, exist_ok=True)
         os.startfile(str(workspace_root))
         self.status_var.set(f"Opened workspace folder at {workspace_root}.")
@@ -887,7 +932,7 @@ class MaineFamilyLawLauncher(tk.Tk):
                 "The launcher hashes and inventories the originals read-only, then builds a fresh local case workspace from the combined sources."
             ),
             confirm_text="Build corpus",
-            default_output_root=default_case_build_root(),
+            default_output_root=_wizard_new_case().default_case_build_root(),
             default_case_name="",
         )
         if plan is None:
@@ -903,12 +948,12 @@ class MaineFamilyLawLauncher(tk.Tk):
 
         def _on_success(result: object) -> None:
             build_result = result
-            append_case_ingest_history(
+            _case_workspace().append_case_ingest_history(
                 build_result.case_root,
                 mode="create_new_case",
                 case_name=plan.case_name,
                 source_roots_added=plan.source_roots,
-                cumulative_source_roots=read_case_source_roots(build_result.case_root),
+                cumulative_source_roots=_case_workspace().read_case_source_roots(build_result.case_root),
                 notes="Initial case build from user-selected source folders and files.",
             )
             self._set_case_root(
@@ -932,9 +977,9 @@ class MaineFamilyLawLauncher(tk.Tk):
         case_root = self._require_case_root()
         if case_root is None:
             return
-        case_summary = load_case_summary(case_root)
-        existing_sources = read_case_source_roots(case_root)
-        history_rows = read_case_ingest_history(case_root)
+        case_summary = _case_workspace().load_case_summary(case_root)
+        existing_sources = _case_workspace().read_case_source_roots(case_root)
+        history_rows = _case_workspace().read_case_ingest_history(case_root)
         plan = self._show_corpus_build_wizard(
             title_text="Reopen Intake / Add More Evidence",
             instructions=(
@@ -961,8 +1006,8 @@ class MaineFamilyLawLauncher(tk.Tk):
 
         def _on_success(result: object) -> None:
             build_result = result
-            cumulative_sources = read_case_source_roots(build_result.case_root)
-            inherit_case_ingest_history(
+            cumulative_sources = _case_workspace().read_case_source_roots(build_result.case_root)
+            _case_workspace().inherit_case_ingest_history(
                 build_result.case_root,
                 existing_case_root=case_root,
                 mode="add_more_evidence",
@@ -988,20 +1033,20 @@ class MaineFamilyLawLauncher(tk.Tk):
 
     def build_sample_case(self) -> None:
         def _worker() -> object:
-            return create_sample_case_build(
+            return _case_corpus_builder().create_sample_case_build(
                 self.repo_root,
-                output_root=default_workspace_root() / "sample_cases",
+                output_root=_case_workspace().default_workspace_root() / "sample_cases",
                 case_name="Example Family Matter",
             )
 
         def _on_success(result: object) -> None:
             build_result = result
-            append_case_ingest_history(
+            _case_workspace().append_case_ingest_history(
                 build_result.case_root,
                 mode="sample_case",
                 case_name="Example Family Matter",
-                source_roots_added=read_case_source_roots(build_result.case_root),
-                cumulative_source_roots=read_case_source_roots(build_result.case_root),
+                source_roots_added=_case_workspace().read_case_source_roots(build_result.case_root),
+                cumulative_source_roots=_case_workspace().read_case_source_roots(build_result.case_root),
                 notes="Neutral sample case for orientation and testing.",
             )
             self._set_case_root(
@@ -1043,7 +1088,8 @@ class MaineFamilyLawLauncher(tk.Tk):
                 (
                     "The local chat service could not start.\n\n"
                     f"{exc.__class__.__name__}: {exc}\n\n"
-                    "Use Repair / Troubleshoot if this repeats, then review the local runtime logs."
+                    "Use Repair / Troubleshoot if this repeats, then review the local runtime logs at\n"
+                    f"{self.runtime.logs_root}"
                 ),
                 parent=self,
             )
@@ -1202,7 +1248,7 @@ class MaineFamilyLawLauncher(tk.Tk):
         destination = self._select_output_root()
         if destination is None:
             return
-        export = export_to_usb(case_root, destination / "USB_EXPORT")
+        export = _case_corpus_builder().export_to_usb(case_root, destination / "USB_EXPORT")
         self.status_var.set(f"USB export created at {export['export_root']}")
 
     def repair_repo(self) -> None:

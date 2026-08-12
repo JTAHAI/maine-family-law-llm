@@ -1,6 +1,6 @@
 {
   "blockers": [],
-  "generated_at": "2026-07-20T16:49:28.400878+00:00",
+  "generated_at": "2026-08-11T23:04:24.055975+00:00",
   "no_filing_ready_bypass": true,
   "readiness": "legal_red_team_passed",
   "required_categories": [
@@ -36,11 +36,13 @@
         "resolutions": [
           {
             "authority_status": "not_found",
+            "candidates": [],
             "citation": {
               "end": 23,
               "form_id": null,
               "kind": "maine_statute",
               "normalized": "19-A M.R.S. \u00a7 99999",
+              "pinpoint": null,
               "raw": "19-A M.R.S. \u00a7 99999",
               "reporter_number": null,
               "reporter_year": null,
@@ -361,6 +363,8 @@
         "forms_freshness_report_missing",
         "human_review_complete",
         "legal_claims_supported",
+        "privacy_review_complete",
+        "privacy_review_incomplete",
         "procedure_posture_checked",
         "procedure_posture_report_missing",
         "quote_report_missing",
@@ -371,6 +375,51 @@
       "details": {
         "filing_gate_report": {
           "attorney_override_logged": true,
+          "blocked_export_explanation": [
+            "authority_matrix_missing",
+            "authority_verified",
+            "citation_report_missing",
+            "citations_resolved",
+            "claim_support_report_missing",
+            "fact_to_evidence_map_missing",
+            "facts_mapped_to_evidence",
+            "forms_current",
+            "forms_freshness_report_missing",
+            "human_review_complete",
+            "legal_claims_supported",
+            "privacy_review_complete",
+            "privacy_review_incomplete",
+            "procedure_posture_checked",
+            "procedure_posture_report_missing",
+            "quote_report_missing",
+            "quotes_found"
+          ],
+          "blocker_panel": {
+            "blockers": [
+              "authority_matrix_missing",
+              "authority_verified",
+              "citation_report_missing",
+              "citations_resolved",
+              "claim_support_report_missing",
+              "fact_to_evidence_map_missing",
+              "facts_mapped_to_evidence",
+              "forms_current",
+              "forms_freshness_report_missing",
+              "human_review_complete",
+              "legal_claims_supported",
+              "privacy_review_complete",
+              "privacy_review_incomplete",
+              "procedure_posture_checked",
+              "procedure_posture_report_missing",
+              "quote_report_missing",
+              "quotes_found"
+            ],
+            "export_status": "blocked_override_logged",
+            "filing_ready": false,
+            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
+            "panel_title": "Filing gate blockers",
+            "review_required": true
+          },
           "blockers": [
             "authority_matrix_missing",
             "authority_verified",
@@ -383,6 +432,8 @@
             "forms_freshness_report_missing",
             "human_review_complete",
             "legal_claims_supported",
+            "privacy_review_complete",
+            "privacy_review_incomplete",
             "procedure_posture_checked",
             "procedure_posture_report_missing",
             "quote_report_missing",
@@ -404,6 +455,8 @@
                 "forms_freshness_report_missing",
                 "human_review_complete",
                 "legal_claims_supported",
+                "privacy_review_complete",
+                "privacy_review_incomplete",
                 "procedure_posture_checked",
                 "procedure_posture_report_missing",
                 "quote_report_missing",
@@ -412,7 +465,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-07-20T16:49:28.400878+00:00",
+              "requested_at": "2026-08-11T23:04:24.055875+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -427,6 +480,8 @@
               "forms_freshness_report_missing",
               "human_review_complete",
               "legal_claims_supported",
+              "privacy_review_complete",
+              "privacy_review_incomplete",
               "procedure_posture_checked",
               "procedure_posture_report_missing",
               "quote_report_missing",
@@ -435,8 +490,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-07-20T16:49:28.400878+00:00",
-            "immutable_report_hash": "c0ff978221baf7309d7491e2524a9fb71ae2fa007a22adaa581d6afedc578453",
+            "generated_at": "2026-08-11T23:04:24.055888+00:00",
+            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,
@@ -444,6 +499,7 @@
               "forms_current": false,
               "human_review_complete": false,
               "legal_claims_supported": false,
+              "privacy_review_complete": false,
               "procedure_posture_checked": false,
               "quotes_found": false
             }
@@ -462,6 +518,8 @@
                 "forms_freshness_report_missing",
                 "human_review_complete",
                 "legal_claims_supported",
+                "privacy_review_complete",
+                "privacy_review_incomplete",
                 "procedure_posture_checked",
                 "procedure_posture_report_missing",
                 "quote_report_missing",
@@ -470,7 +528,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-07-20T16:49:28.400878+00:00",
+              "requested_at": "2026-08-11T23:04:24.055875+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -485,6 +543,8 @@
               "forms_freshness_report_missing",
               "human_review_complete",
               "legal_claims_supported",
+              "privacy_review_complete",
+              "privacy_review_incomplete",
               "procedure_posture_checked",
               "procedure_posture_report_missing",
               "quote_report_missing",
@@ -493,8 +553,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-07-20T16:49:28.400878+00:00",
-            "immutable_report_hash": "c0ff978221baf7309d7491e2524a9fb71ae2fa007a22adaa581d6afedc578453",
+            "generated_at": "2026-08-11T23:04:24.055888+00:00",
+            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,
@@ -502,6 +562,7 @@
               "forms_current": false,
               "human_review_complete": false,
               "legal_claims_supported": false,
+              "privacy_review_complete": false,
               "procedure_posture_checked": false,
               "quotes_found": false
             }
@@ -513,6 +574,7 @@
             "forms_current": false,
             "human_review_complete": false,
             "legal_claims_supported": false,
+            "privacy_review_complete": false,
             "procedure_posture_checked": false,
             "quotes_found": false
           },

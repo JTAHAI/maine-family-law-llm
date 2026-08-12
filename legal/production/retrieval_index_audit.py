@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -169,6 +170,48 @@ class RetrievalIndexAuditor:
                     "manifest_count_mismatch",
                     f"Manifest {manifest_key}={manifest.get(manifest_key)!r} does not match artifact count {actual}.",
                     self.manifest_path,
+                )
+
+        if manifest.get("lookup_value_contract"):
+            candidate_path = self.embedding_store / "hybrid" / "exact_citation_candidates.json"
+            if not candidate_path.exists():
+                self._block(
+                    findings,
+                    blockers,
+                    "exact_citation_candidates_missing",
+                    "The multi-candidate lookup contract requires exact_citation_candidates.json.",
+                    candidate_path,
+                )
+            else:
+                self._count_json_mapping(candidate_path, findings, blockers)
+
+        artifact_hashes = manifest.get("artifact_hashes") if isinstance(manifest.get("artifact_hashes"), dict) else {}
+        for relative, expected_hash in artifact_hashes.items():
+            try:
+                artifact_path = (self.embedding_store / str(relative)).resolve()
+                artifact_path.relative_to(self.embedding_store.resolve())
+                if artifact_path.is_symlink() or not artifact_path.is_file():
+                    raise ValueError("artifact missing or symlinked")
+                digest = hashlib.sha256()
+                with artifact_path.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                actual_hash = digest.hexdigest()
+                if actual_hash != str(expected_hash):
+                    self._block(
+                        findings,
+                        blockers,
+                        "index_artifact_hash_mismatch",
+                        f"Expected {expected_hash}; found {actual_hash}.",
+                        artifact_path,
+                    )
+            except (OSError, ValueError) as exc:
+                self._block(
+                    findings,
+                    blockers,
+                    "index_artifact_path_invalid",
+                    f"Invalid hashed retrieval artifact {relative!r}: {exc}",
+                    self.embedding_store / str(relative),
                 )
 
         required_indexes = {"bm25", "vector", "hybrid"}

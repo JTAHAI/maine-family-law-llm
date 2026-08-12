@@ -12,12 +12,12 @@
     <Description>Maine Family Law LLM is an open-source, local-first legal-information and record-organization workbench for Maine family-law matters.</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
-  <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
-  </Dependencies>
   <Resources>
     <Resource Language="en-us" />
   </Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
   <Applications>
     <Application Id="MaineFamilyLawLLM" Executable="MaineFamilyLawLLM.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements

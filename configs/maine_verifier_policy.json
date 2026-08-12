@@ -1,32 +1,40 @@
 {
-  "version": "1.0.0-pass29-pass31",
-  "citation_quote_verifier": {
-    "citation_existence_target": 0.99,
-    "quote_span_verification_target": 0.97,
-    "resolved_citation_required_for_filing_ready": true,
-    "quote_exact_or_fuzzy_span_required": true,
-    "source_card_trace_required": true,
-    "offset_recording_required": true
-  },
-  "claim_support_verifier": {
-    "citation_support_target": 0.95,
-    "automatic_claim_extraction_enabled": true,
-    "supported_statuses": ["supported"],
-    "blocking_statuses": [
+  "blocking_statuses": {
+    "authority": [
+      "stale_unknown",
+      "not_found",
+      "contradicted",
+      "overruled_or_negative_treatment_unknown",
+      "jurisdiction_mismatch"
+    ],
+    "citations": [
+      "not_found"
+    ],
+    "claims": [
       "unsupported",
       "contradicted",
       "stale",
       "jurisdiction_mismatch",
       "not_verifiable"
     ],
-    "drill_path_required": "claim_to_citation_to_source_text_to_verifier_result"
+    "quotes": [
+      "quote_span_not_found",
+      "semantic_match"
+    ],
+    "source_scope": [
+      "stale_or_unknown_freshness",
+      "jurisdiction_mismatch",
+      "negative_treatment_unknown",
+      "form_freshness_not_verified"
+    ]
   },
-  "source_scope_verifier": {
-    "current_law_requires_known_freshness": true,
-    "maine_scope_default": true,
-    "federal_allowed_when_family_law_adjacent": true,
-    "negative_treatment_unknown_blocks_case_reliance": true,
-    "form_version_current_required": true
+  "citation_quote_verifier": {
+    "citation_existence_target": 0.99,
+    "offset_recording_required": true,
+    "quote_exact_or_fuzzy_span_required": true,
+    "quote_span_verification_target": 0.97,
+    "resolved_citation_required_for_filing_ready": true,
+    "source_card_trace_required": true
   },
   "claim_support_statuses": [
     "supported",
@@ -37,20 +45,44 @@
     "jurisdiction_mismatch",
     "not_verifiable"
   ],
-  "blocking_statuses": {
-    "citations": ["not_found"],
-    "quotes": ["quote_span_not_found", "semantic_match"],
-    "claims": ["unsupported", "contradicted", "stale", "jurisdiction_mismatch", "not_verifiable"],
-    "authority": ["stale_unknown", "not_found", "contradicted", "overruled_or_negative_treatment_unknown", "jurisdiction_mismatch"],
-    "source_scope": ["stale_or_unknown_freshness", "jurisdiction_mismatch", "negative_treatment_unknown", "form_freshness_not_verified"]
+  "claim_support_verifier": {
+    "active_immutable_authority_generation_required": true,
+    "adjacent_sentence_window_enabled": true,
+    "automatic_claim_extraction_enabled": true,
+    "blocking_statuses": [
+      "unsupported",
+      "contradicted",
+      "stale",
+      "jurisdiction_mismatch",
+      "not_verifiable"
+    ],
+    "candidate_span_limit": 5,
+    "citation_support_target": 0.95,
+    "drill_path_required": "claim_to_citation_to_source_text_to_verifier_result",
+    "exact_best_span_offsets_required": true,
+    "numeric_and_citation_token_checks": true,
+    "polarity_conflict_checks": true,
+    "supported_statuses": [
+      "supported"
+    ],
+    "verification_receipt_required": true
   },
   "filing_ready_policy": {
-    "unsupported_legal_claim_blocks_export": true,
-    "unresolved_citation_blocks_export": true,
-    "quote_span_not_found_blocks_export": true,
     "current_law_claim_from_unknown_freshness_blocks_export": true,
-    "wrong_jurisdiction_blocks_export": true,
+    "human_review_required_by_default": true,
+    "model_confidence_never_certifies_support": true,
+    "quote_span_not_found_blocks_export": true,
     "stale_form_blocks_export": true,
-    "human_review_required_by_default": true
-  }
+    "unresolved_citation_blocks_export": true,
+    "unsupported_legal_claim_blocks_export": true,
+    "wrong_jurisdiction_blocks_export": true
+  },
+  "source_scope_verifier": {
+    "current_law_requires_known_freshness": true,
+    "federal_allowed_when_family_law_adjacent": true,
+    "form_version_current_required": true,
+    "maine_scope_default": true,
+    "negative_treatment_unknown_blocks_case_reliance": true
+  },
+  "version": "1.1.0-v7.0.0"
 }

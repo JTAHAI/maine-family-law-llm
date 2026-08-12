@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from legal.evals.citation_quote_metrics import read_jsonl, write_json
 from legal.evals.review_modes import (

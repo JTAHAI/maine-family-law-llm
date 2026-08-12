@@ -84,6 +84,7 @@ class LegalOutputVerifier:
         quotes: Iterable[QuoteRequest | dict[str, str]] | None = None,
         claims: Iterable[ClaimRequest | dict[str, Any] | str] | None = None,
         auto_extract_claims: bool = False,
+        auto_extract_quotes: bool = True,
         expected_jurisdiction: str = "maine",
     ) -> dict[str, Any]:
         source_texts = source_texts or {}
@@ -123,7 +124,8 @@ class LegalOutputVerifier:
         report.source_scope = scope_report
         report.blockers.extend(scope_report.get("blockers", []))
 
-        for quote_request in quotes or _extract_inline_quotes(text):
+        quote_inputs = list(quotes) if quotes is not None else (_extract_inline_quotes(text) if auto_extract_quotes else [])
+        for quote_request in quote_inputs:
             request = _coerce_quote_request(quote_request)
             source_text = source_texts.get(request.source_id, "")
             verification = self.quote_verifier.verify(source_text, request.quoted_text)
@@ -150,12 +152,18 @@ class LegalOutputVerifier:
                 for source_id in selected_ids
                 if source_id in source_metadata
             ]
+            source_classes = [
+                source_metadata.get(source_id, {}).get("source_class", "unknown")
+                for source_id in selected_ids
+                if source_id in source_metadata
+            ]
             verification = self.claim_verifier.verify(
                 request.claim,
                 evidence,
                 authority_statuses=statuses,
                 source_jurisdictions=jurisdictions,
                 source_ids=selected_ids,
+                source_classes=source_classes,
                 expected_jurisdiction=expected_jurisdiction,
             )
             verification["source_ids"] = list(selected_ids)

@@ -1,0 +1,25 @@
+{
+  "schema_version": "maine_v601_bug_hunt_policy_v1",
+  "product_version": "6.0.1",
+  "package_version": "6.0.1.0",
+  "ui_build": 48,
+  "roadmap_pass": 6,
+  "implementation_pass": 64,
+  "scope": "reproducible_bug_fixes_without_workflow_expansion",
+  "fixed_defect_classes": [
+    "path_component_boundary_confusion",
+    "cross_platform_windows_path_acceptance",
+    "unsafe_evidence_uri_scheme_acceptance",
+    "ambiguous_timezone_free_signoff_timestamp",
+    "string_coercion_of_safety_booleans",
+    "api_import_fallback_missing_field_types",
+    "reduced_motion_scroll_animation"
+  ],
+  "non_negotiable_boundaries": {
+    "local_only_default_preserved": true,
+    "review_required_preserved": true,
+    "external_evidence_gates_preserved": true,
+    "no_private_data_in_source_release": true,
+    "no_ga_or_store_certification_claim": true
+  }
+}

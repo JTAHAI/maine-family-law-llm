@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import importlib
 import importlib.metadata
-import os
 import re
 import secrets
 import shutil
