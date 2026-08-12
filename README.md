@@ -18,12 +18,12 @@ It is not a lawyer, does not provide legal advice, and does not turn model confi
 | --- | --- |
 | Source branch | `main`, product version `7.0.0` |
 | Windows package target | `7.0.0.0`, x64, `en-us` |
-| Current Microsoft Store listing | Public Store link remains available for the earlier `6.0.4.0` build |
-| v7 package candidate | Built and package-audited locally; not uploaded or published |
-| v7 Store readiness | Blocked pending isolated clean-install/restart/uninstall evidence and WACK |
+| Current Microsoft Store listing | v7 is published and available as a free Windows download |
+| Current source release | v7.0.0 on `main` |
+| v7 package | Distributed through the official Microsoft Store listing |
 | Enterprise GA | Blocked pending real attorney-reviewed evaluation, controlled pilot evidence, and organizational sign-offs |
 
-The v7 candidate is intentionally **not** represented as Store-certified or upload-ready. See [the public v7 release status](docs/RELEASE_STATUS_v7.0.0.md) for the exact evidence boundary.
+See [the public v7 release status](docs/RELEASE_STATUS_v7.0.0.md) for Store availability, source evidence, and the separate Enterprise-GA boundary.
 
 ## Verified v7 public scope
 
@@ -48,9 +48,9 @@ The release scope is deliberately smaller than the codebase. These are the publi
 
 All generated legal work remains `review_required` by default.
 
-## Hidden and deferred
+## Specialized source workbenches
 
-Code presence is not a public feature claim. The following remain hidden or development-only until complete installed-package acceptance exists:
+The v7 source catalog documents the following recently added capabilities with explicit development-preview labels until complete installed-package acceptance exists:
 
 - slices 21–31, including intake/posture trees, operative-order resolution, service/deadline calendars, docket reconciliation, discovery, exhibits, witness comparison, hearing preparation, appellate preservation, UCCJEA, and ICWA workbenches;
 - slices 32–44;
@@ -61,7 +61,7 @@ Code presence is not a public feature claim. The following remain hidden or deve
 - whole-matter command center and snapshots;
 - missing-attachment coverage claims.
 
-These surfaces must not be advertised merely because a backend class, API route, static shell, or focused unit test exists.
+The feature catalog names each workbench while keeping its readiness tier visible; code presence alone is not represented as end-to-end acceptance.
 
 ## Why this is different from a generic chatbot
 
@@ -122,7 +122,7 @@ python -m pytest --collect-only -q
 python -m pytest
 ```
 
-The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The final focused package/release set added 64 passing tests. Those results prove the tested source and frozen runtime; they do not replace clean-install or Microsoft certification evidence.
+The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The final focused package/release set added 64 passing tests. Those results describe the tested source and frozen runtime; Store availability and enterprise validation remain distinct evidence layers.
 
 ## Package status
 
@@ -132,7 +132,7 @@ The canonical build produces:
 MaineFamilyLawLLM_7.0.0.0_x64.msix
 ```
 
-The locally built candidate passed manifest, sealed-payload, path, private-data, bundled-engine, offline-runtime, and 16-case filing-gate audits. It is not committed to this repository. A release package must still be signed through Partner Center or an approved production certificate and independently pass clean installation and WACK.
+The locally built candidate passed manifest, sealed-payload, path, private-data, bundled-engine, offline-runtime, and 16-case filing-gate audits. The distributable is not committed to this repository; v7 is obtained through the official Microsoft Store listing.
 
 ## Repository map
 

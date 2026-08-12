@@ -164,5 +164,6 @@ def test_public_github_hygiene_files_are_present() -> None:
 def test_github_ci_runs_source_quality_gate() -> None:
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "python -m pytest -q" in workflow
-    assert "python scripts/run-quality-checks.py" in workflow
+    assert "python -m py_compile scripts/run-quality-checks.py" in workflow
+    assert "python scripts/run-public-source-preflight.py" in workflow
     assert "pull_request" in workflow

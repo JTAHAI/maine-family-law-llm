@@ -1,6 +1,6 @@
 # Maine Family Law LLM v7.0.0
 
-v7.0.0 is a smaller, verified Microsoft Store release focused on dependable local workflows.
+v7.0.0 is the current Microsoft Store and source release, focused on dependable local workflows, exact-source review, local privacy, and a broad family-law workbench catalog.
 
 ## Included
 
@@ -17,10 +17,10 @@ v7.0.0 is a smaller, verified Microsoft Store release focused on dependable loca
 
 Private records remain local and are never treated as legal authority. Original records and official forms remain immutable. Outputs remain review-required and are not legal advice. External authority data stays outside the application package.
 
-## Deferred and hidden
+## Specialized source workbenches
 
-Slices 21–31 remain development-only and unadvertised. Slices 32–44 are not included. Timeline correction, claim-disposition, current guided forms, installed tracked-DOCX, whole-matter command-center/snapshot, and missing-attachment coverage claims remain hidden pending complete installed-package acceptance.
+The source catalog now documents slices 21–44 across intake, operative orders, calendars, docket reconciliation, discovery, exhibits, witnesses, hearing and appellate preparation, UCCJEA, ICWA, guardianship/adoption/probate pathways, safety, parenting logistics, negotiation, property, modification, FOAA, filing readiness, digital and email evidence, secure handoff, language access, and resource navigation. These specialized workbenches retain development-preview labels until their individual installed-package acceptance records are complete.
 
 ## Enterprise status
 
-This release does not claim attorney-reviewed evaluation minimums, controlled-pilot evidence, enterprise sign-offs, or Microsoft Store certification. Those are separate evidence gates.
+Microsoft Store availability is live. This release does not claim attorney-reviewed evaluation minimums, controlled-pilot evidence, or enterprise organizational sign-offs; those remain separate evidence gates.

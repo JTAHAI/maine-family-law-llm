@@ -8,20 +8,21 @@ permalink: /
 <section class="hero">
   <div class="shell hero-grid">
     <div>
-      <div class="eyebrow">v7.0.0 source · Local-first · Review-required</div>
-      <h1>Make Maine family-law work traceable to the record and the source.</h1>
-      <p class="lead">Maine Family Law LLM is an open-source Windows workbench for private record review, official Maine authority, exact source inspection, privacy-aware document processing, and drafts that stay subject to human review.</p>
+      <div class="eyebrow">Current source release · v7.0.0</div>
+      <h1>A next-generation local AI workbench for Maine family law.</h1>
+      <p class="lead">Research official Maine authority, organize private matter records, inspect exact sources, verify citations and claims, build reviewable work product, and use specialized family-law workbenches—all with local-first privacy and human review.</p>
       <div class="hero-actions">
-        <a class="button button--primary" href="{{ '/features/' | relative_url }}">Explore verified v7 features</a>
-        <a class="button button--secondary" href="{{ '/release-status/' | relative_url }}">Read release status</a>
+        <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Download v7 free</a>
+        <a class="button button--secondary" href="{{ '/features/' | relative_url }}">Explore the complete v7 catalog</a>
         <a class="button button--warm" href="https://github.com/JTAHAI/maine-family-law-llm">View source</a>
       </div>
       <p class="microcopy">Not a lawyer. Not legal advice. Not affiliated with the Maine Judicial Branch or any court. Every legal output remains review-required.</p>
       <div class="status-row">
-        <span class="status-pill">Source v7.0.0</span>
+        <span class="status-pill">Current source: v7.0.0</span>
+        <span class="status-pill">Available in Microsoft Store</span>
         <span class="status-pill">Local-only by default</span>
         <span class="status-pill">Official sources first</span>
-        <span class="status-pill">v7 Store qualification blocked</span>
+        <span class="status-pill">40 cataloged capabilities</span>
       </div>
     </div>
     <div class="hero-mark" aria-label="For Our Children and Families Maine Family Law LLM brand mark">
@@ -37,35 +38,92 @@ permalink: /
 <section class="section section--wash">
   <div class="shell">
     <div class="section-intro">
-      <div class="eyebrow">Release truth</div>
-      <h2>A smaller verified scope is safer than a larger feature claim.</h2>
-      <p class="lead">The v7 source and frozen runtime passed the available regression, authority, security, privacy, offline, and package audits. Clean isolated AppX installation and WACK remain unproved, so v7 is not represented as Store-ready or certified.</p>
+      <div class="eyebrow">v7 source release</div>
+      <h2>The v7 codebase, documentation, and feature catalog are live.</h2>
+      <p class="lead">Version 7.0.0 expands the local workbench across research, records, evidence, drafting, courtroom preparation, interstate review, filing readiness, secure handoff, accessibility, and resource navigation. Each capability below carries an explicit readiness tier.</p>
     </div>
     <div class="grid-3">
       <article class="card">
         <div class="card-number">01</div>
-        <h3>Source and tests</h3>
-        <p>Version 7.0.0 is frozen. The closure run collected 1,234 tests with 1,220 passes, 14 documented skips, and no failures or errors.</p>
+        <h3>Current v7 source</h3>
+        <p>Version 7.0.0 is the current GitHub source release. The closure run collected 1,234 tests with 1,220 passes, 14 documented skips, and no failures or errors.</p>
       </article>
       <article class="card">
         <div class="card-number">02</div>
-        <h3>Package candidate</h3>
-        <p>The 7.0.0.0 x64 candidate passed manifest, sealed-payload, path, privacy, engine, offline-runtime, and filing-gate audits.</p>
+        <h3>Verified core</h3>
+        <p>Sixteen core workflows are verified end to end, including local launch, record import, OCR, privacy review, official-source research, verification, drafting, packets, filing gates, and backup/restore.</p>
       </article>
       <article class="card">
         <div class="card-number">03</div>
-        <h3>Qualification boundary</h3>
-        <p>Clean install, restart, uninstall/reinstall, installed-offline proof, and WACK are still required before a v7 Store upload-ready claim.</p>
+        <h3>Microsoft Store availability</h3>
+        <p>Version 7 is published and available as a free Windows download from the official Microsoft Store listing.</p>
       </article>
     </div>
     <div class="hero-actions">
-      <a class="button button--primary" href="{{ '/release-status/' | relative_url }}">See exact blockers</a>
-      <a class="button button--secondary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Current Store build (6.0.4)</a>
+      <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Get v7 from Microsoft Store</a>
+      <a class="button button--secondary" href="{{ '/features/' | relative_url }}">View all 40 capabilities</a>
     </div>
   </div>
 </section>
 
 <section class="section">
+  <div class="shell">
+    <div class="section-intro">
+      <div class="eyebrow">Recently added in source</div>
+      <h2>Specialized workbenches now cover the full matter lifecycle.</h2>
+      <p class="lead">These recent vertical slices are present in the v7 source tree. They are labeled development preview until frozen-app and installed-package acceptance is complete.</p>
+    </div>
+    <div class="grid-3">
+      <article class="card feature-cluster">
+        <div class="tier tier--preview">Development preview</div>
+        <h3>Matter strategy and court operations</h3>
+        <ul class="plain-list">
+          <li>Matter intake, posture, and issue tree</li>
+          <li>Operative orders and supersession</li>
+          <li>Service, notice, deadlines, and hearings</li>
+          <li>Docket/MRECS reconciliation</li>
+          <li>Discovery and disclosure</li>
+          <li>Exhibits, Bates labels, and provenance</li>
+          <li>Witness and statement comparison</li>
+          <li>Hearing preparation</li>
+          <li>Appellate preservation and citations</li>
+        </ul>
+      </article>
+      <article class="card feature-cluster">
+        <div class="tier tier--preview">Development preview</div>
+        <h3>Jurisdiction, safety, and family pathways</h3>
+        <ul class="plain-list">
+          <li>UCCJEA interstate jurisdiction map</li>
+          <li>ICWA inquiry and notice review</li>
+          <li>Guardianship, adoption, and probate pathways</li>
+          <li>Protection-from-abuse and safety resources</li>
+          <li>Parenting-plan schedules and logistics</li>
+          <li>Mediation and proposal matrix</li>
+          <li>Property, debt, and valuation</li>
+          <li>Modification/change-in-circumstances review</li>
+        </ul>
+      </article>
+      <article class="card feature-cluster">
+        <div class="tier tier--preview">Development preview</div>
+        <h3>Records, filing, handoff, and access</h3>
+        <ul class="plain-list">
+          <li>FOAA public-records request management</li>
+          <li>Court-filing package and MRECS readiness</li>
+          <li>Screenshot and photo evidence review</li>
+          <li>Email header, attachment, and export integrity</li>
+          <li>Secure reviewer handoff and portable bundles</li>
+          <li>Plain-language, accessibility, and translation</li>
+          <li>Maine family-resource navigation and warm handoff</li>
+        </ul>
+      </article>
+    </div>
+    <div class="hero-actions">
+      <a class="button button--primary" href="{{ '/features/' | relative_url }}">Open the full feature catalog</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--wash">
   <div class="shell">
     <div class="section-intro">
       <div class="eyebrow">Three separate lanes</div>
@@ -91,7 +149,7 @@ permalink: /
   </div>
 </section>
 
-<section class="section section--wash">
+<section class="section">
   <div class="shell">
     <div class="section-intro">
       <div class="eyebrow">Verified v7 workflow</div>
