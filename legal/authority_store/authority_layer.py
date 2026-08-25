@@ -23,30 +23,137 @@ TEXT_FIELDS_FOR_CITATION_DISCOVERY = (
 )
 
 
-def _statute_pinpoints(record: "ParsedAuthorityRecord") -> list[tuple[str, dict[str, int]]]:
-    """Return admitted subsection aliases with exact offsets into parsed text."""
-    if record.authority_kind != "statute_section" or not record.citation:
+_PINPOINT_LABEL = re.compile(r"^\s*(?:\(?)(?P<label>\d+[A-Z]?|[A-Z])(?:\)?|\.)\s+")
+
+
+def _exact_span(text: str, value: object) -> dict[str, int] | None:
+    """Return an exact parsed-text span or nothing; never guess an offset."""
+    candidate = str(value or "").strip()
+    if not text or not candidate:
+        return None
+    start = text.find(candidate)
+    if start < 0:
+        return None
+    return {"start_offset": start, "end_offset": start + len(candidate)}
+
+
+def _iter_labeled_values(value: object, prefix: tuple[str, ...] = ()) -> Iterable[tuple[tuple[str, ...], str]]:
+    """Walk common parser subdivision shapes without treating arbitrary prose as a pinpoint."""
+    if isinstance(value, dict):
+        label = str(value.get("label") or value.get("number") or value.get("paragraph") or "").strip()
+        text = str(value.get("text") or value.get("value") or value.get("content") or "").strip()
+        current = prefix + ((label.upper(),) if label else ())
+        if label and text:
+            yield current, text
+        for key in ("children", "subsections", "subdivisions", "paragraphs", "items"):
+            if key in value:
+                yield from _iter_labeled_values(value[key], current)
+        return
+    if isinstance(value, list):
+        for item in value:
+            yield from _iter_labeled_values(item, prefix)
+        return
+    text = str(value or "").strip()
+    match = _PINPOINT_LABEL.match(text)
+    if match:
+        yield prefix + (match.group("label").upper(),), text
+
+
+def _record_pinpoints(record: "ParsedAuthorityRecord") -> list[tuple[str, str, dict[str, Any]]]:
+    """Index only source-admitted pinpoints with an exact parsed-text span.
+
+    The returned kind and normalized citation deliberately reuse the citation
+    parser's canonical keys.  A resolver can therefore use the same admission,
+    freshness, and source-card path as ordinary citation lookup.  Metadata is
+    explicit about the pinpoint type and remains review-required; it never
+    determines legal effect.
+    """
+    if not record.citation:
         return []
     text = str(record.row.get("text") or "")
-    subsections = record.row.get("subsections")
-    if not text or not isinstance(subsections, list):
+    if not text:
         return []
+    base = extract_citations(record.citation)
+    if not base:
+        return []
+    citation = base[0]
+    output: list[tuple[str, str, dict[str, Any]]] = []
+
+    if citation.kind in {"maine_statute", "maine_rule"}:
+        fields = ("subsections", "subdivisions")
+        for field_name in fields:
+            for labels, value in _iter_labeled_values(record.row.get(field_name)):
+                if not labels:
+                    continue
+                span = _exact_span(text, value)
+                if span is None:
+                    continue
+                suffix = "".join(f"({label})" for label in labels)
+                pinpoint = f"{record.citation}{suffix}"
+                parsed = extract_citations(pinpoint)
+                if not parsed:
+                    continue
+                output.append((parsed[0].kind, parsed[0].normalized, {
+                    "source_span": span,
+                    "pinpoint": pinpoint,
+                    "pinpoint_type": "statute_paragraph" if citation.kind == "maine_statute" else "rule_subdivision",
+                }))
+
+    if citation.kind == "maine_case":
+        for labels, value in _iter_labeled_values(record.row.get("paragraphs")):
+            if not labels:
+                continue
+            span = _exact_span(text, value)
+            if span is None:
+                continue
+            paragraph = labels[-1].lstrip("¶")
+            output.append((citation.kind, citation.normalized, {
+                "source_span": span,
+                "pinpoint": f"{record.citation}, ¶ {paragraph}",
+                "pinpoint_type": "opinion_paragraph",
+                "paragraph": paragraph,
+            }))
+        page_spans = record.row.get("page_spans") or record.row.get("pages")
+        if isinstance(page_spans, dict):
+            page_spans = [{"page": key, **(value if isinstance(value, dict) else {"text": value})} for key, value in page_spans.items()]
+        if isinstance(page_spans, list):
+            for page in page_spans:
+                if not isinstance(page, dict):
+                    continue
+                number = str(page.get("page") or page.get("number") or "").strip()
+                span = dict(page.get("source_span") or {})
+                if not (isinstance(span.get("start_offset"), int) and isinstance(span.get("end_offset"), int)):
+                    span = _exact_span(text, page.get("text")) or {}
+                if not number or not span:
+                    continue
+                output.append((citation.kind, citation.normalized, {
+                    "source_span": span,
+                    "pinpoint": f"{record.citation}, p. {number}",
+                    "pinpoint_type": "opinion_page",
+                    "page": number,
+                }))
+
+    if citation.kind == "maine_form":
+        revision = str(record.row.get("version_date") or record.row.get("revision_date") or record.row.get("revision") or "").strip()
+        if revision:
+            output.append((citation.kind, citation.normalized, {
+                "source_span": dict(record.source_span),
+                "pinpoint": f"{record.citation} (revision {revision})",
+                "pinpoint_type": "form_revision",
+                "form_revision": revision,
+            }))
+    return output
+
+
+def _statute_pinpoints(record: "ParsedAuthorityRecord") -> list[tuple[str, dict[str, int]]]:
+    """Backward-compatible statute-only view used by older retrieval artifacts."""
     results: list[tuple[str, dict[str, int]]] = []
-    for subsection in subsections:
-        value = str(subsection).strip()
-        match = re.match(r"(?P<number>\d+[A-Z]?)\.\s+", value, re.I)
-        if not match:
+    for kind, _normalized, metadata in _record_pinpoints(record):
+        if kind != "maine_statute" or metadata.get("pinpoint_type") != "statute_paragraph":
             continue
-        start = text.find(value)
-        if start < 0:
-            continue
-        number = match.group("number").upper()
-        results.append(
-            (
-                f"{record.citation}({number})",
-                {"start_offset": start, "end_offset": start + len(value)},
-            )
-        )
+        span = dict(metadata.get("source_span") or {})
+        if isinstance(span.get("start_offset"), int) and isinstance(span.get("end_offset"), int):
+            results.append((str(metadata["pinpoint"]), span))
     return results
 
 
@@ -183,13 +290,10 @@ class ParsedAuthorityIndexBuilder:
                     authority_status=record.authority_status,
                     metadata=metadata,
                 )
-            for pinpoint, pinpoint_span in _statute_pinpoints(record):
-                parsed_pinpoints = extract_citations(pinpoint)
-                if not parsed_pinpoints:
-                    continue
+            for kind, normalized, pinpoint_metadata in _record_pinpoints(record):
                 index.add(
-                    kind="maine_statute",
-                    normalized_citation=parsed_pinpoints[0].normalized,
+                    kind=kind,
+                    normalized_citation=normalized,
                     source_id=record.canonical_source_id,
                     authority_status=record.authority_status,
                     metadata={
@@ -199,8 +303,8 @@ class ParsedAuthorityIndexBuilder:
                         "authority_kind": record.authority_kind,
                         "freshness_status": record.freshness_status,
                         "source_hash": record.source_hash,
-                        "source_span": pinpoint_span,
-                        "pinpoint": pinpoint,
+                        "source_span": dict(pinpoint_metadata.get("source_span") or {}),
+                        **pinpoint_metadata,
                     },
                 )
         return index

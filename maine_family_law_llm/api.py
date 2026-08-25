@@ -3398,6 +3398,26 @@ if FastAPI is not None:
         job_id = str((payload or {}).get("job_id") or "").strip() or None
         return AuthorityLibraryService().cancel_update(job_id)
 
+    @app.post("/api/authority/citations/resolve")
+    @app.post("/api/authority/pinpoints/resolve")
+    def resolve_active_authority_pinpoints(payload: dict) -> dict[str, Any]:
+        """Resolve immutable public authority; no matter text is retained here."""
+        text = harden_text_input(str(payload.get("text") or ""), max_length=100_000).value
+        try:
+            result = AuthorityProductService().resolve_citations(text)
+        except (FileNotFoundError, ValueError, OSError):
+            result = {
+                "status": "blocked",
+                "blockers": ["active_authority_product_unavailable_or_unverified"],
+                "resolutions": [],
+                "review_required": True,
+            }
+        result["boundary"] = (
+            "A pinpoint locates admitted source text only. It does not determine legal effect, "
+            "currentness, controlling authority, or a result in any matter."
+        )
+        return result
+
     @app.post("/api/authority/verify-answer")
     def verify_answer_against_active_authority(
         payload: AuthorityVerifyAnswerRequest,

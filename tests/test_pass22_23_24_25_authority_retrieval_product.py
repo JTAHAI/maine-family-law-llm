@@ -188,6 +188,59 @@ def test_direct_statute_pinpoint_and_retrieval_card_preserve_exact_provenance(tm
     assert exact["19-A M.R.S. § 1653(3)"] == "statute-19a-1653"
 
 
+def test_pinpoint_index_supports_nested_statutes_rules_opinions_pages_and_form_revisions(tmp_path):
+    data_root = tmp_path / "external_data"
+    statute_text = "19-A M.R.S. § 1653. 3. Best interest. A. Safety factor."
+    rule_text = "M.R. Civ. P. 4. C. Service. 1. Personal service."
+    opinion_text = "2026 ME 1\n4. The exact paragraph.\nPage 2 exact text."
+    _write_jsonl(
+        data_root / "parsed_authority_store" / "mixed.jsonl",
+        [
+            {
+                "record_id": "statute", "source_id": "statute-snapshot", "source_class": "statute_section",
+                "authority_kind": "statute_section", "jurisdiction": "maine", "freshness_status": "fresh",
+                "citation": "19-A M.R.S. § 1653", "title": "Statute", "text": statute_text,
+                "source_span": {"start_offset": 0, "end_offset": len(statute_text)},
+                "subsections": [{"label": "3", "text": "3. Best interest.", "children": [{"label": "A", "text": "A. Safety factor."}]}],
+            },
+            {
+                "record_id": "rule", "source_id": "rule-snapshot", "source_class": "court_rule",
+                "authority_kind": "court_rule", "jurisdiction": "maine", "freshness_status": "fresh",
+                "citation": "M.R. Civ. P. 4", "title": "Rule", "text": rule_text,
+                "source_span": {"start_offset": 0, "end_offset": len(rule_text)},
+                "subdivisions": [{"label": "C", "text": "C. Service.", "children": [{"label": "1", "text": "1. Personal service."}]}],
+            },
+            {
+                "record_id": "opinion", "source_id": "opinion-snapshot", "source_class": "law_court_opinion",
+                "authority_kind": "law_court_opinion", "jurisdiction": "maine", "freshness_status": "fresh",
+                "citation": "2026 ME 1", "title": "Opinion", "text": opinion_text,
+                "source_span": {"start_offset": 0, "end_offset": len(opinion_text)},
+                "paragraphs": [{"label": "4", "text": "4. The exact paragraph."}],
+                "page_spans": [{"page": 2, "text": "Page 2 exact text."}],
+            },
+            {
+                "record_id": "form", "source_id": "form-snapshot", "source_class": "court_form",
+                "authority_kind": "court_form", "jurisdiction": "maine", "freshness_status": "fresh",
+                "citation": "FM-002", "title": "Form", "text": "FM-002 current form",
+                "source_span": {"start_offset": 0, "end_offset": 19}, "version_date": "2026-01-01",
+            },
+        ],
+    )
+    ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)
+    index = SourceAuthorityIndex.from_rows(json.loads((data_root / "authority_layer" / "citation_index.json").read_text(encoding="utf-8")))
+
+    nested = index.resolve(extract_citations("19-A M.R.S. § 1653(3)(A)")[0])
+    rule = index.resolve(extract_citations("M.R. Civ. P. 4(C)(1)")[0])
+    paragraph = index.resolve(extract_citations("2026 ME 1, ¶ 4")[0])
+    form = index.resolve(extract_citations("FM-002")[0])
+
+    assert nested.metadata["pinpoint_type"] == "statute_paragraph"
+    assert rule.metadata["pinpoint_type"] == "rule_subdivision"
+    assert paragraph.metadata["requested_pinpoint_matched"] is True
+    assert paragraph.metadata["pinpoint_type"] == "opinion_paragraph"
+    assert form.metadata["form_revision"] == "2026-01-01"
+
+
 def test_pass24_runs_measured_retrieval_smoke_eval(tmp_path):
     data_root = _fixture_data_root(tmp_path)
     ParsedAuthorityIndexBuilder(data_root=data_root).build(write=True)

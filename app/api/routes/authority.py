@@ -114,6 +114,30 @@ def resolve_active_authority_citations(payload: dict):
         }
     return review_response("POST /api/authority/citations/resolve", "authority_citation_resolution", result)
 
+
+@router.post("/authority/pinpoints/resolve", summary="Resolve an exact admitted pinpoint without determining legal effect")
+def resolve_active_authority_pinpoints(payload: dict):
+    """Compatibility-stable pinpoint surface over the same immutable source index.
+
+    Authority is a public source lane, so no private matter content is accepted
+    or persisted here.  Every result is explicitly review-required and its
+    exact offset is available only when the parsed authority record admitted it.
+    """
+    try:
+        result = AuthorityProductService().resolve_citations(str(payload.get("text") or ""))
+    except (FileNotFoundError, ValueError, OSError):
+        result = {
+            "status": "blocked",
+            "blockers": ["active_authority_product_unavailable_or_unverified"],
+            "resolutions": [],
+            "review_required": True,
+        }
+    result["boundary"] = (
+        "A pinpoint locates admitted source text only. It does not determine legal effect, "
+        "currentness, controlling authority, or a result in any matter."
+    )
+    return review_response("POST /api/authority/pinpoints/resolve", "authority_pinpoint_resolution", result)
+
 @router.post("/authority/verify-output", summary="Verify an answer against the active immutable authority generation")
 def verify_active_authority_output(payload: dict):
     try:

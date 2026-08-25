@@ -36,6 +36,24 @@
     const authorityUpdateCancelButton = document.getElementById('authority-update-cancel-button');
     const authorityUpdateRefreshButton = document.getElementById('authority-update-refresh-button');
     const authorityUpdateProgress = document.getElementById('authority-update-progress');
+    let authorityPinpointInput = null;
+    let authorityPinpointButton = null;
+    let authorityPinpointResult = null;
+
+    function installAuthorityPinpointControl() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-pinpoint')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-pinpoint-control';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Exact authority pinpoint</div><label for="authority-pinpoint">Citation or pinpoint</label><div class="row"><input id="authority-pinpoint" placeholder="19-A M.R.S. § 1653(3) or 2026 ME 1, ¶ 4"><button class="secondary" id="authority-pinpoint-button" type="button">Locate exact text</button></div><div aria-live="polite" class="status-strip" id="authority-pinpoint-result">Exact text is shown only when an admitted source has a parsed span. Review remains required.</div>';
+      host.insertAdjacentElement('afterend', section);
+      authorityPinpointInput = section.querySelector('#authority-pinpoint');
+      authorityPinpointButton = section.querySelector('#authority-pinpoint-button');
+      authorityPinpointResult = section.querySelector('#authority-pinpoint-result');
+    }
+    installAuthorityPinpointControl();
     // Engineering-only authority update switches stay in the mirrored markup
     // for fixture compatibility, but are never operable or exposed in the
     // production workbench. Public updates require a fresh, explicit network
@@ -6725,6 +6743,40 @@
       }
     }
 
+    async function resolveAuthorityPinpoint() {
+      const text = String(authorityPinpointInput?.value || '').trim();
+      if (!text) {
+        if (authorityPinpointResult) authorityPinpointResult.textContent = 'Enter a citation or pinpoint first.';
+        authorityPinpointInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityPinpointButton) authorityPinpointButton.disabled = true;
+      if (authorityPinpointResult) authorityPinpointResult.textContent = 'Checking the admitted local authority index…';
+      try {
+        const payload = await fetchJson('/api/authority/pinpoints/resolve', {
+          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text}),
+        });
+        const row = Array.isArray(payload?.resolutions) ? payload.resolutions[0] : null;
+        const meta = row?.metadata || {};
+        const span = meta.source_span || {};
+        if (!row || row.status !== 'found') {
+          authorityPinpointResult.textContent = 'No admitted exact source was found. This is not a statement that the citation is invalid; review the authority library.';
+          return;
+        }
+        const exact = Number.isInteger(span.start_offset) && Number.isInteger(span.end_offset);
+        authorityPinpointResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(meta.pinpoint || row.citation?.normalized || text)} resolved to ${escapeHtml(row.source_id || 'an admitted source')}.${exact ? ` Exact offsets ${span.start_offset}–${span.end_offset} are available.` : ' No exact parsed span is admitted for this pinpoint.'}`;
+        if (exact && row.source_id) {
+          authorityPinpointResult.querySelector('strong')?.addEventListener('click', () => showSourcePreview({source_id: row.source_id, metadata: meta, title: meta.title || row.citation?.normalized}));
+          authorityPinpointResult.querySelector('strong')?.setAttribute('role', 'button');
+          authorityPinpointResult.querySelector('strong')?.setAttribute('tabindex', '0');
+        }
+      } catch (error) {
+        if (authorityPinpointResult) authorityPinpointResult.innerHTML = renderRecoverableError(error, {title: 'Exact source lookup could not be completed'});
+      } finally {
+        if (authorityPinpointButton) authorityPinpointButton.disabled = false;
+      }
+    }
+
     async function loadSources() {
       sourcesButton.disabled = true;
       try {
@@ -7064,6 +7116,10 @@
     compactContextButton?.addEventListener('click', compactSafeConversationContext);
     authorityUpdateButton?.addEventListener('click', updateAuthorityLibrary);
     authorityUpdateCancelButton?.addEventListener('click', cancelAuthorityLibraryUpdate);
+    authorityPinpointButton?.addEventListener('click', resolveAuthorityPinpoint);
+    authorityPinpointInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); resolveAuthorityPinpoint(); }
+    });
     authorityUpdateRefreshButton?.addEventListener('click', async () => {
       await loadAuthorityStatus();
       await loadSources();

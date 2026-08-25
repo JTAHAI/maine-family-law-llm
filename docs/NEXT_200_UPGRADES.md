@@ -33,7 +33,9 @@ This backlog is ordered for implementation, not brainstorming. Earlier slices re
 - **Slice 25:** implemented with an explicit as-of-date metadata review lane that blocks a historical-law conclusion when returned authority is later-dated, stale, unknown, or incomplete. Evidence: `dist/ga_today/evidence/32_temporal_authority_resolver.json`.
 - **Slice 26:** implemented as an honest negative-treatment review lane: every legal source card visibly carries its parsed status, defaulting to unknown where no admitted treatment evidence exists. Evidence: `dist/ga_today/evidence/33_negative_treatment_lane.json`.
 - **Slice 27:** implemented with a narrow same-citation metadata conflict explainer and explicit source-version drill-down; it does not decide controlling authority or legal effect. Evidence: `dist/ga_today/evidence/34_authority_conflict_explainer.json`.
-- **Next implementation slice:** 28, Pinpoint resolver expansion.
+- **Slice 28:** implemented in the source checkout with exact admitted nested statute and rule offsets, Law Court paragraph/page metadata, form revision metadata, a canonical authority API, and a hidden-by-default production UI control. It never infers legal effect and reports an absent exact span honestly. Focused service/API/UI tests pass.
+- **Frozen runtime / MSIX status for slice 28:** source assets and frozen-runtime route registration are verified; a rebuilt MSIX is still required before any packaged-reachability claim.
+- **Next implementation slice:** 29, Retrieval diversity control.
 
 ## Twenty major capability tracks
 

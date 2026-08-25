@@ -95,6 +95,32 @@ class SourceAuthorityIndex:
         }
         for index, existing in enumerate(candidates):
             if existing["source_id"] == source_id:
+                existing_metadata = dict(existing.get("metadata") or {})
+                incoming_metadata = dict(payload.get("metadata") or {})
+                # Multiple slip-opinion paragraphs can share one base case
+                # citation. Preserve every exact admitted span instead of
+                # silently replacing the earlier paragraph with the last row.
+                if incoming_metadata.get("pinpoint"):
+                    exact_pinpoints = list(existing_metadata.get("exact_pinpoints") or [])
+                    prior = {
+                        key: existing_metadata[key]
+                        for key in ("pinpoint", "pinpoint_type", "paragraph", "page", "form_revision", "source_span")
+                        if key in existing_metadata
+                    }
+                    incoming = {
+                        key: incoming_metadata[key]
+                        for key in ("pinpoint", "pinpoint_type", "paragraph", "page", "form_revision", "source_span")
+                        if key in incoming_metadata
+                    }
+                    for candidate_pinpoint in (prior, incoming):
+                        if candidate_pinpoint and candidate_pinpoint not in exact_pinpoints:
+                            exact_pinpoints.append(candidate_pinpoint)
+                    incoming_metadata["exact_pinpoints"] = exact_pinpoints
+                    # A bare citation keeps its record-level source span. A
+                    # requested pinpoint selects from exact_pinpoints below.
+                    if "source_span" in existing_metadata:
+                        incoming_metadata["source_span"] = existing_metadata["source_span"]
+                payload["metadata"] = {**existing_metadata, **incoming_metadata}
                 candidates[index] = payload
                 break
         else:
@@ -199,6 +225,22 @@ class SourceAuthorityIndex:
             )
         primary = candidates[0]
         metadata = dict(primary.get("metadata") or {})
+        requested_pinpoint = str(citation.pinpoint or "").casefold()
+        if requested_pinpoint:
+            selected = None
+            for pinpoint in metadata.get("exact_pinpoints") or []:
+                value = str(pinpoint.get("pinpoint") or "").casefold()
+                paragraph = str(pinpoint.get("paragraph") or "").casefold()
+                page = str(pinpoint.get("page") or "").casefold()
+                if requested_pinpoint in value or requested_pinpoint.lstrip("¶ ") in {paragraph, page}:
+                    selected = pinpoint
+                    break
+            if selected is not None:
+                metadata.update(selected)
+                metadata["requested_pinpoint_matched"] = True
+            else:
+                metadata["requested_pinpoint_matched"] = False
+                metadata["requested_pinpoint"] = citation.pinpoint
         metadata["candidate_count"] = len(candidates)
         metadata["alternate_source_ids"] = [candidate["source_id"] for candidate in candidates[1:]]
         return CitationResolution(
