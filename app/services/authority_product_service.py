@@ -13,7 +13,7 @@ from legal.data_boundaries import default_external_data_root, ensure_external_au
 from legal.production.authority_product import AuthorityProductVerifier
 from legal.authority_store.authority_layer import iter_parsed_authority_rows
 from legal.retrieval.models import RetrievalResult
-from legal.retrieval.query_expansion import expand_query
+from legal.retrieval.query_expansion import expand_query_guarded
 from legal.retrieval.retrieval_pipeline import RetrievalPipeline
 from legal.verifiers import LegalOutputVerifier, SourceAuthorityIndex
 
@@ -29,6 +29,7 @@ _MAX_VERIFY_CLAIMS = 128
 _MAX_VERIFY_QUOTES = 128
 _MAX_VERIFY_CLAIM_CHARS = 20_000
 _MAX_VERIFY_QUOTE_CHARS = 20_000
+_INTERACTIVE_HYBRID_MAX_DOCUMENTS = 12_000
 _RETRIEVAL_PIPELINE_CACHE: dict[tuple[str, int, int], RetrievalPipeline] = {}
 _RETRIEVAL_FAST_TEXT_CACHE: dict[
     tuple[str, int, int],
@@ -158,7 +159,19 @@ class AuthorityProductService:
         citation_context = [
             resolution.to_dict() for resolution in pipeline.authority_index.resolve_text(query)
         ] if pipeline.authority_index is not None else []
-        if citation_context:
+        if not citation_context and len(pipeline.documents) <= _INTERACTIVE_HYBRID_MAX_DOCUMENTS:
+            # This stays entirely local and bounded.  Larger corpora retain the
+            # cached lexical fallback below so a semantic scan cannot freeze a
+            # modest desktop.  Exact citations always take precedence.
+            result = pipeline.retrieve(query, top_k=safe_limit, include_text=True)
+            result["retrieval_stack"] = {
+                **dict(result.get("retrieval_stack") or {}),
+                "semantic": "deterministic_sparse_embedding_adapter_bounded_local",
+                "interactive_hybrid_document_cap": _INTERACTIVE_HYBRID_MAX_DOCUMENTS,
+                "active_document_count": len(pipeline.documents),
+                "fallback_reason": None,
+            }
+        elif citation_context:
             by_source_id = {document.source_id: document for document in pipeline.documents}
             exact_results: list[RetrievalResult] = []
             for resolution in citation_context:
@@ -190,11 +203,15 @@ class AuthorityProductService:
                     "freshness_weighting": True,
                     "issue_posture_weighting": False,
                     "parent_child_chunk_aware": False,
+                    "interactive_hybrid_document_cap": _INTERACTIVE_HYBRID_MAX_DOCUMENTS,
+                    "active_document_count": len(pipeline.documents),
+                    "fallback_reason": "admitted_exact_citation_priority",
                 },
                 "review_required": True,
             }
         else:
-            terms = tuple(expand_query(query))[:32]
+            expansion = expand_query_guarded(query)
+            terms = expansion.terms[:32]
             ranked: list[RetrievalResult] = []
             for document, title_text, citation_text, body_text in _RETRIEVAL_FAST_TEXT_CACHE.get(cache_key, ()):
                 matched: list[str] = []
@@ -248,6 +265,10 @@ class AuthorityProductService:
                     "freshness_weighting": True,
                     "issue_posture_weighting": False,
                     "parent_child_chunk_aware": False,
+                    "interactive_hybrid_document_cap": _INTERACTIVE_HYBRID_MAX_DOCUMENTS,
+                    "active_document_count": len(pipeline.documents),
+                    "fallback_reason": "corpus_exceeds_bounded_interactive_hybrid_cap",
+                    "query_expansion": expansion.receipt(),
                 },
                 "review_required": True,
             }
@@ -293,6 +314,21 @@ class AuthorityProductService:
             "text_truncated": bool(source_text is not None and len(full_source_text) > _MAX_SOURCE_TEXT_CHARS),
             "review_required": True,
         }
+
+    def citation_graph_neighbors(self, source_id: str) -> dict[str, Any]:
+        """Return admitted parsed citation edges; an edge has no treatment conclusion."""
+        source_id = str(source_id or "").strip()
+        if not source_id or len(source_id) > _MAX_SOURCE_ID_LENGTH:
+            return {"status": "blocked", "blockers": ["source_id_invalid"], "review_required": True}
+        active = self._active_product(verify_all=False)
+        graph_path = self._artifact_path(active, role_contains="authority_layer:authority_graph", required=False)
+        if graph_path is None:
+            return {"status": "unavailable", "build_id": active.build_id, "source_id": source_id, "edges": [], "blockers": ["authority_graph_not_in_active_build"], "review_required": True}
+        graph = self._read_json(graph_path)
+        if not isinstance(graph, dict):
+            raise ValueError("authority graph must be a JSON object")
+        edges = [dict(item) for item in list(graph.get(source_id) or []) if isinstance(item, dict)][:50]
+        return {"status": "pass", "build_id": active.build_id, "source_id": source_id, "edges": edges, "edge_count": len(edges), "review_required": True, "boundary": "Parsed citation relationships only; not controlling weight, negative treatment, currentness, or legal effect."}
 
     def get_source_span(
         self,

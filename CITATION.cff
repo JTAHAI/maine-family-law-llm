@@ -2,8 +2,8 @@ cff-version: 1.2.0
 title: Maine Family Law LLM
 message: Cite this source repository by project name, version or commit, and repository URL. Do not cite this repository as legal authority.
 type: software
-version: 7.0.0
-date-released: 2026-08-11
+version: 8.0.0
+date-released: 2026-08-23
 authors:
   - name: Maine Family Law LLM contributors
 license: other

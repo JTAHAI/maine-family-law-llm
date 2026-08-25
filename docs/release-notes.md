@@ -1,3 +1,13 @@
+## v8.0.0 — Local workbench expansion and interaction hardening
+
+- Product version: 8.0.0. Microsoft Store package target: 8.0.0.0.
+- Adds matter-scoped Add-on Studio and Productivity Studio workflows through the canonical local API and production workbench.
+- Expands source-backed chat with streaming, question decomposition, comparison, correction, fact pins, temporal review, and authority-conflict guardrails.
+- Adds a modern chat-first view, collapsible supporting panels, stronger contrast, keyboard/focus improvements, and responsive use of freed workspace.
+- Keeps private artifacts local and encrypted, preserves source and audit receipts, and marks generated work review-required.
+- This source checkpoint does not claim attorney validation, controlled-pilot evidence, Microsoft Store certification for v8, or Enterprise GA.
+- Full details: [v8 release notes](RELEASE_NOTES_v8.0.0.md).
+
 ## v7.0.0 — Verified scope and release hardening
 
 - Product version: 7.0.0. Microsoft Store package target: 7.0.0.0.

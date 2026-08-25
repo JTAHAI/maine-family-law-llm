@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from maine_family_law_llm.version import VERSION
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -99,22 +101,50 @@ Attribution should include the project name, repository URL, version or commit, 
             lines.append(
                 f"| `{item.get('resource_id', '')}` | `{item.get('source_class', '')}` | `{item.get('jurisdiction', '')}` | {str(bool(item.get('required_for_enterprise'))).lower()} | {url} |"
             )
+        lines.extend(
+            [
+                "",
+                "## v5.1.0 permissive open-source adaptations",
+                "",
+                "The following projects informed or supplied permissively licensed components in v5.1.0:",
+                "",
+                "- **zeweihan/A-market-ecm-lawyer-plugin** — MIT License. Credited for the legal skill-contract architecture, role separation, many-to-many file classification pattern, QC triage concepts, folder scanner, DOCX embedded-media extractor, and skill-packaging convention. Maine-specific adaptations were rewritten and security-hardened. No Chinese ECM legal rule is represented as Maine authority.",
+                "- **GoogleCloudPlatform/knowledge-catalog / Open Knowledge Format** — Apache License 2.0. Credited for the portable Markdown-plus-frontmatter knowledge-bundle concept, stable path-derived concept IDs, progressive indexes, and version-controllable graph-like source packs. The Maine implementation is a modified strict subset and does not include Google ADK, Gemini, BigQuery, cloud crawling, or external telemetry.",
+                "",
+                "Full notices and license copies are in `THIRD_PARTY_NOTICES.md` and `licenses/`.",
+                "",
+                "",
+                "## v5.2.0 document handling and tracked Word editing",
+                "",
+                "- **Paparusi/legal-ai-agent** — MIT License, Copyright (c) 2026 Lê Minh Hiếu (Paparusi). Credited for document-workspace, structured action, revision-history, audit-schema, and inline-diff architecture patterns. The Maine implementation was independently rewritten and hardened; no Vietnamese legal rule, authentication code, unsafe Docker default, autonomous destructive permission, crawler, or billing/admin code was imported.",
+                "- **pablospe/docx-editor** — MIT License, Copyright (c) 2026 Pablo Speciale. Used as the tracked Word editing engine for hash-anchored paragraph targeting, tracked changes, comments, and revision-aware new-copy output. Maine Family Law LLM adds explicit confirmation, path containment, file and operation limits, immutable originals, and review-required labeling.",
+                "",
+                "Full MIT license copies are retained in `licenses/` and the combined notices are in `THIRD_PARTY_NOTICES.md`.",
+            ]
+        )
         attribution_text = "\n".join(lines) + "\n"
-        citation_text = """cff-version: 1.2.0
+        citation_text = f"""cff-version: 1.2.0
 title: Maine Family Law LLM
-message: Cite this source repository by project name, version/commit, and URL. Do not cite this repository as legal authority.
+message: Cite this source repository by project name, version or commit, and repository URL. Do not cite this repository as legal authority.
 type: software
+version: {VERSION}
+date-released: 2026-08-23
 authors:
   - name: Maine Family Law LLM contributors
 license: other
-repository-code: https://github.com/REPLACE_WITH_OWNER/ME_FM_LLM
-abstract: Standalone Maine-family-law AI source-code framework with external official-source ingestion, retrieval, verification, review gates, and enterprise readiness controls.
+repository-code: https://github.com/JTAHAI/maine-family-law-llm
+url: https://github.com/JTAHAI/maine-family-law-llm
+abstract: Local-first Maine family-law legal-information workbench for official-source research, exact citation and quote verification, privacy-aware record review, OCR derivatives, corpus organization, fail-closed filing gates, and review-required drafting support.
 keywords:
   - Maine
   - family law
   - legal AI
+  - local-first software
   - retrieval augmented generation
   - citation verification
+  - evidence mapping
+  - legal workflow
+  - access to justice
 """
         if not resources:
             blockers.append("resource_catalog_empty_or_missing")

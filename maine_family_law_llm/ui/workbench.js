@@ -12,6 +12,7 @@
     const copyButton = document.getElementById('copy-button');
     const downloadButton = document.getElementById('download-button');
     const downloadJsonButton = document.getElementById('download-json-button');
+    const compactContextButton = document.getElementById('compact-context-button');
     const clearButton = document.getElementById('clear-button');
     const clearDraftButton = document.getElementById('clear-draft-button');
     const stopButton = document.getElementById('stop-button');
@@ -59,6 +60,7 @@
     const trustReviewDetail = document.getElementById('trust-review-detail');
     const trustReviewAction = document.getElementById('trust-review-action');
     const answerStyle = document.getElementById('answer-style');
+    const responseDepth = document.getElementById('response-depth');
     const searchMode = document.getElementById('search-mode');
     const matterContext = document.getElementById('matter-context');
     const audience = document.getElementById('audience');
@@ -313,6 +315,8 @@
     const toggleSideCardsButton = document.getElementById('toggle-side-cards-button');
     const workbenchShortcuts = document.getElementById('workbench-shortcuts');
     const focusModeButton = document.getElementById('focus-mode-button');
+    const v8ViewMenu = document.getElementById('v8-view-menu');
+    const v8ActiveViewLabel = document.getElementById('v8-active-view-label');
     const helpButton = document.getElementById('help-button');
     const newChatButton = document.getElementById('new-chat-button');
     const welcomeOverlay = document.getElementById('welcome-overlay');
@@ -371,6 +375,51 @@
     const localWorkbenchReducedMotion = document.getElementById('local-workbench-reduced-motion');
     const localWorkbenchScreenReader = document.getElementById('local-workbench-screen-reader');
     let localWorkbenchReturnFocus = null;
+    const productivityStudioOverlay = document.getElementById('productivity-studio-overlay');
+    const productivityStudioClose = document.getElementById('productivity-studio-close');
+    const productivityStudioStatus = document.getElementById('productivity-studio-status');
+    const productivityStudioResult = document.getElementById('productivity-studio-result');
+    const productivityTabs = Array.from(document.querySelectorAll('[data-productivity-tab]'));
+    const productivityPanels = Array.from(document.querySelectorAll('[data-productivity-panel]'));
+    let productivityReturnFocus = null;
+    let productivityLastBackupId = '';
+    const addonStudioOverlay = document.getElementById('addon-studio-overlay');
+    const addonStudioClose = document.getElementById('addon-studio-close');
+    const addonStudioStatus = document.getElementById('addon-studio-status');
+    const addonStudioResult = document.getElementById('addon-studio-result');
+    const addonToolList = document.getElementById('addon-tool-list');
+    const addonActiveTitle = document.getElementById('addon-active-title');
+    const addonActiveDescription = document.getElementById('addon-active-description');
+    const addonPrimaryLabel = document.getElementById('addon-primary-label');
+    const addonSecondaryLabel = document.getElementById('addon-secondary-label');
+    const addonTertiaryLabel = document.getElementById('addon-tertiary-label');
+    const addonPrimaryInput = document.getElementById('addon-primary-input');
+    const addonSecondaryInput = document.getElementById('addon-secondary-input');
+    const addonTertiaryInput = document.getElementById('addon-tertiary-input');
+    const addonConfirmedInput = document.getElementById('addon-confirmed-input');
+    const addonBoundary = document.getElementById('addon-boundary');
+    const addonRun = document.getElementById('addon-run');
+    const addonInspect = document.getElementById('addon-inspect');
+    const addonReview = document.getElementById('addon-review');
+    const addonDownload = document.getElementById('addon-download');
+    const addonIntegrity = document.getElementById('addon-integrity');
+    const addonReviewDecision = document.getElementById('addon-review-decision');
+    const addonReviewNote = document.getElementById('addon-review-note');
+    const addonRefresh = document.getElementById('addon-refresh');
+    let addonReturnFocus = null;
+    let activeAddonId = 'native_whisper_transcription';
+    let activeAddonResultId = '';
+    let activeAddonResultHash = '';
+    let activeAddonArtifactId = '';
+    const courtroomPresentationOverlay = document.getElementById('courtroom-presentation-overlay');
+    const courtroomPresentationClose = document.getElementById('courtroom-presentation-close');
+    const courtroomPresentationTitle = document.getElementById('courtroom-presentation-title');
+    const courtroomPresentationText = document.getElementById('courtroom-presentation-text');
+    const courtroomPresentationSource = document.getElementById('courtroom-presentation-source');
+    const courtroomPresentationPosition = document.getElementById('courtroom-presentation-position');
+    const courtroomPresentationPrevious = document.getElementById('courtroom-presentation-previous');
+    const courtroomPresentationNext = document.getElementById('courtroom-presentation-next');
+    const courtroomPresentationState = {cards: [], index: 0};
     const documentWorkspace = document.getElementById('document-workspace');
     const documentWorkspaceBackdrop = document.getElementById('document-workspace-backdrop');
     const documentWorkspaceClose = document.getElementById('document-workspace-close');
@@ -753,7 +802,10 @@
     async function fetchJson(url, options = {}) {
       let res;
       try {
-        res = await fetch(url, options);
+        const headers = new Headers(options.headers || {});
+        if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
+        if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
+        res = await fetch(url, {...options, headers});
       } catch (err) {
         if (err?.name === 'AbortError') throw err;
         throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.'});
@@ -776,6 +828,114 @@
         throw makeSafeLocalError({status: res.status, code: safeCode, recovery: payload?.recovery_hint && !/[\\/]|[A-Z]:/i.test(String(payload.recovery_hint)) ? String(payload.recovery_hint).slice(0, 240) : ''});
       }
       return payload;
+    }
+
+    function localRequestHeaders(rawHeaders = {}) {
+      const headers = new Headers(rawHeaders);
+      if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
+      if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
+      return headers;
+    }
+
+    function parseStreamFrame(frame) {
+      const lines = String(frame || '').split(/\r?\n/);
+      const event = (lines.find((line) => line.startsWith('event:')) || '').slice(6).trim() || 'message';
+      const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+      if (!data) return {event, payload: null};
+      try {
+        return {event, payload: JSON.parse(data)};
+      } catch (err) {
+        throw makeSafeLocalError({code: 'local_stream_invalid', message: 'The local service returned an unreadable progress update.', recovery: 'Retry once. If the problem continues, restart the local service.'});
+      }
+    }
+
+    // The chat immediately renders its local pending state. This budget measures
+    // the separate server acknowledgement so regressions are visible in both UI
+    // telemetry and focused tests without pretending that retrieval has finished.
+    const CHAT_FIRST_FEEDBACK_BUDGET_MS = 150;
+
+    async function fetchAnswerStream(payload, signal, onStage) {
+      const startedAt = performance.now();
+      let firstFeedbackMs = null;
+      let firstFeedbackBudgetMs = CHAT_FIRST_FEEDBACK_BUDGET_MS;
+      let response;
+      try {
+        response = await fetch('/ask/stream', {
+          method: 'POST',
+          headers: localRequestHeaders({'Content-Type': 'application/json', 'Accept': 'text/event-stream'}),
+          body: JSON.stringify(payload),
+          signal
+        });
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+        throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.'});
+      }
+      if (!response.ok) {
+        const text = await response.text();
+        let parsed = {};
+        try { parsed = text ? JSON.parse(text) : {}; } catch (err) { /* Use the safe status code below. */ }
+        const detail = parsed && typeof parsed.detail === 'object' ? parsed.detail : null;
+        const rawCode = parsed?.error_code || parsed?.code || detail?.code || (typeof parsed?.detail === 'string' ? parsed.detail : '');
+        const safeCode = /^[a-z0-9_.:-]{1,80}$/i.test(String(rawCode || '')) ? String(rawCode) : `local_http_${response.status}`;
+        throw makeSafeLocalError({status: response.status, code: safeCode, recovery: parsed?.recovery_hint && !/[\\/]|[A-Z]:/i.test(String(parsed.recovery_hint)) ? String(parsed.recovery_hint).slice(0, 240) : ''});
+      }
+      if (!response.body || typeof response.body.getReader !== 'function') {
+        throw makeSafeLocalError({code: 'local_stream_unavailable', message: 'This local runtime does not support streamed answers.', recovery: 'Restart the app to load the current workbench runtime, then retry.'});
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result = null;
+      let serverDurationMs = null;
+      try {
+        while (true) {
+          const next = await reader.read();
+          if (next.done) break;
+          buffer += decoder.decode(next.value, {stream: true});
+          const frames = buffer.split(/\r?\n\r?\n/);
+          buffer = frames.pop() || '';
+          for (const frame of frames) {
+            const parsed = parseStreamFrame(frame);
+            if (!parsed.payload) continue;
+            if (parsed.event === 'accepted' || parsed.event === 'retrieving') {
+              if (firstFeedbackMs === null) {
+                firstFeedbackMs = Math.max(0, Math.round(performance.now() - startedAt));
+                const declaredBudget = Number(parsed.payload?.first_feedback_budget_ms);
+                if (Number.isFinite(declaredBudget) && declaredBudget > 0) firstFeedbackBudgetMs = declaredBudget;
+              }
+              onStage?.({...parsed.payload, first_feedback_ms: firstFeedbackMs, first_feedback_budget_ms: firstFeedbackBudgetMs});
+            }
+            if (parsed.event === 'result' && parsed.payload && typeof parsed.payload.payload === 'object') {
+              result = parsed.payload.payload;
+              const duration = Number(parsed.payload.duration_ms);
+              if (Number.isFinite(duration) && duration >= 0) serverDurationMs = Math.round(duration);
+            }
+          }
+        }
+        buffer += decoder.decode();
+        if (buffer.trim()) {
+          const parsed = parseStreamFrame(buffer);
+          if (parsed.event === 'result' && parsed.payload && typeof parsed.payload.payload === 'object') {
+            result = parsed.payload.payload;
+            const duration = Number(parsed.payload.duration_ms);
+            if (Number.isFinite(duration) && duration >= 0) serverDurationMs = Math.round(duration);
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      if (!result) {
+        throw makeSafeLocalError({code: 'local_stream_incomplete', message: 'The local service ended before the verified answer was ready.', recovery: 'Your question was not changed. Retry once after confirming the local service is healthy.'});
+      }
+      return {
+        payload: result,
+        metrics: {
+          first_feedback_ms: firstFeedbackMs,
+          first_feedback_budget_ms: firstFeedbackBudgetMs,
+          total_duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
+          server_duration_ms: serverDurationMs
+        }
+      };
     }
 
     let localServiceOnline = null;
@@ -925,6 +1085,468 @@
         await loadLocalWorkbenchStatus();
       } catch (err) {
         if (localWorkbenchStatus) localWorkbenchStatus.textContent = `Could not save preferences: ${err.message}`;
+      }
+    }
+
+    function productivityElement(id) {
+      return document.getElementById(`productivity-${id}`);
+    }
+
+    function selectProductivityTab(tabName, {focus = false} = {}) {
+      const selected = productivityTabs.find((button) => button.dataset.productivityTab === tabName) || productivityTabs[0];
+      productivityTabs.forEach((button) => {
+        const active = button === selected;
+        button.setAttribute('aria-selected', String(active));
+        button.tabIndex = active ? 0 : -1;
+      });
+      productivityPanels.forEach((panel) => { panel.hidden = panel.dataset.productivityPanel !== selected?.dataset.productivityTab; });
+      if (focus) selected?.focus({preventScroll: true});
+    }
+
+    function productivitySafeResult(payload = {}) {
+      const keys = [
+        'status', 'review_required', 'receipt_id', 'receipt_hash', 'candidate_count', 'new_count',
+        'duplicate_count', 'run_id', 'recipe_id', 'export_id', 'plan_id', 'recommended_model_tier',
+        'context_tokens', 'item_id', 'project_id', 'action_id', 'session_id', 'backup_id', 'file_count',
+        'verified', 'encrypted_sha256', 'restore_mode', 'live_matter_overwritten', 'recovery_token',
+        'automatic_download', 'calendar_account_write', 'private_notes_hidden', 'original_immutable',
+        'privacy_review_complete', 'filing_ready',
+      ];
+      const result = {};
+      keys.forEach((key) => { if (payload[key] !== undefined) result[key] = payload[key]; });
+      if (Array.isArray(payload.actions)) result.actions = payload.actions.map((row) => ({action_id: row.action_id, priority: row.priority, title: row.title, status: row.status}));
+      if (payload.artifact) result.artifact = {artifact_id: payload.artifact.artifact_id, kind: payload.artifact.kind, sha256: payload.artifact.sha256, size: payload.artifact.size};
+      if (payload.transcript) result.transcript = {transcript_id: payload.transcript.transcript_id, transcript_sha256: payload.transcript.transcript_sha256, segment_count: payload.transcript.segment_count, status: payload.transcript.status};
+      if (payload.item) result.exact_source = {
+        item_id: payload.item.item_id || payload.item.project_id || payload.item.session_id || payload.item.export_id,
+        source_id: payload.item.source_ref?.source_id || payload.item.source_ref?.record_id,
+        source_hash: payload.item.source_ref?.source_hash,
+        locator: payload.item.source_ref?.locator,
+        exact_span: payload.item.source_ref?.exact_span,
+        freshness: payload.item.source_ref?.freshness,
+      };
+      if (payload.counts) result.counts = payload.counts;
+      return result;
+    }
+
+    function renderProductivityResult(title, payload) {
+      if (productivityStudioStatus) productivityStudioStatus.textContent = `${title} complete · review required.`;
+      if (productivityStudioResult) productivityStudioResult.innerHTML = `<strong>${escapeHtml(title)} — Review required</strong><pre>${escapeHtml(JSON.stringify(productivitySafeResult(payload), null, 2))}</pre>`;
+    }
+
+    async function productivityAction(label, operation) {
+      if (productivityStudioStatus) productivityStudioStatus.textContent = `${label} in progress…`;
+      try {
+        const payload = await operation();
+        renderProductivityResult(label, payload);
+        return payload;
+      } catch (err) {
+        if (productivityStudioStatus) productivityStudioStatus.textContent = `${label} could not finish: ${err.message}`;
+        if (productivityStudioResult) productivityStudioResult.innerHTML = `<strong>Nothing was changed outside the active matter.</strong><p>${escapeHtml(err.message)}</p>`;
+        return null;
+      }
+    }
+
+    function postProductivity(url, payload = {}) {
+      return fetchJson(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+    }
+
+    async function sha256Text(value) {
+      const bytes = new TextEncoder().encode(String(value || ''));
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function openProductivityStudio(tabName = 'inbox') {
+      if (!productivityStudioOverlay) return;
+      productivityReturnFocus = document.activeElement;
+      selectProductivityTab(tabName);
+      openOverlay(productivityStudioOverlay);
+      await productivityAction('Productivity Studio status', () => fetchJson('/api/productivity'));
+      productivityTabs.find((button) => button.dataset.productivityTab === tabName)?.focus({preventScroll: true});
+    }
+
+    function closeProductivityStudio() {
+      closeOverlay(productivityStudioOverlay);
+      productivityReturnFocus?.focus?.({preventScroll: true});
+      productivityReturnFocus = null;
+    }
+
+    const ADDON_SAMPLE_HASH = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const addonDefinitions = [
+      ['native_whisper_transcription', 'Native transcription', 'Create a local transcript with an explicitly approved Whisper-compatible engine.', 'Matter-relative media path', 'Optional source note', 'Media ID', 'hearing.wav', 'Fictional hearing audio.', 'hearing_audio', 'No engine is downloaded automatically. Missing approved tooling returns a blocker.'],
+      ['ocr_correction_studio', 'OCR correction', 'Correct OCR text while preserving the original hash and append-only correction history.', 'Original OCR text', 'Corrected text', 'Page ID', 'Fictlonal OCR text', 'Fictional OCR text', 'page_001', 'The original stays unchanged; the correction is a separate review artifact.'],
+      ['communications_importer', 'Communications importer', 'Normalize an exported message with sender, recipient, time, and attachment provenance.', 'Message text', 'Timestamp', 'Message ID', 'Fictional logistics message.', '2026-01-02T03:04:05Z', 'message_001', 'Imports supplied content only; it never connects to a messaging account.'],
+      ['evidence_relationship_graph', 'Evidence relationship graph', 'Connect a record to an event with an explicit, source-bound relationship.', 'Record label', 'Event label', 'Edge ID', 'Fictional order', 'Fictional exchange event', 'edge_001', 'Edges are reviewer assertions, not findings or legal conclusions.'],
+      ['local_model_manager', 'Local model manager', 'Hash, inspect, and register an existing matter-local model artifact without downloading or activating it.', 'Model ID', 'Matter-relative model path', 'Format', 'local_model_001', 'models/local-model.gguf', 'gguf', 'Registration verifies the actual file and never downloads or selects the model automatically.'],
+      ['court_form_autofill', 'Court-form autofill', 'Create a working copy only when the form is marked current and required fields are present.', 'Form ID', 'Fictional party name', 'Required field ID', 'fm_004', 'Fictional Person', 'party_name', 'The output remains review required and is never filing-ready by itself.'],
+      ['advanced_table_extraction', 'Advanced table extraction', 'Create a CSV cell with an exact source locator.', 'Cell value', 'Source locator', 'Table ID', '2026-01-01', 'page 1, table 1, row 2, column 1', 'table_001', 'Every extracted cell keeps its source location.'],
+      ['financial_document_intelligence', 'Financial document intelligence', 'Categorize a source-bound transaction and flag material values for review.', 'Amount', 'Category', 'Transaction ID', '1250.00', 'housing', 'transaction_001', 'This tool does not make valuation, ownership, support, or legal conclusions.'],
+      ['semantic_order_comparison', 'Semantic order comparison', 'Compare one exact order term and expose material wording changes.', 'Earlier term', 'Later term', 'Term ID', 'Exchange at 5 PM', 'Exchange at 6 PM', 'term_001', 'The comparison does not decide which order is operative.'],
+      ['authority_update_center', 'Authority update center', 'Audit an official-source build candidate without activating or downloading it.', 'Build ID', 'Official source URL', 'Source ID', 'maine_2026_001', 'https://legislature.maine.gov/', 'title_19a', 'Activation and network updates remain separate, controlled operations.'],
+      ['guided_research_builder', 'Guided research builder', 'Turn a question and issue into a Maine-first source-class research plan.', 'Research question', 'Issue', 'Plan ID', 'What source governs this fictional issue?', 'parental rights', 'research_001', 'A research plan makes no current-law claim until exact sources are verified.'],
+      ['evidence_annotation_studio', 'Evidence annotation', 'Attach a locator and review note to an exact record span.', 'Exact source text', 'Review note', 'Record ID', 'Fictional exact source text.', 'Verify this observation.', 'record_001', 'Annotations never modify the original record.'],
+      ['local_automation_scheduler', 'Local automation scheduler', 'Schedule an allow-listed matter-health action while the app is running.', 'Schedule ID', 'Allowed task', 'Interval hours', 'schedule_001', 'matter_health', '24', 'Scheduled tasks run only while the app is active and have no external side effects.'],
+      ['secure_reviewer_collaboration', 'Secure reviewer collaboration', 'Build an encrypted, portable reviewer handoff without sharing live matter access.', 'Reviewer label', 'Artifact reference', 'Bundle ID', 'Fictional reviewer', 'artifact_001', 'bundle_001', 'The app creates a bundle but does not send it.'],
+      ['matter_template_library', 'Matter template library', 'Create a reusable working template from explicitly selected fields.', 'Template ID', 'Field value', 'Field ID', 'review_template', 'Fictional issue', 'issue_label', 'The template does not copy unrelated matter data.'],
+      ['conflict_entity_resolver', 'Conflict and entity resolver', 'Group two spelling variants as a review candidate without merging records.', 'First mention', 'Second mention', 'Candidate ID', 'Fictional Person', 'FICTIONAL-PERSON', 'entity_001', 'No identity merge occurs without explicit human review.'],
+      ['desktop_notification_center', 'Desktop notification center', 'Create a local corrective-action notification from a review blocker.', 'Notification title', 'Corrective action', 'Event ID', 'Citation requires review', 'Open the exact source.', 'event_001', 'Notifications stay local and never reveal matter text to an external service.'],
+      ['courtroom_bundle_exporter', 'Courtroom bundle exporter', 'Create an offline, source-card ZIP with private notes excluded.', 'Card title', 'Exact display text', 'Card ID', 'Exact fictional source', 'Fictional exact record excerpt.', 'card_001', 'The offline bundle is review required and contains no private notes.'],
+      ['voice_drafting_commands', 'Voice drafting and commands', 'Turn a supplied transcript into a review-required draft using punctuation commands.', 'Transcript and commands', 'Optional note', 'Draft ID', 'Fictional heading new paragraph review source comma then cite period', 'Review exact support.', 'voice_draft_001', 'Voice text never becomes filing-ready without source and human review.'],
+      ['extension_sdk_permission_center', 'Extension SDK permissions', 'Review an extension permission request before signing, registration, or enablement.', 'Extension ID', 'Requested permission', 'Version', 'fictional_extension', 'matter.records.read', '1_0_0', 'Signed registration and explicit enablement remain separate; arbitrary network access is never allowed.'],
+    ].map(([id, label, description, primaryLabel, secondaryLabel, tertiaryLabel, primary, secondary, tertiary, boundary]) => ({id, label, description, primaryLabel, secondaryLabel, tertiaryLabel, primary, secondary, tertiary, boundary}));
+
+    function addonDefinition(addonId = activeAddonId) {
+      return addonDefinitions.find((row) => row.id === addonId) || addonDefinitions[0];
+    }
+
+    function renderAddonTools() {
+      if (!addonToolList) return;
+      addonToolList.replaceChildren(...addonDefinitions.map((definition, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'addon-tool-button';
+        button.dataset.addonId = definition.id;
+        button.setAttribute('aria-current', String(definition.id === activeAddonId));
+        button.innerHTML = `<span>${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(definition.label)}</strong>`;
+        button.addEventListener('click', () => selectAddon(definition.id, {focus: false}));
+        return button;
+      }));
+    }
+
+    function selectAddon(addonId, {focus = true} = {}) {
+      const definition = addonDefinition(addonId);
+      activeAddonId = definition.id;
+      activeAddonResultId = '';
+      activeAddonResultHash = '';
+      activeAddonArtifactId = '';
+      if (addonInspect) addonInspect.disabled = true;
+      if (addonReview) addonReview.disabled = true;
+      if (addonDownload) addonDownload.disabled = true;
+      if (addonActiveTitle) addonActiveTitle.textContent = definition.label;
+      if (addonActiveDescription) addonActiveDescription.textContent = definition.description;
+      if (addonPrimaryLabel) addonPrimaryLabel.textContent = definition.primaryLabel;
+      if (addonSecondaryLabel) addonSecondaryLabel.textContent = definition.secondaryLabel;
+      if (addonTertiaryLabel) addonTertiaryLabel.textContent = definition.tertiaryLabel;
+      if (addonPrimaryInput) addonPrimaryInput.value = definition.primary;
+      if (addonSecondaryInput) addonSecondaryInput.value = definition.secondary;
+      if (addonTertiaryInput) addonTertiaryInput.value = definition.tertiary;
+      if (addonConfirmedInput) addonConfirmedInput.checked = false;
+      if (addonBoundary) addonBoundary.textContent = definition.boundary;
+      renderAddonTools();
+      if (focus) addonToolList?.querySelector(`[data-addon-id="${definition.id}"]`)?.focus({preventScroll: true});
+    }
+
+    async function addonPayload() {
+      const primary = String(addonPrimaryInput?.value || '').trim();
+      const secondary = String(addonSecondaryInput?.value || '').trim();
+      const tertiary = intakeSafeId(addonTertiaryInput?.value) || 'review_item_001';
+      const confirmed = addonConfirmedInput?.checked === true;
+      const sourceRef = {record_id: 'record_001', locator: 'page 1'};
+      switch (activeAddonId) {
+        case 'native_whisper_transcription': return {media_relative_path: primary};
+        case 'ocr_correction_studio': return {page_id: tertiary, original_text: primary, corrected_text: secondary, source_hash: await sha256Text(primary)};
+        case 'communications_importer': return {messages: [{message_id: tertiary, source_format: 'manual_export', timestamp: secondary, sender_token: 'person_alpha', recipient_tokens: ['person_beta'], text: primary, attachment_ids: []}]};
+        case 'evidence_relationship_graph': return {nodes: [{node_id: 'record_001', kind: 'record', label: primary}, {node_id: 'event_001', kind: 'event', label: secondary}], edges: [{edge_id: tertiary, source: 'record_001', target: 'event_001', relationship: 'supports', source_ref: sourceRef}]};
+        case 'local_model_manager': return {action: 'register', model_id: intakeSafeId(primary), artifact_relative_path: secondary, format: tertiary};
+        case 'court_form_autofill': return {form_id: intakeSafeId(primary), freshness: 'fresh', required_fields: [tertiary], values: {[tertiary]: secondary}};
+        case 'advanced_table_extraction': return {cells: [{row: 0, column: 0, value: primary, source_locator: secondary}]};
+        case 'financial_document_intelligence': return {review_threshold: 1000, transactions: [{transaction_id: tertiary, date: '2026-01-01', amount: Number(primary), category: secondary.toLowerCase(), source_ref: sourceRef}]};
+        case 'semantic_order_comparison': return {base_terms: [{term_id: tertiary, text: primary, source_ref: {record_id: 'order_a', locator: 'term 1'}}], changed_terms: [{term_id: tertiary, text: secondary, source_ref: {record_id: 'order_b', locator: 'term 1'}}]};
+        case 'authority_update_center': return {manifest: {build_id: intakeSafeId(primary), sources: [{source_id: tertiary, official_url: secondary, sha256: ADDON_SAMPLE_HASH}]}};
+        case 'guided_research_builder': return {question: primary, issues: [secondary], source_classes: ['statutes', 'rules', 'opinions']};
+        case 'evidence_annotation_studio': return {record_id: tertiary, source_hash: ADDON_SAMPLE_HASH, annotations: [{annotation_id: 'annotation_001', kind: 'observation', locator: 'page 1', exact_text: primary, note: secondary}]};
+        case 'local_automation_scheduler': return {action: 'schedule', schedule_id: intakeSafeId(primary), task: secondary, interval_hours: Number(tertiary), enabled: confirmed};
+        case 'secure_reviewer_collaboration': return {recipient_label: primary, artifact_refs: [intakeSafeId(secondary)]};
+        case 'matter_template_library': return {template_id: intakeSafeId(primary), fields: [tertiary], values: {[tertiary]: secondary}};
+        case 'conflict_entity_resolver': return {mentions: [{mention_id: 'mention_001', display: primary, source_ref: sourceRef}, {mention_id: 'mention_002', display: secondary, source_ref: {record_id: 'record_002', locator: 'page 2'}}], confirmed};
+        case 'desktop_notification_center': return {events: [{event_id: tertiary, severity: 'attention', title: primary, corrective_action: secondary}]};
+        case 'courtroom_bundle_exporter': return {cards: [{card_id: tertiary, title: primary, display_text: secondary, source_ref: sourceRef}]};
+        case 'voice_drafting_commands': return {transcript_text: primary};
+        case 'extension_sdk_permission_center': return {action: 'permission_review', extension_id: intakeSafeId(primary), permissions: [secondary], version: tertiary};
+        default: throw new Error('This add-on is not available.');
+      }
+    }
+
+    function addonSafeResult(payload = {}) {
+      const safe = {};
+      ['addon_id', 'result_id', 'result_hash', 'review_state', 'status', 'review_required', 'local_only', 'blockers', 'artifact', 'segments_artifact', 'source_hash',
+       'changed_count', 'imported_count', 'node_count', 'edge_count', 'cell_count', 'review_flag_count',
+       'automatic_download', 'no_automatic_download', 'network_used', 'activation_performed', 'original_modified',
+       'original_preserved', 'operative_order_decided', 'filing_ready', 'encrypted', 'send_performed',
+        'private_notes_included', 'arbitrary_network_access', 'extensions_default_enabled', 'engine', 'engine_version',
+        'model_name', 'model_sha256', 'transcript_sha256', 'segment_count', 'pending_review_count'].forEach((key) => {
+        if (payload[key] !== undefined) safe[key] = payload[key];
+      });
+      if (safe.artifact) safe.artifact = {artifact_id: safe.artifact.artifact_id, kind: safe.artifact.kind, sha256: safe.artifact.sha256, size: safe.artifact.size, encrypted: safe.artifact.encrypted};
+      if (safe.segments_artifact) safe.segments_artifact = {artifact_id: safe.segments_artifact.artifact_id, kind: safe.segments_artifact.kind, sha256: safe.segments_artifact.sha256, size: safe.segments_artifact.size, encrypted: safe.segments_artifact.encrypted};
+      return safe;
+    }
+
+    async function runAddonAction() {
+      if (!addonStudioStatus || !addonStudioResult) return;
+      const definition = addonDefinition();
+      addonRun.disabled = true;
+      addonStudioStatus.textContent = `${definition.label} in progress…`;
+      addonStudioResult.innerHTML = '<strong>Working locally</strong><p>The active matter remains available. No external request is being made.</p>';
+      try {
+        const payload = await addonPayload();
+        const result = await fetchJson(`/api/addons/${encodeURIComponent(activeAddonId)}/actions`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        activeAddonResultId = String(result.result_id || '');
+        activeAddonResultHash = String(result.result_hash || '');
+        activeAddonArtifactId = String(result.artifact?.artifact_id || '');
+        if (addonInspect) addonInspect.disabled = !activeAddonResultId;
+        if (addonReview) addonReview.disabled = !activeAddonResultId || !activeAddonResultHash;
+        if (addonDownload) addonDownload.disabled = !activeAddonArtifactId;
+        const blocked = result.status === 'blocked' || (Array.isArray(result.blockers) && result.blockers.length);
+        addonStudioStatus.textContent = blocked ? `${definition.label} needs attention · review required.` : `${definition.label} complete · review required.`;
+        addonStudioResult.innerHTML = `<strong>${escapeHtml(definition.label)} — ${blocked ? 'Blocked safely' : 'Review required'}</strong><pre>${escapeHtml(JSON.stringify(addonSafeResult(result), null, 2))}</pre>`;
+      } catch (err) {
+        addonStudioStatus.textContent = `${definition.label} could not finish.`;
+        addonStudioResult.innerHTML = `<strong>Nothing outside the active matter was changed.</strong><p>${escapeHtml(err.message)}</p>`;
+      } finally {
+        addonRun.disabled = false;
+      }
+    }
+
+    async function refreshAddonStudio() {
+      if (!addonStudioStatus) return;
+      try {
+        const result = await fetchJson('/api/addons');
+        addonStudioStatus.textContent = `Add-on Studio ready · ${result.revision || 0} recorded action${result.revision === 1 ? '' : 's'} · review required.`;
+      } catch (err) {
+        addonStudioStatus.textContent = `Select an active matter to use Add-on Studio. ${err.message}`;
+      }
+    }
+
+    async function inspectAddonResult() {
+      if (!activeAddonResultId) return;
+      try {
+        const result = await fetchJson(`/api/addons/${encodeURIComponent(activeAddonId)}/results/${encodeURIComponent(activeAddonResultId)}`);
+        activeAddonResultHash = String(result.item?.result_hash || activeAddonResultHash);
+        activeAddonArtifactId = String(result.item?.artifact?.artifact_id || activeAddonArtifactId);
+        if (addonReview) addonReview.disabled = !activeAddonResultHash;
+        if (addonDownload) addonDownload.disabled = !activeAddonArtifactId;
+        addonStudioResult.innerHTML = `<strong>Exact stored result — Review required</strong><pre>${escapeHtml(JSON.stringify(addonSafeResult(result.item || {}), null, 2))}</pre>`;
+        addonStudioStatus.textContent = `Exact result ${activeAddonResultId} loaded from the active matter.`;
+      } catch (err) {
+        addonStudioStatus.textContent = `Exact result could not be opened: ${err.message}`;
+      }
+    }
+
+    async function reviewAddonResult() {
+      if (!activeAddonResultId || !activeAddonResultHash) return;
+      if (addonConfirmedInput?.checked !== true) {
+        addonStudioStatus.textContent = 'Confirm that you reviewed the exact result before recording a decision.';
+        addonConfirmedInput?.focus({preventScroll: true});
+        return;
+      }
+      addonReview.disabled = true;
+      try {
+        const decision = String(addonReviewDecision?.value || 'needs_changes');
+        const note = String(addonReviewNote?.value || '').trim();
+        const result = await fetchJson(`/api/addons/${encodeURIComponent(activeAddonId)}/results/${encodeURIComponent(activeAddonResultId)}/review`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({decision, note, confirmed: true, result_hash: activeAddonResultHash}),
+        });
+        addonStudioStatus.textContent = `Immutable review decision recorded: ${String(result.review_state || decision).replace('_', ' ')}. Filing review is still required.`;
+        addonStudioResult.innerHTML = `<strong>Review receipt recorded</strong><pre>${escapeHtml(JSON.stringify({review_state: result.review_state, review: result.review, filing_ready: result.filing_ready}, null, 2))}</pre>`;
+      } catch (err) {
+        addonStudioStatus.textContent = `Review decision was not recorded: ${err.message}`;
+      } finally {
+        addonReview.disabled = false;
+      }
+    }
+
+    async function downloadAddonArtifact() {
+      if (!activeAddonResultId || !activeAddonArtifactId) return;
+      addonDownload.disabled = true;
+      try {
+        const headers = new Headers({'X-User-Role': 'reviewer', 'X-Tenant-Id': 'local-desktop'});
+        const response = await fetch(`/api/addons/${encodeURIComponent(activeAddonId)}/results/${encodeURIComponent(activeAddonResultId)}/artifacts/${encodeURIComponent(activeAddonArtifactId)}`, {headers});
+        if (!response.ok) throw new Error(`local_http_${response.status}`);
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const filename = disposition.match(/filename="([^"]+)"/)?.[1] || `${activeAddonArtifactId}.bin`;
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        addonStudioStatus.textContent = `Exact decrypted artifact prepared locally: ${filename}.`;
+      } catch (err) {
+        addonStudioStatus.textContent = `Exact artifact could not be opened: ${err.message}`;
+      } finally {
+        addonDownload.disabled = false;
+      }
+    }
+
+    async function verifyAddonIntegrity() {
+      addonIntegrity.disabled = true;
+      try {
+        const result = await fetchJson('/api/addons/integrity');
+        addonStudioStatus.textContent = result.status === 'pass'
+          ? `Integrity verified · ${result.result_count} results · ${result.event_count} immutable events.`
+          : `Integrity verification failed · ${result.failure_count} issue(s). Stop using affected results.`;
+        addonStudioResult.innerHTML = `<strong>${result.status === 'pass' ? 'Integrity pass' : 'Integrity failure'}</strong><pre>${escapeHtml(JSON.stringify(result, null, 2))}</pre>`;
+      } catch (err) {
+        addonStudioStatus.textContent = `Integrity verification could not finish: ${err.message}`;
+      } finally {
+        addonIntegrity.disabled = false;
+      }
+    }
+
+    async function openAddonStudio(addonId = 'native_whisper_transcription') {
+      if (!addonStudioOverlay) return;
+      addonReturnFocus = document.activeElement;
+      selectAddon(addonId, {focus: false});
+      openOverlay(addonStudioOverlay);
+      await refreshAddonStudio();
+      addonToolList?.querySelector(`[data-addon-id="${activeAddonId}"]`)?.focus({preventScroll: true});
+    }
+
+    function closeAddonStudio() {
+      closeOverlay(addonStudioOverlay);
+      addonReturnFocus?.focus?.({preventScroll: true});
+      addonReturnFocus = null;
+    }
+
+    async function runProductivityInbox() {
+      const inboxId = intakeSafeId(productivityElement('inbox-id')?.value);
+      const recordId = intakeSafeId(productivityElement('inbox-record')?.value);
+      const sha256 = String(productivityElement('inbox-hash')?.value || '').trim().toLowerCase();
+      if (!inboxId || !recordId || !/^[a-f0-9]{64}$/.test(sha256)) return productivityAction('Smart Matter Inbox', async () => { throw new Error('Use safe IDs and a valid SHA-256 hash.'); });
+      await productivityAction('Matter inbox configuration', () => postProductivity('/api/productivity/inbox/configurations', {inbox_id: inboxId, label: 'Matter inbox', watch_token: String(productivityElement('inbox-token')?.value || 'local_inbox'), allowed_extensions: ['pdf', 'docx', 'txt', 'eml', 'png', 'jpg']}));
+      return productivityAction('Smart Matter Inbox scan', () => postProductivity(`/api/productivity/inbox/${encodeURIComponent(inboxId)}/scan`, {candidates: [{record_id: recordId, display_name: 'Selected local candidate', extension: 'pdf', sha256, size: 1}]}));
+    }
+
+    async function runProductivityRecipe() {
+      const recipeId = intakeSafeId(productivityElement('recipe-id')?.value);
+      const steps = Array.from(productivityElement('recipe-steps')?.selectedOptions || []).map((option) => option.value);
+      if (!recipeId || !steps.length) return productivityAction('Workflow recipe', async () => { throw new Error('Choose a safe recipe ID and at least one step.'); });
+      await productivityAction('Workflow recipe saved', () => postProductivity('/api/productivity/recipes', {recipe_id: recipeId, label: 'Saved matter review', steps}));
+      return productivityAction('Workflow recipe run', () => postProductivity(`/api/productivity/recipes/${encodeURIComponent(recipeId)}/run`, {confirmed: true, input_refs: []}));
+    }
+
+    async function runProductivityMedia() {
+      const mediaId = intakeSafeId(productivityElement('media-id')?.value);
+      const sourceHash = String(productivityElement('media-hash')?.value || '').trim().toLowerCase();
+      const transcriptText = String(productivityElement('media-text')?.value || '').trim();
+      if (!mediaId || !transcriptText || !/^[a-f0-9]{64}$/.test(sourceHash)) return productivityAction('Local media transcription', async () => { throw new Error('Use a safe media ID, a valid source hash, and transcript text.'); });
+      await productivityAction('Media evidence import', () => postProductivity('/api/hearing-media/import', {media: [{media_id: mediaId, title: 'Selected local evidence', filename: `${mediaId}.wav`, media_kind: 'audio', source_hash: sourceHash, confidentiality: 'private_record'}]}));
+      return productivityAction('Local media transcription', () => postProductivity(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/transcribe`, {transcript_text: transcriptText}));
+    }
+
+    async function runProductivityCalendar() {
+      const exportId = intakeSafeId(productivityElement('calendar-id')?.value);
+      const date = String(productivityElement('calendar-date')?.value || '').trim();
+      if (!exportId || !date) return productivityAction('Calendar ICS export', async () => { throw new Error('Add a safe export ID and date.'); });
+      return productivityAction('Calendar ICS export', () => postProductivity('/api/productivity/calendar/exports', {export_id: exportId, events: [{event_id: `${exportId}_event`, date_time: date, summary: productivityElement('calendar-summary')?.value || 'Review date', source_ref: {record_id: 'user_entered_date'}}]}));
+    }
+
+    function runProductivityHardware() {
+      return productivityAction('Hardware-safe local plan', () => postProductivity('/api/productivity/hardware/optimize', {task: productivityElement('hardware-task')?.value || 'general_chat', requested_context_tokens: Number(productivityElement('hardware-context')?.value || 0)}));
+    }
+
+    async function runProductivityPinboard() {
+      const itemId = intakeSafeId(productivityElement('pin-id')?.value);
+      const sourceId = intakeSafeId(productivityElement('pin-source')?.value);
+      const exactSpan = String(productivityElement('pin-span')?.value || '').trim();
+      if (!itemId || !sourceId || !exactSpan) return productivityAction('Research pinboard', async () => { throw new Error('Add safe IDs and an exact source span.'); });
+      const sourceHash = await sha256Text(exactSpan);
+      return productivityAction('Research pinboard', () => postProductivity('/api/productivity/pinboard/items', {item_id: itemId, board: 'Matter research', title: 'Pinned exact source', lane: 'private_record', source_ref: {source_id: sourceId, source_hash: sourceHash, exact_span: exactSpan, locator: 'User-selected span', freshness: 'source-bound'}}));
+    }
+
+    function inspectProductivityPin() {
+      const itemId = intakeSafeId(productivityElement('pin-id')?.value);
+      return productivityAction('Exact source drill-down', () => fetchJson(`/api/productivity/sources/${encodeURIComponent(itemId)}`));
+    }
+
+    async function runProductivityRedaction() {
+      const projectId = intakeSafeId(productivityElement('redaction-id')?.value);
+      const recordId = intakeSafeId(productivityElement('redaction-record')?.value);
+      const workingText = String(productivityElement('redaction-text')?.value || '');
+      const exactText = String(productivityElement('redaction-exact')?.value || '');
+      const sourceHash = await sha256Text(workingText);
+      const exactTextHash = await sha256Text(exactText);
+      if (productivityElement('redaction-hash')) productivityElement('redaction-hash').value = sourceHash;
+      if (!projectId || !recordId || !workingText || !exactText || !workingText.includes(exactText)) return productivityAction('Redaction studio', async () => { throw new Error('Use safe IDs and select exact text that appears in the working text.'); });
+      await productivityAction('Redaction review project', () => postProductivity('/api/productivity/redaction/projects', {project_id: projectId, record_id: recordId, source_hash: sourceHash, candidates: [{candidate_id: `${projectId}_candidate`, category: 'private_identifier', exact_text_hash: exactTextHash, locator: 'User-selected text'}]}));
+      return productivityAction('Reviewed redaction derivative', () => postProductivity(`/api/productivity/redaction/projects/${encodeURIComponent(projectId)}/finalize`, {confirmed: true, working_text: workingText, replacements: [{candidate_id: `${projectId}_candidate`, exact_text: exactText, replacement: '[REDACTED]'}]}));
+    }
+
+    function runProductivityActions() {
+      return productivityAction('Matter next-action queue', () => postProductivity('/api/productivity/next-actions/refresh', {blockers: [{action_id: 'verify_claim', priority: 1, title: productivityElement('action-title')?.value || 'Verify claim', reason: 'The claim requires exact support.', corrective_action: productivityElement('action-correction')?.value || 'Attach an exact source.'}]}));
+    }
+
+    async function runProductivityCourtroom() {
+      const sessionId = intakeSafeId(productivityElement('courtroom-id')?.value);
+      const sourceId = intakeSafeId(productivityElement('courtroom-source')?.value);
+      const displayText = String(productivityElement('courtroom-text')?.value || '').trim();
+      if (!sessionId || !sourceId || !displayText) return productivityAction('Courtroom presentation', async () => { throw new Error('Add safe IDs and exact display text.'); });
+      const sourceHash = await sha256Text(displayText);
+      const payload = await productivityAction('Courtroom presentation', () => postProductivity('/api/productivity/courtroom/sessions', {session_id: sessionId, label: 'Source-bound hearing presentation', cards: [{card_id: `${sessionId}_card`, title: 'Exact source', display_text: displayText, source_ref: {source_id: sourceId, source_hash: sourceHash, exact_span: displayText}}]}));
+      if (payload?.cards?.length) openCourtroomPresentation(payload.cards);
+      return payload;
+    }
+
+    function renderCourtroomPresentation() {
+      const cards = courtroomPresentationState.cards;
+      const card = cards[courtroomPresentationState.index];
+      if (!card) return;
+      if (courtroomPresentationTitle) courtroomPresentationTitle.textContent = card.title || 'Exact source';
+      if (courtroomPresentationText) courtroomPresentationText.textContent = card.display_text || '';
+      if (courtroomPresentationSource) courtroomPresentationSource.textContent = `Source ${card.source_ref?.source_id || 'unavailable'} · ${String(card.source_ref?.source_hash || 'hash unavailable').slice(0, 16)}…`;
+      if (courtroomPresentationPosition) courtroomPresentationPosition.textContent = `Card ${courtroomPresentationState.index + 1} of ${cards.length}`;
+      if (courtroomPresentationPrevious) courtroomPresentationPrevious.disabled = courtroomPresentationState.index <= 0;
+      if (courtroomPresentationNext) courtroomPresentationNext.disabled = courtroomPresentationState.index >= cards.length - 1;
+    }
+
+    function openCourtroomPresentation(cards) {
+      courtroomPresentationState.cards = Array.isArray(cards) ? cards : [];
+      courtroomPresentationState.index = 0;
+      closeOverlay(productivityStudioOverlay);
+      renderCourtroomPresentation();
+      openOverlay(courtroomPresentationOverlay);
+      courtroomPresentationClose?.focus({preventScroll: true});
+    }
+
+    function closeCourtroomPresentation() {
+      closeOverlay(courtroomPresentationOverlay);
+      openProductivityStudio('courtroom');
+    }
+
+    function moveCourtroomPresentation(delta) {
+      courtroomPresentationState.index = Math.max(0, Math.min(courtroomPresentationState.cards.length - 1, courtroomPresentationState.index + delta));
+      renderCourtroomPresentation();
+    }
+
+    async function runProductivityBackup() {
+      const scheduleId = intakeSafeId(productivityElement('backup-schedule')?.value);
+      if (!scheduleId) return productivityAction('Encrypted backup', async () => { throw new Error('Add a safe schedule ID.'); });
+      await productivityAction('Backup schedule saved', () => postProductivity('/api/productivity/backups/schedules', {schedule_id: scheduleId, interval_hours: Number(productivityElement('backup-interval')?.value || 24), retention_count: Number(productivityElement('backup-retention')?.value || 7), enabled: true}));
+      const payload = await productivityAction('Encrypted backup', () => postProductivity('/api/productivity/backups/run', {schedule_id: scheduleId}));
+      productivityLastBackupId = payload?.backup_id || '';
+      ['backup-verify', 'backup-restore'].forEach((id) => { const button = productivityElement(id); if (button) button.disabled = !productivityLastBackupId; });
+      return payload;
+    }
+
+    function verifyProductivityBackup() {
+      return productivityAction('Backup integrity verification', () => fetchJson(`/api/productivity/backups/${encodeURIComponent(productivityLastBackupId)}/verify`));
+    }
+
+    function restoreProductivityBackup() {
+      return productivityAction('Isolated backup restore', () => postProductivity(`/api/productivity/backups/${encodeURIComponent(productivityLastBackupId)}/restore`, {confirmed: true}));
+    }
+
+    async function runDueProductivityBackups() {
+      try {
+        const summary = await fetchJson('/api/productivity');
+        for (const scheduleId of (summary.due_backup_schedules || [])) {
+          await postProductivity('/api/productivity/backups/run', {schedule_id: scheduleId});
+        }
+      } catch (_err) {
+        // No active matter or no due schedule is a normal idle state.
       }
     }
 
@@ -2681,6 +3303,8 @@
       else if (payload?.local_agent_available) badges.push('<span class="badge">local model available</span>');
       if (payload.metadata && payload.metadata.matched_library_topic) badges.push(`<span class="badge">${escapeHtml(payload.metadata.matched_library_topic)}</span>`);
       if (payload.intake_label || payload?.structured_answer?.intake_label) badges.push(`<span class="badge">${escapeHtml(payload.intake_label || payload.structured_answer.intake_label)}</span>`);
+      const intent = payload?.metadata?.answer_intent || {};
+      if (intent.primary_intent) badges.push(`<span class="badge ${intent.ambiguity ? 'warn' : ''}">intent ${escapeHtml(String(intent.primary_intent).replaceAll('_', ' '))}</span>`);
       if (payload.source_card_count !== undefined) badges.push(`<span class="badge">${escapeHtml(payload.source_card_count)} source cards</span>`);
       if (payload.corpus_mode === 'active_case_corpus') badges.push('<span class="badge good">active case corpus</span>');
       if (payload.active_case_label) badges.push(`<span class="badge">${escapeHtml(payload.active_case_label)}</span>`);
@@ -3002,6 +3626,10 @@
       const technical = meta.technical || {};
       const sourceSpan = payload?.source_span || meta.source_span || {};
       const sourceSpanPreview = payload?.source_span_preview || meta.source_span_preview || snippet;
+      const hasExactSpan = Number.isInteger(sourceSpan.start_offset) && Number.isInteger(sourceSpan.end_offset);
+      const spanMarkup = hasExactSpan
+        ? `<section class="source-preview-snippet"><strong>Exact source span</strong><p>${escapeHtml(sourceSpanPreview || `Start ${sourceSpan.start_offset} end ${sourceSpan.end_offset}`)}</p></section>`
+        : '<section class="source-preview-snippet"><strong>Exact source span unavailable</strong><p class="status-warn">This card has no admitted character range. Review the original source before treating any passage as a pinpoint citation or verified quote.</p></section>';
       const details = payload && typeof payload === 'object'
         ? `<details class="source-preview-json"><summary>Local metadata payload</summary><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre></details>`
         : '';
@@ -3010,7 +3638,7 @@
       return `<div class="source-preview-badges"><span class="badge ${laneClass}">${escapeHtml(laneLabel)}</span><span class="badge">${escapeHtml(sourceType)}</span></div>
         <h3>${escapeHtml(title)}</h3>
         <dl class="source-preview-grid">${fields.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>
-        <section class="source-preview-snippet"><strong>Exact source span</strong><p>${escapeHtml(sourceSpanPreview || `Start ${sourceSpan.start_offset ?? 'n/a'} end ${sourceSpan.end_offset ?? 'n/a'}`)}</p></section>
+        ${spanMarkup}
         <details class="source-preview-json"><summary>Technical details</summary><pre>${escapeHtml(JSON.stringify(technical, null, 2))}</pre></details>
         <section class="source-preview-snippet"><strong>${snippet ? 'Matched passage' : 'Preview'}</strong><p>${escapeHtml(snippet || 'No preview text was returned for this card.')}</p></section>
         ${meta.ocr_derived || String(meta.ocr_status || '').toLowerCase().includes('ocr') ? '<p class="status-warn"><strong>OCR note:</strong> local OCR-derived; verify against page image.</p>' : ''}
@@ -5290,16 +5918,23 @@
       const duplicateBadge = duplicateCopies > 1
         ? `<span class="badge">${escapeHtml(duplicateCopies)} identical copies grouped</span>`
         : '';
-      const badges = `<span class="badge ${lane === 'records' ? 'warn' : 'good'}">${lane === 'records' ? 'My record' : 'Maine law'}</span><span class="badge">${escapeHtml(sourceType)}</span>${normalizationBadge}${duplicateBadge}`;
+      const treatmentBadge = lane === 'law' ? `<span class="badge warn">${escapeHtml(String(meta.negative_treatment_status || 'negative_treatment_unknown').replaceAll('_', ' '))}</span>` : '';
+      const rankScores = Object.entries(meta.retrieval_component_scores || {}).map(([key, value]) => `${String(key).replaceAll('_', ' ')} ${Number(value).toFixed(2)}`).join(' · ');
+      const rankDetail = meta.retrieval_method && meta.retrieval_method !== 'unknown'
+        ? `<details class="chat-context-manifest"><summary>Why this source ranked here</summary><p>${escapeHtml(meta.retrieval_explanation || 'Rank explanation unavailable.')}</p><p><strong>Method:</strong> ${escapeHtml(String(meta.retrieval_method).replaceAll('_', ' '))}${meta.retrieval_rank ? ` · rank ${escapeHtml(meta.retrieval_rank)}` : ''}</p><p class="muted">${escapeHtml(rankScores || 'No numeric contribution detail was exposed by this local retrieval path.')} Rank signals do not prove legal weight or correctness.</p></details>`
+        : '';
+      const badges = `<span class="badge ${lane === 'records' ? 'warn' : 'good'}">${lane === 'records' ? 'My record' : 'Maine law'}</span><span class="badge">${escapeHtml(sourceType)}</span>${treatmentBadge}${normalizationBadge}${duplicateBadge}`;
       const primaryAction = lane === 'records' && binding
         ? `<button class="primary-action compact-action" data-inline-inspect-record="${index}" type="button">Inspect</button><button class="secondary compact-action" data-inline-draft-record="${index}" type="button">Draft from record</button><button class="secondary compact-action" data-inline-open-record="${index}" type="button">Open original</button>${pageNumber > 0 ? `<button class="secondary compact-action" data-inline-inspect-page="${index}" data-page="${escapeHtml(pageNumber)}" type="button">Open at page ${escapeHtml(pageNumber)}</button>` : ''}`
         : (url ? `<a class="primary-action compact-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : '');
+      const graphAction = lane === 'law' && sourceIdentity(item) ? `<button class="secondary compact-action" data-inline-citation-graph="${index}" type="button">Citation links</button>` : '';
       return `<article class="chat-evidence-card source-preview-anchor" data-inline-source-index="${index}" data-inline-source-lane="${lane}"${hidden ? ' hidden' : ''} tabindex="0">
         <div class="source-card-badges">${badges}</div>
         <button class="chat-evidence-title" data-inline-preview-source="${index}" type="button">${escapeHtml(title)}</button>
         <div class="source-card-compact-meta">${citation ? `<span>${escapeHtml(citation)}</span>` : ''}${pageNumber ? `<span>Page ${escapeHtml(pageNumber)}</span>` : ''}<span>${escapeHtml(sourceBasename(item))}</span></div>
         <div class="chat-evidence-snippet">${escapeHtml(snippet || 'Open the source preview for the complete local details.')}</div>
-        <div class="source-card-actions">${primaryAction}<button class="secondary compact-action" data-inline-preview-source="${index}" type="button">Preview</button><button class="secondary compact-action" data-inline-copy-source="${index}" type="button">Copy</button></div>
+        ${rankDetail}
+        <div class="source-card-actions">${primaryAction}${graphAction}<button class="secondary compact-action" data-inline-preview-source="${index}" type="button">Preview</button><button class="secondary compact-action" data-inline-copy-source="${index}" type="button">Copy</button></div>
       </article>`;
     }
 
@@ -5410,6 +6045,16 @@
         showToast('Source card copied.');
         window.setTimeout(() => { button.textContent = 'Copy'; }, 1100);
       }));
+      container.querySelectorAll('[data-inline-citation-graph]').forEach((button) => button.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const item = itemAt(button);
+        const sourceId = sourceIdentity(item);
+        if (!sourceId) return;
+        try {
+          const graph = await fetchJson(`/api/authority/graph/${encodeURIComponent(sourceId)}`);
+          addMessage('assistant', 'Citation-link review loaded. Parsed links are not treatment conclusions.', {response_kind: 'citation_graph', ...graph, citations: [item]});
+        } catch (err) { showToast(`Citation links unavailable: ${safeErrorInfo(err).message}`); }
+      }));
       container.querySelectorAll('.chat-evidence-card').forEach((card) => card.addEventListener('click', (event) => {
         if (event.target.closest('button, a')) return;
         const item = items[Number(card.dataset.inlineSourceIndex)];
@@ -5417,19 +6062,336 @@
       }));
     }
 
+    const FAST_PATH_DRAWER_PANELS = new Set(['setup', 'evidence', 'review', 'starters']);
+
+    function renderActionableFooter(payload) {
+      const footer = payload?.metadata?.actionable_footer || {};
+      const action = footer.next_action || {};
+      const panel = String(action.panel || '');
+      if (!FAST_PATH_DRAWER_PANELS.has(panel)) return '';
+      const blockers = Array.isArray(footer.blockers) ? footer.blockers.slice(0, 3) : [];
+      return `<footer class="chat-actionable-footer"><div><strong>Safest next action</strong><p>${escapeHtml(footer.boundary || 'Review required before relying on this result.')}</p>${blockers.length ? `<p class="status-warn"><strong>Blockers:</strong> ${escapeHtml(blockers.map((item) => String(item).replaceAll('_', ' ')).join(' · '))}</p>` : '<p class="muted">No automated clearance is implied; review remains required.</p>'}</div><button class="secondary compact-action" data-answer-footer-panel="${escapeHtml(panel)}" type="button">${escapeHtml(action.label || 'Open workspace')}</button></footer>`;
+    }
+
+    function bindActionableFooter(container) {
+      container.querySelectorAll('[data-answer-footer-panel]').forEach((button) => button.addEventListener('click', () => {
+        const panel = String(button.dataset.answerFooterPanel || '');
+        if (!FAST_PATH_DRAWER_PANELS.has(panel)) return;
+        setV8View('workspace', {userInitiated: true, drawerPanel: panel});
+        window.requestAnimationFrame(() => selectDrawerTab(panel));
+      }));
+    }
+
+    function renderFastPathActions(payload) {
+      const actions = Array.isArray(payload?.metadata?.fast_path_actions) ? payload.metadata.fast_path_actions : [];
+      const safeActions = actions.filter((action) => FAST_PATH_DRAWER_PANELS.has(String(action?.panel || ''))).slice(0, 2);
+      if (!safeActions.length) return '';
+      return `<section class="chat-fast-path-actions" aria-label="Local workbench actions"><p><strong>Local workbench action</strong><br><span>This route did not search a matter or legal authority. Open the named in-app workspace to continue.</span></p>${safeActions.map((action) => `<button class="secondary compact-action" data-fast-path-panel="${escapeHtml(action.panel)}" type="button">${escapeHtml(action.label || 'Open workspace')}</button>`).join('')}</section>`;
+    }
+
+    function bindFastPathActions(container) {
+      container.querySelectorAll('[data-fast-path-panel]').forEach((button) => button.addEventListener('click', () => {
+        const panel = String(button.dataset.fastPathPanel || '');
+        if (!FAST_PATH_DRAWER_PANELS.has(panel)) return;
+        setV8View('workspace', {userInitiated: true, drawerPanel: panel});
+        window.requestAnimationFrame(() => {
+          selectDrawerTab(panel);
+          document.querySelector(`[data-drawer-tab="${CSS.escape(panel)}"]`)?.focus({preventScroll: true});
+        });
+      }));
+    }
+
+    function renderContextCompactionReceipt(payload) {
+      const receipt = payload?.context_compaction || {};
+      const anchor = receipt.safe_routing_anchor || {};
+      const labels = [
+        anchor.task ? `Task: ${String(anchor.task).replaceAll('_', ' ')}` : '',
+        anchor.procedural_posture && anchor.procedural_posture !== 'unknown' ? `Posture: ${String(anchor.procedural_posture).replaceAll('_', ' ')}` : '',
+        Array.isArray(anchor.issues) && anchor.issues.length ? `Issues: ${anchor.issues.map((value) => String(value).replaceAll('_', ' ')).join(', ')}` : ''
+      ].filter(Boolean);
+      return `<section class="chat-context-compaction" aria-label="Safe conversation context receipt"><h3>Safe context receipt</h3><p>The visible conversation was not deleted. This receipt stores no raw turn text and cannot promote chat statements into verified facts.</p><details><summary>Inspect retained routing context</summary><div><p><strong>Context ID:</strong> ${escapeHtml(receipt.context_id || 'not available')}</p><p><strong>Source basis:</strong> ${escapeHtml(receipt.source_card_count || 0)} source card(s) · ${escapeHtml(String(receipt.source_basis_sha256 || '').slice(0, 16) || 'none')}…</p><p><strong>Audit:</strong> ${escapeHtml(String(receipt.audit_status || 'not available').replaceAll('_', ' '))}</p>${labels.length ? `<ul class="answer-list">${labels.map((label) => `<li>${escapeHtml(label)}</li>`).join('')}</ul>` : '<p class="muted">No durable routing labels were retained.</p>'}<p class="muted">${escapeHtml(receipt.reversible_inspection || '')}</p></div></details><p class="muted">Review required. This is continuity metadata, not a legal conclusion, factual finding, or filing-ready record.</p></section>`;
+    }
+
+    function renderProgressiveAnswerDetails(payload, structured, {open = false} = {}) {
+      const receipt = payload?.metadata?.progressive_response || {};
+      if (receipt.same_cited_basis !== true) return '';
+      const details = [
+        renderCriticalDates(structured.critical_dates || structured.intake?.critical_dates),
+        renderStructuredSection('What to do right now', Array.isArray(structured.what_to_do_right_now) ? structured.what_to_do_right_now.slice(0, 4) : []),
+        renderStructuredSection('Next steps', Array.isArray(structured.next_three_steps) ? structured.next_three_steps.slice(0, 3) : []),
+        renderStructuredSection('What to gather', structured.what_to_gather),
+        renderStructuredSection('What may be missing', structured.what_may_be_missing),
+        renderSuggestedQuestionSection(structured.suggested_questions)
+      ].filter(Boolean).join('');
+      if (!details) return '';
+      const sourceCount = Number(receipt.source_card_count || 0);
+      return `<details class="chat-progressive-details"${open ? ' open' : ''}><summary><strong>Expand analysis, missing information, and next steps</strong><span>Uses the same ${escapeHtml(sourceCount)} source card${sourceCount === 1 ? '' : 's'} shown above.</span></summary><div class="chat-progressive-detail-body">${details}<p class="muted">Review required. Expanding these details does not add sources or change the source basis of the concise answer.</p></div></details>`;
+    }
+
+    function correctionSeedSentence(text) {
+      const compact = String(text || '').replace(/\s+/g, ' ').trim();
+      const boundary = compact.search(/[.!?](?:\s|$)/);
+      return (boundary >= 0 ? compact.slice(0, boundary + 1) : compact).slice(0, 1200);
+    }
+
+    function renderAnswerCorrectionControls(payload, text) {
+      if (!payload?.search_id || payload?.response_kind === 'conversation_answer_correction') return '';
+      const original = correctionSeedSentence(text);
+      if (!original) return '';
+      return `<details class="chat-answer-correction"><summary><strong>Flag a sentence for source review</strong><span>Creates an immutable hash receipt; it never overwrites this answer or a matter fact.</span></summary><div class="chat-answer-correction-body"><label>Sentence from this answer<textarea data-correction-original rows="3">${escapeHtml(original)}</textarea></label><label>Reason<select data-correction-reason><option value="source_mismatch">Source mismatch</option><option value="missing_context">Missing context</option><option value="outdated">May be outdated</option><option value="wording">Wording needs qualification</option><option value="other">Other</option></select></label><label>Optional review note<textarea data-correction-note rows="2" maxlength="1000" placeholder="Visible only for this local verification request; the service stores a hash, not this note."></textarea></label><label>Proposed corrected wording<textarea data-correction-proposed rows="3" placeholder="Enter a changed sentence to verify against the same source set."></textarea></label><p class="muted">Review required. The original and proposal are sent only for this local verification run; durable state stores hashes, source basis, and audit status—not correction prose.</p><button class="secondary compact-action" data-save-answer-correction type="button">Save correction and rerun verification</button></div></details>`;
+    }
+
+    function correctionStatusSummary(verification) {
+      const status = String(verification?.status || 'review_blocked').replaceAll('_', ' ');
+      const counts = Object.entries(verification?.status_counts || {}).filter(([, value]) => Number(value) > 0).map(([key, value]) => `${key.replaceAll('_', ' ')}: ${value}`).join(' · ');
+      const blockers = Array.isArray(verification?.blockers) ? verification.blockers.map((value) => String(value).replaceAll('_', ' ')).join(' · ') : '';
+      return `<p><strong>${escapeHtml(status)}</strong>${counts ? ` · ${escapeHtml(counts)}` : ''}</p>${blockers ? `<p class="status-warn">${escapeHtml(blockers)}</p>` : ''}`;
+    }
+
+    function renderAnswerCorrectionReceipt(payload) {
+      const original = payload?.original_sentence || 'Original sentence is available in the local transcript.';
+      const proposed = payload?.proposed_correction || 'Proposed wording was verified transiently.';
+      return `<section class="chat-correction-receipt" aria-label="Answer correction review receipt"><div><span class="badge warn">review required</span><span class="badge">immutable receipt</span></div><h3>Correction verification</h3><p><strong>Original:</strong> ${escapeHtml(original)}</p><p><strong>Proposed:</strong> ${escapeHtml(proposed)}</p><div class="chat-correction-grid"><section><h4>Original support check</h4>${correctionStatusSummary(payload?.original_verification)}</section><section><h4>Proposed support check</h4>${correctionStatusSummary(payload?.proposed_verification)}</section></div><details><summary>Inspect correction receipt</summary><div><p><strong>Correction ID:</strong> ${escapeHtml(payload?.correction_id || 'not available')}</p><p><strong>Source basis:</strong> ${escapeHtml(String(payload?.source_basis_sha256 || '').slice(0, 16) || 'not available')}…</p><p><strong>Audit:</strong> ${escapeHtml(String(payload?.audit_status || 'not available').replaceAll('_', ' '))}</p><p class="muted">The service retained immutable hashes, not correction prose. This review receipt cannot change the original answer, facts, law, or filing status.</p></div></details>${renderInlineEvidence(payload)}</section>`;
+    }
+
+    function renderLatencyObservatory(payload) {
+      const timing = payload?.metadata?.chat_latency_observation;
+      if (!timing) return '';
+      const feedback = timing.first_feedback_ms == null ? 'not measured' : `${timing.first_feedback_ms} ms`;
+      return `<details class="chat-latency-observatory"><summary><strong>Local timing</strong><span>First feedback ${escapeHtml(feedback)} · total ${escapeHtml(timing.total_duration_ms || 0)} ms</span></summary><div><p>Server work: ${escapeHtml(timing.server_duration_ms ?? 'not measured')} ms · queue delay: ${escapeHtml(timing.queue_delay_ms ?? 'not measured')} ms · cache: ${escapeHtml(String(timing.cache_state || 'unknown').replaceAll('_', ' '))}</p><p class="muted">This local receipt contains timing and coarse hardware capability only. It never records your question, matter text, or source content.</p></div></details>`;
+    }
+
+    function renderAudiencePresentation(payload) {
+      const presentation = payload?.metadata?.audience_presentation;
+      if (!presentation) return '';
+      return `<p class="chat-audience-notice"><strong>Audience:</strong> ${escapeHtml(String(presentation.audience || 'self_represented').replaceAll('_', ' '))}. ${escapeHtml(presentation.framing || '')} <span>Same source and verifier requirements apply.</span></p>`;
+    }
+
+    function renderClarificationMinimizer(payload) {
+      const receipt = payload?.metadata?.clarification_minimizer;
+      const item = Array.isArray(receipt?.questions) ? receipt.questions[0] : null;
+      if (!receipt?.required || !item) return '';
+      const options = Array.isArray(item.options) ? item.options.slice(0, 4) : [];
+      return `<section class="chat-clarification" aria-label="Clarification needed"><span class="badge warn">clarification needed</span><h3>${escapeHtml(item.question || 'Choose the next task.')}</h3><p>${escapeHtml(item.why_needed || '')}</p><div>${options.map((option) => `<button class="secondary compact-action" data-clarification-prompt="${escapeHtml(option.prompt || '')}" type="button">${escapeHtml(option.label || 'Choose task')}</button>`).join('')}</div><p class="muted">${escapeHtml(receipt.boundary || '')}</p></section>`;
+    }
+
+    function bindClarificationMinimizer(container) {
+      container.querySelectorAll('[data-clarification-prompt]').forEach((button) => button.addEventListener('click', () => {
+        question.value = String(button.dataset.clarificationPrompt || '');
+        question.focus({preventScroll: true});
+        showToast('One workflow was selected. Review and send the focused question when ready.');
+      }));
+    }
+
+    function renderAssumptionLedger(payload) {
+      const ledger = payload?.metadata?.assumption_ledger;
+      const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
+      if (!entries.length) return '';
+      return `<details class="chat-assumption-ledger"><summary><strong>Assumptions and unknowns</strong><span>Review what is source-bound, user-provided, or still unknown.</span></summary><div>${entries.map((entry) => `<article><div><strong>${escapeHtml(entry.label || 'Ledger item')}</strong><span class="badge ${entry.state === 'source_bound' ? 'good' : 'warn'}">${escapeHtml(String(entry.state || 'unknown').replaceAll('_', ' '))}</span></div><p>${escapeHtml(entry.detail || '')}</p>${entry.correctable ? `<button class="secondary compact-action" data-ledger-correct="${escapeHtml(entry.label || 'this item')}" type="button">Correct or clarify</button>` : ''}</article>`).join('')}<p class="muted">${escapeHtml(ledger.boundary || '')}</p></div></details>`;
+    }
+
+    function bindAssumptionLedger(container) {
+      container.querySelectorAll('[data-ledger-correct]').forEach((button) => button.addEventListener('click', () => {
+        question.value = `I want to correct or clarify the ${button.dataset.ledgerCorrect || 'assumption'} for this review.`;
+        question.focus({preventScroll: true});
+        showToast('Add the source or record context, then send a new review request.');
+      }));
+    }
+
+    function renderQuestionDecomposition(payload) {
+      const receipt = payload?.metadata?.question_decomposition;
+      const parts = Array.isArray(receipt?.components) ? receipt.components : [];
+      if (!receipt?.is_compound || !parts.length) return '';
+      return `<details class="chat-assumption-ledger"><summary><strong>Separate questions to verify</strong><span>${escapeHtml(parts.length)} parts need their own sourced review.</span></summary><div>${parts.map((part) => `<article><div><strong>${escapeHtml(part.question || 'Question part')}</strong><span class="badge warn">not independently verified</span></div><p>Current source status: ${escapeHtml(String(part.source_status || 'unknown').replaceAll('_', ' '))}.</p><button class="secondary compact-action" data-decomposed-question="${escapeHtml(part.question || '')}" type="button">Ask this part separately</button></article>`).join('')}<p class="muted">${escapeHtml(receipt.boundary || '')}</p></div></details>`;
+    }
+
+    function renderQueryExpansionGuardrails(payload) {
+      const receipt = payload?.metadata?.query_expansion_guardrails || {};
+      if (!receipt?.jurisdiction_status || receipt.jurisdiction_status === 'maine_expansion_allowed') return '';
+      return `<p class="chat-intent-notice status-warn"><strong>Jurisdiction check:</strong> ${escapeHtml(String(receipt.jurisdiction_status).replaceAll('_', ' '))}. Maine-law synonyms were not added; confirm the applicable jurisdiction before relying on retrieval.</p>`;
+    }
+
+    function renderTemporalAuthorityReview(payload) {
+      const receipt = payload?.metadata?.temporal_authority_review || {};
+      if (!receipt?.requested_date) return '';
+      const sources = Array.isArray(receipt.sources) ? receipt.sources : [];
+      return `<section class="chat-clarification" aria-label="Authority date review"><span class="badge warn">historical source review</span><h3>Authority date requested: ${escapeHtml(receipt.requested_date)}</h3>${sources.map((item) => `<p><strong>${escapeHtml(item.source_id || 'source')}</strong> · effective ${escapeHtml(item.effective_date || 'not recorded')} · ${escapeHtml(String(item.status || 'unknown').replaceAll('_', ' '))}</p>`).join('') || '<p>No returned legal source had dated metadata for this request.</p>'}${(receipt.blockers || []).length ? `<p class="status-warn">Blockers: ${escapeHtml(receipt.blockers.join(' · ').replaceAll('_', ' '))}</p>` : ''}<p class="muted">${escapeHtml(receipt.boundary || '')}</p></section>`;
+    }
+
+    function renderAuthorityConflictReview(payload) {
+      const receipt = payload?.metadata?.authority_conflict_review || {};
+      const candidates = Array.isArray(receipt.candidates) ? receipt.candidates : [];
+      if (!candidates.length) return '';
+      return `<section class="chat-clarification" aria-label="Authority metadata conflict"><span class="badge warn">authority metadata needs review</span><h3>Compare these source versions</h3>${candidates.map((item) => `<p><strong>${escapeHtml(item.citation || 'citation')}</strong> · ${escapeHtml((item.source_ids || []).join(' · '))}<br>${escapeHtml((item.metadata_variants || []).map((row) => `${row.source_class || 'source'} / ${row.effective_date || 'undated'} / ${row.freshness_status || 'unknown'}`).join(' · '))}</p>`).join('')}<p class="muted">${escapeHtml(receipt.boundary || '')}</p></section>`;
+    }
+
+    function bindQuestionDecomposition(container) {
+      container.querySelectorAll('[data-decomposed-question]').forEach((button) => button.addEventListener('click', () => {
+        question.value = String(button.dataset.decomposedQuestion || '');
+        question.focus({preventScroll: true});
+        showToast('Focused question ready. Send it to retrieve and verify its own source basis.');
+      }));
+    }
+
+    function renderContradictionFollowup(payload) {
+      const receipt = payload?.metadata?.contradiction_followup;
+      const candidates = Array.isArray(receipt?.candidates) ? receipt.candidates : [];
+      if (!candidates.length) return '';
+      return `<section class="chat-clarification" aria-label="Source conflict needs review"><span class="badge warn">source conflict needs review</span><h3>Check the conflicting date against its source</h3>${candidates.map((item) => `<article><p><strong>Pinned date:</strong> ${escapeHtml(item.pinned_date || 'unknown')} · <strong>new date:</strong> ${escapeHtml((item.new_date_candidates || []).join(', ') || 'unknown')}</p><p class="muted">Dispute status: ${escapeHtml(String(item.dispute_status || 'unclear').replaceAll('_', ' '))}. This is not a decision about accuracy or legal effect.</p><button class="secondary compact-action" data-contradiction-followup="${escapeHtml(item.pin_id || '')}" type="button">Ask for a source-by-source review</button></article>`).join('')}<p class="muted">${escapeHtml(receipt.boundary || '')}</p></section>`;
+    }
+
+    function bindContradictionFollowup(container) {
+      container.querySelectorAll('[data-contradiction-followup]').forEach((button) => button.addEventListener('click', () => {
+        question.value = `Compare the source-bound dates for pinned fact ${button.dataset.contradictionFollowup || ''} and explain what records need review. Do not decide which date is correct.`;
+        question.focus({preventScroll: true});
+        showToast('A source-by-source review request is ready; no fact was changed.');
+      }));
+    }
+
+    function renderAnswerComparisonControls(payload, text) {
+      if (!payload?.search_id) return '';
+      return `<details class="chat-answer-comparison"><summary><strong>Compare two approaches</strong><span>Checks both against the same source cards; it does not choose one.</span></summary><div><label>Approach A<textarea data-comparison-a rows="2">${escapeHtml(correctionSeedSentence(text))}</textarea></label><label>Approach B<textarea data-comparison-b rows="2" placeholder="Alternative wording to compare"></textarea></label><button class="secondary compact-action" data-compare-approaches type="button">Compare source support</button></div></details>`;
+    }
+
+    function renderAnswerComparison(payload) {
+      const row = (label, item) => `<section><h4>${label}</h4>${correctionStatusSummary(item?.verification)}<p><code>${escapeHtml(String(item?.sha256 || '').slice(0, 16))}…</code></p></section>`;
+      return `<section class="chat-comparison-receipt"><span class="badge warn">review required</span><h3>Same-source comparison</h3><div class="chat-correction-grid">${row('Approach A', payload?.approach_a)}${row('Approach B', payload?.approach_b)}</div><p class="muted">${escapeHtml(payload?.boundary || '')}</p>${renderInlineEvidence(payload)}</section>`;
+    }
+
+    function bindAnswerComparisonControls(container, payload) {
+      container.querySelectorAll('[data-compare-approaches]').forEach((button) => button.addEventListener('click', async () => {
+        const approachA = String(container.querySelector('[data-comparison-a]')?.value || '').trim();
+        const approachB = String(container.querySelector('[data-comparison-b]')?.value || '').trim();
+        if (!approachA || !approachB) { showToast('Enter two approaches to compare.'); return; }
+        button.disabled = true;
+        try {
+          const comparison = await fetchJson('/api/conversation/compare', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({session_id: localSessionId, expected_search_id: payload.search_id, approach_a: approachA, approach_b: approachB})});
+          addMessage('assistant', 'Both approaches were checked against the same source set. Review is still required.', comparison);
+        } catch (err) { showToast(`Comparison was not completed: ${safeErrorInfo(err).message}`); } finally { button.disabled = false; }
+      }));
+    }
+
+    function renderConversationBranchControl(payload) {
+      if (!payload?.search_id) return '';
+      return '<button class="secondary compact-action" data-branch-conversation type="button">Branch from this answer</button>';
+    }
+
+    function renderFactPinControl(payload) {
+      if (!sourceItemsFromPayload(payload).length) return '';
+      return '<button class="secondary compact-action" data-pin-source-fact type="button">Pin a source-bound fact</button><p class="muted">A pin is a review aid, not a finding. It keeps an exact local source locator and dispute status.</p>';
+    }
+
+    function renderUsefulnessControl(payload) {
+      if (!payload?.search_id) return '';
+      return '<button class="secondary compact-action" data-evaluate-usefulness type="button">Inspect answer review checks</button>';
+    }
+
+    function renderUsefulnessReceipt(payload) {
+      const checks = Array.isArray(payload?.checks) ? payload.checks : [];
+      const rubric = Array.isArray(payload?.human_review_rubric) ? payload.human_review_rubric : [];
+      return `<section class="chat-context-compaction"><span class="badge warn">review required</span><h3>Answer review checks</h3><div class="chat-correction-grid">${checks.map((check) => `<article><strong>${escapeHtml(String(check.criterion || 'check').replaceAll('_', ' '))}</strong><p>${escapeHtml(String(check.status || 'unknown').replaceAll('_', ' '))}</p></article>`).join('')}</div><p><strong>Human review rubric:</strong> ${escapeHtml(rubric.join(' · '))}</p><p class="muted">${escapeHtml(payload?.boundary || '')}</p>${renderInlineEvidence(payload)}</section>`;
+    }
+
+    function bindUsefulnessControl(container, payload) {
+      container.querySelectorAll('[data-evaluate-usefulness]').forEach((button) => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          const receipt = await fetchJson('/api/conversation/usefulness', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({session_id: localSessionId, expected_search_id: payload.search_id})});
+          addMessage('assistant', 'Structural review checks are ready. They are not attorney review or a correctness certification.', receipt);
+        } catch (err) { showToast(`Review checks were unavailable: ${safeErrorInfo(err).message}`); } finally { button.disabled = false; }
+      }));
+    }
+
+    function bindFactPinControl(container, payload) {
+      container.querySelectorAll('[data-pin-source-fact]').forEach((button) => button.addEventListener('click', async () => {
+        const item = sourceItemsFromPayload(payload)[0];
+        const meta = item?.metadata || item || {};
+        const label = window.prompt('Describe the fact exactly as you want to review it (not a finding):');
+        if (!label || !label.trim()) return;
+        const effectiveDate = window.prompt('Effective date (YYYY-MM-DD), if known:', '') || '';
+        const disputed = window.confirm('Mark this fact as disputed?');
+        const sourceId = sourceIdentity(item);
+        if (!sourceId) { showToast('This source card has no stable local identifier to pin.'); return; }
+        const locator = String(item?.locator || meta.source_locator_basename || meta.safe_locator || meta.citation_hint || 'Source card returned by local workbench');
+        const sourceHash = String(meta.source_hash || item?.source_hash || sourceId);
+        const pinId = `pin-${(window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`).replaceAll(/[^a-zA-Z0-9_-]/g, '').slice(0, 48).toLowerCase()}`;
+        button.disabled = true;
+        try {
+          const receipt = await fetchJson('/api/fact-pins', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({pin_id: pinId, label: label.trim(), effective_date: effectiveDate.trim(), dispute_status: disputed ? 'disputed' : 'unclear', actor_role: 'self_represented', source_ref: {source_id: sourceId, source_lane: sourceLane(item) === 'records' ? 'private_record' : 'legal_authority', locator, source_hash: sourceHash}})});
+          addMessage('assistant', `Pinned for review: ${label.trim()}`, {response_kind: 'fact_pin_receipt', ...receipt, citations: [item]});
+          showToast('Source-bound fact pin saved locally for review.');
+        } catch (err) { showToast(`Fact was not pinned: ${safeErrorInfo(err).message}`); } finally { button.disabled = false; }
+      }));
+    }
+
+    function bindConversationBranchControl(container, payload) {
+      container.querySelectorAll('[data-branch-conversation]').forEach((button) => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          const receipt = await fetchJson('/api/conversation/branch', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({session_id: localSessionId, expected_search_id: payload.search_id})});
+          localSessionId = receipt.branch_session_id;
+          addMessage('assistant', 'A new local branch was created. It keeps the source-card lineage but not raw conversation or matter text.', {response_kind: 'conversation_branch', ...receipt, citations: payload.citations || []});
+          showToast('New branch created. The next question uses its own local session.');
+        } catch (err) { showToast(`Branch was not created: ${safeErrorInfo(err).message}`); } finally { button.disabled = false; }
+      }));
+    }
+
+    function bindAnswerCorrectionControls(container, payload) {
+      container.querySelectorAll('[data-save-answer-correction]').forEach((button) => button.addEventListener('click', async () => {
+        const original = String(container.querySelector('[data-correction-original]')?.value || '').trim();
+        const proposed = String(container.querySelector('[data-correction-proposed]')?.value || '').trim();
+        const reasonCode = String(container.querySelector('[data-correction-reason]')?.value || 'other');
+        const reasonNote = String(container.querySelector('[data-correction-note]')?.value || '').trim();
+        if (!original || !proposed) {
+          showToast('Add the original sentence and changed proposed wording before verification.');
+          return;
+        }
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        try {
+          const base = {session_id: localSessionId, expected_search_id: payload.search_id, original_sentence: original, proposed_correction: proposed};
+          const created = await fetchJson('/api/conversation/corrections', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...base, reason_code: reasonCode, reason_note: reasonNote})});
+          const rerun = await fetchJson(`/api/conversation/corrections/${encodeURIComponent(created.correction_id)}/rerun`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(base)});
+          addMessage('assistant', 'A correction receipt was recorded and the source-support check was rerun. The original answer remains unchanged.', {...created, ...rerun, original_sentence: original, proposed_correction: proposed});
+          showToast('Correction receipt created; review the original and proposed support checks.');
+        } catch (err) {
+          showToast(`Correction was not saved: ${safeErrorInfo(err).message}`);
+        } finally {
+          button.disabled = false;
+          button.removeAttribute('aria-busy');
+        }
+      }));
+    }
+
     function renderMainChatAnswer(text, payload) {
       if (payload?.local_agent_result) {
         return `<div class="chat-rich-answer"><div class="local-agent-answer-banner"><strong>Optional loopback local model analysis</strong><br>This answer used only the exact context you approved. It remains review-required analytical work product.</div><section class="chat-answer-main"><h3>Local model response</h3>${renderParagraphBlocks(text)}</section>${renderInlineEvidence(payload)}${renderContextManifest(payload)}${renderLocalAgentReceipt(payload)}</div>`;
       }
+      if (payload?.response_kind === 'local_help_fast_path') {
+        return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>Local workbench help</h3>${renderParagraphBlocks(text)}</section>${renderFastPathActions(payload)}<p class="muted">Review required remains visible because this is navigation help, not legal advice, a source-based answer, or a finding about your matter.</p></div>`;
+      }
+      if (payload?.response_kind === 'conversation_context_compaction') {
+        return `<div class="chat-rich-answer">${renderContextCompactionReceipt(payload)}</div>`;
+      }
+      if (payload?.response_kind === 'conversation_answer_correction' || payload?.response_kind === 'conversation_answer_correction_rerun') {
+        return `<div class="chat-rich-answer">${renderAnswerCorrectionReceipt(payload)}</div>`;
+      }
+      if (payload?.response_kind === 'conversation_answer_comparison') return `<div class="chat-rich-answer">${renderAnswerComparison(payload)}</div>`;
+      if (payload?.response_kind === 'conversation_branch') return `<div class="chat-rich-answer"><section class="chat-context-compaction"><h3>Conversation branch</h3><p>Source-card lineage copied: ${escapeHtml(payload.source_card_count || 0)} card(s). Raw conversation and matter text were not copied.</p><p class="muted">Review required. This branch cannot establish facts or conclusions.</p>${renderInlineEvidence(payload)}</section></div>`;
+      if (payload?.response_kind === 'fact_pin_receipt') return `<div class="chat-rich-answer"><section class="chat-context-compaction"><h3>Source-bound fact pin</h3><p>${escapeHtml(payload?.pin?.label || 'Fact pin saved')} · <strong>review required</strong>.</p><p class="muted">This is not a finding and cannot be marked filing-ready. Open its source card to inspect the preserved locator.</p>${renderInlineEvidence(payload)}</section></div>`;
+      if (payload?.response_kind === 'conversation_usefulness') return `<div class="chat-rich-answer">${renderUsefulnessReceipt(payload)}</div>`;
+      if (payload?.response_kind === 'citation_graph') return `<div class="chat-rich-answer"><section class="chat-context-compaction"><h3>Citation links</h3>${(payload.edges || []).map((edge) => `<p><strong>${escapeHtml(String(edge.relation || 'cites').replaceAll('_', ' '))}</strong> · ${escapeHtml(edge.target_source_id || 'unknown source')}</p>`).join('') || '<p>No parsed outgoing citation links are available in this active build.</p>'}<p class="muted">${escapeHtml(payload.boundary || 'Review required.')}</p>${renderInlineEvidence(payload)}</section></div>`;
       if (payload?.direct_record_search) {
         return `${renderParagraphBlocks(text)}${renderRecordGroups(payload.record_groups)}${renderContextManifest(payload)}`;
       }
       const structured = payload?.structured_answer || null;
       if (!structured) return `${renderParagraphBlocks(text)}${renderInlineEvidence(payload)}${renderContextManifest(payload)}`;
       const primary = structured.what_this_means || text;
-      const immediate = Array.isArray(structured.what_to_do_right_now) ? structured.what_to_do_right_now.slice(0, 4) : [];
-      const next = Array.isArray(structured.next_three_steps) ? structured.next_three_steps.slice(0, 3) : [];
-      return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${renderInlineEvidence(payload)}${renderContextManifest(payload)}${renderCriticalDates(structured.critical_dates || structured.intake?.critical_dates)}${renderStructuredSection('What to do right now', immediate)}${renderStructuredSection('Next steps', next)}</div>`;
+      const responseDepth = String(payload?.metadata?.response_depth || 'standard');
+      const intent = payload?.metadata?.answer_intent || {};
+      const intentNotice = intent.primary_intent ? `<p class="chat-intent-notice ${intent.ambiguity ? 'status-warn' : 'muted'}"><strong>Route:</strong> ${escapeHtml(String(intent.primary_intent).replaceAll('_', ' '))}${intent.ambiguity ? ` · ${escapeHtml((intent.candidate_intents || []).join(', '))} need separate review` : ''}. This is a workflow hint, not a legal or factual finding.</p>` : '';
+      const depthNotice = responseDepth === 'concise' ? '<p class="muted">Concise view selected. Source cards and review safeguards remain unchanged; choose Standard or Thorough for the same-basis analysis.</p>' : '';
+      return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${intentNotice}${renderQueryExpansionGuardrails(payload)}${renderTemporalAuthorityReview(payload)}${renderAuthorityConflictReview(payload)}${renderClarificationMinimizer(payload)}${renderAudiencePresentation(payload)}${renderInlineEvidence(payload)}${renderContextManifest(payload)}${depthNotice}${responseDepth === 'concise' ? '' : renderProgressiveAnswerDetails(payload, structured, {open: responseDepth === 'thorough'})}${renderAssumptionLedger(payload)}${renderQuestionDecomposition(payload)}${renderContradictionFollowup(payload)}${renderLatencyObservatory(payload)}${renderAnswerComparisonControls(payload, primary)}${renderAnswerCorrectionControls(payload, primary)}${renderConversationBranchControl(payload)}${renderFactPinControl(payload)}${renderUsefulnessControl(payload)}${renderActionableFooter(payload)}</div>`;
     }
 
     function addMessage(role, text, payload = null) {
@@ -5455,6 +6417,18 @@
       wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><div class="message-speaker-meta">${draftAction}${localAgentAction}${authorityVerifyAction}${evidenceJump}<span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div></div><div class="message-content">${content}</div></div>`;
       transcript.appendChild(wrapper);
       if (role === 'assistant' && payload) bindInlineEvidenceActions(wrapper, payload);
+      if (role === 'assistant' && payload) bindAnswerFollowUps(wrapper);
+      if (role === 'assistant' && payload) bindActionableFooter(wrapper);
+      if (role === 'assistant' && payload) bindAnswerCorrectionControls(wrapper, payload);
+      if (role === 'assistant' && payload) bindClarificationMinimizer(wrapper);
+      if (role === 'assistant' && payload) bindAssumptionLedger(wrapper);
+      if (role === 'assistant' && payload) bindQuestionDecomposition(wrapper);
+      if (role === 'assistant' && payload) bindContradictionFollowup(wrapper);
+      if (role === 'assistant' && payload) bindAnswerComparisonControls(wrapper, payload);
+      if (role === 'assistant' && payload) bindConversationBranchControl(wrapper, payload);
+      if (role === 'assistant' && payload) bindFactPinControl(wrapper, payload);
+      if (role === 'assistant' && payload) bindUsefulnessControl(wrapper, payload);
+      if (role === 'assistant' && payload?.response_kind === 'local_help_fast_path') bindFastPathActions(wrapper);
       if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
       wrapper.querySelector('[data-message-save-draft]')?.addEventListener('click', () => saveAnswerAsDraft(text, payload));
       wrapper.querySelector('[data-message-local-agent]')?.addEventListener('click', (event) => openLocalAgentDialog(payload, event.currentTarget));
@@ -5498,6 +6472,58 @@
         /(source cards?|sources?|matches?|records?|snippets?|pages?|files?|where did you find|show all|open the)/.test(normalized);
     }
 
+    let responseProgressTimer = null;
+    function clearResponseProgress() {
+      if (responseProgressTimer) {
+        window.clearTimeout(responseProgressTimer);
+        responseProgressTimer = null;
+      }
+      document.querySelector('.response-pending')?.remove();
+    }
+
+    function showResponseProgress() {
+      clearResponseProgress();
+      const pending = document.createElement('div');
+      pending.className = 'message assistant response-pending';
+      pending.setAttribute('role', 'status');
+      pending.setAttribute('aria-live', 'polite');
+      pending.innerHTML = '<div class="message-bubble assistant-bubble"><div class="response-pending-heading"><span aria-hidden="true" class="response-pending-pulse"></span><strong>Working locally</strong></div><p data-response-progress>Finding relevant Maine sources and preparing a review-required answer…</p></div>';
+      transcript.appendChild(pending);
+      chatScroll?.scrollTo({top: chatScroll.scrollHeight, behavior: 'auto'});
+      responseProgressTimer = window.setTimeout(() => {
+        const progress = pending.querySelector('[data-response-progress]');
+        if (progress) progress.textContent = 'Checking source context and keeping the review boundary visible…';
+      }, 850);
+    }
+
+    function updateResponseProgress(stage) {
+      const progress = document.querySelector('.response-pending [data-response-progress]');
+      if (!progress) return;
+      const message = String(stage?.message || '').trim();
+      if (message) progress.textContent = message;
+    }
+
+    async function recordChatLatency(payload, metrics) {
+      const observation = {
+        session_id: localSessionId,
+        expected_search_id: payload?.search_id || '',
+        first_feedback_ms: metrics?.first_feedback_ms ?? null,
+        total_duration_ms: Math.max(0, Number(metrics?.total_duration_ms || 0)),
+        server_duration_ms: metrics?.server_duration_ms ?? null,
+        queue_delay_ms: 0,
+        cache_state: 'unknown',
+        model_output_tokens: 0,
+        hardware_concurrency: Math.min(256, Math.max(0, Number(navigator.hardwareConcurrency || 0))),
+        device_memory_gib: Math.min(4096, Math.max(0, Number(navigator.deviceMemory || 0)))
+      };
+      if (!observation.expected_search_id) return null;
+      try {
+        return await fetchJson('/api/conversation/latency', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(observation)});
+      } catch (_err) {
+        return null;
+      }
+    }
+
     async function ask() {
       if (sending) return;
       const text = question.value.trim();
@@ -5521,26 +6547,38 @@
       question.value = '';
       question.style.height = '';
       question.dataset.lastSubmitCleared = 'true';
+      const requestStartedAt = performance.now();
+      showResponseProgress();
       try {
-        const context = [matterContext.value.trim(), `Audience: ${audience.value}`].filter(Boolean).join('\n');
-        const payload = await fetchJson('/ask', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            question: text,
-            answer_style: answerStyle.value,
-            matter_context: context,
-            search_mode: searchMode?.value || 'maine_law',
-            child_impact_lens: Boolean(childImpactLens?.checked),
-            session_id: localSessionId,
-            last_search_id: lastPayload?.search_id || ''
-          }),
-          signal: activeRequestController.signal
-        });
+        const context = matterContext.value.trim();
+        const streamed = await fetchAnswerStream({
+          question: text,
+          answer_style: answerStyle.value,
+          response_depth: responseDepth?.value || 'standard',
+          audience: audience?.value || 'parent',
+          matter_context: context,
+          search_mode: searchMode?.value || 'maine_law',
+          child_impact_lens: Boolean(childImpactLens?.checked),
+          session_id: localSessionId,
+          last_search_id: lastPayload?.search_id || ''
+        }, activeRequestController.signal, updateResponseProgress);
+        const payload = streamed.payload;
         const responseText = payload.answer || JSON.stringify(payload, null, 2);
+        const responseDurationMs = Math.round(performance.now() - requestStartedAt);
+        payload.metadata = {...(payload.metadata || {}), chat_latency_observation: {
+          first_feedback_ms: streamed.metrics?.first_feedback_ms ?? null,
+          total_duration_ms: streamed.metrics?.total_duration_ms ?? responseDurationMs,
+          server_duration_ms: streamed.metrics?.server_duration_ms ?? null,
+          queue_delay_ms: 0,
+          cache_state: 'unknown',
+          prompt_text_stored: false,
+          matter_text_stored: false
+        }};
+        clearResponseProgress();
         renderLatestAnswer(payload);
         addMessage('assistant', responseText, payload);
         lastPayload = payload;
+        void recordChatLatency(payload, streamed.metrics);
         lastHandoffSources = payload.handoff_safe_source_cards || [];
         downloadJsonButton.style.display = '';
         renderBadges(payload);
@@ -5554,9 +6592,15 @@
             : 'Prior source cards opened. No new corpus search was run.';
           showToast(sourceFollowupToast);
         } else {
-          showToast(payload.grounded ? 'Grounded answer ready.' : 'Answer returned with review-needed flags.');
+          const durationLabel = responseDurationMs < 1000 ? `${responseDurationMs} ms` : `${(responseDurationMs / 1000).toFixed(1)} s`;
+          const firstFeedbackMs = Number(streamed.metrics?.first_feedback_ms);
+          const feedbackSuffix = Number.isFinite(firstFeedbackMs)
+            ? ` First local update: ${firstFeedbackMs} ms${firstFeedbackMs > Number(streamed.metrics?.first_feedback_budget_ms || CHAT_FIRST_FEEDBACK_BUDGET_MS) ? ' (over the 150 ms target)' : ''}.`
+            : '';
+          showToast((payload.grounded ? `Grounded answer ready in ${durationLabel}.` : `Answer returned with review-needed flags in ${durationLabel}.`) + feedbackSuffix);
         }
       } catch (err) {
+        clearResponseProgress();
         if (err.name === 'AbortError') {
           if (!question.value.trim()) question.value = text;
           const serviceDisconnected = requestAbortReason === 'service_disconnected';
@@ -5579,6 +6623,7 @@
         checkLocalService({announce: true});
         question.focus({preventScroll: true});
       } finally {
+        clearResponseProgress();
         sending = false;
         askButton.disabled = false;
         askButton.removeAttribute('aria-label');
@@ -5885,6 +6930,44 @@
         ask();
       });
     });
+
+    async function compactSafeConversationContext() {
+      const expectedSearchId = String(lastPayload?.search_id || '').trim();
+      if (!expectedSearchId) {
+        showToast('Ask a source-backed question first; there is no safe context receipt to compact yet.');
+        return;
+      }
+      if (compactContextButton) {
+        compactContextButton.disabled = true;
+        compactContextButton.setAttribute('aria-busy', 'true');
+      }
+      try {
+        const receipt = await fetchJson('/api/conversation/context/compact', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({session_id: localSessionId, expected_search_id: expectedSearchId})
+        });
+        addMessage('assistant', 'A safe continuity receipt was created. Your visible transcript was not changed.', {
+          response_kind: 'conversation_context_compaction',
+          answer: 'A safe continuity receipt was created. Your visible transcript was not changed.',
+          context_compaction: receipt,
+          review_required: true,
+          grounded: false,
+          citations: [],
+          source_card_count: 0
+        });
+        showToast('Safe context receipt created. Raw chat text was not stored.');
+      } catch (err) {
+        const info = safeErrorInfo(err);
+        showToast(`Context receipt was not created: ${info.message}`);
+      } finally {
+        if (compactContextButton) {
+          compactContextButton.disabled = false;
+          compactContextButton.removeAttribute('aria-busy');
+        }
+      }
+    }
+
     askButton.addEventListener('click', ask);
     stopButton?.addEventListener('click', () => {
       requestAbortReason = 'user_cancelled';
@@ -5978,6 +7061,7 @@
       }
     });
     clearDraftButton?.addEventListener('click', () => { question.value = ''; question.style.height = ''; question.focus(); showToast('Draft cleared.'); });
+    compactContextButton?.addEventListener('click', compactSafeConversationContext);
     authorityUpdateButton?.addEventListener('click', updateAuthorityLibrary);
     authorityUpdateCancelButton?.addEventListener('click', cancelAuthorityLibraryUpdate);
     authorityUpdateRefreshButton?.addEventListener('click', async () => {
@@ -6074,6 +7158,7 @@
         window.localStorage.setItem(layoutPreferenceKey, JSON.stringify({
           evidenceOpen: drawerUserPreference,
           shortcutsOpen: sideCardsUserPreference,
+          v8View: activeV8View,
         }));
       } catch (_error) {
         // Layout remains fully usable when storage is unavailable.
@@ -6083,6 +7168,8 @@
     let drawerReturnFocus = null;
     let drawerUserPreference = typeof savedLayoutPreferences.evidenceOpen === 'boolean' ? savedLayoutPreferences.evidenceOpen : null;
     let sideCardsUserPreference = savedLayoutPreferences.shortcutsOpen !== false;
+    // Chat intentionally wins on first launch. The larger workspace is an explicit view.
+    let activeV8View = savedLayoutPreferences.v8View === 'workspace' ? 'workspace' : 'chat';
     let responsiveLayoutMode = '';
     const inlineDrawerQuery = window.matchMedia('(min-width: 960px)');
     const fullWorkbenchQuery = window.matchMedia('(min-width: 1360px)');
@@ -6147,6 +7234,11 @@
       document.body.dataset.layout = nextMode;
 
       if (initial) {
+        if (activeV8View === 'chat') {
+          setShortcutCardsVisible(false, {userInitiated: false});
+          setDrawerOpen(false, '', {manageFocus: false});
+          return;
+        }
         setDrawerOpen(nextMode !== 'overlay' && drawerUserPreference !== false, 'evidence', {manageFocus: false});
         return;
       }
@@ -6183,10 +7275,52 @@
       });
     }
 
+    function setV8View(view, {userInitiated = false, drawerPanel = ''} = {}) {
+      const nextView = view === 'workspace' ? 'workspace' : 'chat';
+      activeV8View = nextView;
+      document.body.dataset.v8View = nextView;
+      if (v8ActiveViewLabel) v8ActiveViewLabel.textContent = nextView === 'workspace' ? 'Workbench' : 'Chat';
+      document.querySelectorAll('[data-v8-view]').forEach((button) => {
+        const selected = button.dataset.v8View === nextView;
+        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      });
+      if (nextView === 'chat') {
+        setShortcutCardsVisible(false, {userInitiated: false});
+        setDrawerOpen(false, '', {manageFocus: false});
+      } else {
+        setShortcutCardsVisible(true, {userInitiated: false});
+        setDrawerOpen(true, drawerPanel || 'evidence', {manageFocus: false});
+      }
+      if (userInitiated) saveLayoutPreferences();
+      if (v8ViewMenu) v8ViewMenu.open = false;
+    }
+
     focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
     toggleSideCardsButton?.addEventListener('click', () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true}));
     closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
+    document.querySelectorAll('[data-v8-view]').forEach((button) => {
+      button.addEventListener('click', () => setV8View(button.dataset.v8View, {userInitiated: true}));
+    });
+    document.querySelectorAll('[data-v8-panel]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const panel = button.dataset.v8Panel || 'evidence';
+        setV8View('workspace', {userInitiated: true, drawerPanel: panel});
+        // The drawer's legacy initialization can select its evidence tab during
+        // startup. Reassert the requested chat-to-panel handoff after layout.
+        window.requestAnimationFrame(() => selectDrawerTab(panel));
+      });
+    });
+    document.querySelectorAll('[data-v8-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (v8ViewMenu) v8ViewMenu.open = false;
+        if (button.dataset.v8Action === 'matter') {
+          setV8View('workspace', {userInitiated: true, drawerPanel: 'setup'});
+          window.requestAnimationFrame(() => selectDrawerTab('setup'));
+        }
+        if (button.dataset.v8Action === 'settings') welcomeButton?.click();
+      });
+    });
     document.querySelectorAll('[data-drawer-tab]').forEach((button) => {
       button.addEventListener('click', () => selectDrawerTab(button.dataset.drawerTab || 'setup'));
       button.addEventListener('keydown', (event) => {
@@ -6199,7 +7333,10 @@
         tabs[next].focus({preventScroll: true});
       });
     });
-    moreStartersButton?.addEventListener('click', () => setDrawerOpen(true, 'starters'));
+    moreStartersButton?.addEventListener('click', () => {
+      setV8View('workspace', {userInitiated: true, drawerPanel: 'starters'});
+      window.requestAnimationFrame(() => selectDrawerTab('starters'));
+    });
     printableSearchButton?.addEventListener('click', () => searchFamilyPrintables());
     printableSearch?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchFamilyPrintables(); } });
     ocrActionButton?.addEventListener('click', openOcrChoice);
@@ -6376,6 +7513,17 @@
       {id:'open_handoff_workspace',group:'Specialized workbenches',label:'Secure reviewer handoff',hint:'Create an encrypted local handoff manifest',aliases:'slice 42 handoff portable bundle',run:openHandoffWorkspace},
       {id:'open_language_workspace',group:'Specialized workbenches',label:'Plain language & translation',hint:'Create review-required accessible working copies',aliases:'slice 43 accessibility translation',run:openLanguageWorkspace},
       {id:'open_resource_workspace',group:'Specialized workbenches',label:'Maine resource navigator',hint:'Record verified resource candidates',aliases:'slice 44 resource warm handoff',run:openResourceWorkspace},
+      {id:'open_smart_matter_inbox',group:'Productivity Studio',label:'Smart Matter Inbox',hint:'Review an explicit local candidate manifest',aliases:'inbox watch import duplicate',run:()=>openProductivityStudio('inbox')},
+      {id:'open_workflow_recipes',group:'Productivity Studio',label:'Saved workflow recipes',hint:'Run confirmed allow-listed local steps',aliases:'recipe automation workflow',run:()=>openProductivityStudio('recipes')},
+      {id:'open_media_transcription',group:'Productivity Studio',label:'Audio/video evidence transcription',hint:'Create a source-bound local transcript',aliases:'audio video transcript hearing',run:()=>openProductivityStudio('media')},
+      {id:'open_calendar_interop',group:'Productivity Studio',label:'Calendar interoperability',hint:'Create a review-required ICS file',aliases:'calendar ics dates export',run:()=>openProductivityStudio('calendar')},
+      {id:'open_hardware_optimizer',group:'Productivity Studio',label:'Local model hardware optimizer',hint:'Choose safe context and concurrency limits',aliases:'gpu cpu memory model optimize',run:()=>openProductivityStudio('hardware')},
+      {id:'open_research_pinboard',group:'Productivity Studio',label:'Research notebook & citation pinboard',hint:'Pin and inspect an exact source span',aliases:'research notebook pin citation source',run:()=>openProductivityStudio('pinboard')},
+      {id:'open_redaction_studio',group:'Productivity Studio',label:'Redaction studio',hint:'Review privacy candidates against an immutable original',aliases:'redact privacy pii derivative',run:()=>openProductivityStudio('redaction')},
+      {id:'open_matter_next_actions',group:'Productivity Studio',label:'Matter health & next actions',hint:'Turn blockers into a corrective review queue',aliases:'health actions blockers status',run:()=>openProductivityStudio('actions')},
+      {id:'open_courtroom_presentation',group:'Productivity Studio',label:'Courtroom presentation mode',hint:'Prepare source-bound cards with notes hidden',aliases:'court hearing present fullscreen',run:()=>openProductivityStudio('courtroom')},
+      {id:'open_encrypted_backup',group:'Productivity Studio',label:'Encrypted automatic backup',hint:'Schedule, verify and safely rehearse restore',aliases:'backup restore recovery automatic',run:()=>openProductivityStudio('backup')},
+      ...addonDefinitions.map((addon) => ({id:`open_addon_${addon.id}`,group:'Add-on Studio',label:addon.label,hint:addon.description,aliases:`addon local review ${addon.id.replaceAll('_', ' ')}`,run:()=>openAddonStudio(addon.id)})),
       {id: 'open_document_intelligence', group: 'Evidence', label: 'Open document intelligence', hint: 'Inspect OCR, privacy review, and preservation copies', aliases: 'ocr redact preserve compare duplicate', run: () => openDocumentIntelligence()},
       {id: 'toggle_evidence_drawer', group: 'Evidence', label: 'Open Evidence & tools', hint: 'Sources, matter controls, review and starters', aliases: 'drawer proof audit', run: () => setDrawerOpen(true, 'evidence')},
       {id: 'toggle_shortcut_cards', group: 'Workspace', label: 'Toggle shortcut cards', hint: 'Hide or show supporting cards and resize chat', aliases: 'side cards rail expand chat layout', run: () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true})},
@@ -6614,6 +7762,58 @@
       }
     });
 
+    addonStudioClose?.addEventListener('click', closeAddonStudio);
+    addonRun?.addEventListener('click', runAddonAction);
+    addonRefresh?.addEventListener('click', refreshAddonStudio);
+    addonInspect?.addEventListener('click', inspectAddonResult);
+    addonReview?.addEventListener('click', reviewAddonResult);
+    addonDownload?.addEventListener('click', downloadAddonArtifact);
+    addonIntegrity?.addEventListener('click', verifyAddonIntegrity);
+    addonToolList?.addEventListener('keydown', (event) => {
+      const buttons = Array.from(addonToolList.querySelectorAll('[data-addon-id]'));
+      const index = buttons.indexOf(document.activeElement);
+      if (index < 0 || !['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 :
+        event.key === 'ArrowUp' ? (index - 1 + buttons.length) % buttons.length : (index + 1) % buttons.length;
+      selectAddon(buttons[next].dataset.addonId, {focus: true});
+    });
+    productivityStudioClose?.addEventListener('click', closeProductivityStudio);
+    productivityTabs.forEach((button, index) => {
+      button.addEventListener('click', () => selectProductivityTab(button.dataset.productivityTab || 'inbox'));
+      button.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let next = index;
+        if (event.key === 'ArrowLeft') next = (index - 1 + productivityTabs.length) % productivityTabs.length;
+        if (event.key === 'ArrowRight') next = (index + 1) % productivityTabs.length;
+        if (event.key === 'Home') next = 0;
+        if (event.key === 'End') next = productivityTabs.length - 1;
+        selectProductivityTab(productivityTabs[next].dataset.productivityTab || 'inbox', {focus: true});
+      });
+    });
+    productivityElement('inbox-run')?.addEventListener('click', runProductivityInbox);
+    productivityElement('recipe-run')?.addEventListener('click', runProductivityRecipe);
+    productivityElement('media-run')?.addEventListener('click', runProductivityMedia);
+    productivityElement('calendar-run')?.addEventListener('click', runProductivityCalendar);
+    productivityElement('hardware-run')?.addEventListener('click', runProductivityHardware);
+    productivityElement('pin-run')?.addEventListener('click', runProductivityPinboard);
+    productivityElement('pin-inspect')?.addEventListener('click', inspectProductivityPin);
+    productivityElement('redaction-run')?.addEventListener('click', runProductivityRedaction);
+    productivityElement('redaction-open')?.addEventListener('click', () => { closeProductivityStudio(); openDocumentIntelligence(); });
+    productivityElement('actions-run')?.addEventListener('click', runProductivityActions);
+    productivityElement('courtroom-run')?.addEventListener('click', runProductivityCourtroom);
+    productivityElement('backup-run')?.addEventListener('click', runProductivityBackup);
+    productivityElement('backup-verify')?.addEventListener('click', verifyProductivityBackup);
+    productivityElement('backup-restore')?.addEventListener('click', restoreProductivityBackup);
+    courtroomPresentationClose?.addEventListener('click', closeCourtroomPresentation);
+    courtroomPresentationPrevious?.addEventListener('click', () => moveCourtroomPresentation(-1));
+    courtroomPresentationNext?.addEventListener('click', () => moveCourtroomPresentation(1));
+    courtroomPresentationOverlay?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); moveCourtroomPresentation(-1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); moveCourtroomPresentation(1); }
+    });
+
     commandPaletteButton?.addEventListener('click', openCommandPalette);
     closeCommandPaletteButton?.addEventListener('click', closeCommandPalette);
     commandSearch?.addEventListener('input', () => { commandIndex = 0; renderCommands(commandSearch.value); });
@@ -6741,7 +7941,7 @@
     });
 
     installSpecializedSourceInspectors();
-    setShortcutCardsVisible(sideCardsUserPreference);
+    setV8View(activeV8View, {userInitiated: false});
     selectDrawerTab('evidence');
     syncResponsiveLayout({initial: true});
     const scheduleResponsiveSync = (() => {
@@ -6756,6 +7956,9 @@
       else if (typeof query.addListener === 'function') query.addListener(scheduleResponsiveSync);
     });
     window.addEventListener('resize', scheduleResponsiveSync, {passive: true});
+    renderAddonTools();
     renderCommands();
+    window.setTimeout(runDueProductivityBackups, 10000);
+    window.setInterval(runDueProductivityBackups, 15 * 60 * 1000);
 
-    // v5.0 premium workbench marker: constitutional_bar, mission_popover_close, local_privacy_popover, evidence_drawer, grouped_ctrl_k_command_palette, ctrl_j_justice_key, privacy_overlay, shortcuts_overlay, civic_build_card
+    // v8 add-on marker: native_whisper_transcription, ocr_correction_studio, communications_importer, evidence_relationship_graph, local_model_manager, court_form_autofill, advanced_table_extraction, financial_document_intelligence, semantic_order_comparison, authority_update_center, guided_research_builder, evidence_annotation_studio, local_automation_scheduler, secure_reviewer_collaboration, matter_template_library, conflict_entity_resolver, desktop_notification_center, courtroom_bundle_exporter, voice_drafting_commands, extension_sdk_permission_center

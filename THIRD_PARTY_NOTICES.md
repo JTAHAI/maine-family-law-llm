@@ -59,6 +59,20 @@ The Maine implementation is independently rewritten and substantially hardened. 
 
 Maine Family Law LLM wraps this dependency with source-root containment, size and operation caps, explicit user confirmation, immutable imported originals, and new-copy-only output. The optional session/Jupyter mode is not installed or exposed.
 
+## whisper.cpp
+
+- Project: `ggml-org/whisper.cpp`
+- Version: 1.9.2 (CPU-only Windows x64 release)
+- License: MIT
+- Included license: `licenses/whisper.cpp-MIT.md`
+- Included model: `ggml-tiny.en-q5_1.bin`, distributed by the whisper.cpp project
+- Use in this project:
+  - fully local English speech-to-text for admitted matter audio;
+  - timestamped, source-hash-bound transcript derivatives;
+  - offline runtime operation with no model or engine download.
+
+The Store build pins and verifies the release archive, executable, and model by SHA-256. Transcripts remain derived, review-required work product and are not treated as official court transcripts.
+
 ## Excluded after review
 
 The following repositories were reviewed but their code was not incorporated:

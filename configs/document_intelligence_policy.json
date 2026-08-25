@@ -1,6 +1,6 @@
 {
   "schema_version": "maine_document_intelligence_policy_v1",
-  "product_version": "7.0.0",
+  "product_version": "8.0.0",
   "default_mode": "local_only",
   "automatic_install": false,
   "automatic_model_download": false,

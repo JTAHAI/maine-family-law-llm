@@ -36,6 +36,14 @@ def test_inline_evidence_reuses_secure_existing_source_actions() -> None:
     assert "file://" not in js.lower()
 
 
+def test_inline_preview_refuses_to_label_a_snippet_as_an_exact_span() -> None:
+    js = read_workbench_asset("workbench.js")
+    assert "const hasExactSpan = Number.isInteger(sourceSpan.start_offset)" in js
+    assert "Exact source span unavailable" in js
+    assert "no admitted character range" in js
+    assert "pinpoint citation or verified quote" in js
+
+
 def test_external_source_links_reject_active_or_file_schemes() -> None:
     js = read_workbench_asset("workbench.js")
     assert "function safeExternalUrl(value)" in js

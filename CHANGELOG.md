@@ -1,5 +1,12 @@
 # Changelog
 
+## 8.0.0 - Enterprise-hardened Add-on Studio
+
+- Added twenty complete local-first verticals spanning native transcription, OCR correction, communications, evidence graphs, model admission, forms, tables, finance, order comparison, authority updates, research, annotation, scheduling, reviewer handoff, templates, entity review, notifications, courtroom bundles, voice drafting, and extension permissions.
+- Bundled a hash-pinned CPU whisper.cpp 1.9.2 runtime and compact English model for real offline transcription; no runtime download is performed.
+- Added tenant enforcement, encrypted artifacts, exact artifact drill-down, append-only review decisions, idempotency, and result/audit-chain integrity verification.
+- Verified all twenty through the shipped production UI and a fresh frozen executable using fictional data.
+
 ## 7.0.0 - Verified-scope freeze and fail-closed release hardening
 
 - Froze the public source release at 7.0.0 and the Windows package target at 7.0.0.0 while preserving the Microsoft Store identity, publisher, x64 architecture, and `en-us` language.

@@ -238,8 +238,8 @@ def test_pass_38_source_zip_audit_allows_only_bundled_public_focaf_pdfs(tmp_path
 def test_v380_version_and_store_revision_are_aligned() -> None:
     from maine_family_law_llm.version import BUILD_NUMBER, PACKAGE_VERSION, UI_PASS_MARKER, VERSION
 
-    assert VERSION == "7.0.0"
-    assert PACKAGE_VERSION == "7.0.0.0"
-    assert BUILD_NUMBER == 52
-    assert UI_PASS_MARKER == "v7.0.0-ga"
+    assert VERSION == "8.0.0"
+    assert PACKAGE_VERSION == "8.0.0.0"
+    assert BUILD_NUMBER == 53
+    assert UI_PASS_MARKER == "v8.0.0-ga"
     assert json.loads((ROOT / "store/msix/identity.local.json").read_text(encoding="utf-8"))["package_version"] == PACKAGE_VERSION

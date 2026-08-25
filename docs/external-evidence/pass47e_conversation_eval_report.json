@@ -26,7 +26,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.529407+00:00",
+        "created_at": "2026-08-25T01:16:42.100194+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -303,7 +303,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.530734+00:00",
+        "created_at": "2026-08-25T01:16:42.100409+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -487,7 +487,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.531804+00:00",
+        "created_at": "2026-08-25T01:16:42.100632+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -692,7 +692,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.532699+00:00",
+        "created_at": "2026-08-25T01:16:42.100818+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -938,7 +938,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.533429+00:00",
+        "created_at": "2026-08-25T01:16:42.100995+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -1191,7 +1191,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.533761+00:00",
+        "created_at": "2026-08-25T01:16:42.101186+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -1428,7 +1428,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.534056+00:00",
+        "created_at": "2026-08-25T01:16:42.101372+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -1667,7 +1667,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.534412+00:00",
+        "created_at": "2026-08-25T01:16:42.101549+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -1874,7 +1874,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.535014+00:00",
+        "created_at": "2026-08-25T01:16:42.101705+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -2095,7 +2095,7 @@
         ],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.535664+00:00",
+        "created_at": "2026-08-25T01:16:42.101882+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -2293,7 +2293,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.536490+00:00",
+        "created_at": "2026-08-25T01:16:42.102046+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -2470,7 +2470,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.536891+00:00",
+        "created_at": "2026-08-25T01:16:42.102211+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -2673,7 +2673,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.538506+00:00",
+        "created_at": "2026-08-25T01:16:42.102401+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -2887,7 +2887,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.538990+00:00",
+        "created_at": "2026-08-25T01:16:42.102573+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -3118,7 +3118,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.539517+00:00",
+        "created_at": "2026-08-25T01:16:42.102730+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [],
         "filing_ready_status": "blocked_from_filing_ready",
@@ -3326,7 +3326,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.540124+00:00",
+        "created_at": "2026-08-25T01:16:42.102877+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -3510,7 +3510,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.540664+00:00",
+        "created_at": "2026-08-25T01:16:42.103031+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -3694,7 +3694,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.541389+00:00",
+        "created_at": "2026-08-25T01:16:42.103198+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -3971,7 +3971,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.541715+00:00",
+        "created_at": "2026-08-25T01:16:42.103366+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -4172,7 +4172,7 @@
         "citations": [],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.541971+00:00",
+        "created_at": "2026-08-25T01:16:42.103518+00:00",
         "explanation": "This response is review-required. Source status is source_unknown_freshness. Freshness status is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -4396,7 +4396,7 @@
         ],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.542278+00:00",
+        "created_at": "2026-08-25T01:16:42.103701+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -4600,7 +4600,7 @@
         ],
         "claim_support_status": "unsupported_claim",
         "confidence": 0.22,
-        "created_at": "2026-08-11T22:51:05.542593+00:00",
+        "created_at": "2026-08-25T01:16:42.103871+00:00",
         "explanation": "Mode is source-forward and concise. Source scope is source_unknown_freshness. Source freshness is source_unknown_freshness. Filing-ready status is blocked_from_filing_ready.",
         "filing_ready_blockers": [
           "review_required"
@@ -4775,7 +4775,7 @@
       "status": "pass"
     }
   ],
-  "generated_at": "2026-08-11T22:51:05.542808+00:00",
+  "generated_at": "2026-08-25T01:16:42.103934+00:00",
   "hard_safety_checks": {
     "citation_safety": true,
     "filing_ready_gate_pass": true,

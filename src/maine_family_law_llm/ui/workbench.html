@@ -14,14 +14,14 @@
 <link href="/brand-assets/css/focaf-family-law-llm-theme.css" rel="stylesheet"/>
 <link href="/ui-assets/workbench.css?v={{UI_VERSION}}" rel="stylesheet"/>
 </head>
-<body class="v6-workbench" data-production-ui="workbench" data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}" data-drawer="open" data-layout="full">
+<body class="v6-workbench v8-workbench" data-production-ui="workbench" data-brand-kit="focaf_family_law_llm_brand_kit" data-ui-pass="{{UI_PASS_MARKER}}" data-drawer="closed" data-layout="full" data-shortcuts="closed" data-v8-view="chat">
 <a class="skip-link" href="#main-workbench">Skip to the family justice workbench</a>
 <div aria-live="polite" class="connection-banner" hidden id="connection-banner" role="status">
   <strong>Local service disconnected.</strong>
   <span>Your draft remains on this device. Reconnect the local service before sending or changing records.</span>
   <button class="secondary compact-action" id="connection-retry" type="button">Retry connection</button>
 </div>
-<div class="app-shell v5-workbench" data-brand-assets="/brand-assets" data-ui-generation="v5-premium-workbench" data-visual-generation="v6-visual-design-refresh" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
+<div class="app-shell v5-workbench" data-brand-assets="/brand-assets" data-ui-generation="v5-premium-workbench" data-visual-generation="v8-command-surface" data-ui-version="{{UI_VERSION}}" id="focaf-brand-shell">
 <header class="hero-banner constitutional-bar" data-brand-kit-mounted="expected" id="focaf-brand-hero">
   <div class="v5-brand-lockup">
     <button aria-controls="constitutional-popover" aria-describedby="constitutional-popover" aria-expanded="false" class="constitutional-identity v5-brand-mark" id="constitutional-identity" type="button">
@@ -53,7 +53,7 @@
       </div>
     </div>
     <span>Review required&nbsp;&nbsp;•&nbsp;&nbsp;Not legal advice</span>
-    <span aria-label="Version 7 verified workbench" class="v6-release-chip">v7 verified workbench</span>
+    <span aria-label="Version 8 verified workbench" class="v6-release-chip v8-release-chip">v8.0 major release</span>
   </div>
   <button aria-label="Open matter setup. Current matter: General Maine law" class="constitutional-context v5-focaf-lockup civic-tooltip" data-tooltip="The authority belongs to the source, not the model." id="matter-shortcut-button" type="button">
     <span aria-hidden="true" class="focaf-people-icon"><i></i><i></i></span>
@@ -62,15 +62,16 @@
 </header>
 
 <section aria-label="Conversation controls" class="v5-control-bar">
-  <div class="v5-control-field"><label for="audience">Role</label><select id="audience" title="Choose the audience lane."><option value="parent">Parent</option><option value="lawyer">Lawyer / advocate</option><option value="caregiver">Caregiver / relative</option><option value="counselor">Counselor</option><option value="therapist">Therapist / clinician</option></select></div>
+  <div class="v5-control-field"><label for="audience">Audience</label><select id="audience" title="Changes presentation only; it never changes legal truth or review requirements."><option value="parent">Self-represented litigant</option><option value="legal_aid_intake">Legal-aid intake</option><option value="paralegal">Paralegal</option><option value="attorney_review">Attorney review</option><option value="caregiver">Caregiver / relative</option><option value="counselor">Counselor</option><option value="therapist">Therapist / clinician</option></select></div>
   <div class="v5-control-field"><label for="answer-style">Answer style</label><select id="answer-style" title="Choose the answer format."><option value="plain_language">Plain language</option><option value="checklist">Checklist</option><option value="source_first">Source-first</option><option value="research_brief">Research brief</option><option value="intake">Intake triage</option><option value="professional_boundary">Professional boundary</option><option value="source_card_table">Source-card table</option><option value="questions_to_ask">Questions to ask</option><option value="missing_information">Missing information</option></select></div>
+  <div class="v5-control-field"><label for="response-depth">Depth</label><select id="response-depth" title="Change detail without changing source or verifier requirements."><option value="concise">Concise</option><option selected value="standard">Standard</option><option value="thorough">Thorough</option></select></div>
   <div class="v5-control-field"><label for="topic-filter">Topic filter</label><select id="topic-filter" title="Filter starter prompts and packs."><option value="all">All topics</option></select></div>
   <div class="v5-control-field v5-focus-field"><label for="matter-context">Focus context</label><input id="matter-context" placeholder="e.g., parental rights, PFA, support…" title="Optional short issue framing."/></div>
   <button class="compact-action command-hint v5-command-button" id="command-palette-button" title="Open the command palette" type="button"><span aria-hidden="true">⌕</span><span class="action-label">Search / Command</span><kbd>Ctrl K</kbd></button>
   <button class="compact-action civic-action" id="local-workbench-button" title="Open the local AI control center" type="button"><span aria-hidden="true" class="action-glyph">✦</span><span class="action-label">AI controls</span></button>
   <button class="compact-action civic-action" id="privacy-button" title="Open privacy information" type="button"><span aria-hidden="true" class="action-glyph">⌾</span><span class="action-label">Privacy</span></button>
   <button class="compact-action civic-action v5-matter-button" id="matter-button" title="Choose the active matter" type="button"><span aria-hidden="true" class="action-glyph">▣</span><span><small>Matter</small><strong id="active-matter-label">General Maine law</strong></span></button>
-  <button aria-controls="evidence-drawer" aria-expanded="true" class="primary-action compact-action v5-evidence-button" id="focus-mode-button" type="button"><span aria-hidden="true">▣</span> Evidence &amp; tools</button>
+  <button aria-controls="evidence-drawer" aria-expanded="false" class="primary-action compact-action v5-evidence-button" id="focus-mode-button" type="button"><span aria-hidden="true">▣</span> Evidence &amp; tools</button>
   <button class="compact-action civic-action v5-icon-button" id="help-button" title="Help" type="button"><span aria-hidden="true" class="action-glyph">?</span><span class="sr-only action-label">Help</span></button>
   <button class="compact-action civic-action v5-icon-button" id="new-chat-button" title="New chat" type="button"><span aria-hidden="true" class="action-glyph">＋</span><span class="sr-only action-label">New chat</span></button>
 </section>
@@ -104,8 +105,8 @@
 <main aria-labelledby="chat-heading" class="main-stage v5-main-stage" id="main-workbench" tabindex="-1">
 <section aria-labelledby="chat-heading" class="chat-panel panel" data-chat-layout="primary">
   <div class="chat-header">
-    <div class="chat-heading-copy v5-chat-title"><span aria-hidden="true" class="chat-seed-icon">AI</span><div><div class="section-kicker">Maine Family Law LLM</div><h2 id="chat-heading">Family justice chat</h2></div></div>
-    <div class="header-actions"><button aria-controls="workbench-shortcuts" aria-expanded="true" class="secondary compact-action" id="toggle-side-cards-button" title="Hide or show the shortcut cards and let chat use the available space" type="button"><span aria-hidden="true">▤</span> <span class="action-label">Hide shortcuts</span></button><button class="secondary compact-action" id="welcome-button" type="button">Conversation settings</button><button class="secondary compact-action" id="copy-link-button" title="Copy a privacy-safe settings link" type="button">Copy settings link</button></div>
+    <div class="chat-heading-copy v5-chat-title"><span aria-hidden="true" class="chat-seed-icon">AI</span><div><div class="section-kicker">Maine Family Law LLM <span class="v8-command-label">Command surface</span></div><h2 id="chat-heading">Family justice chat</h2><div aria-label="Chat safeguards" class="v8-chat-context"><span>Local-only</span><span>Review required</span></div></div></div>
+    <div class="header-actions v8-chat-actions"><details class="v8-view-menu" id="v8-view-menu"><summary aria-label="Choose a workbench view"><span>View</span><strong id="v8-active-view-label">Chat</strong><span aria-hidden="true">⌄</span></summary><div aria-label="Workspace views and tools" class="v8-view-popover" role="menu"><button aria-pressed="true" data-v8-view="chat" role="menuitemradio" type="button"><span>✦</span><strong>AI chat</strong><small>Focused conversation</small></button><button aria-pressed="false" data-v8-view="workspace" role="menuitemradio" type="button"><span>▦</span><strong>Full workbench</strong><small>Controls and guided workspaces</small></button><button data-v8-panel="evidence" role="menuitem" type="button"><span>⌁</span><strong>Evidence &amp; sources</strong><small>Open source cards and records</small></button><button data-v8-panel="review" role="menuitem" type="button"><span>✓</span><strong>Review &amp; blockers</strong><small>See what needs attention</small></button><hr/><button data-v8-action="matter" role="menuitem" type="button"><span>▣</span><strong>Choose matter</strong><small>Switch the private-record context</small></button><button data-v8-action="settings" role="menuitem" type="button"><span>⚙</span><strong>Conversation settings</strong><small>Adjust safe local preferences</small></button></div></details><button aria-controls="workbench-shortcuts" aria-expanded="false" class="secondary compact-action" id="toggle-side-cards-button" title="Hide or show the shortcut cards and let chat use the available space" type="button"><span aria-hidden="true">▤</span> <span class="action-label">Show shortcuts</span></button><button class="secondary compact-action" id="welcome-button" type="button">Conversation settings</button><button class="secondary compact-action" id="copy-link-button" title="Copy a privacy-safe settings link" type="button">Copy settings link</button></div>
   </div>
   <div aria-label="Research chat messages" class="chat-scroll">
     <div class="chat-seed">
@@ -135,7 +136,7 @@
       <div class="composer-submit-actions"><button class="secondary compact-action" disabled="" hidden="" id="stop-button" type="button">Stop</button><button type="button" class="primary-action" id="ask-button"><span aria-hidden="true">➤</span><span>Send<small>Shift+Enter</small></span></button></div>
     </div>
     <div class="composer-toolbar">
-      <div class="composer-actions"><button type="button" class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
+      <div class="composer-actions"><button type="button" class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="compact-context-button" type="button">Compact safe context</button><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
       <div class="composer-meta">Press <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for a new line · <strong>Ctrl+K</strong> for commands</div>
     </div>
   </div>
@@ -165,7 +166,7 @@
   <section class="rail-panel v5-quick-actions"><div class="rail-title"><span aria-hidden="true">ϟ</span> Quick actions</div><button id="quick-new-corpus" type="button">▱ Set up a case corpus</button><button id="quick-open-workspace" type="button">▢ Open case workspace</button><button id="quick-local-workbench" type="button">✦ Local AI control center</button><button id="quick-export-chat" type="button">⇩ Export chat / transcript</button></section>
 </aside>
 
-<aside aria-hidden="false" aria-label="Research controls and evidence" class="right-rail evidence-drawer" id="evidence-drawer" role="complementary" tabindex="-1">
+<aside aria-hidden="true" aria-label="Research controls and evidence" class="right-rail evidence-drawer" id="evidence-drawer" role="complementary" tabindex="-1">
   <div class="drawer-header"><div><div class="section-kicker">Evidence &amp; tools</div><h2>Private matter workbench</h2></div><button aria-label="Close evidence drawer" class="compact-action" id="close-drawer-button" type="button">Close</button></div>
   <div aria-label="Evidence drawer sections" class="drawer-tabs" role="tablist"><button aria-selected="false" class="drawer-tab" data-drawer-tab="setup" role="tab" type="button">Setup</button><button aria-selected="true" class="drawer-tab is-active" data-drawer-tab="evidence" role="tab" type="button">Evidence</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="review" role="tab" type="button">Review</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="starters" role="tab" type="button">Starters</button><button aria-selected="false" class="drawer-tab" data-drawer-tab="printables" role="tab" type="button">Printables</button></div>
   <div class="drawer-scroll">
@@ -418,8 +419,8 @@
         <p class="record-inspector-note">Bind the frozen release candidate to the final shipment inventory, GA-definition controls, release-channel qualification, rollback evidence, and immutable distribution receipts. This application does not create Store approval or claim that GA shipped.</p>
         <button class="secondary" id="ga-shipment-readiness-refresh" type="button">Refresh Pass 51 status</button>
         <label>Shipment ID<input id="ga-shipment-readiness-id" maxlength="128" value="v5-19-0-ga1"/></label>
-        <label>Product version<input id="ga-shipment-readiness-version" maxlength="64" value="7.0.0"/></label>
-        <label>Source ZIP filename<input id="ga-shipment-readiness-source-name" maxlength="180" value="Maine-Family-Law-LLM-v7.0.0-ga-full-source.zip"/></label>
+        <label>Product version<input id="ga-shipment-readiness-version" maxlength="64" value="8.0.0"/></label>
+        <label>Source ZIP filename<input id="ga-shipment-readiness-source-name" maxlength="180" value="Maine-Family-Law-LLM-v8.0.0-ga-full-source.zip"/></label>
         <label>Source ZIP SHA-256<input id="ga-shipment-readiness-source-hash" maxlength="64" placeholder="64-character hash"/></label>
         <label>Pass 50 candidate ID<input id="ga-shipment-readiness-rc-id" maxlength="128" value="v5-18-0-rc1"/></label>
         <label>Pass 50 report SHA-256<input id="ga-shipment-readiness-rc-report-hash" maxlength="64" placeholder="64-character hash"/></label>
@@ -428,7 +429,7 @@
         <button class="secondary" id="ga-shipment-readiness-create" type="button">Create immutable shipment manifest</button>
         <hr/>
         <label>GA artifact type<select id="ga-shipment-readiness-artifact-type"><option value="clean_source_zip">Clean source ZIP</option><option value="external_legal_data_product_manifest">External legal data product manifest</option><option value="parsed_authority_build_manifest">Parsed authority build manifest</option><option value="retrieval_indexes_manifest">Retrieval indexes manifest</option><option value="gold_eval_pack_manifest">Gold eval pack manifest</option><option value="smoke_evidence_json">Smoke/evidence JSON</option><option value="release_metrics_json">Release metrics JSON</option><option value="security_governance_packet">Security/governance packet</option><option value="admin_guide">Admin guide</option><option value="user_guide">User guide</option><option value="attorney_reviewer_guide">Attorney reviewer guide</option><option value="incident_rollback_runbook">Incident/rollback runbook</option><option value="source_update_runbook">Source update runbook</option><option value="model_update_runbook">Model update runbook</option></select></label>
-        <label>Artifact version<input id="ga-shipment-readiness-artifact-version" maxlength="64" value="7.0.0"/></label>
+        <label>Artifact version<input id="ga-shipment-readiness-artifact-version" maxlength="64" value="8.0.0"/></label>
         <label>Opaque reference or URI<input id="ga-shipment-readiness-artifact-reference" maxlength="512" placeholder="artifact-ref-v1 or urn:sha256:…"/></label>
         <label>Artifact SHA-256<input id="ga-shipment-readiness-artifact-hash" maxlength="64" placeholder="64-character hash"/></label>
         <label class="document-intelligence-option"><input checked id="ga-shipment-readiness-artifact-external" type="checkbox"/> Artifact remains outside the source repository.</label>
@@ -869,6 +870,78 @@ contact schedule"></textarea></label>
 </div>
 <div class="overlay-actions"><button class="secondary" id="local-workbench-refresh" type="button">Refresh status</button><button class="secondary" id="local-workbench-release-readiness" type="button">Check GA evidence</button><button class="secondary" id="local-workbench-save-preferences" type="button">Save preferences</button><button class="primary-action" id="local-workbench-close" type="button">Back to the chat</button></div>
 <div class="overlay-meta">CPU fallback remains the baseline. Hardware acceleration improves responsiveness; it never changes your data boundary.</div>
+</div>
+</div>
+<div aria-hidden="true" class="overlay-shell" hidden id="productivity-studio-overlay">
+<div aria-labelledby="productivity-studio-title" aria-modal="true" class="overlay-card productivity-studio-card" role="dialog">
+<div class="productivity-studio-header">
+<div><div class="overlay-kicker">Ten local-first capabilities</div><h3 id="productivity-studio-title">Matter Productivity Studio</h3><p>Build review artifacts without sending records, changing a calendar account, filing, or downloading a model.</p></div>
+<button aria-label="Close Matter Productivity Studio" class="secondary" id="productivity-studio-close" type="button">Close</button>
+</div>
+<div aria-live="polite" class="status-strip" id="productivity-studio-status">Select an active matter, then choose a capability.</div>
+<nav aria-label="Productivity capabilities" class="productivity-tabs" id="productivity-tabs">
+<button aria-controls="productivity-inbox" aria-selected="true" data-productivity-tab="inbox" role="tab" type="button">Inbox</button>
+<button aria-controls="productivity-recipes" aria-selected="false" data-productivity-tab="recipes" role="tab" type="button">Recipes</button>
+<button aria-controls="productivity-media" aria-selected="false" data-productivity-tab="media" role="tab" type="button">Media</button>
+<button aria-controls="productivity-calendar" aria-selected="false" data-productivity-tab="calendar" role="tab" type="button">Calendar</button>
+<button aria-controls="productivity-hardware" aria-selected="false" data-productivity-tab="hardware" role="tab" type="button">Hardware</button>
+<button aria-controls="productivity-pinboard" aria-selected="false" data-productivity-tab="pinboard" role="tab" type="button">Pinboard</button>
+<button aria-controls="productivity-redaction" aria-selected="false" data-productivity-tab="redaction" role="tab" type="button">Redaction</button>
+<button aria-controls="productivity-actions" aria-selected="false" data-productivity-tab="actions" role="tab" type="button">Next actions</button>
+<button aria-controls="productivity-courtroom" aria-selected="false" data-productivity-tab="courtroom" role="tab" type="button">Courtroom</button>
+<button aria-controls="productivity-backup" aria-selected="false" data-productivity-tab="backup" role="tab" type="button">Backup</button>
+</nav>
+<div class="productivity-panels">
+<section aria-labelledby="productivity-inbox-heading" data-productivity-panel="inbox" id="productivity-inbox" role="tabpanel"><h4 id="productivity-inbox-heading">Smart Matter Inbox</h4><p>Review an explicit file manifest. Nothing is silently watched or imported.</p><div class="productivity-form"><label>Inbox ID<input id="productivity-inbox-id" value="matter_inbox"/></label><label>Safe folder label<input id="productivity-inbox-token" value="local_inbox"/></label><label>Candidate record ID<input id="productivity-inbox-record" value="record_001"/></label><label>Candidate SHA-256<input id="productivity-inbox-hash" maxlength="64" value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-inbox-run" type="button">Configure and scan manifest</button></div></section>
+<section aria-labelledby="productivity-recipes-heading" data-productivity-panel="recipes" hidden id="productivity-recipes" role="tabpanel"><h4 id="productivity-recipes-heading">Saved workflow recipes</h4><p>Run an allow-listed local sequence only after explicit confirmation.</p><div class="productivity-form"><label>Recipe ID<input id="productivity-recipe-id" value="weekly_review"/></label><label>Steps<select id="productivity-recipe-steps" multiple size="4"><option selected value="inventory_records">Inventory records</option><option selected value="privacy_scan">Privacy scan</option><option value="build_timeline">Build timeline</option><option value="review_blockers">Review blockers</option></select></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-recipe-run" type="button">Save and run confirmed recipe</button></div></section>
+<section aria-labelledby="productivity-media-heading" data-productivity-panel="media" hidden id="productivity-media" role="tabpanel"><h4 id="productivity-media-heading">Audio/video evidence transcription</h4><p>Create a source-bound transcript from supplied local text. The original media hash remains authoritative.</p><div class="productivity-form"><label>Media ID<input id="productivity-media-id" value="hearing_audio_001"/></label><label>Source SHA-256<input id="productivity-media-hash" maxlength="64" value="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"/></label><label class="wide">Transcript text<textarea id="productivity-media-text">Speaker 1: This is fictional demonstration testimony.</textarea></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-media-run" type="button">Import and transcribe locally</button></div></section>
+<section aria-labelledby="productivity-calendar-heading" data-productivity-panel="calendar" hidden id="productivity-calendar" role="tabpanel"><h4 id="productivity-calendar-heading">Calendar interoperability</h4><p>Create a review-required ICS file. No calendar account is changed.</p><div class="productivity-form"><label>Export ID<input id="productivity-calendar-id" value="review_dates"/></label><label>Date and time<input id="productivity-calendar-date" type="datetime-local"/></label><label class="wide">Event summary<input id="productivity-calendar-summary" value="Fictional review date — verify before relying"/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-calendar-run" type="button">Create ICS export</button></div></section>
+<section aria-labelledby="productivity-hardware-heading" data-productivity-panel="hardware" hidden id="productivity-hardware" role="tabpanel"><h4 id="productivity-hardware-heading">Local model hardware optimizer</h4><p>Profile this PC and choose safe local limits. Models are never downloaded automatically.</p><div class="productivity-form"><label>Workload<select id="productivity-hardware-task"><option value="general_chat">General chat</option><option value="research">Research</option><option value="document_review">Document review</option></select></label><label>Requested context tokens<input id="productivity-hardware-context" min="512" step="512" type="number" value="8192"/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-hardware-run" type="button">Profile and optimize</button></div></section>
+<section aria-labelledby="productivity-pinboard-heading" data-productivity-panel="pinboard" hidden id="productivity-pinboard" role="tabpanel"><h4 id="productivity-pinboard-heading">Research notebook and citation pinboard</h4><p>Pin an exact source span with its locator, hash, and freshness.</p><div class="productivity-form"><label>Pin ID<input id="productivity-pin-id" value="pin_001"/></label><label>Source ID<input id="productivity-pin-source" value="record_001"/></label><label class="wide">Exact source span<textarea id="productivity-pin-span">Exact fictional source text selected for review.</textarea></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-pin-run" type="button">Pin exact source</button><button class="secondary" id="productivity-pin-inspect" type="button">Inspect exact source</button></div></section>
+<section aria-labelledby="productivity-redaction-heading" data-productivity-panel="redaction" hidden id="productivity-redaction" role="tabpanel"><h4 id="productivity-redaction-heading">Redaction studio</h4><p>Identify candidates against an immutable original, then create a separate reviewed derivative.</p><div class="productivity-form"><label>Project ID<input id="productivity-redaction-id" value="redact_001"/></label><label>Record ID<input id="productivity-redaction-record" value="record_001"/></label><label class="wide">Working text<textarea id="productivity-redaction-text">The fictional private value is Fictional private value.</textarea></label><label>Exact text to redact<input id="productivity-redaction-exact" value="Fictional private value"/></label><label>Computed source SHA-256<input id="productivity-redaction-hash" readonly/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-redaction-run" type="button">Create reviewed derivative</button><button class="secondary" id="productivity-redaction-open" type="button">Open document redaction tools</button></div></section>
+<section aria-labelledby="productivity-actions-heading" data-productivity-panel="actions" hidden id="productivity-actions" role="tabpanel"><h4 id="productivity-actions-heading">Matter health and next actions</h4><p>Turn explicit blockers into a prioritized corrective queue without making legal-priority decisions.</p><div class="productivity-form"><label>Blocker title<input id="productivity-action-title" value="Verify one unsupported claim"/></label><label class="wide">Corrective action<input id="productivity-action-correction" value="Open the claim and attach an exact source or remove it."/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-actions-run" type="button">Refresh next-action queue</button></div></section>
+<section aria-labelledby="productivity-courtroom-heading" data-productivity-panel="courtroom" hidden id="productivity-courtroom" role="tabpanel"><h4 id="productivity-courtroom-heading">Courtroom presentation mode</h4><p>Prepare a keyboard-navigable, source-bound card while keeping private notes hidden.</p><div class="productivity-form"><label>Session ID<input id="productivity-courtroom-id" value="hearing_session"/></label><label>Source ID<input id="productivity-courtroom-source" value="record_001"/></label><label class="wide">Display text<textarea id="productivity-courtroom-text">Exact fictional source excerpt for presentation.</textarea></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-courtroom-run" type="button">Create presentation session</button></div></section>
+<section aria-labelledby="productivity-backup-heading" data-productivity-panel="backup" hidden id="productivity-backup" role="tabpanel"><h4 id="productivity-backup-heading">Encrypted automatic backup</h4><p>Schedule backups while the app is active, verify each encrypted container, and restore only into a separate recovery directory.</p><div class="productivity-form"><label>Schedule ID<input id="productivity-backup-schedule" value="daily_backup"/></label><label>Interval hours<input id="productivity-backup-interval" min="1" type="number" value="24"/></label><label>Retention count<input id="productivity-backup-retention" min="1" max="30" type="number" value="7"/></label></div><div class="overlay-actions"><button class="primary-action" id="productivity-backup-run" type="button">Save schedule and back up now</button><button class="secondary" disabled id="productivity-backup-verify" type="button">Verify last backup</button><button class="secondary" disabled id="productivity-backup-restore" type="button">Restore to recovery folder</button></div></section>
+</div>
+<div aria-atomic="true" aria-live="polite" class="productivity-result" id="productivity-studio-result"><strong>Review required</strong><p>Actions and receipts will appear here. Nothing from this studio is filing-ready by itself.</p></div>
+</div>
+</div>
+<div aria-hidden="true" class="overlay-shell" hidden id="addon-studio-overlay">
+<div aria-labelledby="addon-studio-title" aria-modal="true" class="overlay-card addon-studio-card" role="dialog">
+<div class="productivity-studio-header">
+<div><div class="overlay-kicker">Twenty local-first add-ons</div><h3 id="addon-studio-title">Add-on Studio</h3><p>Run one source-bound, review-required action inside the active matter. No add-on files, uploads, downloads, files with a court, or silently enables an extension.</p></div>
+<button aria-label="Close Add-on Studio" class="secondary" id="addon-studio-close" type="button">Close</button>
+</div>
+<div aria-live="polite" class="status-strip" id="addon-studio-status">Select an active matter, then choose an add-on.</div>
+<div class="addon-studio-layout">
+<nav aria-label="Add-on tools" class="addon-tool-list" id="addon-tool-list"></nav>
+<section aria-labelledby="addon-active-title" class="addon-action-panel">
+<div class="addon-active-heading"><span class="status-badge review">Review required</span><h4 id="addon-active-title">Native transcription</h4></div>
+<p id="addon-active-description">Create a local transcript with an explicitly approved native engine. Missing dependencies fail closed.</p>
+<div class="productivity-form addon-form">
+<label class="wide"><span id="addon-primary-label">Matter-relative media path</span><input autocomplete="off" id="addon-primary-input" value="hearing.wav"/></label>
+<label class="wide"><span id="addon-secondary-label">Optional note</span><textarea id="addon-secondary-input">Fictional demonstration input.</textarea></label>
+<label><span id="addon-tertiary-label">Safe ID</span><input autocomplete="off" id="addon-tertiary-input" value="review_item_001"/></label>
+<label class="child-impact-toggle"><span class="switch"><input id="addon-confirmed-input" type="checkbox"/><i></i></span> I reviewed and confirm this action</label>
+</div>
+<div class="addon-review-controls">
+<label>Review decision<select id="addon-review-decision"><option value="accepted">Accepted after review</option><option value="needs_changes">Needs changes</option><option value="rejected">Rejected</option></select></label>
+<label class="wide">Review note<input id="addon-review-note" maxlength="4000" value="Reviewed against the exact result and source receipt."/></label>
+</div>
+<div class="overlay-actions"><button class="primary-action" id="addon-run" type="button">Run local review action</button><button class="secondary" disabled id="addon-inspect" type="button">Inspect exact result</button><button class="secondary" disabled id="addon-review" type="button">Record review decision</button><button class="secondary" disabled id="addon-download" type="button">Open exact artifact</button><button class="secondary" id="addon-integrity" type="button">Verify integrity</button><button class="secondary" id="addon-refresh" type="button">Refresh studio status</button></div>
+<p class="addon-boundary" id="addon-boundary">The engine is never downloaded automatically. A missing approved executable returns a blocker.</p>
+</section>
+</div>
+<div aria-atomic="true" aria-live="polite" class="productivity-result addon-result" id="addon-studio-result"><strong>Review required</strong><p>Receipts, blockers, hashes, and exact-result IDs appear here.</p></div>
+</div>
+</div>
+<div aria-hidden="true" class="overlay-shell courtroom-presentation-shell" hidden id="courtroom-presentation-overlay">
+<div aria-labelledby="courtroom-presentation-title" aria-modal="true" class="courtroom-presentation-card" role="dialog">
+<div class="courtroom-presentation-topline"><span>Source-bound presentation · Review required</span><button aria-label="Close courtroom presentation" class="secondary" id="courtroom-presentation-close" type="button">Close</button></div>
+<h3 id="courtroom-presentation-title">Exact source</h3>
+<blockquote id="courtroom-presentation-text">No card selected.</blockquote>
+<div class="courtroom-presentation-source" id="courtroom-presentation-source">Source unavailable</div>
+<div class="overlay-actions"><button class="secondary" disabled id="courtroom-presentation-previous" type="button">Previous</button><span id="courtroom-presentation-position">Card 1 of 1</span><button class="secondary" disabled id="courtroom-presentation-next" type="button">Next</button></div>
 </div>
 </div>
 <div aria-hidden="true" class="overlay-shell" hidden="" id="shortcuts-overlay">

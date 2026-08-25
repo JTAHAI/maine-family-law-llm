@@ -15,7 +15,10 @@ def test_local_workbench_html_has_real_chat_controls() -> None:
     assert "Maine Family Law LLM" in html
     assert "id=\"question\"" in html
     assert "id=\"ask-button\"" in html
-    assert "fetch('/ask'" in html
+    assert "/ui-assets/workbench.js" in html
+    script = (ROOT / "src" / "maine_family_law_llm" / "ui" / "workbench.js").read_text(encoding="utf-8")
+    assert "fetch('/ask/stream'" in script
+    assert "fetchAnswerStream" in script
     assert "Retrieved source cards" in html
     assert "data-source-card" in html
     assert "Not legal advice" in html or "not legal advice" in html

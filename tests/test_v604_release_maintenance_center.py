@@ -10,6 +10,7 @@ from app.web.ui_contracts import UICompletionAuditor
 from app.web.ui_inventory import UIViewInventory
 from legal.ops.release_pilot_hardening import PrivacySafeObservabilityStore
 from maine_family_law_llm import api as api_module
+from maine_family_law_llm.version import VERSION as PRODUCT_VERSION
 
 
 TRAINING = [
@@ -338,7 +339,7 @@ def test_release_maintenance_api_surface_drives_the_pilot_and_real_matter_workfl
         "/api/ga-shipment-readiness/shipments",
         json={
             "shipment_id": "v6-0-4-ga1",
-            "version": "6.0.4",
+            "version": PRODUCT_VERSION,
             "source_repo_zip_name": "Maine-Family-Law-LLM-v6.0.4-ga-shipment-readiness-full-source.zip",
             "source_repo_zip_sha256": "2" * 64,
             "release_candidate_id": "v6-0-4-rc1",

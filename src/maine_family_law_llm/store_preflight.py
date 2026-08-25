@@ -14,7 +14,7 @@ from xml.etree import ElementTree as ET
 EXPECTED_PACKAGE_NAME = "TAHAIWebServices.MaineFamilyLawLLM"
 EXPECTED_PUBLISHER = "CN=D75EE668-B409-45ED-87E5-E37AA5FE3868"
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MSIX_PATH = DEFAULT_REPO_ROOT / "dist" / "release" / "v7.0.0" / "msix" / "MaineFamilyLawLLM_7.0.0.0_x64.msix"
+DEFAULT_MSIX_PATH = DEFAULT_REPO_ROOT / "dist" / "release" / "v8.0.0" / "msix" / "MaineFamilyLawLLM_8.0.0.0_x64.msix"
 DEFAULT_EVIDENCE_ROOT = DEFAULT_REPO_ROOT / "dist" / "store" / "evidence"
 DEFAULT_WACK_RESULT = DEFAULT_EVIDENCE_ROOT / "wack" / "wack-result.json"
 

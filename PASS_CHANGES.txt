@@ -1,3 +1,16 @@
+Maine Family Law LLM v8.0.0
+Current completed implementation pass number: 66
+Seven-pass roadmap position: completed; post-roadmap v8 hardening checkpoint
+
+Local workbench expansion, faster source-backed chat, and interaction hardening
+
+- Product version 8.0.0; Microsoft Store manifest target 8.0.0.0.
+- Added canonical, matter-scoped Add-on Studio and Productivity Studio verticals with encrypted local state, audit receipts, source drill-down, and review-required outputs.
+- Expanded the chat-first workbench with streaming, correction, comparison, question decomposition, fact pins, temporal checks, authority-conflict checks, and collapsible supporting surfaces.
+- Added stronger contrast, keyboard and focus behavior, responsive panel collapse, and modern chat layout modes.
+- Preserved fail-closed filing, privacy, matter-isolation, and local-network boundaries.
+- v8 Store qualification, attorney review, controlled pilot evidence, and Enterprise GA remain separate external gates.
+
 Maine Family Law LLM v7.0.0
 
 Verified scope, official-source acceptance, and fail-closed release hardening

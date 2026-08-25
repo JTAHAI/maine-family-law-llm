@@ -4,7 +4,7 @@ Audit date: 2026-08-12
 
 ## Decision
 
-All 24 specialized workbenches now have an evidence-backed `verified_end_to_end` status in the current v7 source and full-tier frozen runtime. They are publicly reachable from the shipped command palette and complete this path:
+All 24 specialized workbenches now have an evidence-backed `verified_end_to_end` status in the current v8 source and full-tier frozen runtime. They are publicly reachable from the shipped command palette and complete this path:
 
 `matter service → canonical loopback API → matter-scoped encrypted store → shipped desktop UI → meaningful fictional action → exact-source inspector → review-required result → focused tests → frozen-runtime reachability`
 
@@ -46,7 +46,10 @@ This status does not assert attorney validation, legal advice, a jurisdictional 
 - Specialized route responses enforce `local_only: true` and `review_required: true`.
 - Private stores are encrypted under the active matter. Exact source opening uses an opaque, short-lived capability and exposes a safe locator—not a filesystem path.
 - The command palette exposes 24 specialized entries. No environment override is required.
-- The frozen full-tier v7 executable contains both production UI asset copies and all 24 command markers.
+- The command palette also exposes 10 Matter Productivity Studio entries backed by the canonical `/api/productivity` and hearing-media routes.
+- Productivity state is matter-scoped and AES-GCM encrypted; every mutation appends a hash-chained audit event and remains review-required.
+- The ten capabilities perform meaningful local actions: manifest review, confirmed recipes, media transcription, ICS export, hardware planning, exact-source pinning, redaction review, corrective action queues, source-bound presentation, and encrypted backup/isolated restore.
+- The frozen full-tier v8 executable contains both production UI asset copies and all 24 command markers.
 
 ## Verification results
 
@@ -68,3 +71,14 @@ This status does not assert attorney validation, legal advice, a jurisdictional 
 - `dist/verified-workbench-runtime/evidence/focaf-runtime-asset-audit.json`
 
 No specialized feature remains hidden or disabled in the current accepted source scope. Additional non-slice source capabilities retain their existing qualification status.
+
+## Add-on Studio acceptance (capabilities 55–74)
+
+The Add-on Studio adds twenty tenant- and matter-scoped local tools behind the canonical `/api/addons` route family. All twenty have a shipped command-palette entry, guided production UI action, role enforcement, AES-GCM state and artifacts, hash-chained audit history, review-required result, exact-result and artifact drill-down, and an immutable human review decision.
+
+- Capabilities 55–74: `verified_end_to_end` through service, canonical API, rendered production UI, fictional user action, exact result, immutable review, focused tests, and fresh essential-tier frozen executable.
+- Capability 55 uses bundled, SHA-256-pinned whisper.cpp 1.9.2 and a compact English model. A fictional WAV completed through the source and frozen production UI with timestamped segments and no runtime download.
+- Rendered source and frozen UI: 20/20 meaningful tool actions, 20/20 exact-result inspections, 20/20 immutable review decisions, artifact drill-down, and integrity verification passed.
+- Responsive UI: no horizontal body overflow at 800×720 and the primary action remained visible.
+
+The authorized 8.0.0 gate is satisfied. Product version 8.0.0 and package target 8.0.0.0 are frozen; MSIX packaging, installation, WACK, and Store publication remain separate qualification steps.

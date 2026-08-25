@@ -55,7 +55,7 @@ def test_every_accepted_specialized_workbench_has_production_navigation() -> Non
 
 def test_runtime_and_ui_manifests_publish_only_the_accepted_scope() -> None:
     release_scope = capability_inventory()["release_scope"]
-    assert len(ACCEPTED_FEATURE_IDS) == 24
+    assert len(ACCEPTED_FEATURE_IDS) == 54
     assert release_scope["accepted_feature_ids"] == list(ACCEPTED_FEATURE_IDS)
     assert release_scope["experimental_disabled_feature_ids"] == []
     assert release_scope["experimental_backend_override_enabled"] is False
@@ -81,8 +81,18 @@ def test_public_catalog_promotes_all_accepted_slices_without_preview_claims() ->
     catalog = Path("docs/features.md").read_text(encoding="utf-8")
     truth = Path("docs/GA_TODAY_FEATURE_TRUTH.md").read_text(encoding="utf-8")
     specialized = catalog.split("<h2>Verified specialized workbenches</h2>", 1)[1].split(
+        "<h2>Verified Matter Productivity Studio</h2>", 1
+    )[0]
+    productivity = catalog.split("<h2>Verified Matter Productivity Studio</h2>", 1)[1].split(
+        "<h2>Verified Add-on Studio</h2>", 1
+    )[0]
+    addons = catalog.split("<h2>Verified Add-on Studio</h2>", 1)[1].split(
         "<h2>Additional source capabilities under qualification</h2>", 1
     )[0]
     assert specialized.count("Verified end to end") == 24
+    assert productivity.count("Verified end to end") == 10
+    assert addons.count("Verified end to end") == 20
+    assert "Usable with local-engine prerequisite" not in addons
+    assert "bundled, hash-pinned whisper.cpp" in addons
     assert "Development preview" not in specialized
     assert truth.count("`verified_end_to_end`") >= 24

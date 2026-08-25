@@ -2,6 +2,7 @@ from legal.evals.retrieval_metrics import summarize_ranked_retrieval
 from legal.retrieval import RetrievalDocument, RetrievalPipeline
 from legal.retrieval.hybrid_search import HybridSearch
 from legal.retrieval.lexical_search import BM25LexicalSearch
+from legal.retrieval.query_expansion import expand_query_guarded
 from legal.verifiers import SourceAuthorityIndex
 
 
@@ -94,3 +95,18 @@ def test_retrieval_metrics_include_recall_mrr_and_ndcg():
     assert metrics["precision_at_1"] == 1.0
     assert metrics["mrr"] == 1.0
     assert metrics["ndcg_at_2"] == 1.0
+
+
+def test_query_expansion_keeps_non_maine_jurisdiction_out_of_maine_synonyms():
+    receipt = expand_query_guarded("What New Hampshire custody rule applies?")
+    assert receipt.jurisdiction_status == "non_maine_review_required"
+    assert receipt.expansion_applied is False
+    assert "parental" not in receipt.terms
+    assert "jurisdiction_review_required" in receipt.guardrails
+
+
+def test_query_expansion_preserves_exact_maine_form_reference():
+    receipt = expand_query_guarded("Where can I find Maine FM-002 form?")
+    assert receipt.exact_reference_preserved is True
+    assert "fm-002" in receipt.terms
+    assert receipt.receipt()["review_required"] is True

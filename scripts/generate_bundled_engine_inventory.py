@@ -72,7 +72,7 @@ ENGINE_DEFINITIONS: tuple[EngineDefinition, ...] = (
     EngineDefinition(
         package_name="pypdfium2",
         module_name="pypdfium2",
-        smoke_group="ocr_stack",
+        smoke_group="pdfium_stack",
         path_markers=("pypdfium2",),
     ),
     EngineDefinition(
@@ -346,6 +346,27 @@ def _smoke_ocr_stack(runtime_root: Path) -> dict[str, Any]:
     }
 
 
+def _smoke_pdfium_stack(runtime_root: Path) -> dict[str, Any]:
+    import pypdfium2
+
+    with tempfile.TemporaryDirectory(prefix="mfl-pdfium-") as temporary:
+        input_pdf = Path(temporary) / "input.pdf"
+        _write_minimal_pdf(input_pdf)
+        document = pypdfium2.PdfDocument(str(input_pdf))
+        try:
+            if len(document) != 1:
+                raise RuntimeError("pypdfium2 did not open the one-page smoke PDF")
+            bitmap = document[0].render(scale=0.25)
+            if bitmap.width <= 0 or bitmap.height <= 0:
+                raise RuntimeError("pypdfium2 rendered an empty bitmap")
+        finally:
+            document.close()
+    return {
+        "status": "pass",
+        "detail": "pypdfium2 opened and rendered a deterministic one-page local PDF.",
+    }
+
+
 def _smoke_qdrant_client(runtime_root: Path) -> dict[str, Any]:
     import qdrant_client
 
@@ -365,11 +386,68 @@ def _smoke_qdrant_client(runtime_root: Path) -> dict[str, Any]:
     }
 
 
+def _native_whisper_inventory(runtime_root: Path) -> dict[str, Any]:
+    whisper_root = runtime_root / "store" / "whisper"
+    executable = whisper_root / "whisper-cli.exe"
+    model = whisper_root / "ggml-tiny.en-q5_1.bin"
+    manifest_path = whisper_root / "engine-manifest.json"
+    for required in (executable, model, manifest_path):
+        if not required.is_file() or required.is_symlink():
+            raise RuntimeError(f"Required whisper.cpp payload is missing: {required.name}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    executable_hash = sha256_file(executable)
+    model_hash = sha256_file(model)
+    if executable_hash != str(manifest.get("executable_sha256") or ""):
+        raise RuntimeError("whisper.cpp executable hash mismatch")
+    if model_hash != str(manifest.get("model_sha256") or ""):
+        raise RuntimeError("whisper.cpp model hash mismatch")
+    started = time.perf_counter()
+    completed = subprocess.run(
+        [str(executable), "--version"],
+        cwd=str(whisper_root),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=30,
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    duration_ms = round((time.perf_counter() - started) * 1000)
+    if completed.returncode != 0 or str(manifest.get("version") or "") not in (completed.stdout + completed.stderr):
+        raise RuntimeError("whisper.cpp native launch/version smoke failed")
+    runtime_files = _collect_runtime_files(runtime_root, ("store/whisper",))
+    return {
+        "package_name": "whisper.cpp",
+        "version": str(manifest.get("version") or "unknown"),
+        "license": "MIT",
+        "module_name": "native_executable",
+        "required_bundle_paths": ["store/whisper"],
+        "binary_model_files": runtime_files,
+        "sha256": hashlib.sha256(
+            json.dumps(runtime_files, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+        "runtime_import_check": {
+            "status": "pass",
+            "duration_ms": 0,
+            "detail": "Native executable; Python import is not applicable.",
+        },
+        "offline_functional_smoke_result": {
+            "status": "pass",
+            "duration_ms": duration_ms,
+            "detail": "Pinned CPU executable launched offline and reported the admitted version; audio E2E is recorded separately.",
+        },
+        "startup_cost_ms": duration_ms,
+        "package_size_contribution_bytes": sum(int(row["size"]) for row in runtime_files),
+    }
+
+
 SMOKE_HANDLERS: dict[str, Callable[[Path], dict[str, Any]]] = {
     "presidio_stack": _smoke_presidio_stack,
     "sqlite_vec": _smoke_sqlite_vec,
     "docling": _smoke_docling,
     "ocr_stack": _smoke_ocr_stack,
+    "pdfium_stack": _smoke_pdfium_stack,
     "qdrant_client": _smoke_qdrant_client,
 }
 
@@ -427,6 +505,7 @@ def build_inventory(runtime_root: Path, *, feature_tier: str | None = None) -> l
                 "package_size_contribution_bytes": package_size_contribution,
             }
         )
+    inventory.append(_native_whisper_inventory(runtime_root))
     return inventory
 
 

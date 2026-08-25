@@ -1,15 +1,15 @@
 ---
 layout: default
-title: v7 Feature Catalog
-description: Complete verified capability catalog for the Maine Family Law LLM v7 local-first workbench.
+title: v8 Feature Catalog
+description: Complete verified capability catalog for the Maine Family Law LLM v8 local-first workbench.
 permalink: /features/
 ---
 
 <section class="page-hero">
   <div class="shell">
-    <div class="eyebrow">Current source release · v7.0.0</div>
-    <h1>The complete v7 capability catalog.</h1>
-    <p class="lead">The v7 source contains 16 verified core workflows and 24 verified specialized workbenches. Each public capability has a production UI, protected local API, source drill-down, review boundary, focused tests, and frozen-runtime reachability evidence.</p>
+    <div class="eyebrow">Current source release · v8.0.0</div>
+    <h1>The complete v8 capability catalog.</h1>
+    <p class="lead">The v8 source contains 16 verified core workflows, 24 verified specialized workbenches, 10 Matter Productivity Studio capabilities, and 20 verified Add-on Studio verticals. Each public capability has a production UI, protected local API, source drill-down, review boundary, and focused tests.</p>
   </div>
 </section>
 
@@ -17,12 +17,12 @@ permalink: /features/
   <div class="tier-legend" aria-label="Feature readiness legend">
     <span class="tier tier--verified">Verified end to end</span>
     <span>Production path and tests are proven.</span>
-    <span>40 public workflows currently meet this evidence tier.</span>
+    <span>70 public workflows currently meet this evidence tier in the current source.</span>
   </div>
 
   <h2>Verified end-to-end core</h2>
 
-  <p>The following 16 workflows are the accepted public v7 scope.</p>
+  <p>The following 16 workflows are the accepted core scope retained in v8.</p>
 
   <h2>Records and privacy</h2>
 
@@ -144,6 +144,58 @@ permalink: /features/
     </table>
   </div>
 
+  <h2>Verified Matter Productivity Studio</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Capability</th><th>Safety boundary</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>45</td><td>Smart Matter Inbox</td><td>Explicit manifest; no silent watch or import</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>46</td><td>Saved workflow recipes</td><td>Allow-listed steps and explicit confirmation</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>47</td><td>Local audio/video transcription</td><td>Source-hash bound; no silent engine download</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>48</td><td>Calendar interoperability</td><td>Local ICS export; no calendar-account write</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>49</td><td>Local model hardware optimizer</td><td>Safe limits; no automatic model download</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>50</td><td>Research notebook and source pinboard</td><td>Exact span, hash, locator, and freshness</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>51</td><td>Redaction Studio</td><td>Immutable original; pending privacy review</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>52</td><td>Matter health and next actions</td><td>Corrective queue; no legal-priority decision</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>53</td><td>Courtroom presentation mode</td><td>Source-bound cards; private notes hidden</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>54</td><td>Encrypted automatic backup</td><td>Verified container; isolated recovery restore</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Verified Add-on Studio</h2>
+
+  <p>Twenty additional local-first tools now run through the active matter, canonical API, production desktop UI, review-required receipts, immutable review decisions, and exact-result and artifact drill-down. Native transcription uses a bundled, hash-pinned whisper.cpp runtime and performs no runtime download.</p>
+
+  <div class="feature-table-wrap">
+    <table class="feature-table">
+      <thead><tr><th>ID</th><th>Add-on</th><th>Safety boundary</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>55</td><td>Native Whisper transcription</td><td>Bundled hash-pinned local engine; no runtime download or network</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>56</td><td>OCR correction studio</td><td>Immutable original and append-only correction receipt</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>57</td><td>Universal communications importer</td><td>Explicit exported messages; no account connection</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>58</td><td>Evidence relationship graph</td><td>Source-bound reviewer assertions, never findings</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>59</td><td>Local model manager</td><td>No automatic download, selection, or removal</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>60</td><td>Court-form autofill</td><td>Current-form and required-field gates; never filing-ready alone</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>61</td><td>Advanced table extraction</td><td>Cell-level source locators retained</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>62</td><td>Financial-document intelligence</td><td>Review flags only; no valuation or ownership conclusion</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>63</td><td>Semantic order comparison</td><td>Exposes wording changes; does not decide the operative order</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>64</td><td>Authority update center</td><td>Audits candidates without network update or activation</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>65</td><td>Guided legal-research builder</td><td>Maine-first plan; no unverified current-law claim</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>66</td><td>Evidence annotation studio</td><td>Exact-span notes; original record unchanged</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>67</td><td>Local automation scheduler</td><td>Allow-listed tasks while the app is active</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>68</td><td>Secure reviewer collaboration</td><td>Encrypted bundle; no send or live-matter sharing</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>69</td><td>Matter template library</td><td>Selected fields only; no unrelated matter copy</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>70</td><td>Conflict and entity resolver</td><td>Candidates only; no automatic identity merge</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>71</td><td>Desktop notification center</td><td>Local corrective notices; no external service</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>72</td><td>Courtroom bundle exporter</td><td>Offline source cards with private notes excluded</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>73</td><td>Voice drafting and commands</td><td>Review-required working draft; never filing-ready alone</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>74</td><td>Extension SDK permission center</td><td>Signed allow-list, default disabled, no arbitrary network</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <h2>Additional source capabilities under qualification</h2>
 
   <div class="grid-2">
@@ -157,7 +209,7 @@ permalink: /features/
 
   <h2>Availability and qualification</h2>
 
-  <p>The current GitHub source is v7.0.0, and v7 is available as a free download from the Microsoft Store. The 24 specialized workbenches are verified in the current source and full-tier frozen runtime; the Store updates when Microsoft distributes a build containing this source revision.</p>
+  <p>The current GitHub source is v8.0.0 and exposes 70 accepted workflows: 16 verified core workflows, 24 specialized workbenches, 10 Matter Productivity Studio capabilities, and 20 verified Add-on Studio verticals. The published Microsoft Store package remains v7 until a separately qualified v8 package is uploaded and Microsoft distributes it.</p>
 
   <div class="cta-band">
     <div>

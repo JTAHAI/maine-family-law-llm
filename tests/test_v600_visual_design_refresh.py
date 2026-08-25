@@ -28,11 +28,11 @@ def _contrast(first: str, second: str) -> float:
 
 
 def test_v600_release_identity() -> None:
-    assert VERSION == "7.0.0"
-    assert PACKAGE_VERSION == "7.0.0.0"
-    assert BUILD_NUMBER == 52
-    assert UI_PASS_MARKER == "v7.0.0-ga"
-    assert UI_VERSION == "7.0.0-ga-b52"
+    assert VERSION == "8.0.0"
+    assert PACKAGE_VERSION == "8.0.0.0"
+    assert BUILD_NUMBER == 53
+    assert UI_PASS_MARKER == "v8.0.0-ga"
+    assert UI_VERSION == "8.0.0-ga-b53"
 
 
 def test_v600_ui_mirrors_match() -> None:
@@ -40,13 +40,16 @@ def test_v600_ui_mirrors_match() -> None:
     assert CSS_PATHS[0].read_bytes() == CSS_PATHS[1].read_bytes()
 
 
-def test_v600_visual_generation_is_scoped_without_breaking_v5_contract() -> None:
+def test_visual_generation_is_scoped_without_breaking_prior_layout_contracts() -> None:
     html = HTML_PATHS[0].read_text(encoding="utf-8")
-    assert '<body class="v6-workbench"' in html
+    assert 'class="v6-workbench v8-workbench"' in html
     assert 'class="app-shell v5-workbench"' in html
     assert 'data-ui-generation="v5-premium-workbench"' in html
-    assert 'data-visual-generation="v6-visual-design-refresh"' in html
-    assert 'class="v6-release-chip"' in html
+    assert 'data-visual-generation="v8-command-surface"' in html
+    assert 'class="v6-release-chip v8-release-chip"' in html
+    assert 'data-v8-view="chat"' in html
+    assert 'id="v8-view-menu"' in html
+    assert 'data-response-progress' in (ROOT / "maine_family_law_llm" / "ui" / "workbench.js").read_text(encoding="utf-8")
 
 
 def test_v600_policy_and_tokens_are_machine_readable() -> None:
@@ -99,6 +102,9 @@ def test_v600_refresh_covers_core_surfaces_and_modals() -> None:
         ".evidence-work-product-modal",
         ".retrieval-workbench-modal",
         ".release-pilot-hardening-modal",
+        ".v8-view-menu",
+        'body.v8-workbench[data-v8-view="chat"]',
+        ".response-pending",
     ):
         assert marker in css
 

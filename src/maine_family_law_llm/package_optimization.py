@@ -24,7 +24,7 @@ from maine_family_law_llm.version import VERSION
 EXPECTED_PACKAGE_NAME = "TAHAIWebServices.MaineFamilyLawLLM"
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RUNTIME_ROOT = DEFAULT_REPO_ROOT / "dist" / "store" / "runtime"
-DEFAULT_MSIX_PATH = DEFAULT_REPO_ROOT / "dist" / "release" / "v7.0.0" / "msix" / "MaineFamilyLawLLM_7.0.0.0_x64.msix"
+DEFAULT_MSIX_PATH = DEFAULT_REPO_ROOT / "dist" / "release" / "v8.0.0" / "msix" / "MaineFamilyLawLLM_8.0.0.0_x64.msix"
 DEFAULT_EVIDENCE_ROOT = DEFAULT_REPO_ROOT / "dist" / "store" / "evidence"
 DEFAULT_REPORT_PATHS = {
     "package_size_inventory": DEFAULT_EVIDENCE_ROOT / "package-size-inventory.json",

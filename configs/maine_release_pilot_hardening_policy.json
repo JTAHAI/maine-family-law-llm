@@ -40,5 +40,5 @@
     "external_identity_and_pilot_audit_required": true,
     "source_workbench_records_count_as_ga_evidence": false
   },
-  "product_version": "7.0.0"
+  "product_version": "8.0.0"
 }

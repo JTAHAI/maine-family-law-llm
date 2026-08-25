@@ -100,6 +100,16 @@ def test_loopback_firewall_rejects_invalid_and_oversized_lengths() -> None:
     assert oversized.code == "request_too_large"
     assert oversized.status_code == 413
 
+    streaming_without_length = evaluate_local_request(
+        method="POST",
+        path="/ask/stream",
+        client_host="127.0.0.1",
+        host_header="127.0.0.1:8000",
+        require_content_length=True,
+    )
+    assert streaming_without_length.code == "content_length_required"
+    assert streaming_without_length.status_code == 411
+
 
 def test_api_middleware_blocks_bad_host_and_cross_origin_before_route_execution() -> None:
     client = TestClient(api.app)

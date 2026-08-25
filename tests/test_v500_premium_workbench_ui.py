@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_v500_release_identity_and_store_version_are_aligned() -> None:
-    assert VERSION == "7.0.0"
-    assert PACKAGE_VERSION == "7.0.0.0"
-    assert BUILD_NUMBER == 52
-    assert UI_PASS_MARKER == "v7.0.0-ga"
-    assert UI_VERSION.endswith("-b52")
+    assert VERSION == "8.0.0"
+    assert PACKAGE_VERSION == "8.0.0.0"
+    assert BUILD_NUMBER == 53
+    assert UI_PASS_MARKER == "v8.0.0-ga"
+    assert UI_VERSION.endswith("-b53")
     identity_path = ROOT / "store/msix/identity.local.json"
     if not identity_path.is_file():
         identity_path = ROOT / "store/msix/identity.example.json"
@@ -32,8 +32,9 @@ def test_v500_html_matches_approved_three_column_workbench_contract() -> None:
         'class="workbench-rail"',
         'class="right-rail evidence-drawer"',
         'data-ui-generation="v5-premium-workbench"',
-        'data-drawer="open"',
-        'aria-hidden="false" aria-label="Research controls and evidence"',
+        'data-drawer="closed"',
+        'aria-hidden="true" aria-label="Research controls and evidence"',
+        'aria-controls="evidence-drawer" aria-expanded="false"',
         "FOR OUR CHILDREN &amp; FAMILIES",
         "Source-backed research workbench for FOCAF",
         "Prompt shortcuts",

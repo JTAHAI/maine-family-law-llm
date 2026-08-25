@@ -1,7 +1,7 @@
 {
   "schema_version": "maine_v6_visual_design_policy_v1",
-  "product_version": "7.0.0",
-  "ui_build": 52,
+  "product_version": "8.0.0",
+  "ui_build": 53,
   "scope": "visual_refresh_without_workflow_rearchitecture",
   "principles": [
     "source_and_review_status_remain_visually_prominent",

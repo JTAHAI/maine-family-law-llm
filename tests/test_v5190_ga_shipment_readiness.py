@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import maine_family_law_llm.api as api_module
+from maine_family_law_llm.version import VERSION as PRODUCT_VERSION
 from legal.release.shipment_readiness_operations import (
     GAShipmentReadinessError,
     GAShipmentReadinessStore,
@@ -210,7 +211,7 @@ def test_v519_api_and_ui_surface_are_available(tmp_path: Path, monkeypatch: pyte
     assert blocked.status_code == 200
     assert blocked.json()["pass51_complete"] is False
     created = client.post("/api/ga-shipment-readiness/shipments", json={
-        "shipment_id": "v5-19-0-ga1", "version": "6.0.4",
+        "shipment_id": "v5-19-0-ga1", "version": PRODUCT_VERSION,
         "source_repo_zip_name": "Maine-Family-Law-LLM-v6.0.4-extended-hardening-full-source.zip",
         "source_repo_zip_sha256": SOURCE_HASH, "release_candidate_id": "v5-18-0-rc1",
         "release_candidate_report_sha256": RC_HASH,
@@ -236,7 +237,7 @@ def test_v519_api_rejects_absolute_distribution_reference(tmp_path: Path, monkey
     monkeypatch.setenv("MAINE_FAMILY_LAW_RELEASE_ROOT", str(tmp_path / "release"))
     client = TestClient(api_module.app)
     client.post("/api/ga-shipment-readiness/shipments", json={
-        "shipment_id": "v5-19-0-ga1", "version": "6.0.4",
+        "shipment_id": "v5-19-0-ga1", "version": PRODUCT_VERSION,
         "source_repo_zip_name": "Maine-Family-Law-LLM-v6.0.4-extended-hardening-full-source.zip",
         "source_repo_zip_sha256": SOURCE_HASH, "release_candidate_id": "v5-18-0-rc1",
         "release_candidate_report_sha256": RC_HASH,

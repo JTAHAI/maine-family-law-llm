@@ -149,6 +149,16 @@ $tesseractRuntimeRoot = Join-Path $runtimeRoot "store\tesseract"
 New-Item -ItemType Directory -Force -Path $tesseractRuntimeRoot | Out-Null
 Copy-Item -Path (Join-Path $tesseractSourceRoot "*") -Destination $tesseractRuntimeRoot -Recurse -Force
 
+# Native transcription is part of the essential offline product. Provisioning
+# happens only on the build machine into LocalAppData, verifies pinned hashes,
+# and copies the admitted CPU runtime/model into the frozen payload. The app
+# itself never downloads an engine or model.
+$whisperRuntimeRoot = Join-Path $runtimeRoot "store\whisper"
+& (Join-Path $PSScriptRoot "provision-whisper-engine.ps1") -Destination $whisperRuntimeRoot
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $whisperRuntimeRoot "whisper-cli.exe"))) {
+  throw "Pinned whisper.cpp runtime provisioning failed."
+}
+
 if ($FeatureTier -eq "full") {
   $doclingModelsSourceRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-cache\docling-models"
   $requiredDoclingModels = @(

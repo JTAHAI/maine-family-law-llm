@@ -1,6 +1,6 @@
 # Maine Family Law LLM
 
-[![Version](https://img.shields.io/badge/source-v7.0.0-0A6E75)](docs/RELEASE_NOTES_v7.0.0.md)
+[![Version](https://img.shields.io/badge/source-v8.0.0-0A6E75)](docs/RELEASE_NOTES_v8.0.0.md)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-306998)](pyproject.toml)
 [![Local first](https://img.shields.io/badge/default-local--only-17324D)](docs/privacy.md)
 [![Review required](https://img.shields.io/badge/output-review_required-BB6B38)](docs/safety.md)
@@ -10,24 +10,24 @@ Maine Family Law LLM is an open-source, local-first Windows workbench for Maine 
 
 It is not a lawyer, does not provide legal advice, and does not turn model confidence into legal authority. Official Maine sources, exact source spans, citation and quote checks, factual support, privacy review, and human review remain separate gates.
 
-[Project site](https://jtahai.github.io/maine-family-law-llm/) · [Current Microsoft Store build](https://apps.microsoft.com/detail/9NV67WCQW0DM) · [v7 release notes](docs/RELEASE_NOTES_v7.0.0.md) · [Safety](docs/safety.md) · [Privacy](docs/privacy.md)
+[Project site](https://jtahai.github.io/maine-family-law-llm/) · [Download v7 from Microsoft Store](https://apps.microsoft.com/detail/9NV67WCQW0DM) · [v8 release notes](docs/RELEASE_NOTES_v8.0.0.md) · [Safety](docs/safety.md) · [Privacy](docs/privacy.md)
 
 ## Release truth
 
 | Surface | Current status |
 | --- | --- |
-| Source branch | `main`, product version `7.0.0` |
-| Windows package target | `7.0.0.0`, x64, `en-us` |
+| Source branch | `main`, product version `8.0.0` |
+| Windows package target | `8.0.0.0`, x64, `en-us` |
 | Current Microsoft Store listing | v7 is published and available as a free Windows download |
-| Current source release | v7.0.0 on `main` |
+| Current source release | v8.0.0 on `main` |
 | v7 package | Distributed through the official Microsoft Store listing |
 | Enterprise GA | Blocked pending real attorney-reviewed evaluation, controlled pilot evidence, and organizational sign-offs |
 
 See [the public v7 release status](docs/RELEASE_STATUS_v7.0.0.md) for Store availability, source evidence, and the separate Enterprise-GA boundary.
 
-## Verified v7 public scope
+## Verified core public scope
 
-The release scope is deliberately smaller than the codebase. These are the public v7 surfaces retained after source and frozen-runtime verification:
+The release scope is deliberately smaller than the codebase. These core surfaces remain public after source and frozen-runtime verification:
 
 - application launch, health, and production workbench;
 - matter/corpus creation, selection, and reopening;
@@ -56,7 +56,35 @@ Slices 21–44 now complete the production service → canonical local API → m
 - slices 32–44 cover family pathways, safety records, parenting schedules, negotiation, property, modification, FOAA, filing readiness, image/email integrity, reviewer handoff, language access, and resource navigation;
 - all 24 are local-only, matter-scoped, source-bound, auditable, and review-required.
 
-Additional source capabilities still under qualification include:
+## Verified Matter Productivity Studio
+
+The current source also includes ten user-operable local productivity capabilities, each reachable from the shipped command palette and protected by the active-matter, reviewer-role, encryption, audit, and review-required boundaries:
+
+- Smart Matter Inbox reviews an explicit candidate manifest, identifies exact duplicates, and never silently watches or imports a folder;
+- saved workflow recipes run only allow-listed steps after confirmation;
+- audio/video evidence transcription preserves the media hash and exact transcript spans without silently downloading an engine;
+- calendar interoperability creates a local review-required ICS artifact without changing a calendar account;
+- the hardware optimizer chooses safe local context and concurrency limits without downloading a model;
+- the research pinboard preserves exact source spans, hashes, locators, and freshness;
+- Redaction Studio binds pending privacy candidates to an immutable original and does not mislabel a draft derivative as complete;
+- matter health and next actions turns explicit blockers into a corrective review queue without deciding legal priority;
+- courtroom presentation mode creates keyboard-navigable, source-bound cards while hiding private notes; and
+- automatic backup runs while the app is active, encrypts and verifies each container, applies retention, and restores only into a separate recovery directory.
+
+These capabilities do not send records, file documents, modify external calendars, install a background service, or treat generated work as final.
+
+## Verified v8 Add-on Studio
+
+The v8 source freeze adds 20 matter-scoped, local-only add-ons. Every add-on now completes a meaningful action through the service, canonical protected API, production desktop UI, and frozen executable. Each result remains review-required and supports exact-result inspection, guarded artifact access where applicable, immutable review decisions, and audit-chain verification:
+
+- native Whisper transcription with a pinned, hash-verified bundled engine and model;
+- OCR correction, communications import, evidence relationship graphs, and local model management;
+- court-form autofill, advanced table extraction, financial-document intelligence, and semantic order comparison;
+- authority-update review, guided research, evidence annotation, and confirmed local automation;
+- secure reviewer bundles, matter templates, conflict/entity review, and desktop notifications;
+- courtroom bundles, voice drafting commands, and signed extension-permission review.
+
+Additional core capabilities still under qualification include:
 
 - timeline event correction;
 - claim-disposition workbench;
@@ -117,6 +145,10 @@ python -m pip install -e ".[api,dev]"
 
 Start with fictional demonstration data. Do not post private records, identifying screenshots, logs, tokens, or local paths in GitHub issues.
 
+For non-technical local testing, double-click `START_LOCAL_CHAT.cmd` or run
+`.\START_LOCAL_CHAT.ps1` in PowerShell. Both start the same local-only
+workbench at `http://127.0.0.1:8000/` and keep matter records on the current PC.
+
 ## Validate a checkout
 
 ```powershell
@@ -126,17 +158,17 @@ python -m pytest --collect-only -q
 python -m pytest
 ```
 
-The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The final focused package/release set added 64 passing tests. Those results describe the tested source and frozen runtime; Store availability and enterprise validation remain distinct evidence layers.
+The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The v8 Add-on Studio acceptance run added 31 passing focused tests with one unrelated conditional skip, plus production-browser and frozen-runtime journeys across all 20 add-ons. Those results describe the tested source and frozen runtime; Store availability and enterprise validation remain distinct evidence layers.
 
 ## Package status
 
 The canonical build produces:
 
 ```text
-MaineFamilyLawLLM_7.0.0.0_x64.msix
+MaineFamilyLawLLM_8.0.0.0_x64.msix
 ```
 
-The locally built candidate passed manifest, sealed-payload, path, private-data, bundled-engine, offline-runtime, and 16-case filing-gate audits. The distributable is not committed to this repository; v7 is obtained through the official Microsoft Store listing.
+The v8 frozen-runtime candidate passed its canonical smoke test and bundled-engine inventory. A v8 MSIX has not been built or Store-qualified yet, so the published v7 package remains the Microsoft Store download until a separate package qualification succeeds.
 
 ## Repository map
 

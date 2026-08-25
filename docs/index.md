@@ -8,7 +8,7 @@ permalink: /
 <section class="hero">
   <div class="shell hero-grid">
     <div>
-      <div class="eyebrow">Current source release · v7.0.0</div>
+      <div class="eyebrow">Current source release · v8.0.0</div>
       <h1>A next-generation local AI workbench for Maine family law.</h1>
       <p class="lead">Research official Maine authority, organize private matter records, inspect exact sources, verify citations and claims, build reviewable work product, and use specialized family-law workbenches—all with local-first privacy and human review.</p>
       <div class="hero-actions">
@@ -18,7 +18,7 @@ permalink: /
       </div>
       <p class="microcopy">Not a lawyer. Not legal advice. Not affiliated with the Maine Judicial Branch or any court. Every legal output remains review-required.</p>
       <div class="status-row">
-        <span class="status-pill">Current source: v7.0.0</span>
+        <span class="status-pill">Current source: v8.0.0</span>
         <span class="status-pill">Available in Microsoft Store</span>
         <span class="status-pill">Local-only by default</span>
         <span class="status-pill">Official sources first</span>
@@ -40,13 +40,13 @@ permalink: /
     <div class="section-intro">
       <div class="eyebrow">v7 source release</div>
       <h2>The v7 codebase, documentation, and feature catalog are live.</h2>
-      <p class="lead">Version 7.0.0 expands the local workbench across research, records, evidence, drafting, courtroom preparation, interstate review, filing readiness, secure handoff, accessibility, and resource navigation. Each capability below carries an explicit readiness tier.</p>
+      <p class="lead">Version 8.0.0 expands the local workbench across research, records, evidence, drafting, courtroom preparation, local transcription, secure handoff, accessibility, and resource navigation. Each capability below carries an explicit readiness tier.</p>
     </div>
     <div class="grid-3">
       <article class="card">
         <div class="card-number">01</div>
         <h3>Current v7 source</h3>
-        <p>Version 7.0.0 is the current GitHub source release. The closure run collected 1,234 tests with 1,220 passes, 14 documented skips, and no failures or errors.</p>
+        <p>Version 8.0.0 is the current GitHub source release. Its twenty new Add-on Studio verticals passed source and frozen-runtime production-UI acceptance; package and Store qualification remain separate.</p>
       </article>
       <article class="card">
         <div class="card-number">02</div>
@@ -72,6 +72,7 @@ permalink: /
       <div class="eyebrow">Verified specialized workbenches</div>
       <h2>Specialized workbenches now cover the full matter lifecycle.</h2>
       <p class="lead">Slices 21–44 now pass protected local API, meaningful production UI action, exact-source inspection, review-required status, focused tests, and full-tier frozen-runtime reachability.</p>
+      <p class="lead">The shipped command palette also includes 10 local Matter Productivity Studio capabilities for inbox review, workflow recipes, media transcription, ICS export, hardware optimization, source pinning, redaction review, next actions, courtroom presentation, and encrypted backup.</p>
     </div>
     <div class="grid-3">
       <article class="card feature-cluster">

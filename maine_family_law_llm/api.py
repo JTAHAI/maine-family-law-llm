@@ -19,7 +19,7 @@ from pathlib import Path, PureWindowsPath
 from difflib import SequenceMatcher
 from email import policy
 from email.parser import BytesParser
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from legal.product.family_justice_workbench_v205 import build_workbench_packet
 from legal.drafting.findings_engine import Rule52BestInterestFindingsEngine
@@ -59,6 +59,7 @@ from legal.matter.hearing_preparation import HearingPreparationStore
 from legal.matter.appellate_review import AppellateReviewStore
 from legal.matter.uccjea_review import UccjeaReviewStore
 from legal.matter.icwa_review import IcwaReviewStore
+from legal.matter.fact_pins import FactPinStore
 from legal.matter.care_pathways import CarePathwayStore
 from legal.matter.safety_review import SafetyReviewStore
 from legal.matter.parenting_schedule import ParentingScheduleStore
@@ -207,7 +208,7 @@ from .local_agent_bridge import (
 
 try:
     from fastapi import FastAPI, HTTPException, Request
-    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
     from fastapi.staticfiles import StaticFiles
     from starlette.requests import ClientDisconnect
     from pydantic import BaseModel, Field, StrictBool
@@ -217,6 +218,7 @@ except Exception:  # pragma: no cover - lets CLI import without API extras
     HTMLResponse = None  # type: ignore[assignment]
     JSONResponse = None  # type: ignore[assignment]
     FileResponse = None  # type: ignore[assignment]
+    StreamingResponse = None  # type: ignore[assignment]
     StaticFiles = None  # type: ignore[assignment]
     Request = object  # type: ignore[assignment]
 
@@ -240,12 +242,138 @@ class QueryRequest(BaseModel):
 class AskRequest(BaseModel):
     question: str
     answer_style: str = "plain_language"
+    response_depth: str = "standard"
+    audience: str = "self_represented"
     matter_context: str = ""
     search_mode: str = "maine_law"
     child_impact_lens: StrictBool = False
     session_id: str = ""
     last_search_id: str = ""
     input_integrity: dict[str, Any] | None = None
+
+
+class ConversationContextCompactionRequest(BaseModel):
+    session_id: str
+    expected_search_id: str = ""
+
+
+class ConversationAnswerCorrectionRequest(BaseModel):
+    """One review-required, immutable correction proposal for a displayed answer."""
+
+    session_id: str
+    expected_search_id: str
+    original_sentence: str
+    proposed_correction: str
+    reason_code: str = "other"
+    reason_note: str = ""
+
+
+class ConversationAnswerCorrectionRerunRequest(BaseModel):
+    session_id: str
+    expected_search_id: str
+    original_sentence: str
+    proposed_correction: str
+
+
+class ConversationLatencyObservationRequest(BaseModel):
+    session_id: str
+    expected_search_id: str
+    first_feedback_ms: int | None = None
+    total_duration_ms: int
+    server_duration_ms: int | None = None
+    queue_delay_ms: int | None = None
+    cache_state: str = "unknown"
+    model_output_tokens: int = 0
+    hardware_concurrency: int = 0
+    device_memory_gib: float = 0.0
+
+
+class ConversationAnswerComparisonRequest(BaseModel):
+    session_id: str
+    expected_search_id: str
+    approach_a: str
+    approach_b: str
+
+
+class ConversationBranchRequest(BaseModel):
+    session_id: str
+    expected_search_id: str
+
+
+class ConversationUsefulnessRequest(BaseModel):
+    session_id: str
+    expected_search_id: str
+
+
+# This is a user-visible responsiveness contract, not an answer-quality shortcut.
+# The initial event is intentionally generic because source retrieval and verifier
+# results are not yet known; the canonical /ask result remains the sole answer.
+STREAM_FIRST_FEEDBACK_BUDGET_MS = 150
+
+
+def _stream_event(event: str, payload: dict[str, Any]) -> str:
+    """Serialize one safe, structured Server-Sent Event frame."""
+
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
+    return f"event: {event}\ndata: {body}\n\n"
+
+
+def iter_stream_answer_events(
+    payload: AskRequest,
+    answer_runner: Callable[[AskRequest], dict[str, Any]],
+) -> Iterable[str]:
+    """Yield honest progress before executing the canonical answer path.
+
+    Keeping this generator outside the route makes the first-feedback budget
+    testable without claiming that first source retrieval or verification has
+    completed. The answer runner is invoked only after the safe progress
+    states; its output is emitted unchanged as the canonical result payload.
+    """
+
+    started_at = time.perf_counter()
+    yield _stream_event(
+        "accepted",
+        {
+            "stage": "accepted",
+            "message": "Question received locally. Preparing a review-required answer.",
+            "first_feedback_budget_ms": STREAM_FIRST_FEEDBACK_BUDGET_MS,
+            "server_elapsed_ms": 0,
+            "local_only": True,
+            "review_required": True,
+        },
+    )
+    retrieving_elapsed_ms = max(0, round((time.perf_counter() - started_at) * 1000))
+    yield _stream_event(
+        "retrieving",
+        {
+            "stage": "retrieving",
+            "message": "Finding relevant Maine sources and checking the selected matter context.",
+            "server_elapsed_ms": retrieving_elapsed_ms,
+            "local_only": True,
+            "review_required": True,
+        },
+    )
+    result = answer_runner(payload)
+    duration_ms = max(0, round((time.perf_counter() - started_at) * 1000))
+    yield _stream_event(
+        "result",
+        {
+            "stage": "complete",
+            "duration_ms": duration_ms,
+            "payload": result,
+            "local_only": True,
+            "review_required": bool(result.get("review_required", True)),
+        },
+    )
+    yield _stream_event(
+        "complete",
+        {
+            "stage": "complete",
+            "duration_ms": duration_ms,
+            "local_only": True,
+            "review_required": bool(result.get("review_required", True)),
+        },
+    )
 
 
 class DraftRequest(BaseModel):
@@ -1029,6 +1157,8 @@ else:
     from app.api.routes.children import router as children_router
     from app.api.routes.communications import router as communications_router
     from app.api.routes.multimedia import router as multimedia_router
+    from app.api.routes.productivity import router as productivity_router
+    from app.api.routes.addons import router as addons_router
     from app.api.routes.release_control import router as release_control_router
     from app.api.routes.governance import router as governance_router
     from app.api.routes.security_privacy import router as security_privacy_router
@@ -1044,6 +1174,8 @@ else:
     app.include_router(children_router, prefix="/api")
     app.include_router(communications_router, prefix="/api")
     app.include_router(multimedia_router, prefix="/api")
+    app.include_router(productivity_router, prefix="/api")
+    app.include_router(addons_router, prefix="/api")
 
 
 if FastAPI is not None:
@@ -1405,6 +1537,55 @@ if FastAPI is not None:
             entry = dict(_recent_record_searches.get(key) or {})
         return dict(entry.get("intake_anchor") or {})
 
+    def _conversation_matter_scope() -> str:
+        """Return an opaque scope marker; never persist a matter path or name."""
+
+        root = active_case_root()
+        if root is None:
+            return "general_maine_law"
+        return "matter:" + hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:24]
+
+    def _context_compaction_receipt(
+        *,
+        session_id: str,
+        entry: dict[str, Any],
+        matter_scope: str,
+    ) -> dict[str, Any]:
+        """Build a reversible, no-prose context receipt from already-safe state.
+
+        Conversation text is deliberately excluded. The client retains the
+        visible transcript; the service retains only routing labels and hashes
+        that can be inspected, discarded, and never promoted to case facts.
+        """
+
+        anchor = _safe_intake_anchor(dict(entry.get("intake_anchor") or {}))
+        source_ids = [
+            str(item.get("source_id") or "")
+            for item in list(entry.get("citations") or [])
+            if str(item.get("source_id") or "")
+        ]
+        source_digest = hashlib.sha256(
+            json.dumps(sorted(set(source_ids)), separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        body = {
+            "schema_version": "safe_conversation_context_v1",
+            "session_id": session_id,
+            "matter_scope": matter_scope,
+            "search_id": str(entry.get("search_id") or ""),
+            "response_kind": str(entry.get("response_kind") or ""),
+            "safe_routing_anchor": anchor,
+            "source_card_count": len(source_ids),
+            "source_basis_sha256": source_digest,
+            "raw_turn_text_stored": False,
+            "fact_promotion": "prohibited",
+            "review_required": True,
+            "reversible_inspection": "The visible local transcript remains unchanged; this receipt can be inspected or discarded without changing it.",
+        }
+        body["context_id"] = hashlib.sha256(
+            json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:32]
+        return body
+
     def _parse_payload_intake(payload: AskRequest) -> IntakeSummary:
         return parse_intake(
             payload.question,
@@ -1426,6 +1607,14 @@ if FastAPI is not None:
         structured = dict(result.get("structured_answer") or {})
         metadata = dict(result.get("metadata") or {})
         intake_value = result.get("intake") or structured.get("intake") or metadata.get("intake")
+        matter_scope = _conversation_matter_scope()
+        with _recent_search_lock:
+            prior_entry = dict(_recent_record_searches.get(key) or {})
+        prior_compaction = (
+            dict(prior_entry.get("context_compaction") or {})
+            if str(prior_entry.get("matter_scope") or "") == matter_scope
+            else {}
+        )
         entry = {
             "search_id": search_id,
             "search_summary": dict(result.get("search_summary") or {}),
@@ -1435,6 +1624,8 @@ if FastAPI is not None:
             "response_kind": str(result.get("response_kind") or "family_answer"),
             "direct_record_search": bool(result.get("direct_record_search")),
             "intake_anchor": _safe_intake_anchor(intake_value),
+            "matter_scope": matter_scope,
+            "context_compaction": prior_compaction,
             "created_at": time.time(),
             "local_only": True,
         }
@@ -1654,6 +1845,10 @@ if FastAPI is not None:
             sec_fetch_site=request.headers.get("sec-fetch-site", ""),
             content_length=request.headers.get("content-length", ""),
             max_body_bytes=DEFAULT_MAX_BODY_BYTES,
+            # The streamed route keeps ASGI receive untouched so disconnects
+            # remain observable. Require a browser-provided bounded length on
+            # that route rather than creating a chunked-body size bypass.
+            require_content_length=request.url.path == "/ask/stream",
         )
         if not decision.allowed:
             return JSONResponse(
@@ -1664,8 +1859,14 @@ if FastAPI is not None:
                     "request_id": request_id,
                 },
                 headers={"X-Request-ID": request_id, "Cache-Control": "no-store"},
-            )
-        if request.method.upper() not in {"GET", "HEAD", "OPTIONS"}:
+        )
+        # Streaming answers must keep the original receive channel intact so
+        # Starlette can observe a genuine client disconnect.  The stream route
+        # requires the bounded Content-Length checked above and its schema is
+        # still hardened by `ask`.
+        streaming_answer_request = request.url.path == "/ask/stream"
+        if request.method.upper() not in {"GET", "HEAD", "OPTIONS"} and not streaming_answer_request:
+            original_receive = request._receive  # type: ignore[attr-defined]
             try:
                 body = await _read_limited_request_body(request, max_bytes=DEFAULT_MAX_BODY_BYTES)
             except ClientDisconnect:
@@ -1694,7 +1895,11 @@ if FastAPI is not None:
             async def _receive():  # type: ignore[no-untyped-def]
                 nonlocal delivered
                 if delivered:
-                    return {"type": "http.request", "body": b"", "more_body": False}
+                    # The request body was already replayed to FastAPI.  Delegate
+                    # later calls to the original ASGI receive channel so a
+                    # StreamingResponse can wait for a real disconnect instead
+                    # of receiving an invalid second http.request message.
+                    return await original_receive()
                 delivered = True
                 return {"type": "http.request", "body": body, "more_body": False}
 
@@ -1936,6 +2141,15 @@ if FastAPI is not None:
         style = str(value or "plain_language").strip().lower()[:80]
         return style if style in ANSWER_STYLES else "plain_language"
 
+    def _normalize_response_depth(value: str) -> str:
+        depth = str(value or "standard").strip().lower()[:32]
+        return depth if depth in {"concise", "standard", "thorough"} else "standard"
+
+    def _normalize_audience(value: str) -> str:
+        aliases = {"parent": "self_represented", "lawyer": "attorney_review", "caregiver": "self_represented", "counselor": "legal_aid_intake", "therapist": "legal_aid_intake"}
+        audience = aliases.get(str(value or "").strip().lower(), str(value or "").strip().lower())
+        return audience if audience in {"self_represented", "legal_aid_intake", "paralegal", "attorney_review"} else "self_represented"
+
     _RETRIEVAL_GENERIC_TOKENS = {
         "all",
         "and",
@@ -1966,6 +2180,229 @@ if FastAPI is not None:
     def _normalize_search_mode(value: str) -> str:
         mode = str(value or "maine_law").strip().lower()
         return mode if mode in SEARCH_MODES else "maine_law"
+
+    _FAST_LOCAL_HELP_RULES: tuple[tuple[str, tuple[str, ...], str, str, str], ...] = (
+        (
+            "import_records",
+            (
+                r"\bhow (?:do|can) i (?:import|add|upload) (?:my )?(?:records|documents|files)\b",
+                r"\bwhere (?:do|can) i (?:import|add|upload) (?:my )?(?:records|documents|files)\b",
+            ),
+            "setup",
+            "Open matter setup",
+            "Open Workspace, choose Matter setup, select or create a local matter, then use the desktop intake flow to approve the records you want indexed. The workbench does not read a folder merely because it exists.",
+        ),
+        (
+            "open_source_cards",
+            (
+                r"\bhow (?:do|can) i (?:open|see|inspect|view) (?:the )?(?:source cards?|sources?)\b",
+                r"\bwhere (?:are|can i find) (?:the )?(?:source cards?|sources?)\b",
+            ),
+            "evidence",
+            "Open evidence",
+            "Open Workspace, then Evidence. Each result keeps Maine authority, private matter records, and model analysis in separate lanes. Open a card to inspect its exact source or record context.",
+        ),
+        (
+            "review_required_explainer",
+            (
+                r"\bwhat does review required mean\b",
+                r"\bwhy (?:is|are) (?:this|that|the answer|my answer) review required\b",
+            ),
+            "review",
+            "Open review details",
+            "Review required means the workbench has not treated the response as a legal conclusion, a finding of fact, or filing-ready work. Open Workspace, then Review, to inspect missing information, source boundaries, and blockers.",
+        ),
+        (
+            "starter_questions",
+            (
+                r"\bhow (?:do|can) i (?:find|open|use) (?:starter )?(?:questions|prompts)\b",
+                r"\bwhere (?:are|can i find) (?:starter )?(?:questions|prompts)\b",
+            ),
+            "starters",
+            "Open starter questions",
+            "Open Workspace, then Starter questions, to choose a reviewed prompt. Selecting a prompt only fills the local chat composer; you remain in control of whether to send it.",
+        ),
+    )
+
+    def _fast_local_help_payload(payload: AskRequest, intake: IntakeSummary) -> dict[str, Any] | None:
+        """Return a zero-retrieval route only for narrowly scoped product help.
+
+        This is deliberately not a shortcut for Maine-law, case-status, factual,
+        deadline, or drafting questions. Those requests continue through the
+        full canonical retrieval and verifier path. Fast responses contain no
+        matter content and point to a concrete shipped UI artifact instead of
+        fabricating a source card.
+        """
+
+        normalized = " ".join(re.findall(r"[a-z0-9]+", str(payload.question or "").casefold()))
+        if not normalized or len(normalized) > 180:
+            return None
+        for route_id, patterns, panel, action_label, answer in _FAST_LOCAL_HELP_RULES:
+            if not any(re.search(pattern, normalized) for pattern in patterns):
+                continue
+            return {
+                "question": payload.question,
+                "answer_style": payload.answer_style,
+                "search_mode": _normalize_search_mode(payload.search_mode),
+                "response_kind": "local_help_fast_path",
+                "answer": answer,
+                "grounded": False,
+                "failure_class": "none",
+                "recovery_hint": "Use the action below, or ask a specific Maine-law or records question when you are ready.",
+                "citations": [],
+                "source_card_count": 0,
+                "review_required": True,
+                "not_legal_advice": True,
+                "matter_context_used": False,
+                "metadata": {
+                    "fast_path": {
+                        "route_id": route_id,
+                        "retrieval_skipped": True,
+                        "reason": "narrow_product_navigation_only",
+                        "legal_or_case_content": False,
+                        "artifact_reference": f"workbench_drawer:{panel}",
+                    },
+                    "fast_path_actions": [{"panel": panel, "label": action_label}],
+                    "intake": intake.to_dict(),
+                    "missing_information": [
+                        "This is product-navigation help only; no legal authority or private matter records were reviewed."
+                    ],
+                },
+            }
+        return None
+
+    def _answer_intent_receipt(payload: AskRequest, intake: IntakeSummary, response_kind: str) -> dict[str, Any]:
+        """Classify a request conservatively without changing substantive routing."""
+
+        text = str(payload.question or "").casefold()
+        signals = {
+            "navigate": bool(response_kind == "local_help_fast_path" or re.search(r"\bhow do i|where (?:is|are|can)\b", text)),
+            "locate": bool(intake.task in {"record_search", "corpus_inventory", "source_card_followup"}),
+            "compare": bool(re.search(r"\bcompare|difference|versus|vs\.?\b", text)),
+            "draft": bool(re.search(r"\bdraft|write|prepare a (?:motion|letter|affidavit)\b", text)),
+            "review": bool(re.search(r"\breview|verify|check|support\b", text)),
+            "calculate": bool(re.search(r"\bcalculate|deadline|due date|business day\b", text)),
+            "prepare": bool(re.search(r"\bhearing|packet|exhibit|filing package\b", text)),
+        }
+        candidates = [name for name, matched in signals.items() if matched]
+        primary = candidates[0] if len(candidates) == 1 else ("explain" if not candidates else "mixed")
+        ambiguity = len(candidates) > 1
+        return {
+            "schema_version": "answer_intent_v2",
+            "primary_intent": primary,
+            "candidate_intents": candidates or ["explain"],
+            "ambiguity": ambiguity,
+            "clarification_required": ambiguity,
+            "routing_changed": False,
+            "review_required": True,
+            "boundary": "Intent is a UI and workflow hint only. It does not establish facts, law, deadlines, jurisdiction, or a filing decision.",
+        }
+
+    def _clarification_minimizer(intent: dict[str, Any]) -> dict[str, Any]:
+        """Ask at most one generic question when a choice changes the workflow."""
+
+        candidates = [str(item) for item in list(intent.get("candidate_intents") or [])]
+        if not bool(intent.get("ambiguity")):
+            return {"schema_version": "clarification_minimizer_v1", "required": False, "questions": [], "review_required": True}
+        labels = {"compare": "compare source-bound records", "calculate": "identify a rule-based deadline trigger", "draft": "prepare a review-required draft", "review": "verify support and blockers", "prepare": "assemble a review workspace", "locate": "locate a specific record", "navigate": "open a workbench area"}
+        options = [
+            {"intent": item, "label": labels.get(item, item.replace("_", " ")), "prompt": f"Help me {labels.get(item, item.replace('_', ' '))}."}
+            for item in candidates[:4]
+        ]
+        return {
+            "schema_version": "clarification_minimizer_v1",
+            "required": True,
+            "questions": [{
+                "question_id": "workflow_priority",
+                "question": "Which one task should be handled first?",
+                "why_needed": "The choice changes the retrieval, procedure, drafting, or safety workflow. The app will not assume one.",
+                "options": options,
+            }],
+            "review_required": True,
+            "boundary": "This clarification selects a workflow only. It does not establish facts, law, deadlines, jurisdiction, or filing readiness.",
+        }
+
+    def _assumption_ledger(intake: IntakeSummary, citations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Expose only bounded classification, never a silently promoted matter fact."""
+
+        entries = [
+            {"entry_id": "source_basis", "label": "Source basis", "state": "source_bound" if citations else "unknown", "detail": f"{len(citations)} source card(s) are attached to this answer." if citations else "No source card supports a substantive conclusion yet.", "correctable": False},
+            {"entry_id": "procedural_posture", "label": "Procedural posture", "state": "unknown" if intake.procedural_posture == "unknown" else "user_provided", "detail": "No procedural posture was inferred." if intake.procedural_posture == "unknown" else "The posture label came from the current request and needs review against records.", "correctable": True},
+            {"entry_id": "matter_facts", "label": "Matter facts", "state": "unknown", "detail": "No unverified statement was promoted to a fact or finding.", "correctable": True},
+        ]
+        return {"schema_version": "assumption_ledger_v1", "entries": entries, "review_required": True, "boundary": "Correcting a ledger item starts a new review request only; it does not alter records, facts, orders, or legal conclusions."}
+
+    def _question_decomposition(question: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Expose compound requests without pretending each part was separately researched."""
+
+        normalized = " ".join(str(question or "").split()).strip()
+        candidates = [part.strip(" ,;:") for part in re.split(r"\?+|\s*;\s*|\s+and\s+(?=(?:I|we|the|my|what|how|whether)\b)", normalized, flags=re.IGNORECASE) if part.strip(" ,;:")]
+        if len(candidates) < 2 and " and " in normalized.casefold():
+            candidates = [part.strip(" ,;:") for part in re.split(r"\s+and\s+", normalized, maxsplit=3, flags=re.IGNORECASE) if part.strip(" ,;:")]
+        candidates = candidates[:4]
+        is_compound = len(candidates) > 1
+        source_ids = sorted(str(item.get("source_id") or "") for item in citations if str(item.get("source_id") or ""))
+        return {"schema_version": "question_decomposition_v1", "is_compound": is_compound, "components": [{"component_id": f"question_part_{index + 1}", "question": part, "source_status": "shares_answer_source_basis" if source_ids else "no_admitted_source_basis", "independent_resolution": "not_yet_verified", "review_required": True} for index, part in enumerate(candidates if is_compound else [])], "unresolved_parts_explicit": is_compound, "source_basis_sha256": hashlib.sha256(json.dumps(source_ids, separators=(",", ":")).encode("utf-8")).hexdigest(), "private_question_persisted": False, "boundary": "Each part is a review queue, not a separate legal answer. Ask a part separately to retrieve and verify it independently.", "review_required": True}
+
+    def _contradiction_aware_followup(question: str, case_root: Path | None) -> dict[str, Any]:
+        """Detect a narrow date conflict with a source-bound pin; never decide truth."""
+
+        receipt: dict[str, Any] = {"schema_version": "contradiction_followup_v1", "candidates": [], "review_required": True, "private_question_persisted": False, "boundary": "A conflict candidate means the new statement and a pinned source need human source review. It does not decide which is accurate, current, operative, or legally material."}
+        if case_root is None:
+            return receipt
+        question_dates = set(re.findall(r"\b\d{4}-\d{2}-\d{2}\b", str(question or "")))
+        if not question_dates:
+            return receipt
+        try:
+            pins = FactPinStore(case_root).inventory().get("pins") or []
+        except IntakeWorkbenchError:
+            receipt["store_status"] = "unavailable"
+            return receipt
+        question_words = {word for word in re.findall(r"[a-z]{5,}", str(question).casefold()) if word not in {"about", "should", "could", "would", "there", "their", "which", "where"}}
+        for pin in pins[:100]:
+            pin_date = str(pin.get("effective_date") or "")
+            pin_words = set(re.findall(r"[a-z]{5,}", str(pin.get("label") or "").casefold()))
+            if pin_date and pin_date not in question_dates and len(question_words & pin_words) >= 1:
+                receipt["candidates"].append({"candidate_id": f"pinned_date_{pin.get('pin_id')}", "kind": "different_effective_date", "pin_id": str(pin.get("pin_id") or ""), "pinned_date": pin_date, "new_date_candidates": sorted(question_dates), "dispute_status": str(pin.get("dispute_status") or "unclear"), "source_ref": dict(pin.get("source_ref") or {}), "review_required": True})
+        receipt["candidates"] = receipt["candidates"][:10]
+        receipt["candidate_count"] = len(receipt["candidates"])
+        return receipt
+
+    def _temporal_authority_receipt(question: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
+        match = re.search(r"\b(?:as\s+of|on)\s+(\d{4}-\d{2}-\d{2})\b", str(question or ""), re.IGNORECASE)
+        receipt: dict[str, Any] = {"schema_version": "temporal_authority_review_v1", "requested_date": match.group(1) if match else None, "sources": [], "status": "not_requested", "review_required": True, "historical_law_determined": False, "boundary": "Effective dates and freshness markers are source metadata, not a complete historical-law or supersession determination."}
+        if not match:
+            return receipt
+        requested = match.group(1)
+        blockers: list[str] = []
+        for item in citations:
+            meta = dict(item.get("metadata") or {})
+            if str(meta.get("source_lane") or "") != "legal_authority":
+                continue
+            effective = str(meta.get("effective_date") or "")
+            freshness = str(meta.get("freshness_status") or "unknown")
+            source_status = "date_metadata_missing"
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", effective):
+                source_status = "effective_on_or_before_requested_date" if effective <= requested else "effective_after_requested_date"
+            if source_status != "effective_on_or_before_requested_date" or freshness in {"stale", "superseded", "stale_or_superseded", "unknown"}:
+                blockers.append(source_status if source_status != "effective_on_or_before_requested_date" else "freshness_not_current")
+            receipt["sources"].append({"source_id": str(item.get("source_id") or ""), "effective_date": effective or None, "freshness_status": freshness, "status": source_status, "review_required": True})
+        receipt["blockers"] = sorted(set(blockers))
+        receipt["status"] = "blocked_needs_historical_source_review" if blockers or not receipt["sources"] else "candidate_metadata_only"
+        return receipt
+
+    def _authority_conflict_receipt(citations: list[dict[str, Any]]) -> dict[str, Any]:
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for item in citations:
+            meta = dict(item.get("metadata") or {})
+            if str(meta.get("source_lane") or "") == "legal_authority" and str(item.get("citation") or "").strip():
+                groups.setdefault(str(item.get("citation")).strip().casefold(), []).append(item)
+        candidates = []
+        for citation, rows in groups.items():
+            signatures = {(str((row.get("metadata") or {}).get("freshness_status") or "unknown"), str((row.get("metadata") or {}).get("effective_date") or ""), str((row.get("metadata") or {}).get("source_class") or "")) for row in rows}
+            if len(rows) > 1 and len(signatures) > 1:
+                candidates.append({"citation": citation, "source_ids": [str(row.get("source_id") or "") for row in rows], "metadata_variants": [{"freshness_status": value[0], "effective_date": value[1] or None, "source_class": value[2]} for value in sorted(signatures)], "review_required": True})
+        return {"schema_version": "authority_conflict_review_v1", "candidates": candidates[:10], "candidate_count": len(candidates[:10]), "review_required": True, "controlling_authority_determined": False, "boundary": "Different metadata for the same citation requires source-by-source review. It does not establish conflict, controlling weight, amendment effect, or legal outcome."}
 
     def _authority_result_snippet(
         text: str,
@@ -2118,6 +2555,15 @@ if FastAPI is not None:
                 "start_offset": span.get("start_offset"),
                 "end_offset": span.get("end_offset"),
                 "build_id": payload.get("build_id"),
+                "retrieval_method": str(row.get("method") or "unknown"),
+                "retrieval_rank": int(row.get("rank") or 0),
+                "retrieval_component_scores": {
+                    str(key): float(value)
+                    for key, value in dict(row.get("component_scores") or {}).items()
+                    if isinstance(value, (int, float))
+                },
+                "retrieval_explanation": str(row.get("explanation") or "Rank explanation unavailable."),
+                "negative_treatment_status": str(document_metadata.get("negative_treatment_status") or card.get("negative_treatment_status") or "negative_treatment_unknown"),
                 "exact_source_span": bool(span),
                 "fixture_fallback_used": False,
                 "review_required": True,
@@ -2185,6 +2631,7 @@ if FastAPI is not None:
                 "fixture_fallback_used": False,
                 "citation_resolution_context": citation_context,
                 "result_count": len(results),
+                "retrieval_stack": dict(payload.get("retrieval_stack") or {}),
                 "human_review_required": True,
             },
         )
@@ -2495,6 +2942,18 @@ if FastAPI is not None:
         default_lane = "private_record" if mode == "my_records" else "legal_authority"
         citations = _dedupe_citations(_annotate_source_lanes(citations, default_lane))
         citations = annotate_grounding_metadata(citations)
+        for citation in citations:
+            rank_metadata = dict(citation.get("metadata") or {})
+            method = str(citation.get("method") or rank_metadata.get("retrieval_method") or "unknown")
+            scores = citation.get("component_scores") or rank_metadata.get("retrieval_component_scores") or {}
+            rank_metadata["retrieval_method"] = method
+            rank_metadata["retrieval_rank"] = citation.get("rank") or rank_metadata.get("retrieval_rank") or 0
+            rank_metadata["retrieval_component_scores"] = {
+                str(key): float(value) for key, value in dict(scores).items() if isinstance(value, (int, float))
+            }
+            rank_metadata["retrieval_explanation"] = str(citation.get("explanation") or rank_metadata.get("retrieval_explanation") or "Rank explanation unavailable.")
+            rank_metadata["negative_treatment_status"] = str(rank_metadata.get("negative_treatment_status") or "negative_treatment_unknown")
+            citation["metadata"] = rank_metadata
         citations, document_security_warnings = _annotate_instruction_boundaries(citations)
         grounding_integrity = assess_grounding_integrity(citations, search_mode=mode)
         metadata = dict(result.get("metadata") or {})
@@ -2509,6 +2968,26 @@ if FastAPI is not None:
             else _parse_payload_intake(payload)
         )
         metadata.setdefault("intake", intake.to_dict())
+        metadata["answer_intent"] = _answer_intent_receipt(
+            payload,
+            intake,
+            str(result.get("response_kind") or "family_answer"),
+        )
+        metadata["clarification_minimizer"] = _clarification_minimizer(metadata["answer_intent"])
+        metadata["assumption_ledger"] = _assumption_ledger(intake, citations)
+        metadata["question_decomposition"] = _question_decomposition(payload.question, citations)
+        metadata["contradiction_followup"] = _contradiction_aware_followup(payload.question, active_case_root())
+        metadata["temporal_authority_review"] = _temporal_authority_receipt(payload.question, citations)
+        metadata["authority_conflict_review"] = _authority_conflict_receipt(citations)
+        metadata["retrieval_rank_explainability"] = {
+            "source_card_count": len(citations),
+            "contribution_detail_count": sum(1 for item in citations if bool((item.get("metadata") or {}).get("retrieval_component_scores"))),
+            "boundary": "Rank details explain retrieval signals only; they do not prove relevance, correctness, legal weight, or currentness.",
+            "review_required": True,
+        }
+        metadata["query_expansion_guardrails"] = dict(
+            (metadata.get("retrieval_diagnostics") or {}).get("retrieval_stack", {}).get("query_expansion") or {}
+        )
         prompt_findings = _prompt_injection_scanner.scan_user_prompt(payload.question)
         security_warnings = list(document_security_warnings)
         if prompt_findings:
@@ -2587,6 +3066,66 @@ if FastAPI is not None:
             grounding_integrity=grounding_integrity,
             answer_support_integrity=answer_support_integrity,
         )
+        source_basis = [
+            {
+                "source_id": str(item.get("source_id") or ""),
+                "citation": str(item.get("citation") or ""),
+                "lane": str((item.get("metadata") or {}).get("source_lane") or ""),
+                "locator": str((item.get("metadata") or {}).get("source_locator") or ""),
+            }
+            for item in citations
+        ]
+        # The compact first view and optional details must always refer to the
+        # same already-finalized source set. This fingerprint is a receipt for
+        # that invariant, not a claim that sources alone verify every sentence.
+        metadata["progressive_response"] = {
+            "schema_version": "progressive_response_v1",
+            "compact_view": "what_this_means_and_exact_source_cards",
+            "expandable_sections": [
+                "critical_dates",
+                "what_to_do_right_now",
+                "next_three_steps",
+                "what_to_gather",
+                "what_may_be_missing",
+                "suggested_questions",
+            ],
+            "same_cited_basis": True,
+            "source_card_count": len(citations),
+            "source_basis_sha256": hashlib.sha256(
+                json.dumps(source_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest(),
+            "review_required": True,
+        }
+        metadata["response_depth"] = _normalize_response_depth(payload.response_depth)
+        audience = _normalize_audience(payload.audience)
+        framing = {
+            "self_represented": "Plain-language orientation and safe next steps; this does not decide what applies to the matter.",
+            "legal_aid_intake": "Intake-oriented issue and record framing; this does not establish eligibility, representation, or legal conclusions.",
+            "paralegal": "Source and task organization framing; legal judgment and client advice remain for authorized attorney review.",
+            "attorney_review": "Citation-forward review framing; it does not substitute for attorney judgment or current-law verification.",
+        }
+        metadata["audience_presentation"] = {"audience": audience, "framing": framing[audience], "legal_truth_changed": False, "review_required": True}
+        blockers = list(answer_support_integrity.get("blockers") or [])
+        failure_class = str(result.get("failure_class") or "none")
+        if failure_class != "none":
+            blockers.append(failure_class)
+        if result.get("response_kind") == "local_help_fast_path":
+            footer_action = dict((metadata.get("fast_path_actions") or [{}])[0])
+        elif failure_class in {"no_active_matter", "no_active_matter_for_combined_search"}:
+            footer_action = {"panel": "setup", "label": "Choose a matter", "action_id": "choose_matter"}
+        elif citations:
+            footer_action = {"panel": "evidence", "label": "Open exact evidence", "action_id": "open_evidence"}
+        else:
+            footer_action = {"panel": "starters", "label": "Open starter questions", "action_id": "open_starters"}
+        if "action_id" not in footer_action:
+            footer_action["action_id"] = f"open_{footer_action.get('panel') or 'starters'}"
+        metadata["actionable_footer"] = {
+            "schema_version": "actionable_footer_v1",
+            "next_action": footer_action,
+            "blockers": list(dict.fromkeys(str(item) for item in blockers if item)),
+            "review_required": True,
+            "boundary": "The next action opens a local review workspace only; it does not file, send, decide, or certify anything.",
+        }
         result["citations"] = citations
         result["handoff_safe_source_cards"] = handoff_safe_source_cards
         result["answer_support_integrity"] = answer_support_integrity
@@ -2787,6 +3326,13 @@ if FastAPI is not None:
     @app.get("/api/authority/status")
     def local_authority_status() -> dict[str, Any]:
         return AuthorityLibraryService().status()
+
+    @app.get("/api/authority/graph/{source_id}")
+    def local_authority_graph(source_id: str) -> dict[str, Any]:
+        try:
+            return AuthorityProductService().citation_graph_neighbors(source_id)
+        except Exception as exc:
+            raise HTTPException(status_code=409, detail="authority_graph_unavailable") from exc
 
     @app.get("/api/authority/builds")
     def local_authority_builds(limit: int = 20) -> dict[str, Any]:
@@ -3588,6 +4134,31 @@ if FastAPI is not None:
             return AppellateReviewStore(root)
         except IntakeWorkbenchError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    def _fact_pin_store() -> FactPinStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return FactPinStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/fact-pins/inventory")
+    def fact_pin_inventory() -> dict[str, Any]:
+        return _intake_call(lambda: _fact_pin_store().inventory())
+
+    @app.post("/api/fact-pins")
+    def fact_pin_add(payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _fact_pin_store().add(payload))
+
+    @app.get("/api/fact-pins/receipt")
+    def fact_pin_receipt() -> dict[str, Any]:
+        return _intake_call(lambda: _fact_pin_store().receipt())
+
+    @app.get("/api/fact-pins/{pin_id}")
+    def fact_pin_get(pin_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _fact_pin_store().get(pin_id))
 
     @app.get("/api/appellate/inventory")
     def appellate_inventory() -> dict[str, Any]:
@@ -8525,6 +9096,434 @@ if FastAPI is not None:
     def missing_information_prompts() -> list[dict[str, Any]]:
         return public_missing_information_prompts()
 
+    @app.post("/api/conversation/context/compact")
+    def compact_conversation_context(
+        payload: ConversationContextCompactionRequest,
+    ) -> dict[str, Any]:
+        """Persist only a no-prose, matter-scoped conversation continuity receipt."""
+
+        session_id, session_report = normalize_session_id(payload.session_id)
+        expected_search_id, search_report = normalize_search_id(payload.expected_search_id)
+        if not session_report["accepted"]:
+            raise HTTPException(status_code=422, detail="conversation_session_required")
+        if search_report["provided"] and not search_report["accepted"]:
+            raise HTTPException(status_code=422, detail="invalid_search_identifier")
+        matter_scope = _conversation_matter_scope()
+        session_key = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+        with _recent_search_lock:
+            _prune_recent_sources()
+            entry = dict(_recent_record_searches.get(session_key) or {})
+        if not entry:
+            raise HTTPException(status_code=404, detail="conversation_context_unavailable")
+        if str(entry.get("matter_scope") or "") != matter_scope:
+            raise HTTPException(status_code=409, detail="conversation_context_matter_scope_mismatch")
+        if expected_search_id and expected_search_id != str(entry.get("search_id") or ""):
+            raise HTTPException(status_code=409, detail="conversation_context_stale_search")
+
+        case_root = active_case_root()
+        audit_status = "not_applicable_general_workspace"
+        if case_root is not None:
+            try:
+                PrivacySafeObservabilityStore(case_root).record(
+                    "api_request",
+                    metrics={"count": 1, "result_count": len(entry.get("citations") or [])},
+                    labels={
+                        "component": "conversation",
+                        "operation": "context_compaction",
+                        "status": "ok",
+                    },
+                )
+                audit_status = "privacy_safe_audit_recorded"
+            except ReleasePilotHardeningError as exc:
+                raise HTTPException(status_code=409, detail="conversation_context_audit_unavailable") from exc
+
+        receipt = _context_compaction_receipt(
+            session_id=session_id,
+            entry=entry,
+            matter_scope=matter_scope,
+        )
+        receipt["audit_status"] = audit_status
+        with _recent_search_lock:
+            current = dict(_recent_record_searches.get(session_key) or {})
+            if not current or str(current.get("search_id") or "") != str(entry.get("search_id") or ""):
+                raise HTTPException(status_code=409, detail="conversation_context_changed_retry")
+            current["context_compaction"] = dict(receipt)
+            _recent_record_searches[session_key] = current
+        return receipt
+
+    @app.get("/api/conversation/context/{session_id}")
+    def inspect_conversation_context(session_id: str) -> dict[str, Any]:
+        """Return the current safe receipt only when it belongs to this matter."""
+
+        normalized, report = normalize_session_id(session_id)
+        if not report["accepted"]:
+            raise HTTPException(status_code=422, detail="conversation_session_required")
+        session_key = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        with _recent_search_lock:
+            _prune_recent_sources()
+            entry = dict(_recent_record_searches.get(session_key) or {})
+        receipt = dict(entry.get("context_compaction") or {})
+        if not receipt:
+            raise HTTPException(status_code=404, detail="conversation_context_not_compacted")
+        if str(entry.get("matter_scope") or "") != _conversation_matter_scope():
+            raise HTTPException(status_code=409, detail="conversation_context_matter_scope_mismatch")
+        return receipt
+
+    def _correction_verification_summary(text: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
+        """Expose verifier states and exact source locators without retaining prose."""
+
+        report = assess_answer_support_integrity(text, citations)
+        claim_results = []
+        for item in list(report.get("claim_results") or [])[:8]:
+            source_trace = dict(item.get("source_trace") or {})
+            claim_results.append(
+                {
+                    "claim_sha256": str(item.get("claim_sha256") or ""),
+                    "status": str(item.get("status") or "not_verifiable"),
+                    "supported": bool(item.get("supported")),
+                    "source_trace": {
+                        "source_id": str(source_trace.get("best_source_id") or ""),
+                        "start_offset": source_trace.get("start_offset"),
+                        "end_offset": source_trace.get("end_offset"),
+                    },
+                }
+            )
+        return {
+            "status": str(report.get("status") or "review_blocked"),
+            "status_counts": dict(report.get("status_counts") or {}),
+            "blockers": [str(item) for item in list(report.get("blockers") or [])],
+            "claim_results": claim_results,
+            "review_required": True,
+            "filing_ready": False,
+        }
+
+    def _correction_entry(
+        *,
+        session_id: str,
+        expected_search_id: str,
+    ) -> tuple[str, dict[str, Any]]:
+        normalized, session_report = normalize_session_id(session_id)
+        search_id, search_report = normalize_search_id(expected_search_id)
+        if not session_report["accepted"]:
+            raise HTTPException(status_code=422, detail="conversation_session_required")
+        if not search_report["accepted"]:
+            raise HTTPException(status_code=422, detail="valid_search_identifier_required")
+        session_key = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        with _recent_search_lock:
+            _prune_recent_sources()
+            entry = dict(_recent_record_searches.get(session_key) or {})
+        if not entry:
+            raise HTTPException(status_code=404, detail="conversation_correction_unavailable")
+        if str(entry.get("matter_scope") or "") != _conversation_matter_scope():
+            raise HTTPException(status_code=409, detail="conversation_correction_matter_scope_mismatch")
+        if str(entry.get("search_id") or "") != search_id:
+            raise HTTPException(status_code=409, detail="conversation_correction_stale_search")
+        return session_key, entry
+
+    def _record_correction_audit(entry: dict[str, Any], correction_id: str, operation: str) -> str:
+        case_root = active_case_root()
+        if case_root is None:
+            return "not_applicable_general_workspace"
+        try:
+            PrivacySafeObservabilityStore(case_root).record(
+                "api_request",
+                metrics={"count": 1, "result_count": len(entry.get("citations") or [])},
+                labels={"component": "conversation", "operation": operation, "correction_id": correction_id[:16], "status": "ok"},
+            )
+        except ReleasePilotHardeningError as exc:
+            raise HTTPException(status_code=409, detail="conversation_correction_audit_unavailable") from exc
+        return "privacy_safe_audit_recorded"
+
+    @app.post("/api/conversation/corrections")
+    def create_conversation_correction(
+        payload: ConversationAnswerCorrectionRequest,
+    ) -> dict[str, Any]:
+        """Record only immutable hashes; correction prose is verified transiently."""
+
+        session_key, entry = _correction_entry(
+            session_id=payload.session_id, expected_search_id=payload.expected_search_id
+        )
+        original = str(payload.original_sentence or "").strip()
+        proposed = str(payload.proposed_correction or "").strip()
+        if not original or not proposed:
+            raise HTTPException(status_code=422, detail="original_and_proposed_sentence_required")
+        if len(original) > 4000 or len(proposed) > 4000:
+            raise HTTPException(status_code=422, detail="correction_sentence_too_long")
+        if original == proposed:
+            raise HTTPException(status_code=422, detail="proposed_correction_must_change_sentence")
+        allowed_reasons = {"source_mismatch", "missing_context", "outdated", "wording", "other"}
+        reason_code = str(payload.reason_code or "other").strip().lower()
+        if reason_code not in allowed_reasons:
+            reason_code = "other"
+        reason_note = str(payload.reason_note or "").strip()
+        if len(reason_note) > 1000:
+            raise HTTPException(status_code=422, detail="correction_reason_too_long")
+        original_sha256 = hashlib.sha256(original.encode("utf-8")).hexdigest()
+        proposed_sha256 = hashlib.sha256(proposed.encode("utf-8")).hexdigest()
+        reason_sha256 = hashlib.sha256(reason_note.encode("utf-8")).hexdigest() if reason_note else ""
+        now = time.time()
+        correction_id = hashlib.sha256(
+            f"{session_key}|{entry['search_id']}|{original_sha256}|{proposed_sha256}|{reason_code}|{now}".encode("utf-8")
+        ).hexdigest()[:32]
+        receipt = {
+            "schema_version": "conversation_answer_correction_v1",
+            "correction_id": correction_id,
+            "search_id": str(entry["search_id"]),
+            "matter_scope": str(entry["matter_scope"]),
+            "original_sentence_sha256": original_sha256,
+            "proposed_correction_sha256": proposed_sha256,
+            "reason_code": reason_code,
+            "reason_note_sha256": reason_sha256,
+            "source_basis_sha256": hashlib.sha256(
+                json.dumps(sorted(str(item.get("source_id") or "") for item in entry.get("citations") or []), separators=(",", ":")).encode("utf-8")
+            ).hexdigest(),
+            "raw_correction_text_stored": False,
+            "immutable": True,
+            "review_required": True,
+            "filing_ready": False,
+            "created_at": now,
+        }
+        receipt["audit_status"] = _record_correction_audit(entry, correction_id, "answer_correction_create")
+        with _recent_search_lock:
+            current = dict(_recent_record_searches.get(session_key) or {})
+            if not current or str(current.get("search_id") or "") != str(entry.get("search_id") or ""):
+                raise HTTPException(status_code=409, detail="conversation_correction_changed_retry")
+            corrections = list(current.get("answer_corrections") or [])
+            corrections.append(dict(receipt))
+            current["answer_corrections"] = corrections[-20:]
+            _recent_record_searches[session_key] = current
+        citations = _bounded_citations(list(entry.get("citations") or []))
+        return {
+            **receipt,
+            "response_kind": "conversation_answer_correction",
+            "original_sentence": original,
+            "proposed_correction": proposed,
+            "original_verification": _correction_verification_summary(original, citations),
+            "proposed_verification": _correction_verification_summary(proposed, citations),
+            "citations": citations,
+            "source_card_count": len(citations),
+            "rerun_required": True,
+        }
+
+    @app.post("/api/conversation/corrections/{correction_id}/rerun")
+    def rerun_conversation_correction(
+        correction_id: str,
+        payload: ConversationAnswerCorrectionRerunRequest,
+    ) -> dict[str, Any]:
+        """Re-run verifier states only after the immutable hash receipt matches."""
+
+        session_key, entry = _correction_entry(
+            session_id=payload.session_id, expected_search_id=payload.expected_search_id
+        )
+        original = str(payload.original_sentence or "").strip()
+        proposed = str(payload.proposed_correction or "").strip()
+        if not original or not proposed or len(original) > 4000 or len(proposed) > 4000:
+            raise HTTPException(status_code=422, detail="valid_correction_sentences_required")
+        correction_id = str(correction_id or "").strip().lower()
+        receipt = next(
+            (dict(item) for item in list(entry.get("answer_corrections") or []) if str(item.get("correction_id") or "") == correction_id),
+            None,
+        )
+        if receipt is None:
+            raise HTTPException(status_code=404, detail="conversation_correction_not_found")
+        if (
+            receipt.get("original_sentence_sha256") != hashlib.sha256(original.encode("utf-8")).hexdigest()
+            or receipt.get("proposed_correction_sha256") != hashlib.sha256(proposed.encode("utf-8")).hexdigest()
+        ):
+            raise HTTPException(status_code=409, detail="conversation_correction_hash_mismatch")
+        receipt["audit_status"] = _record_correction_audit(entry, correction_id, "answer_correction_rerun")
+        citations = _bounded_citations(list(entry.get("citations") or []))
+        return {
+            **receipt,
+            "response_kind": "conversation_answer_correction_rerun",
+            "original_verification": _correction_verification_summary(original, citations),
+            "proposed_verification": _correction_verification_summary(proposed, citations),
+            "citations": citations,
+            "source_card_count": len(citations),
+            "review_required": True,
+            "filing_ready": False,
+        }
+
+    @app.post("/api/conversation/latency")
+    def record_conversation_latency(
+        payload: ConversationLatencyObservationRequest,
+    ) -> dict[str, Any]:
+        """Store a bounded, no-prose local timing receipt for the current answer."""
+
+        session_key, entry = _correction_entry(
+            session_id=payload.session_id, expected_search_id=payload.expected_search_id
+        )
+        cache_state = str(payload.cache_state or "unknown").lower()
+        if cache_state not in {"unknown", "miss", "local_hit", "bypassed"}:
+            cache_state = "unknown"
+        def bounded_ms(value: int | None) -> int | None:
+            if value is None:
+                return None
+            return max(0, min(int(value), 3_600_000))
+        receipt = {
+            "schema_version": "chat_latency_observation_v1",
+            "observation_id": uuid.uuid4().hex,
+            "search_id": str(entry.get("search_id") or ""),
+            "matter_scope": str(entry.get("matter_scope") or ""),
+            "first_feedback_ms": bounded_ms(payload.first_feedback_ms),
+            "total_duration_ms": bounded_ms(payload.total_duration_ms) or 0,
+            "server_duration_ms": bounded_ms(payload.server_duration_ms),
+            "queue_delay_ms": bounded_ms(payload.queue_delay_ms),
+            "cache_state": cache_state,
+            "model_output_tokens": max(0, min(int(payload.model_output_tokens or 0), 1_000_000)),
+            "hardware_concurrency": max(0, min(int(payload.hardware_concurrency or 0), 256)),
+            "device_memory_gib": max(0.0, min(float(payload.device_memory_gib or 0.0), 4096.0)),
+            "prompt_text_stored": False,
+            "matter_text_stored": False,
+            "review_required": True,
+            "created_at": time.time(),
+        }
+        case_root = active_case_root()
+        receipt["audit_status"] = "not_applicable_general_workspace"
+        if case_root is not None:
+            try:
+                PrivacySafeObservabilityStore(case_root).record(
+                    "api_request",
+                    metrics={"count": 1, "duration_ms": receipt["total_duration_ms"]},
+                    labels={"component": "conversation", "operation": "latency_observation", "cache_state": cache_state, "status": "ok"},
+                )
+                receipt["audit_status"] = "privacy_safe_audit_recorded"
+            except ReleasePilotHardeningError as exc:
+                raise HTTPException(status_code=409, detail="conversation_latency_audit_unavailable") from exc
+        with _recent_search_lock:
+            current = dict(_recent_record_searches.get(session_key) or {})
+            if not current or str(current.get("search_id") or "") != str(entry.get("search_id") or ""):
+                raise HTTPException(status_code=409, detail="conversation_latency_changed_retry")
+            observations = list(current.get("latency_observations") or [])
+            observations.append(dict(receipt))
+            current["latency_observations"] = observations[-30:]
+            _recent_record_searches[session_key] = current
+        return receipt
+
+    @app.get("/api/conversation/latency/{session_id}")
+    def inspect_conversation_latency(session_id: str, expected_search_id: str) -> dict[str, Any]:
+        session_key, entry = _correction_entry(session_id=session_id, expected_search_id=expected_search_id)
+        del session_key
+        observations = [dict(item) for item in list(entry.get("latency_observations") or [])]
+        totals = sorted(int(item.get("total_duration_ms") or 0) for item in observations)
+        return {
+            "schema_version": "chat_latency_observatory_v1",
+            "search_id": str(entry.get("search_id") or ""),
+            "observation_count": len(observations),
+            "average_total_duration_ms": round(sum(totals) / len(totals)) if totals else None,
+            "p95_total_duration_ms": totals[max(0, int(len(totals) * 0.95) - 1)] if totals else None,
+            "observations": observations,
+            "prompt_text_stored": False,
+            "matter_text_stored": False,
+            "review_required": True,
+        }
+
+    @app.post("/api/conversation/compare")
+    def compare_conversation_approaches(payload: ConversationAnswerComparisonRequest) -> dict[str, Any]:
+        """Compare transient candidate wording against one immutable source basis."""
+
+        _session_key_value, entry = _correction_entry(session_id=payload.session_id, expected_search_id=payload.expected_search_id)
+        approach_a = str(payload.approach_a or "").strip()
+        approach_b = str(payload.approach_b or "").strip()
+        if not approach_a or not approach_b or len(approach_a) > 6000 or len(approach_b) > 6000:
+            raise HTTPException(status_code=422, detail="two_bounded_comparison_approaches_required")
+        citations = _bounded_citations(list(entry.get("citations") or []))
+        source_basis_sha256 = hashlib.sha256(json.dumps(sorted(str(item.get("source_id") or "") for item in citations), separators=(",", ":")).encode("utf-8")).hexdigest()
+        return {
+            "schema_version": "conversation_answer_comparison_v1",
+            "response_kind": "conversation_answer_comparison",
+            "search_id": str(entry.get("search_id") or ""),
+            "matter_scope": str(entry.get("matter_scope") or ""),
+            "source_basis_sha256": source_basis_sha256,
+            "approach_a": {"sha256": hashlib.sha256(approach_a.encode("utf-8")).hexdigest(), "verification": _correction_verification_summary(approach_a, citations)},
+            "approach_b": {"sha256": hashlib.sha256(approach_b.encode("utf-8")).hexdigest(), "verification": _correction_verification_summary(approach_b, citations)},
+            "candidate_text_stored": False,
+            "citations": citations,
+            "source_card_count": len(citations),
+            "review_required": True,
+            "filing_ready": False,
+            "boundary": "This compares review aids against the same source set. It does not select an approach, establish facts or law, or create a filing-ready draft.",
+        }
+
+    @app.post("/api/conversation/branch")
+    def branch_conversation(payload: ConversationBranchRequest) -> dict[str, Any]:
+        """Create a new session with source lineage but no copied conversation prose."""
+
+        parent_key, entry = _correction_entry(session_id=payload.session_id, expected_search_id=payload.expected_search_id)
+        branch_session_id = str(uuid.uuid4())
+        branch_key = hashlib.sha256(branch_session_id.encode("utf-8")).hexdigest()
+        source_ids = sorted(str(item.get("source_id") or "") for item in list(entry.get("citations") or []) if str(item.get("source_id") or "") )
+        receipt = {
+            "schema_version": "conversation_branch_v1",
+            "branch_id": uuid.uuid4().hex,
+            "branch_session_id": branch_session_id,
+            "parent_session_sha256": parent_key,
+            "parent_search_id": str(entry.get("search_id") or ""),
+            "matter_scope": str(entry.get("matter_scope") or ""),
+            "source_basis_sha256": hashlib.sha256(json.dumps(source_ids, separators=(",", ":")).encode("utf-8")).hexdigest(),
+            "source_card_count": len(source_ids),
+            "raw_conversation_text_copied": False,
+            "raw_matter_text_copied": False,
+            "review_required": True,
+        }
+        receipt["audit_status"] = "not_applicable_general_workspace"
+        case_root = active_case_root()
+        if case_root is not None:
+            try:
+                PrivacySafeObservabilityStore(case_root).record(
+                    "api_request",
+                    metrics={"count": 1, "result_count": len(source_ids)},
+                    labels={"component": "conversation", "operation": "branch", "status": "ok"},
+                )
+                receipt["audit_status"] = "privacy_safe_audit_recorded"
+            except ReleasePilotHardeningError as exc:
+                raise HTTPException(status_code=409, detail="conversation_branch_audit_unavailable") from exc
+        branch_entry = dict(entry)
+        branch_entry["branch_lineage"] = {key: value for key, value in receipt.items() if key != "branch_session_id"}
+        branch_entry["context_compaction"] = {}
+        branch_entry["answer_corrections"] = []
+        branch_entry["latency_observations"] = []
+        branch_entry["created_at"] = time.time()
+        with _recent_search_lock:
+            _prune_recent_sources()
+            _recent_record_searches[branch_key] = branch_entry
+        return receipt
+
+    @app.post("/api/conversation/usefulness")
+    def evaluate_conversation_usefulness(payload: ConversationUsefulnessRequest) -> dict[str, Any]:
+        """Return a deterministic, non-substantive usefulness receipt for one answer."""
+
+        _, entry = _correction_entry(session_id=payload.session_id, expected_search_id=payload.expected_search_id)
+        citations = _bounded_citations(list(entry.get("citations") or []))
+        intake_anchor = dict(entry.get("intake_anchor") or {})
+        intent = dict(entry.get("answer_intent") or {})
+        checks = [
+            {"criterion": "citation_sufficiency", "status": "present" if citations else "needs_sources", "basis": "source_card_count"},
+            {"criterion": "actionability", "status": "review_path_present" if str(intent.get("primary_intent") or "") else "needs_intent_review", "basis": "workflow_intent"},
+            {"criterion": "scope_restraint", "status": "review_required", "basis": "no_automated_quality_clearance"},
+            {"criterion": "matter_context", "status": "available" if intake_anchor else "not_provided", "basis": "bounded_intake_anchor"},
+        ]
+        case_root = active_case_root()
+        audit_status = "not_applicable_general_workspace"
+        if case_root is not None:
+            try:
+                PrivacySafeObservabilityStore(case_root).record(
+                    "api_request", metrics={"count": 1, "result_count": len(checks)},
+                    labels={"component": "conversation", "operation": "usefulness_evaluation", "status": "ok"},
+                )
+                audit_status = "privacy_safe_audit_recorded"
+            except ReleasePilotHardeningError as exc:
+                raise HTTPException(status_code=409, detail="conversation_usefulness_audit_unavailable") from exc
+        return {
+            "schema_version": "conversation_usefulness_v1", "response_kind": "conversation_usefulness",
+            "search_id": str(entry.get("search_id") or ""), "checks": checks,
+            "human_review_rubric": ["correctness against exact source spans", "actionability for the selected workflow", "clarity for the selected audience", "restraint and visible uncertainty", "citation sufficiency and freshness"],
+            "synthetic_or_human_review": "deterministic_structural_checks_only",
+            "answer_text_stored": False, "matter_text_stored": False, "citations": citations,
+            "review_required": True, "filing_ready": False, "audit_status": audit_status,
+            "boundary": "This is not attorney review, a quality certification, or a conclusion that the answer is correct. Human source review remains required.",
+        }
+
     @app.post("/api/intake/understand")
     def understand_intake(payload: AskRequest) -> dict[str, Any]:
         summary = _parse_payload_intake(payload)
@@ -8590,6 +9589,8 @@ if FastAPI is not None:
             else ("__invalid__" if search_id_report["provided"] else "")
         )
         payload.answer_style = _normalize_answer_style(payload.answer_style)
+        payload.response_depth = _normalize_response_depth(payload.response_depth)
+        payload.audience = _normalize_audience(payload.audience)
         question = payload.question
         security_flags = [
             flag
@@ -8646,6 +9647,10 @@ if FastAPI is not None:
             followup = _source_card_followup(payload)
             if followup is not None:
                 return _finalize_family_response(followup, payload)
+
+            fast_help = _fast_local_help_payload(payload, intake)
+            if fast_help is not None:
+                return _finalize_family_response(fast_help, payload)
 
             if intake.task == "corpus_inventory":
                 inventory = _case_inventory_chat_payload(payload)
@@ -8861,6 +9866,27 @@ if FastAPI is not None:
                 "source_card_count": 0,
                 "request_integrity": dict(payload.input_integrity or {}),
             }
+
+    @app.post("/ask/stream")
+    def ask_stream(payload: AskRequest) -> Any:
+        """Return canonical `/ask` output over a local-only SSE response.
+
+        The existing answer builder remains the single source of legal and
+        review truth.  Early events provide honest UI feedback while it runs;
+        the `result` event contains the same completed payload that `/ask`
+        returns.  This keeps streaming cancellable without splitting or
+        weakening source, review, or matter protections.
+        """
+
+        return StreamingResponse(
+            iter_stream_answer_events(payload, ask),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-store",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
 
     @app.post("/draft")
     def draft(payload: DraftRequest) -> dict[str, Any]:

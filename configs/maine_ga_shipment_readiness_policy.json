@@ -1,6 +1,6 @@
 {
-  "version": "v7.0.0-ga-shipment-readiness",
-  "product_version": "7.0.0",
+  "version": "v8.0.0-ga-shipment-readiness",
+  "product_version": "8.0.0",
   "pass_number": 52,
   "external_shipment_evidence_required": true,
   "application_may_claim_store_approval": false,

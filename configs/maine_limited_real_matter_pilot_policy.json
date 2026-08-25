@@ -1,6 +1,6 @@
 {
-  "version": "2.0-v7.0.0",
-  "product_version": "7.0.0",
+  "version": "2.0-v8.0.0",
+  "product_version": "8.0.0",
   "stage": "limited_real_matter_pilot_operations",
   "minimum_matter_count": 1,
   "minimum_daily_reviews_per_matter": 1,

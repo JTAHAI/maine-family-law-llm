@@ -127,6 +127,7 @@ def evaluate_local_request(
     sec_fetch_site: str = "",
     content_length: str = "",
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
+    require_content_length: bool = False,
 ) -> FirewallDecision:
     """Return a fail-closed decision for a local HTTP request."""
 
@@ -158,6 +159,13 @@ def evaluate_local_request(
             403,
             "cross_site_blocked",
             "Cross-site local-workbench requests are blocked.",
+        )
+    if normalized_method not in SAFE_METHODS and require_content_length and not content_length:
+        return FirewallDecision(
+            False,
+            411,
+            "content_length_required",
+            "A bounded Content-Length header is required for this local request.",
         )
     if content_length:
         try:

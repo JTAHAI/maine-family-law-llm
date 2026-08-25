@@ -12,6 +12,8 @@ from app.api.routes.providers import router as providers_router
 from app.api.routes.children import router as children_router
 from app.api.routes.communications import router as communications_router
 from app.api.routes.multimedia import router as multimedia_router
+from app.api.routes.productivity import router as productivity_router
+from app.api.routes.addons import router as addons_router
 from app.api.routes.privacy import router as privacy_router
 from app.api.security import AuditHeaderMiddleware, require_api_role
 from maine_family_law_llm import __version__
@@ -75,4 +77,6 @@ app.router.include_router(providers_router, prefix="/api")
 app.router.include_router(children_router, prefix="/api")
 app.router.include_router(communications_router, prefix="/api")
 app.router.include_router(multimedia_router, prefix="/api")
+app.router.include_router(productivity_router, prefix="/api")
+app.router.include_router(addons_router, prefix="/api")
 app.router.include_router(privacy_router, prefix="/api")

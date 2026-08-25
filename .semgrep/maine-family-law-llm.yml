@@ -1,0 +1,68 @@
+rules:
+  - id: mfl-python-shell-true
+    languages: [python]
+    severity: ERROR
+    message: shell=True is prohibited in Maine Family Law LLM runtime code.
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$F(..., shell=True, ...)
+          - pattern: $P(..., shell=True, ...)
+      - metavariable-regex:
+          metavariable: $P
+          regex: ^(run|Popen|call|check_call|check_output)$
+    paths:
+      exclude:
+        - tests/**
+
+  - id: mfl-python-eval-exec
+    languages: [python]
+    severity: ERROR
+    message: eval/exec is prohibited for model, document, and matter data.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+    paths:
+      exclude:
+        - tests/**
+
+  - id: mfl-python-public-bind
+    languages: [python]
+    severity: ERROR
+    message: Local servers must not bind to all interfaces.
+    pattern-either:
+      - pattern: $X.run(..., host="0.0.0.0", ...)
+      - pattern: $X.run(..., host="::", ...)
+      - pattern: uvicorn.run(..., host="0.0.0.0", ...)
+      - pattern: uvicorn.run(..., host="::", ...)
+
+  - id: mfl-python-unsafe-zip-extractall
+    languages: [python]
+    severity: ERROR
+    message: ZipFile.extractall requires an explicit validated-entry wrapper.
+    pattern: $ZIP.extractall(...)
+    paths:
+      exclude:
+        - tests/**
+
+  - id: mfl-python-plaintext-secret
+    languages: [python]
+    severity: ERROR
+    message: Do not write API keys, tokens, or passwords to plaintext files.
+    patterns:
+      - pattern-either:
+          - pattern: $PATH.write_text($VALUE, ...)
+          - pattern: $PATH.write_bytes($VALUE, ...)
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(api.?key|token|password|secret).*
+
+  - id: mfl-js-dangerous-innerhtml-model-output
+    languages: [javascript]
+    severity: WARNING
+    message: Dynamic HTML must pass through escapeHtml or a fixed renderer.
+    pattern: $EL.innerHTML = $VALUE
+    pattern-not: $EL.innerHTML = escapeHtml(...)
+    paths:
+      include:
+        - maine_family_law_llm/ui/**
+        - src/maine_family_law_llm/ui/**

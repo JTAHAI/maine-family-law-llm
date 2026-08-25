@@ -1,6 +1,6 @@
 {
   "blockers": [],
-  "generated_at": "2026-08-11T23:04:24.055975+00:00",
+  "generated_at": "2026-08-25T01:26:29.734989+00:00",
   "no_filing_ready_bypass": true,
   "readiness": "legal_red_team_passed",
   "required_categories": [
@@ -416,7 +416,7 @@
             ],
             "export_status": "blocked_override_logged",
             "filing_ready": false,
-            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
+            "immutable_report_hash": "5a802d33dffcc6a8ced6f1daeb510e209eea5bf28503b4179ac6287cab0feb13",
             "panel_title": "Filing gate blockers",
             "review_required": true
           },
@@ -465,7 +465,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-08-11T23:04:24.055875+00:00",
+              "requested_at": "2026-08-25T01:26:29.732912+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -490,8 +490,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-08-11T23:04:24.055888+00:00",
-            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
+            "generated_at": "2026-08-25T01:26:29.732955+00:00",
+            "immutable_report_hash": "5a802d33dffcc6a8ced6f1daeb510e209eea5bf28503b4179ac6287cab0feb13",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,
@@ -528,7 +528,7 @@
               "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
               "reason": "test bypass",
               "requested": true,
-              "requested_at": "2026-08-11T23:04:24.055875+00:00",
+              "requested_at": "2026-08-25T01:26:29.732912+00:00",
               "requested_by": "attorney-1"
             },
             "blockers": [
@@ -553,8 +553,8 @@
             "export_status": "blocked_override_logged",
             "filing_ready": false,
             "gate_version": "pass38-filing-ready-hardening-v1",
-            "generated_at": "2026-08-11T23:04:24.055888+00:00",
-            "immutable_report_hash": "c4cef4af99315ff46eab74522435e3224e3cf059efac9f47d89a869fd00facaa",
+            "generated_at": "2026-08-25T01:26:29.732955+00:00",
+            "immutable_report_hash": "5a802d33dffcc6a8ced6f1daeb510e209eea5bf28503b4179ac6287cab0feb13",
             "mandatory_checks": {
               "authority_verified": false,
               "citations_resolved": false,

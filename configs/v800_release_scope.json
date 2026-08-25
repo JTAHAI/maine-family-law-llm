@@ -1,0 +1,51 @@
+{
+  "schema_version": "v800_release_scope_v1",
+  "release": "8.0.0",
+  "package_version": "8.0.0.0",
+  "decision": "VERSION_FROZEN",
+  "public_addon_features": [
+    "native_whisper_transcription",
+    "ocr_correction_studio",
+    "communications_importer",
+    "evidence_relationship_graph",
+    "local_model_manager",
+    "court_form_autofill",
+    "advanced_table_extraction",
+    "financial_document_intelligence",
+    "semantic_order_comparison",
+    "authority_update_center",
+    "guided_research_builder",
+    "evidence_annotation_studio",
+    "local_automation_scheduler",
+    "secure_reviewer_collaboration",
+    "matter_template_library",
+    "conflict_entity_resolver",
+    "desktop_notification_center",
+    "courtroom_bundle_exporter",
+    "voice_drafting_commands",
+    "extension_sdk_permission_center"
+  ],
+  "acceptance_status": "verified_end_to_end",
+  "acceptance_layers": [
+    "service",
+    "canonical_api",
+    "matter_and_tenant_scope",
+    "role_enforcement",
+    "encrypted_artifacts",
+    "append_only_audit",
+    "production_desktop_ui",
+    "meaningful_fictional_action",
+    "exact_result_and_artifact_drilldown",
+    "immutable_review_decision",
+    "focused_regression",
+    "frozen_executable"
+  ],
+  "release_boundaries": {
+    "review_required": true,
+    "filing_ready_by_addon_alone": false,
+    "local_only": true,
+    "automatic_model_or_engine_download": false,
+    "automatic_external_send": false,
+    "enterprise_organizational_validation_claimed": false
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "maine_local_agent_policy_v1",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "enabled_by_default": false,
   "remote_providers_enabled": false,
   "allowed_endpoint_schemes": ["http", "https"],
