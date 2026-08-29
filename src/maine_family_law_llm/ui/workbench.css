@@ -5178,11 +5178,51 @@ body.v8-workbench[data-shortcuts="closed"][data-drawer="closed"] .v5-main-stage.
 }
 body.v8-workbench[data-shortcuts="closed"] .chat-panel.panel { box-shadow: var(--v8-shadow-lift); }
 
-@media (min-width: 1500px) {
+/* V8 command strip contract: every child receives an explicit track.  The
+   previous desktop grid declared fewer tracks than controls, which created
+   implicit columns and could place interactive controls over one another. */
+@media (min-width: 1360px) and (max-width: 1899px) {
   .v8-workbench .v5-control-bar {
-    grid-template-columns: 145px 160px 145px minmax(220px, 1fr) 195px 112px 120px 150px 155px 40px 40px;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: auto 40px;
+    column-gap: 8px;
+    row-gap: 10px;
   }
-  .v8-workbench .v5-focus-field { min-width: 220px; }
+
+  .v8-workbench .v5-control-bar > [data-control] { grid-row: 1; min-width: 0; }
+  .v8-workbench .v5-control-bar > [data-control="audience"],
+  .v8-workbench .v5-control-bar > [data-control="answer-style"],
+  .v8-workbench .v5-control-bar > [data-control="response-depth"] { grid-column: span 2; }
+  .v8-workbench .v5-control-bar > [data-control="topic-filter"],
+  .v8-workbench .v5-control-bar > [data-control="focus-context"] { grid-column: span 3; }
+
+  .v8-workbench .v5-control-bar > [data-control-action] {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0 !important;
+    justify-content: center;
+  }
+  .v8-workbench .v5-control-bar > [data-control-action="command"],
+  .v8-workbench .v5-control-bar > [data-control-action="ai-controls"],
+  .v8-workbench .v5-control-bar > [data-control-action="privacy"],
+  .v8-workbench .v5-control-bar > [data-control-action="matter"],
+  .v8-workbench .v5-control-bar > [data-control-action="evidence"] { grid-column: span 2; }
+  .v8-workbench .v5-control-bar > [data-control-action="help"],
+  .v8-workbench .v5-control-bar > [data-control-action="new-chat"] { grid-column: span 1; }
+  .v8-workbench .v5-control-bar > [data-control-action="matter"] { text-align: left; }
+  .v8-workbench .v5-control-bar > [data-control-action="matter"] strong { max-width: 100%; }
+  .v8-workbench .v5-control-bar > .v5-icon-button { width: 100%; }
+}
+
+/* A single row is permitted only when its 12 declared tracks fit without
+   compressing a field or obscuring a control. */
+@media (min-width: 1900px) {
+  .v8-workbench .v5-control-bar {
+    grid-template-columns: 130px 145px 115px minmax(220px, 1fr) minmax(220px, 1fr) 145px 105px 110px 145px 155px 40px 40px;
+  }
+  .v8-workbench .v5-control-bar > [data-control-action] { width: auto; }
+  .v8-workbench .v5-control-bar > .v5-icon-button { width: 40px; }
 }
 
 @media (max-width: 1359px) {
