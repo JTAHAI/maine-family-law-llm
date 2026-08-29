@@ -1,0 +1,25 @@
+{
+  "schema": "maine-family-law-llm.fast-interchange-fleet.v1",
+  "status": "specified_untrained_no_artifacts",
+  "jurisdiction": "US-ME",
+  "external_worker_required": true,
+  "shared_base": {
+    "selection_status": "unselected_pending_rights_and_evaluation",
+    "parameter_range": "0.5B_to_1.5B",
+    "runtime": "external_loopback_fast_interchange_worker",
+    "quantization": "4bit_nf4_after_validation",
+    "maximum_context_tokens": 2048,
+    "shared_kv_cache": false,
+    "remote_downloads": false
+  },
+  "model_slots": [
+    {"slot_id": "family-intake-triage-small", "capability": "intake_triage", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16},
+    {"slot_id": "family-evidence-review-small", "capability": "evidence_review", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16},
+    {"slot_id": "family-authority-review-small", "capability": "authority_review", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16},
+    {"slot_id": "family-drafting-small", "capability": "drafting", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16},
+    {"slot_id": "family-parenting-plan-review-small", "capability": "parenting_plan_review", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16},
+    {"slot_id": "family-financial-disclosure-review-small", "capability": "financial_disclosure_review", "release_state": "specified_untrained", "adapter_kind": "lora", "lora_rank": 16},
+    {"slot_id": "family-safety-privacy-review-small", "capability": "safety_privacy_review", "adapter_kind": "lora", "release_state": "specified_untrained", "lora_rank": 16}
+  ],
+  "promotion_authority": false
+}

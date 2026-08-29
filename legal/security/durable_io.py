@@ -10,12 +10,42 @@ from __future__ import annotations
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import shutil
 import stat
-from typing import Iterator
+from typing import Callable, Iterator
 
 
 class DurableIOError(OSError):
     """Raised when a local file operation cannot be completed safely."""
+
+
+def required_write_reserve_bytes() -> int:
+    """Return the minimum free-space reserve retained after a local write.
+
+    The conservative default prevents a temporary-file atomic replacement from
+    consuming the last free blocks. A deployment may raise the reserve; a
+    negative/invalid override never disables the guard.
+    """
+
+    raw = str(os.environ.get("MFL_MINIMUM_WRITE_RESERVE_BYTES") or "").strip()
+    try:
+        configured = int(raw) if raw else 64 * 1024 * 1024
+    except ValueError:
+        configured = 64 * 1024 * 1024
+    return max(8 * 1024 * 1024, min(configured, 8 * 1024 * 1024 * 1024))
+
+
+def ensure_write_capacity(path: str | Path, incoming_bytes: int, *, reserve_bytes: int | None = None) -> None:
+    """Fail closed before a local durable write exhausts available storage."""
+
+    target = Path(path)
+    required = max(0, int(incoming_bytes)) + (required_write_reserve_bytes() if reserve_bytes is None else max(0, int(reserve_bytes)))
+    try:
+        free = int(shutil.disk_usage(target.parent).free)
+    except OSError as exc:
+        raise DurableIOError("storage_capacity_unavailable") from exc
+    if free < required:
+        raise DurableIOError("storage_reserve_required")
 
 
 def _open_flags(*, write: bool = False, append: bool = False, create: bool = False) -> int:
@@ -172,6 +202,7 @@ def durable_append_text(path: str | Path, text: str) -> None:
         raise DurableIOError("file_symlink_refused")
 
     raw = text.encode("utf-8")
+    ensure_write_capacity(file_path, len(raw))
     flags = _open_flags(write=True, append=True, create=True)
     try:
         descriptor = os.open(str(file_path), flags, 0o600)
@@ -198,7 +229,13 @@ def durable_append_text(path: str | Path, text: str) -> None:
     _fsync_directory(file_path.parent)
 
 
-def atomic_write_bytes(path: str | Path, data: bytes, *, mode: int = 0o600) -> Path:
+def atomic_write_bytes(
+    path: str | Path,
+    data: bytes,
+    *,
+    mode: int = 0o600,
+    fault_injector: Callable[[str], None] | None = None,
+) -> Path:
     """Atomically replace a private file and sync both file and parent dir."""
 
     file_path = Path(path)
@@ -207,12 +244,15 @@ def atomic_write_bytes(path: str | Path, data: bytes, *, mode: int = 0o600) -> P
         raise DurableIOError("parent_symlink_refused")
     if file_path.exists() and file_path.is_symlink():
         raise DurableIOError("file_symlink_refused")
+    ensure_write_capacity(file_path, len(data))
     suffix = f".{os.getpid()}.{os.urandom(8).hex()}.tmp"
     temp_path = file_path.with_name(f".{file_path.name}{suffix}")
     flags = _open_flags(write=True, create=True)
     flags |= os.O_EXCL
     descriptor: int | None = None
     try:
+        if fault_injector is not None:
+            fault_injector("before_open")
         descriptor = os.open(str(temp_path), flags, mode)
         view = memoryview(data)
         while view:
@@ -220,7 +260,11 @@ def atomic_write_bytes(path: str | Path, data: bytes, *, mode: int = 0o600) -> P
             if written <= 0:
                 raise DurableIOError("atomic_write_failed")
             view = view[written:]
+        if fault_injector is not None:
+            fault_injector("after_write")
         os.fsync(descriptor)
+        if fault_injector is not None:
+            fault_injector("after_file_sync_before_replace")
         if hasattr(os, "fchmod"):
             try:
                 os.fchmod(descriptor, mode)
@@ -229,6 +273,8 @@ def atomic_write_bytes(path: str | Path, data: bytes, *, mode: int = 0o600) -> P
         os.close(descriptor)
         descriptor = None
         os.replace(temp_path, file_path)
+        if fault_injector is not None:
+            fault_injector("after_replace_before_directory_sync")
         _fsync_directory(file_path.parent)
         return file_path
     finally:
@@ -245,5 +291,7 @@ __all__ = [
     "atomic_write_bytes",
     "durable_append_text",
     "exclusive_file_lock",
+    "ensure_write_capacity",
+    "required_write_reserve_bytes",
     "read_bounded_regular_file",
 ]

@@ -39,6 +39,113 @@
     let authorityPinpointInput = null;
     let authorityPinpointButton = null;
     let authorityPinpointResult = null;
+    let authorityGapIssue = null;
+    let authorityGapButton = null;
+    let authorityGapBrowseButton = null;
+    let authorityGapResult = null;
+    let authorityBuildSelect = null;
+    let authorityBuildRefreshButton = null;
+    let authorityBuildActivateButton = null;
+    let authorityBuildRollbackButton = null;
+    let authorityBuildAcknowledgement = null;
+    let authorityBuildResult = null;
+    let authorityFreshnessButton = null;
+    let authorityFreshnessResult = null;
+    let authorityAvailabilityButton = null;
+    let authorityAvailabilityResult = null;
+    let authorityParserRegressionButton = null;
+    let authorityParserRegressionResult = null;
+    let authorityLineageInput = null;
+    let authorityLineageButton = null;
+    let authorityLineageResult = null;
+    let authorityFormSyncIdInput = null;
+    let authorityFormSyncVersionInput = null;
+    let authorityFormSyncHashInput = null;
+    let authorityFormSyncButton = null;
+    let authorityFormSyncResult = null;
+    let authorityOpinionInput = null;
+    let authorityOpinionButton = null;
+    let authorityOpinionResult = null;
+    let authorityRuleHistoryInput = null;
+    let authorityRuleHistoryButton = null;
+    let authorityRuleHistoryResult = null;
+    let authorityBundleAdminAck = null;
+    let authorityBundleIdInput = null;
+    let authorityBundleFileInput = null;
+    let authorityBundleStatusButton = null;
+    let authorityBundleExportButton = null;
+    let authorityBundleImportButton = null;
+    let authorityBundleResult = null;
+    let timelineCorrectionEventId = null;
+    let timelineCorrectionDate = null;
+    let timelineCorrectionSourceId = null;
+    let timelineCorrectionReason = null;
+    let timelineCorrectionLoadButton = null;
+    let timelineCorrectionSaveButton = null;
+    let timelineCorrectionSourceButton = null;
+    let timelineCorrectionResult = null;
+    let claimDispositionStatement = null;
+    let claimDispositionRecordIds = null;
+    let claimDispositionId = null;
+    let claimDispositionStatus = null;
+    let claimDispositionNotes = null;
+    let claimDispositionCreateButton = null;
+    let claimDispositionLoadButton = null;
+    let claimDispositionReviewButton = null;
+    let claimDispositionResult = null;
+    let attachmentCoverageId = null;
+    let attachmentCoverageLabel = null;
+    let attachmentCoverageState = null;
+    let attachmentCoverageSourceId = null;
+    let attachmentCoverageLinkedId = null;
+    let attachmentCoverageNotes = null;
+    let attachmentCoverageCreateButton = null;
+    let attachmentCoverageRefreshButton = null;
+    let attachmentCoverageReviewButton = null;
+    let attachmentCoverageSourceButton = null;
+    let attachmentCoverageResult = null;
+    let factGraphNodeId = null;
+    let factGraphNodeKind = null;
+    let factGraphNodeLabel = null;
+    let factGraphNodeSource = null;
+    let factGraphNodeState = null;
+    let factGraphEdgeId = null;
+    let factGraphEdgeFrom = null;
+    let factGraphEdgeTo = null;
+    let factGraphEdgeRelationship = null;
+    let factGraphEdgeSource = null;
+    let factGraphEdgeState = null;
+    let factGraphNodeButton = null;
+    let factGraphEdgeButton = null;
+    let factGraphRefreshButton = null;
+    let factGraphResult = null;
+    let issueProofItemId = null;
+    let issueProofIssueId = null;
+    let issueProofIssueLabel = null;
+    let issueProofProofId = null;
+    let issueProofProofLabel = null;
+    let issueProofRole = null;
+    let issueProofSource = null;
+    let issueProofAuthority = null;
+    let issueProofReviewState = null;
+    let issueProofNotes = null;
+    let issueProofCreateButton = null;
+    let issueProofRefreshButton = null;
+    let issueProofReviewButton = null;
+    let issueProofResult = null;
+    let changeDigestCheckpointId = null;
+    let changeDigestCheckpointLabel = null;
+    let changeDigestCreateButton = null;
+    let changeDigestGenerateButton = null;
+    let changeDigestResult = null;
+    let recordLineageLinkId = null;
+    let recordLineageRelationship = null;
+    let recordLineageOriginal = null;
+    let recordLineageDerivative = null;
+    let recordLineageNotes = null;
+    let recordLineageCreateButton = null;
+    let recordLineageRefreshButton = null;
+    let recordLineageResult = null;
 
     function installAuthorityPinpointControl() {
       const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
@@ -53,7 +160,798 @@
       authorityPinpointButton = section.querySelector('#authority-pinpoint-button');
       authorityPinpointResult = section.querySelector('#authority-pinpoint-result');
     }
+
+    function installAuthorityGapControl() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-gap-review')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-gap-control';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Authority coverage review</div><label for="authority-gap-issue">Review label <span class="muted">(optional; does not filter sources)</span></label><input id="authority-gap-issue" maxlength="500" placeholder="Optional label only; avoid private facts"><div class="row"><button class="secondary" id="authority-gap-review" type="button">Review active corpus</button><button class="secondary" id="authority-gap-browse" type="button">Browse admitted sources</button></div><div aria-live="polite" class="status-strip" id="authority-gap-result">Reviews active source metadata only. It does not determine legal completeness or current law. Review remains required.</div>';
+      const anchor = document.getElementById('authority-pinpoint')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityGapIssue = section.querySelector('#authority-gap-issue');
+      authorityGapButton = section.querySelector('#authority-gap-review');
+      authorityGapBrowseButton = section.querySelector('#authority-gap-browse');
+      authorityGapResult = section.querySelector('#authority-gap-result');
+    }
+
+    function installAuthorityUpdateCenter() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-build-select')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-update-center';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Authority update center</div><p class="field-hint">An update stages a verified local build. It never changes the active build until you explicitly review and activate it.</p><label for="authority-build-select">Verified authority build</label><select id="authority-build-select"><option value="">Refresh to load local builds</option></select><label class="document-intelligence-option"><input id="authority-build-acknowledgement" type="checkbox"> I reviewed the source-hash diff and want to change the active build.</label><div class="row"><button class="secondary" id="authority-build-refresh" type="button">Refresh builds</button><button class="secondary" id="authority-build-activate" type="button">Activate selected build</button><button class="secondary" id="authority-build-rollback" type="button">Restore selected build</button></div><div aria-live="polite" class="status-strip" id="authority-build-result">Activation and restoration require a selected verified build and explicit review. Legal review remains required.</div>';
+      const anchor = document.getElementById('authority-gap-review')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityBuildSelect = section.querySelector('#authority-build-select');
+      authorityBuildRefreshButton = section.querySelector('#authority-build-refresh');
+      authorityBuildActivateButton = section.querySelector('#authority-build-activate');
+      authorityBuildRollbackButton = section.querySelector('#authority-build-rollback');
+      authorityBuildAcknowledgement = section.querySelector('#authority-build-acknowledgement');
+      authorityBuildResult = section.querySelector('#authority-build-result');
+      if (authorityUpdateButton) authorityUpdateButton.textContent = 'Stage official-source update';
+    }
+
+    function installAuthorityFreshnessDashboard() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-freshness-review')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-freshness-dashboard';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Authority freshness review</div><p class="field-hint">Review operational source ages, missing retrieval dates, and parser failures. A check interval does not determine current law or legal effect.</p><div class="row"><button class="secondary" id="authority-freshness-review" type="button">Review freshness metadata</button></div><div aria-live="polite" class="status-strip" id="authority-freshness-result">No freshness review loaded. No source will be downloaded, changed, or activated.</div>';
+      const anchor = document.getElementById('authority-build-select')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityFreshnessButton = section.querySelector('#authority-freshness-review');
+      authorityFreshnessResult = section.querySelector('#authority-freshness-result');
+    }
+
+    function installAuthorityAvailabilityMonitor() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-availability-review')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-availability-monitor';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Official-source availability</div><p class="field-hint">Review the admitted update metadata for moved URLs, changed hashes, TLS failures, and access restrictions. This never contacts a source or substitutes a mirror.</p><div class="row"><button class="secondary" id="authority-availability-review" type="button">Review availability evidence</button></div><div aria-live="polite" class="status-strip" id="authority-availability-result">No availability review loaded. Network access, redirects, and mirror substitution remain disabled.</div>';
+      const anchor = document.getElementById('authority-freshness-review')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityAvailabilityButton = section.querySelector('#authority-availability-review');
+      authorityAvailabilityResult = section.querySelector('#authority-availability-result');
+    }
+
+    function installAuthorityParserRegressionControl() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-parser-regression-run')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-parser-regression';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Parser regression corpus</div><p class="field-hint">Run bundled synthetic page-shape fixtures for layout changes, tables, footnotes, and malformed downloads. These fixtures are never legal authority.</p><div class="row"><button class="secondary" id="authority-parser-regression-run" type="button">Run parser regression checks</button></div><div aria-live="polite" class="status-strip" id="authority-parser-regression-result">No regression receipt loaded. This runs local synthetic fixtures only; no official source is contacted or changed.</div>';
+      const anchor = document.getElementById('authority-availability-review')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityParserRegressionButton = section.querySelector('#authority-parser-regression-run');
+      authorityParserRegressionResult = section.querySelector('#authority-parser-regression-result');
+    }
+
+    function installAuthorityLineageInspector() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-lineage-inspect')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-lineage-inspector';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Authority lineage inspector</div><p class="field-hint">Enter an admitted source ID from the Authority library to trace its parsed node, immutable snapshot, recorded retrieval metadata, official URL, and build fingerprint.</p><label for="authority-lineage-source-id">Admitted source ID</label><div class="row"><input id="authority-lineage-source-id" maxlength="256" placeholder="statute-19a-1653"><button class="secondary" id="authority-lineage-inspect" type="button">Inspect lineage</button></div><div aria-live="polite" class="status-strip" id="authority-lineage-result">No lineage loaded. This inspects the active local build only; it does not contact or update any official source.</div>';
+      const anchor = document.getElementById('authority-parser-regression-run')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityLineageInput = section.querySelector('#authority-lineage-source-id');
+      authorityLineageButton = section.querySelector('#authority-lineage-inspect');
+      authorityLineageResult = section.querySelector('#authority-lineage-result');
+    }
+
+    function installAuthorityFormSynchronizer() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-form-sync-run')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-form-synchronizer';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Installed-form catalog check</div><p class="field-hint">Compare an installed form ID and its version date or SHA-256 against the admitted active official catalog. Form contents are never read or sent.</p><label for="authority-form-sync-id">Installed form ID</label><input id="authority-form-sync-id" maxlength="135" placeholder="FM-001"><label for="authority-form-sync-version">Installed version date (optional if SHA-256 supplied)</label><input id="authority-form-sync-version" maxlength="10" placeholder="YYYY-MM-DD"><label for="authority-form-sync-hash">Installed form SHA-256 (optional if version date supplied)</label><input id="authority-form-sync-hash" maxlength="64" placeholder="64-character SHA-256"><div class="row"><button class="secondary" id="authority-form-sync-run" type="button">Compare installed metadata</button></div><div aria-live="polite" class="status-strip" id="authority-form-sync-result">No form comparison loaded. A catalog match still requires human review and does not make a filing ready.</div>';
+      const anchor = document.getElementById('authority-lineage-inspect')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityFormSyncIdInput = section.querySelector('#authority-form-sync-id');
+      authorityFormSyncVersionInput = section.querySelector('#authority-form-sync-version');
+      authorityFormSyncHashInput = section.querySelector('#authority-form-sync-hash');
+      authorityFormSyncButton = section.querySelector('#authority-form-sync-run');
+      authorityFormSyncResult = section.querySelector('#authority-form-sync-result');
+    }
+
+    function installAuthorityOpinionEnrichment() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-opinion-enrichment-run')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-opinion-enrichment';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Law Court opinion inspection</div><p class="field-hint">Inspect admitted Law Court opinion metadata, numbered paragraphs, cited-authority locations, and an exact source excerpt. Signals are review aids, not treatment or outcome conclusions.</p><label for="authority-opinion-source-id">Admitted opinion source ID</label><div class="row"><input id="authority-opinion-source-id" maxlength="256" placeholder="law-court-opinion-source-id"><button class="secondary" id="authority-opinion-enrichment-run" type="button">Inspect opinion metadata</button></div><div aria-live="polite" class="status-strip" id="authority-opinion-enrichment-result">No opinion inspection loaded. This reads the admitted local build only; it does not contact a court source.</div>';
+      const anchor = document.getElementById('authority-form-sync-run')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityOpinionInput = section.querySelector('#authority-opinion-source-id');
+      authorityOpinionButton = section.querySelector('#authority-opinion-enrichment-run');
+      authorityOpinionResult = section.querySelector('#authority-opinion-enrichment-result');
+    }
+
+    function installAuthorityRuleHistoryTimeline() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-rule-history-run')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-rule-history';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Rule history timeline</div><p class="field-hint">Find admitted effective-date and amendment metadata for a Maine procedural or evidentiary rule. The result does not determine which version applies to a situation.</p><label for="authority-rule-history-query">Rule citation or admitted rule ID</label><div class="row"><input id="authority-rule-history-query" maxlength="256" placeholder="M.R. Civ. P. 52"><button class="secondary" id="authority-rule-history-run" type="button">Inspect rule timeline</button></div><div aria-live="polite" class="status-strip" id="authority-rule-history-result">No rule timeline loaded. This reads the admitted local build only; it does not contact or update any source.</div>';
+      const anchor = document.getElementById('authority-opinion-enrichment-run')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityRuleHistoryInput = section.querySelector('#authority-rule-history-query');
+      authorityRuleHistoryButton = section.querySelector('#authority-rule-history-run');
+      authorityRuleHistoryResult = section.querySelector('#authority-rule-history-result');
+    }
+
+    function installAuthorityBundlePortability() {
+      const host = document.querySelector('.v5-authority-card[data-drawer-panel="setup"]');
+      if (!host || document.getElementById('authority-bundle-status')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel authority-bundle-portability';
+      section.dataset.drawerPanel = 'setup';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Offline authority portability</div><p class="field-hint">Export or import an already signed, hash-verified authority bundle. The app never creates a signing key, changes the MSIX, or downloads authority data.</p><label class="document-intelligence-option"><input id="authority-bundle-admin-ack" type="checkbox"> I am authorized to manage signed authority bundles on this device</label><label for="authority-bundle-id">Bundle ID for export (leave blank for the active bundle)</label><input id="authority-bundle-id" maxlength="100" placeholder="active signed bundle"><div class="row"><button class="secondary" id="authority-bundle-status" type="button">Check bundle status</button><button class="secondary" id="authority-bundle-export" type="button">Export signed bundle</button></div><label for="authority-bundle-file">Signed portable archive to import</label><input accept=".authority-bundle.zip,application/zip" id="authority-bundle-file" type="file"><div class="row"><button class="secondary" id="authority-bundle-import" type="button">Verify and import selected archive</button></div><div aria-live="polite" class="status-strip" id="authority-bundle-result">No bundle operation loaded. Import and export stay local, require an explicit authorization acknowledgement, and remain review-required.</div>';
+      const anchor = document.getElementById('authority-rule-history-run')?.closest('section') || host;
+      anchor.insertAdjacentElement('afterend', section);
+      authorityBundleAdminAck = section.querySelector('#authority-bundle-admin-ack');
+      authorityBundleIdInput = section.querySelector('#authority-bundle-id');
+      authorityBundleFileInput = section.querySelector('#authority-bundle-file');
+      authorityBundleStatusButton = section.querySelector('#authority-bundle-status');
+      authorityBundleExportButton = section.querySelector('#authority-bundle-export');
+      authorityBundleImportButton = section.querySelector('#authority-bundle-import');
+      authorityBundleResult = section.querySelector('#authority-bundle-result');
+    }
+
+    function installTimelineCorrectionControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('timeline-correction-load')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel timeline-correction-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Timeline correction review</div><p class="field-hint">Correct an existing event or bind it to a different record in the active matter. Every change stays append-only and review-required; the original record is never changed.</p><label for="timeline-correction-event-id">Timeline event ID</label><input id="timeline-correction-event-id" maxlength="160" placeholder="event_…"><label for="timeline-correction-date">Corrected date <span class="muted">(optional)</span></label><input id="timeline-correction-date" maxlength="40" placeholder="YYYY-MM-DD"><label for="timeline-correction-source-id">Rebind to active-matter record ID <span class="muted">(optional)</span></label><input id="timeline-correction-source-id" maxlength="120" placeholder="Record ID from evidence inventory"><label for="timeline-correction-reason">Reason for correction</label><input id="timeline-correction-reason" maxlength="500" placeholder="Why this date or source was corrected"><div class="row"><button class="secondary" id="timeline-correction-load" type="button">Load history</button><button class="secondary" id="timeline-correction-save" type="button">Save review-required correction</button><button class="secondary" id="timeline-correction-source" type="button">Inspect bound source</button></div><div aria-live="polite" class="status-strip" id="timeline-correction-result">Load an event to inspect its append-only correction history. Source drill-down is available only for a hash-bound record in this matter.</div>';
+      host.insertAdjacentElement('afterend', section);
+      timelineCorrectionEventId = section.querySelector('#timeline-correction-event-id');
+      timelineCorrectionDate = section.querySelector('#timeline-correction-date');
+      timelineCorrectionSourceId = section.querySelector('#timeline-correction-source-id');
+      timelineCorrectionReason = section.querySelector('#timeline-correction-reason');
+      timelineCorrectionLoadButton = section.querySelector('#timeline-correction-load');
+      timelineCorrectionSaveButton = section.querySelector('#timeline-correction-save');
+      timelineCorrectionSourceButton = section.querySelector('#timeline-correction-source');
+      timelineCorrectionResult = section.querySelector('#timeline-correction-result');
+      if (timelineCorrectionSourceButton) timelineCorrectionSourceButton.disabled = true;
+    }
+
+    function installClaimDispositionControl() {
+      const host = document.querySelector('.timeline-correction-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('claim-disposition-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel claim-disposition-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Claim disposition review</div><p class="field-hint">Compare one factual claim with selected active-matter records. Candidate support, contradictions, qualifications, and missing context remain review aids—not findings or filing approval.</p><label for="claim-disposition-statement">Claim to review</label><textarea id="claim-disposition-statement" maxlength="2000" placeholder="Enter one factual claim for source-bound review"></textarea><label for="claim-disposition-record-ids">Active-matter record IDs</label><input id="claim-disposition-record-ids" maxlength="2000" placeholder="Comma-separated IDs from evidence inventory"><div class="row"><button class="secondary" id="claim-disposition-create" type="button">Create source-bound review</button></div><label for="claim-disposition-id">Claim review ID</label><input id="claim-disposition-id" maxlength="160" placeholder="Created claim ID"><div class="row"><button class="secondary" id="claim-disposition-load" type="button">Load review</button></div><label for="claim-disposition-status">Reviewer decision</label><select id="claim-disposition-status"><option value="review_required">Keep review required</option><option value="accepted_with_qualification">Accept with qualification</option><option value="needs_more_context">Needs more context</option><option value="needs_revision">Needs revision</option><option value="unsupported">Unsupported</option><option value="contradicted">Contradicted</option><option value="not_material">Not material</option></select><label for="claim-disposition-notes">Reviewer note</label><input id="claim-disposition-notes" maxlength="2000" placeholder="What the reviewer decided and why"><div class="row"><button class="secondary" id="claim-disposition-review" type="button">Record reviewer decision</button></div><div aria-live="polite" class="status-strip" id="claim-disposition-result">Select active-matter records to create a source-bound claim review. Every outcome remains review-required.</div>';
+      host.insertAdjacentElement('afterend', section);
+      claimDispositionStatement = section.querySelector('#claim-disposition-statement');
+      claimDispositionRecordIds = section.querySelector('#claim-disposition-record-ids');
+      claimDispositionId = section.querySelector('#claim-disposition-id');
+      claimDispositionStatus = section.querySelector('#claim-disposition-status');
+      claimDispositionNotes = section.querySelector('#claim-disposition-notes');
+      claimDispositionCreateButton = section.querySelector('#claim-disposition-create');
+      claimDispositionLoadButton = section.querySelector('#claim-disposition-load');
+      claimDispositionReviewButton = section.querySelector('#claim-disposition-review');
+      claimDispositionResult = section.querySelector('#claim-disposition-result');
+    }
+
+    function installAttachmentCoverageControl() {
+      const host = document.querySelector('.claim-disposition-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('attachment-coverage-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel attachment-coverage-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Attachment coverage review</div><p class="field-hint">Record an alleged, referenced, expected, not-yet-reviewed, or absent-in-selected-scope attachment. “Absent” never means the attachment does not exist elsewhere.</p><label for="attachment-coverage-id">Coverage item ID</label><input id="attachment-coverage-id" maxlength="120" placeholder="attachment_001"><label for="attachment-coverage-label">Attachment label</label><input id="attachment-coverage-label" maxlength="300" placeholder="Fictional bank receipt attachment"><label for="attachment-coverage-source-id">Source record ID</label><input id="attachment-coverage-source-id" maxlength="120" placeholder="Record that mentions or expects the attachment"><label for="attachment-coverage-state">Coverage state</label><select id="attachment-coverage-state"><option value="referenced">Referenced in a record</option><option value="alleged">Alleged</option><option value="expected">Expected</option><option value="not_yet_reviewed">Not yet reviewed</option><option value="absent_in_selected_scope">Absent in selected scope</option><option value="located">Located in active matter</option></select><label for="attachment-coverage-linked-id">Located record ID <span class="muted">(required only when located)</span></label><input id="attachment-coverage-linked-id" maxlength="120" placeholder="Existing record ID"><div class="row"><button class="secondary" id="attachment-coverage-create" type="button">Record source-bound coverage item</button><button class="secondary" id="attachment-coverage-refresh" type="button">Refresh coverage</button></div><label for="attachment-coverage-notes">Reviewer note for state update</label><input id="attachment-coverage-notes" maxlength="2000" placeholder="Why this coverage state was reviewed"><div class="row"><button class="secondary" id="attachment-coverage-review" type="button">Record review-required update</button><button class="secondary" id="attachment-coverage-source" type="button">Inspect source record</button></div><div aria-live="polite" class="status-strip" id="attachment-coverage-result">Record source-bound attachment coverage so an attachment gap remains visible and scoped to the records reviewed.</div>';
+      host.insertAdjacentElement('afterend', section);
+      attachmentCoverageId = section.querySelector('#attachment-coverage-id');
+      attachmentCoverageLabel = section.querySelector('#attachment-coverage-label');
+      attachmentCoverageState = section.querySelector('#attachment-coverage-state');
+      attachmentCoverageSourceId = section.querySelector('#attachment-coverage-source-id');
+      attachmentCoverageLinkedId = section.querySelector('#attachment-coverage-linked-id');
+      attachmentCoverageNotes = section.querySelector('#attachment-coverage-notes');
+      attachmentCoverageCreateButton = section.querySelector('#attachment-coverage-create');
+      attachmentCoverageRefreshButton = section.querySelector('#attachment-coverage-refresh');
+      attachmentCoverageReviewButton = section.querySelector('#attachment-coverage-review');
+      attachmentCoverageSourceButton = section.querySelector('#attachment-coverage-source');
+      attachmentCoverageResult = section.querySelector('#attachment-coverage-result');
+      if (attachmentCoverageSourceButton) attachmentCoverageSourceButton.disabled = true;
+    }
+
+    function installFactGraphControl() {
+      const host = document.querySelector('.attachment-coverage-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('fact-graph-node-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel fact-graph-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Matter fact graph</div><p class="field-hint">Create source-bound people, events, orders, assertions, records, and source nodes. Disputed and unknown states remain visible; graph links are not findings.</p><label for="fact-graph-node-id">Node ID</label><input id="fact-graph-node-id" maxlength="120" placeholder="event_001"><label for="fact-graph-node-kind">Node kind</label><select id="fact-graph-node-kind"><option value="event">Event</option><option value="person">Person</option><option value="order">Order</option><option value="assertion">Assertion</option><option value="record">Record</option><option value="source">Source</option></select><label for="fact-graph-node-label">Node label</label><input id="fact-graph-node-label" maxlength="300" placeholder="Fictional exchange event"><label for="fact-graph-node-source">Source record ID</label><input id="fact-graph-node-source" maxlength="120" placeholder="Active-matter record ID"><label for="fact-graph-node-state">Fact state</label><select id="fact-graph-node-state"><option value="not_yet_reviewed">Not yet reviewed</option><option value="unknown">Unknown</option><option value="disputed">Disputed</option><option value="observed">Observed</option><option value="alleged">Alleged</option></select><div class="row"><button class="secondary" id="fact-graph-node-create" type="button">Create source-bound node</button></div><label for="fact-graph-edge-id">Edge ID</label><input id="fact-graph-edge-id" maxlength="120" placeholder="edge_001"><label for="fact-graph-edge-from">From node ID</label><input id="fact-graph-edge-from" maxlength="120" placeholder="record_001"><label for="fact-graph-edge-to">To node ID</label><input id="fact-graph-edge-to" maxlength="120" placeholder="event_001"><label for="fact-graph-edge-relationship">Relationship</label><select id="fact-graph-edge-relationship"><option value="supports">Supports</option><option value="contradicts">Contradicts</option><option value="qualifies">Qualifies</option><option value="mentions">Mentions</option><option value="relates_to">Relates to</option><option value="describes">Describes</option><option value="supersedes">Supersedes</option></select><label for="fact-graph-edge-source">Source record ID</label><input id="fact-graph-edge-source" maxlength="120" placeholder="Active-matter record ID"><label for="fact-graph-edge-state">Fact state</label><select id="fact-graph-edge-state"><option value="not_yet_reviewed">Not yet reviewed</option><option value="unknown">Unknown</option><option value="disputed">Disputed</option><option value="observed">Observed</option><option value="alleged">Alleged</option></select><div class="row"><button class="secondary" id="fact-graph-edge-create" type="button">Create source-bound relationship</button><button class="secondary" id="fact-graph-refresh" type="button">Refresh graph</button></div><div aria-live="polite" class="status-strip" id="fact-graph-result">No graph entries loaded. Graph relationships are review records, never factual or legal findings.</div>';
+      host.insertAdjacentElement('afterend', section);
+      factGraphNodeId = section.querySelector('#fact-graph-node-id'); factGraphNodeKind = section.querySelector('#fact-graph-node-kind'); factGraphNodeLabel = section.querySelector('#fact-graph-node-label'); factGraphNodeSource = section.querySelector('#fact-graph-node-source'); factGraphNodeState = section.querySelector('#fact-graph-node-state'); factGraphEdgeId = section.querySelector('#fact-graph-edge-id'); factGraphEdgeFrom = section.querySelector('#fact-graph-edge-from'); factGraphEdgeTo = section.querySelector('#fact-graph-edge-to'); factGraphEdgeRelationship = section.querySelector('#fact-graph-edge-relationship'); factGraphEdgeSource = section.querySelector('#fact-graph-edge-source'); factGraphEdgeState = section.querySelector('#fact-graph-edge-state'); factGraphNodeButton = section.querySelector('#fact-graph-node-create'); factGraphEdgeButton = section.querySelector('#fact-graph-edge-create'); factGraphRefreshButton = section.querySelector('#fact-graph-refresh'); factGraphResult = section.querySelector('#fact-graph-result');
+    }
+
+    function installIssueProofMatrixControl() {
+      const host = document.querySelector('.fact-graph-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('issue-proof-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel issue-proof-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Issue-to-proof matrix</div><p class="field-hint">Map a stated issue to source-bound proof, a contradiction, qualification, or missing proof. Authority entries are unverified candidates, never a legal-element decision.</p><label for="issue-proof-id">Matrix item ID</label><input id="issue-proof-id" maxlength="120" placeholder="proof_001"><label for="issue-proof-issue-id">Issue ID</label><input id="issue-proof-issue-id" maxlength="120" placeholder="issue_parenting_time"><label for="issue-proof-issue-label">Issue label</label><input id="issue-proof-issue-label" maxlength="300" placeholder="Fictional parenting-time issue"><label for="issue-proof-proof-id">Proof item ID</label><input id="issue-proof-proof-id" maxlength="120" placeholder="exchange_log"><label for="issue-proof-proof-label">Proof item label</label><input id="issue-proof-proof-label" maxlength="500" placeholder="Exchange-log record noted for review"><label for="issue-proof-role">Record role</label><select id="issue-proof-role"><option value="supports">Candidate support</option><option value="contradicts">Candidate contradiction</option><option value="qualifies">Qualification or context</option><option value="missing_proof">Missing proof identified from source</option></select><label for="issue-proof-source">Source record ID</label><input id="issue-proof-source" maxlength="120" placeholder="Active-matter record ID"><label for="issue-proof-authority">Authority candidate <span class="muted">(optional; remains unverified)</span></label><input id="issue-proof-authority" maxlength="300" placeholder="Candidate citation or admitted source ID"><div class="row"><button class="secondary" id="issue-proof-create" type="button">Record source-bound matrix item</button><button class="secondary" id="issue-proof-refresh" type="button">Refresh matrix</button></div><label for="issue-proof-review-state">Review state</label><select id="issue-proof-review-state"><option value="review_required">Review required</option><option value="not_yet_reviewed">Not yet reviewed</option><option value="reviewed_with_qualification">Reviewed with qualification</option></select><label for="issue-proof-notes">Reviewer note</label><input id="issue-proof-notes" maxlength="2000" placeholder="What still needs human review"><div class="row"><button class="secondary" id="issue-proof-review" type="button">Record review state</button></div><div aria-live="polite" class="status-strip" id="issue-proof-result">No matrix items loaded. This is a source-bound review aid, not a legal or factual determination.</div>';
+      host.insertAdjacentElement('afterend', section);
+      issueProofItemId = section.querySelector('#issue-proof-id');
+      issueProofIssueId = section.querySelector('#issue-proof-issue-id');
+      issueProofIssueLabel = section.querySelector('#issue-proof-issue-label');
+      issueProofProofId = section.querySelector('#issue-proof-proof-id');
+      issueProofProofLabel = section.querySelector('#issue-proof-proof-label');
+      issueProofRole = section.querySelector('#issue-proof-role');
+      issueProofSource = section.querySelector('#issue-proof-source');
+      issueProofAuthority = section.querySelector('#issue-proof-authority');
+      issueProofReviewState = section.querySelector('#issue-proof-review-state');
+      issueProofNotes = section.querySelector('#issue-proof-notes');
+      issueProofCreateButton = section.querySelector('#issue-proof-create');
+      issueProofRefreshButton = section.querySelector('#issue-proof-refresh');
+      issueProofReviewButton = section.querySelector('#issue-proof-review');
+      issueProofResult = section.querySelector('#issue-proof-result');
+    }
+
+    function installMatterChangeDigestControl() {
+      const host = document.querySelector('.issue-proof-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('matter-change-digest-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel matter-change-digest-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Matter change digest</div><p class="field-hint">Create a source-bound checkpoint, then compare current records and review work. The digest flags items to revisit; it does not resolve contradictions, calculate deadlines, or approve work.</p><label for="matter-change-digest-id">Checkpoint ID</label><input id="matter-change-digest-id" maxlength="120" placeholder="review_001"><label for="matter-change-digest-label">Checkpoint label</label><input id="matter-change-digest-label" maxlength="300" placeholder="Fictional pre-hearing review"><div class="row"><button class="secondary" id="matter-change-digest-create" type="button">Create review checkpoint</button><button class="secondary" id="matter-change-digest-generate" type="button">Generate change digest</button></div><div aria-live="polite" class="status-strip" id="matter-change-digest-result">Create a checkpoint before comparing later active-matter records and review work.</div>';
+      host.insertAdjacentElement('afterend', section);
+      changeDigestCheckpointId = section.querySelector('#matter-change-digest-id');
+      changeDigestCheckpointLabel = section.querySelector('#matter-change-digest-label');
+      changeDigestCreateButton = section.querySelector('#matter-change-digest-create');
+      changeDigestGenerateButton = section.querySelector('#matter-change-digest-generate');
+      changeDigestResult = section.querySelector('#matter-change-digest-result');
+    }
+
+    function installRecordLineageControl() {
+      const host = document.querySelector('.matter-change-digest-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('record-lineage-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel record-lineage-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Record lineage review</div><p class="field-hint">Link two active-matter records as a proposed duplicate, changed copy, OCR correction, translation, redaction, or export derivative. The link remains review-required and does not decide which text controls.</p><label for="record-lineage-id">Link ID</label><input id="record-lineage-id" maxlength="120" placeholder="lineage_001"><label for="record-lineage-relationship">Proposed relationship</label><select id="record-lineage-relationship"><option value="exact_duplicate">Exact duplicate</option><option value="changed_copy">Changed copy</option><option value="ocr_correction">OCR correction</option><option value="translation">Translation</option><option value="redaction">Redaction</option><option value="export_derivative">Export derivative</option><option value="derived_copy">Derived copy</option></select><label for="record-lineage-original">Original record ID</label><input id="record-lineage-original" maxlength="120" placeholder="Active-matter record ID"><label for="record-lineage-derivative">Related record ID</label><input id="record-lineage-derivative" maxlength="120" placeholder="Different active-matter record ID"><label for="record-lineage-notes">Reviewer note</label><input id="record-lineage-notes" maxlength="2000" placeholder="Why this provenance relationship needs review"><div class="row"><button class="secondary" id="record-lineage-create" type="button">Record proposed lineage link</button><button class="secondary" id="record-lineage-refresh" type="button">Refresh lineage</button></div><div aria-live="polite" class="status-strip" id="record-lineage-result">No lineage links loaded. Original records remain preserved; this is not an authenticity or legal-effect decision.</div>';
+      host.insertAdjacentElement('afterend', section);
+      recordLineageLinkId = section.querySelector('#record-lineage-id'); recordLineageRelationship = section.querySelector('#record-lineage-relationship'); recordLineageOriginal = section.querySelector('#record-lineage-original'); recordLineageDerivative = section.querySelector('#record-lineage-derivative'); recordLineageNotes = section.querySelector('#record-lineage-notes'); recordLineageCreateButton = section.querySelector('#record-lineage-create'); recordLineageRefreshButton = section.querySelector('#record-lineage-refresh'); recordLineageResult = section.querySelector('#record-lineage-result');
+    }
     installAuthorityPinpointControl();
+    installAuthorityGapControl();
+    installAuthorityUpdateCenter();
+    installAuthorityFreshnessDashboard();
+    installAuthorityAvailabilityMonitor();
+    installAuthorityParserRegressionControl();
+    installAuthorityLineageInspector();
+    installAuthorityFormSynchronizer();
+    installAuthorityOpinionEnrichment();
+    installAuthorityRuleHistoryTimeline();
+    installAuthorityBundlePortability();
+    installTimelineCorrectionControl();
+    installClaimDispositionControl();
+    installAttachmentCoverageControl();
+    installFactGraphControl();
+    (function installExhibitAdmissionChecklistControl() {
+      const host = document.getElementById('exhibits-workspace-results');
+      if (!host || document.getElementById('exhibit-admission-checklist-create')) return;
+      const section = document.createElement('section');
+      section.className = 'matter-intake-results exhibit-admission-checklist-control';
+      section.innerHTML = '<strong>Exhibit admission-preparation checklist</strong><p class="field-hint">Create neutral, source-bound reviewer prompts for foundation, authenticity materials, objections, and missing proof. This never decides admissibility, authenticity, relevance, or weight.</p><div class="matter-intake-grid"><label>Checklist safe ID<input id="exhibit-admission-checklist-id" maxlength="120" placeholder="admission_review_001"></label><label>Reviewer safe ID<input id="exhibit-admission-reviewer-id" maxlength="120" placeholder="reviewer_001"></label></div><label>Reviewer note (optional)<textarea id="exhibit-admission-reviewer-note" rows="3" maxlength="2000" placeholder="Local review context; no legal conclusion."></textarea></label><div class="row"><button class="secondary" id="exhibit-admission-checklist-create" type="button">Create review checklist for this exhibit</button><button class="secondary" id="exhibit-admission-checklist-source" type="button">Inspect selected checklist source</button></div><div aria-live="polite" class="status-strip" id="exhibit-admission-checklist-result">Select an exhibit candidate, then create a review-required checklist.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#exhibit-admission-checklist-result');
+      const sourceButton = section.querySelector('#exhibit-admission-checklist-source');
+      const showSource = async () => {
+        const checklistId = value('#exhibit-admission-checklist-id');
+        if (!checklistId) { result.textContent = 'Enter the checklist safe ID to inspect its exact exhibit-source reference.'; return; }
+        try {
+          const payload = await fetchJson(`/api/exhibits/admission-checklists/${encodeURIComponent(checklistId)}/source`);
+          const source = payload?.source || {};
+          result.innerHTML = `<strong>Review required.</strong> Exact source reference for ${escapeHtml(payload?.exhibit_id || 'selected exhibit')}: <code>${escapeHtml(source.record_id || 'unavailable')}</code><p>SHA-256: <code>${escapeHtml(source.source_hash || 'unavailable')}</code></p><p>${escapeHtml(source.description || 'No candidate description was supplied.')}</p><p>This source reference does not determine foundation, authenticity, admissibility, relevance, or weight.</p>`;
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Checklist source could not be opened'}); }
+      };
+      section.querySelector('#exhibit-admission-checklist-create').addEventListener('click', async () => {
+        const checklistId = value('#exhibit-admission-checklist-id');
+        const reviewerSafeId = value('#exhibit-admission-reviewer-id');
+        const exhibitId = String(document.getElementById('exhibits-id')?.value || '').trim().toLowerCase();
+        if (!checklistId || !reviewerSafeId || !exhibitId) { result.textContent = 'Enter a checklist ID, reviewer ID, and the existing exhibit candidate ID before creating a checklist.'; return; }
+        try {
+          const payload = await fetchJson('/api/exhibits/admission-checklists', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({checklist_id:checklistId, exhibit_id:exhibitId, reviewer_safe_id:reviewerSafeId, reviewer_note:value('#exhibit-admission-reviewer-note')})});
+          const checklist = payload?.checklist || payload || {}; const categories = checklist.categories || {};
+          result.innerHTML = `<strong>Review required.</strong> Checklist ${escapeHtml(checklist.checklist_id || checklistId)} records ${escapeHtml(Object.keys(categories).length)} review categories for exhibit ${escapeHtml(checklist.exhibit_id || exhibitId)}.<p>All prompts remain unresolved; source reference and reviewer follow-up are required. No legal conclusion was generated.</p>`;
+          await showSource();
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Admission-preparation checklist could not be created'}); }
+      });
+      sourceButton.addEventListener('click', showSource);
+    }());
+    (function installCustodyEventCaptureControl() {
+      const host = document.getElementById('exhibits-workspace-results');
+      if (!host || document.getElementById('custody-event-create')) return;
+      const section = document.createElement('section');
+      section.className = 'matter-intake-results custody-event-capture-control';
+      section.innerHTML = '<strong>Chain-of-custody event capture</strong><p class="field-hint">Record a user-confirmed collection, transfer, transformation, hashing, review, or export observation for the selected exhibit. The local integrity receipt is not a person, witness, notary, court, or authenticity signature.</p><div class="matter-intake-grid"><label>Event safe ID<input id="custody-event-id" maxlength="120" placeholder="custody_001"></label><label>Event type<select id="custody-event-type"><option value="collection">Collection</option><option value="transfer">Transfer</option><option value="transformation">Transformation</option><option value="hashing">Hashing</option><option value="review">Review</option><option value="export">Export</option></select></label><label>Actor safe ID<input id="custody-event-actor" maxlength="120" placeholder="reviewer_001"></label><label>Claimed time (optional)<input id="custody-event-time" maxlength="160" placeholder="Reviewer-supplied; not independently verified"></label><label>Related artifact safe ID (required for transformation)<input id="custody-event-artifact" maxlength="128" placeholder="derivative_001"></label><label>Related SHA-256 (optional)<input id="custody-event-hash" maxlength="64" placeholder="Derivative hash"></label></div><label>Source-grounded note (optional)<textarea id="custody-event-details" rows="3" maxlength="2000" placeholder="Record what the user is confirming without adding an authenticity or legal conclusion."></textarea></label><div class="row"><button class="secondary" id="custody-event-create" type="button">Record review-required event</button><button class="secondary" id="custody-event-verify" type="button">Verify local receipt chain</button></div><div aria-live="polite" class="status-strip" id="custody-event-result">Select an existing exhibit candidate, then record a user-confirmed custody observation.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#custody-event-result');
+      const inspectSource = async (eventId) => {
+        try {
+          const payload = await fetchJson('/api/exhibits/custody-events/' + encodeURIComponent(eventId) + '/source');
+          const source = payload?.source || {};
+          result.innerHTML = '<strong>Review required.</strong> Custody event source: <code>' + escapeHtml(source.record_id || 'unavailable') + '</code><p>Exhibit: ' + escapeHtml(source.exhibit_id || 'unavailable') + ' · SHA-256: <code>' + escapeHtml(source.source_hash || 'unavailable') + '</code></p><p>The receipt only verifies locally stored integrity. It does not verify collection, custody, authenticity, identity, completeness, or admissibility.</p>';
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Custody-event source could not be opened'}); }
+      };
+      section.querySelector('#custody-event-create').addEventListener('click', async () => {
+        const eventId = value('#custody-event-id');
+        const exhibitId = String(document.getElementById('exhibits-id')?.value || '').trim().toLowerCase();
+        const actorSafeId = value('#custody-event-actor');
+        if (!eventId || !exhibitId || !actorSafeId) { result.textContent = 'Enter an event ID, selected exhibit candidate ID, and actor safe ID before recording a custody event.'; return; }
+        try {
+          const payload = await fetchJson('/api/exhibits/custody-events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({event_id:eventId, exhibit_id:exhibitId, event_type:value('#custody-event-type'), actor_safe_id:actorSafeId, occurred_at_claimed:value('#custody-event-time'), related_artifact_id:value('#custody-event-artifact'), related_hash:value('#custody-event-hash').toLowerCase(), details:value('#custody-event-details'), user_confirmed:true})});
+          const event = payload?.event || payload || {}; const receipt = event.receipt || {};
+          result.innerHTML = '<strong>Review required.</strong> ' + escapeHtml(event.event_type || 'custody') + ' event recorded for ' + escapeHtml(event.exhibit_id || exhibitId) + '.<p>Source SHA-256: <code>' + escapeHtml(event.source_hash || 'unavailable') + '</code> · local integrity signature: <code>' + escapeHtml(String(receipt.signature || '').slice(0, 16) || 'unavailable') + '…</code></p><button class="secondary compact-action" data-custody-event-source="' + escapeHtml(event.event_id || eventId) + '" type="button">Inspect exact source</button>';
+          result.querySelector('[data-custody-event-source]')?.addEventListener('click', () => inspectSource(event.event_id || eventId));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Custody event could not be recorded'}); }
+      });
+      section.querySelector('#custody-event-verify').addEventListener('click', async () => {
+        try {
+          const payload = await fetchJson('/api/exhibits/custody-events/verify');
+          result.innerHTML = '<strong>Review required.</strong> ' + escapeHtml(payload?.event_count || 0) + ' custody event(s) checked. Local integrity: ' + escapeHtml(payload?.integrity_valid ? 'valid' : 'not valid') + '<p>' + escapeHtml(payload?.notice || 'No authenticity conclusion is available.') + '</p>';
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Custody receipt chain could not be verified'}); }
+      });
+    }());
+    (function installEvidenceRelationshipGraphV2Control() {
+      const host = document.querySelector('.fact-graph-control[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('relationship-v2-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel relationship-v2-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Evidence relationship graph v2</div><p class="field-hint">Record a source-bound temporal, attachment, reply, duplicate, contradiction, or derivative relationship between existing graph nodes. This is a review record, never a finding.</p><label>Relationship ID</label><input id="relationship-v2-id" maxlength="120" placeholder="relation_001"><label>From node ID</label><input id="relationship-v2-from" maxlength="120" placeholder="record_001"><label>To node ID</label><input id="relationship-v2-to" maxlength="120" placeholder="event_001"><label>Relationship</label><select id="relationship-v2-type"><option value="temporal_before">Temporal: before</option><option value="temporal_after">Temporal: after</option><option value="attachment_of">Attachment of</option><option value="reply_to">Reply to</option><option value="duplicate_of">Duplicate of</option><option value="contradicts">Contradiction</option><option value="derivative_of">Derivative of</option></select><label>Source record ID</label><input id="relationship-v2-source" maxlength="120" placeholder="Active-matter record ID"><label>Relationship basis</label><input id="relationship-v2-basis" maxlength="120" value="reviewer_supplied"><label>Reviewer note</label><textarea id="relationship-v2-note" rows="3" maxlength="2000" placeholder="Why this source-bound link needs review"></textarea><button class="secondary" id="relationship-v2-create" type="button">Record review relationship</button><div aria-live="polite" class="status-strip" id="relationship-v2-result">No v2 evidence relationship has been recorded.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim(); const result = section.querySelector('#relationship-v2-result');
+      section.querySelector('#relationship-v2-create').addEventListener('click', async () => {
+        const edge_id = value('#relationship-v2-id'), source_node_id = value('#relationship-v2-from'), target_node_id = value('#relationship-v2-to'), source_record_id = value('#relationship-v2-source');
+        if (!edge_id || !source_node_id || !target_node_id || !source_record_id) { result.textContent = 'Enter a relationship ID, both existing node IDs, and an active-matter source record ID.'; return; }
+        try {
+          const payload = await fetchJson('/api/evidence/fact-graph/edges', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({edge_id, source_node_id, target_node_id, source_record_id, relationship:value('#relationship-v2-type'), fact_state:'not_yet_reviewed', relationship_basis:value('#relationship-v2-basis') || 'reviewer_supplied', relationship_note:value('#relationship-v2-note')})});
+          const edge = payload?.edge || {};
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(edge.source_node_id || source_node_id)} ${escapeHtml(String(edge.relationship || '').replaceAll('_', ' '))} ${escapeHtml(edge.target_node_id || target_node_id)}.<p>Source hash: ${escapeHtml(edge.source_hash || 'unavailable')} · basis: ${escapeHtml(edge.relationship_basis || 'reviewer supplied')}.</p><button class="secondary compact-action" data-relationship-v2-source="${escapeHtml(edge.edge_id || edge_id)}" type="button">Inspect exact source</button>`;
+          result.querySelector('[data-relationship-v2-source]')?.addEventListener('click', async (event) => { try { const source = await fetchJson(`/api/evidence/fact-graph/edges/${encodeURIComponent(edge.edge_id || edge_id)}/source`); const token = String(source?.source?.source_token || ''); if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('relationship_v2_source_token_unavailable'); openRecordInspector({source_token:token}, 0, event.currentTarget); } catch (error) { result.innerHTML = renderRecoverableError(error,{title:'Relationship source could not be opened'}); } });
+        } catch (error) { result.innerHTML = renderRecoverableError(error,{title:'Evidence relationship could not be recorded'}); }
+      });
+    }());
+    installIssueProofMatrixControl();
+    installMatterChangeDigestControl();
+    installRecordLineageControl();
+    (function installImportPolicyControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('import-policy-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel import-policy-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Import policy profile</div><p class="field-hint">Set stricter local import limits for this matter. A profile cannot relax the global privacy, quarantine, symlink, or local-OCR-review safeguards.</p><label>Profile ID</label><input id="import-policy-id" maxlength="120" placeholder="strict_documents_001"><label>Maximum file size (bytes)</label><input id="import-policy-bytes" type="number" min="1" max="262144000" value="262144000"><label>Allowed extensions (comma separated)</label><input id="import-policy-extensions" maxlength="2000" placeholder=".pdf, .docx, .txt"><button class="secondary" id="import-policy-create" type="button">Activate stricter profile</button><div aria-live="polite" class="status-strip" id="import-policy-result">No matter-specific import profile is active through this control.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim(); const result = section.querySelector('#import-policy-result');
+      section.querySelector('#import-policy-create').addEventListener('click', async () => {
+        const profile_id = value('#import-policy-id');
+        if (!profile_id) { result.textContent = 'Enter a profile ID.'; return; }
+        try {
+          const profile = await fetchJson('/api/evidence/import-policy/profiles', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({profile_id, max_file_bytes: Number(value('#import-policy-bytes') || 0), allowed_extensions: value('#import-policy-extensions').split(',').map((item) => item.trim()).filter(Boolean), privacy_scan_required: true, quarantine_unknown_extensions: true, local_ocr_review_for_images: true})});
+          const policy = profile?.profile?.policy || {};
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(profile?.profile?.notice || '')}<p>${escapeHtml((policy.allowed_extensions || []).length)} allowed extension(s) · ${escapeHtml(policy.max_file_bytes || 0)} byte limit.</p>`;
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Import policy could not be activated'}); }
+      });
+    }());
+    (function installMediaMetadataInspectionControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('media-metadata-inspect')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel media-metadata-inspection-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Media metadata inspection</div><p class="field-hint">Inspect available local image EXIF, WAV, or video container metadata against the imported source hash. Metadata can be absent or conflict; it does not authenticate a file or establish an event.</p><label>Media safe ID</label><input id="media-metadata-media" maxlength="120" placeholder="image_001"><label>Local media file, relative to active matter</label><input id="media-metadata-file" maxlength="512" placeholder="evidence/image_001.jpg"><label>Claimed capture time (optional)</label><input id="media-metadata-captured-at" maxlength="240" placeholder="Reviewer-supplied value"><label>Claimed device label (optional)</label><input id="media-metadata-device" maxlength="240" placeholder="Reviewer-supplied value"><button class="secondary" id="media-metadata-inspect" type="button">Inspect local metadata</button><div aria-live="polite" class="status-strip" id="media-metadata-result">No local media metadata inspection has been recorded.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#media-metadata-result');
+      section.querySelector('#media-metadata-inspect').addEventListener('click', async () => {
+        const mediaId = value('#media-metadata-media'); const sourceFile = value('#media-metadata-file');
+        if (!mediaId || !sourceFile) { result.textContent = 'Enter an imported media ID and its local file relative to the active matter.'; return; }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/metadata-inspections`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({source_file: sourceFile, claimed_metadata: {captured_at: value('#media-metadata-captured-at'), device_label: value('#media-metadata-device')}})});
+          const inspection = payload?.inspection || {}; const technical = inspection.technical_metadata || {}; const exif = inspection.exif_metadata || {}; const inspectionId = String(inspection.inspection_id || '');
+          result.innerHTML = `<strong>Review required.</strong> Local ${escapeHtml(technical.media_kind || 'media')} metadata inspected. EXIF status: ${escapeHtml(exif.status || 'unknown')}.<p>Source hash: ${escapeHtml(inspection.media_hash || 'unavailable')} · ${escapeHtml(technical.width || 'unknown')}×${escapeHtml(technical.height || 'unknown')} · capture time: ${escapeHtml(exif.capture_time || 'not available')}.</p>${inspection.conflicts?.length ? `<p>${escapeHtml(inspection.conflicts.length)} metadata conflict or unverified claim(s) require review.</p>` : ''}<button class="secondary compact-action" data-media-metadata-source="${escapeHtml(inspectionId)}" type="button">Inspect metadata receipt</button>`;
+          result.querySelector('[data-media-metadata-source]')?.addEventListener('click', async () => {
+            try {
+              const source = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/metadata-inspections/${encodeURIComponent(inspectionId)}`);
+              const record = source?.inspection || {};
+              result.innerHTML = `<strong>Review required.</strong> Source binding: ${escapeHtml(record.media_id || mediaId)} · ${escapeHtml(record.media_hash || 'hash unavailable')}<p>Derivative effects: ${escapeHtml((record.derivative_effects?.keyframe_reviews || []).length)} keyframe review(s), ${escapeHtml((record.derivative_effects?.media_redaction_derivatives || []).length)} media redaction derivative(s).</p><p>Metadata does not authenticate this file or establish an event.</p>`;
+            } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata receipt could not be opened'}); }
+          });
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Local media metadata could not be inspected'}); }
+      });
+    }());
+    (function installCourtroomMediaPlayerControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('courtroom-media-session-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel courtroom-media-player-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Courtroom media player</div><p class="field-hint">Prepare an offline, source-hash-bound audio or video clip with transcript synchronization. Playback and transcript text remain review-required. Private notes are encrypted separately and excluded from the session record and export path.</p><label>Session safe ID</label><input id="courtroom-media-session-id" maxlength="120" placeholder="courtroom_001"><label>Imported media ID</label><input id="courtroom-media-id" maxlength="120" placeholder="hearing_audio"><label>Local media file relative to active matter</label><input id="courtroom-media-file" maxlength="512" placeholder="evidence/hearing_audio.wav"><div class="matter-intake-grid"><label>Clip start seconds<input id="courtroom-media-start" type="number" min="0" value="0"></label><label>Clip end seconds<input id="courtroom-media-end" type="number" min="0" value="30"></label></div><label><input id="courtroom-media-confirmed" type="checkbox"> I confirmed this local review session.</label><div class="row"><button class="secondary" id="courtroom-media-session-create" type="button">Create offline review session</button><button class="secondary" id="courtroom-media-source" type="button">Inspect exact source</button></div><div id="courtroom-media-player-host"></div><div aria-live="polite" class="status-strip" id="courtroom-media-result">Import media and create a transcript first. This player does not authenticate media, speaker identity, completeness, or legal effect.</div><label>Private reviewer safe ID</label><input id="courtroom-media-note-reviewer" maxlength="120" placeholder="reviewer_001"><label>Separate private note</label><textarea id="courtroom-media-note" rows="3" maxlength="8000" placeholder="Private review note; it is separately encrypted and not placed in the media session or export."></textarea><label><input id="courtroom-media-note-confirmed" type="checkbox"> I confirmed this private review note.</label><button class="secondary" id="courtroom-media-note-save" type="button">Save separate private note</button><div aria-live="polite" class="status-strip" id="courtroom-media-note-result">No private note saved through this control.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#courtroom-media-result');
+      const playerHost = section.querySelector('#courtroom-media-player-host');
+      const noteResult = section.querySelector('#courtroom-media-note-result');
+      let sessionId = '';
+      let lastSyncedAt = 0;
+      const showSync = async (position) => {
+        if (!sessionId) return;
+        try {
+          const payload = await fetchJson('/api/hearing-media/courtroom-sessions/' + encodeURIComponent(sessionId) + '/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({position_seconds:position})});
+          const segments = Array.isArray(payload?.segments) ? payload.segments : [];
+          const text = segments.map((segment) => '[' + String(segment.start_seconds ?? '?') + '–' + String(segment.end_seconds ?? '?') + 's] ' + String(segment.speaker_label || 'unknown') + ': ' + String(segment.text || '')).join('\n') || 'No transcript segment overlaps this playback position.';
+          const sync = section.querySelector('#courtroom-media-sync');
+          if (sync) sync.textContent = text;
+        } catch (error) { const sync = section.querySelector('#courtroom-media-sync'); if (sync) sync.textContent = 'Transcript synchronization could not be refreshed: ' + String(error.message || error); }
+      };
+      const loadPlayback = async () => {
+        const playback = await fetchJson('/api/hearing-media/courtroom-sessions/' + encodeURIComponent(sessionId) + '/playback');
+        const dataUrl = String(playback?.data_url || '');
+        if (!dataUrl.startsWith('data:audio/') && !dataUrl.startsWith('data:video/')) throw new Error('courtroom_playback_unavailable');
+        const isAudio = String(playback?.media_type || '').startsWith('audio/');
+        const player = document.createElement(isAudio ? 'audio' : 'video');
+        player.controls = true; player.preload = 'metadata'; player.src = dataUrl; player.tabIndex = 0;
+        player.setAttribute('aria-label', 'Offline courtroom media player. Space plays or pauses. Left and right arrows seek five seconds.');
+        player.setAttribute('aria-keyshortcuts', 'Space ArrowLeft ArrowRight');
+        player.className = 'courtroom-media-player';
+        const start = Number(playback?.session?.clip_start_seconds || 0);
+        player.addEventListener('loadedmetadata', () => { if (Number.isFinite(start) && start >= 0) player.currentTime = start; });
+        player.addEventListener('timeupdate', () => { const now = Date.now(); if (now - lastSyncedAt > 750) { lastSyncedAt = now; void showSync(player.currentTime); } });
+        player.addEventListener('keydown', (event) => { if (event.code === 'Space') { event.preventDefault(); if (player.paused) void player.play(); else player.pause(); } if (event.key === 'ArrowLeft') { event.preventDefault(); player.currentTime = Math.max(0, player.currentTime - 5); } if (event.key === 'ArrowRight') { event.preventDefault(); player.currentTime = Math.min(player.duration || Number.MAX_SAFE_INTEGER, player.currentTime + 5); } });
+        const sync = document.createElement('pre'); sync.id = 'courtroom-media-sync'; sync.className = 'status-strip'; sync.setAttribute('aria-live', 'polite'); sync.textContent = 'Move playback to synchronize a review-required transcript segment.';
+        playerHost.replaceChildren(player, sync);
+        await showSync(start);
+      };
+      section.querySelector('#courtroom-media-session-create').addEventListener('click', async () => {
+        sessionId = value('#courtroom-media-session-id');
+        const mediaId = value('#courtroom-media-id');
+        const sourceFile = value('#courtroom-media-file');
+        if (!sessionId || !mediaId || !sourceFile || !section.querySelector('#courtroom-media-confirmed')?.checked) { result.textContent = 'Enter a session ID, imported media ID, local matter-relative file, and confirm the local review session.'; return; }
+        try {
+          const payload = await fetchJson('/api/hearing-media/media/' + encodeURIComponent(mediaId) + '/courtroom-sessions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({session_id:sessionId, source_file:sourceFile, clip_start_seconds:Number(value('#courtroom-media-start') || 0), clip_end_seconds:Number(value('#courtroom-media-end') || 0), confirmed:true})});
+          result.innerHTML = '<strong>Review required.</strong> Offline review session created. Source hash: <code>' + escapeHtml(payload?.source?.media_hash || 'unavailable') + '</code>. Private notes are separate from the session and export path.';
+          await loadPlayback();
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Courtroom media session could not be created'}); }
+      });
+      section.querySelector('#courtroom-media-source').addEventListener('click', async () => {
+        const selected = value('#courtroom-media-session-id');
+        if (!selected) { result.textContent = 'Enter a courtroom session ID to inspect its source binding.'; return; }
+        try {
+          const payload = await fetchJson('/api/hearing-media/courtroom-sessions/' + encodeURIComponent(selected) + '/source');
+          const source = payload?.source || {};
+          result.innerHTML = '<strong>Review required.</strong> Session source: ' + escapeHtml(source.media_id || 'unavailable') + '<p>Media SHA-256: <code>' + escapeHtml(source.media_hash || 'unavailable') + '</code> · transcript SHA-256: <code>' + escapeHtml(source.transcript_sha256 || 'unavailable') + '</code></p><p>' + escapeHtml(payload?.notice || '') + '</p>';
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Courtroom session source could not be opened'}); }
+      });
+      section.querySelector('#courtroom-media-note-save').addEventListener('click', async () => {
+        const selected = value('#courtroom-media-session-id');
+        const reviewer = value('#courtroom-media-note-reviewer');
+        const noteText = value('#courtroom-media-note');
+        if (!selected || !reviewer || !noteText || !section.querySelector('#courtroom-media-note-confirmed')?.checked) { noteResult.textContent = 'Enter a session ID, reviewer ID, and note, then confirm before saving a separate private note.'; return; }
+        try {
+          const payload = await fetchJson('/api/hearing-media/courtroom-sessions/' + encodeURIComponent(selected) + '/private-notes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer_safe_id:reviewer, note_text:noteText, confirmed:true})});
+          noteResult.textContent = 'Review-required private note saved separately for this local session. It is excluded from the session record and export path.';
+          if (payload?.not_in_session_or_export !== true) throw new Error('private_note_separation_not_confirmed');
+        } catch (error) { noteResult.innerHTML = renderRecoverableError(error, {title: 'Separate private note could not be saved'}); }
+      });
+    }());
+    (function installScreenshotConversationControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('screenshot-conversation-build')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel screenshot-conversation-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Screenshot conversation review</div><p class="field-hint">Order screenshot observations from visible timestamps and reviewer-supplied metadata. Gaps and uncertainty remain visible; this does not prove authenticity, sender identity, or message completeness.</p><label>Conversation safe ID</label><input id="screenshot-conversation-id" maxlength="120" placeholder="conversation_review_001"><label>Screenshot entries — one per line</label><textarea id="screenshot-conversation-entries" rows="6" maxlength="12000" placeholder="shot_001 | 64-character SHA-256 | 2026-01-01T09:00:00-05:00 | America/New_York | visible timestamp\nshot_002 | 64-character SHA-256 | not_visible | unknown | timestamp absent"></textarea><p class="field-hint">Format: screenshot ID | source SHA-256 | visible timestamp or not_visible | timezone | optional review note.</p><button class="secondary" id="screenshot-conversation-build" type="button">Build review ordering</button><div aria-live="polite" class="status-strip" id="screenshot-conversation-result">No screenshot conversation reconstruction has been created.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#screenshot-conversation-result');
+      section.querySelector('#screenshot-conversation-build').addEventListener('click', async () => {
+        const conversationId = value('#screenshot-conversation-id');
+        const screenshots = value('#screenshot-conversation-entries').split(/\r?\n/).map((line, index) => {
+          const fields = line.split('|').map((item) => item.trim());
+          if (!line.trim()) return null;
+          if (fields.length < 4 || !/^[a-f0-9]{64}$/i.test(fields[1] || '')) throw new Error(`Screenshot entry ${index + 1} needs an ID, a 64-character source hash, a visible timestamp/not_visible, and a timezone.`);
+          return {screenshot_id: fields[0], source_hash: fields[1].toLowerCase(), visible_timestamp: fields[2], timezone: fields[3], review_annotation: fields.slice(4).join(' | '), order_hint: index + 1};
+        }).filter(Boolean);
+        if (!conversationId || !screenshots.length) { result.textContent = 'Enter a conversation ID and at least one complete screenshot entry.'; return; }
+        try {
+          const payload = await fetchJson('/api/hearing-media/screenshot-conversations', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({conversation_id: conversationId, screenshots})});
+          const reconstruction = payload?.reconstruction || {}; const ordered = Array.isArray(reconstruction.ordered_screenshots) ? reconstruction.ordered_screenshots : [];
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(reconstruction.screenshot_count || ordered.length)} screenshot observation(s) ordered. ${reconstruction.gaps?.length ? `<p>${escapeHtml(reconstruction.gaps.length)} gap or ordering uncertainty item(s) require review; a gap does not prove omitted messages.</p>` : ''}<div class="row">${ordered.map((item) => `<button class="secondary compact-action" data-screenshot-conversation-source="${escapeHtml(item.screenshot_id || '')}" type="button">Inspect ${escapeHtml(item.screenshot_id || 'source')}</button>`).join('')}</div>`;
+          result.querySelectorAll('[data-screenshot-conversation-source]').forEach((button) => button.addEventListener('click', async () => {
+            try {
+              const source = await fetchJson(`/api/hearing-media/screenshot-conversations/${encodeURIComponent(conversationId)}/screenshots/${encodeURIComponent(button.dataset.screenshotConversationSource)}`);
+              const observation = source?.observation || {};
+              result.innerHTML = `<strong>Review required.</strong> Screenshot source binding: ${escapeHtml(observation.screenshot_id || 'unknown')} · ${escapeHtml(observation.source_hash || 'hash unavailable')}<p>Visible timestamp: ${escapeHtml(observation.visible_timestamp || 'not visible')} · timezone: ${escapeHtml(observation.timezone || 'unknown')} · status: ${escapeHtml(observation.timestamp_status || 'unknown')}.</p><p>This observation does not determine authenticity, sender identity, message completeness, or legal effect.</p>`;
+            } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Screenshot source binding could not be opened'}); }
+          }));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Screenshot conversation could not be reconstructed'}); }
+      });
+    }());
+    (function installMediaRedactionDerivativeControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('media-redaction-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel media-redaction-derivative-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Media redaction derivative</div><p class="field-hint">Create an encrypted local WAV muting or AVI blur derivative from a source-hash-bound record. Original media stays unchanged; every derivative remains review-required.</p><label>Media safe ID</label><input id="media-redaction-media" maxlength="120" placeholder="hearing_audio_001"><label>Local media file, relative to active matter</label><input id="media-redaction-file" maxlength="512" placeholder="evidence/hearing_audio_001.wav"><label>Redaction type</label><select id="media-redaction-kind"><option value="audio">Mute WAV audio</option><option value="video">Blur video region</option></select><label>Start seconds</label><input id="media-redaction-start" type="number" min="0" step="0.001" value="0"><label>End seconds</label><input id="media-redaction-end" type="number" min="0.001" step="0.001" value="1"><label>Video blur region x, y, width, height (0–1)</label><input id="media-redaction-region" maxlength="120" value="0,0,1,1"><label class="check-row"><input id="media-redaction-confirmed" type="checkbox"> I reviewed the exact interval and confirm this redaction derivative is still review-required.</label><button class="secondary" id="media-redaction-create" type="button">Create encrypted derivative</button><div aria-live="polite" class="status-strip" id="media-redaction-result">No media redaction derivative has been created.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#media-redaction-result');
+      const openDerivative = async (mediaId, derivativeId) => {
+        const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/redaction-derivatives/${encodeURIComponent(derivativeId)}`);
+        const derivative = payload?.derivative || {}; const dataUrl = String(payload?.data_url || '');
+        const isAudio = String(derivative.media_type || '').startsWith('audio/');
+        const expected = isAudio ? 'data:audio/wav;base64,' : 'data:video/x-msvideo;base64,';
+        if (!dataUrl.startsWith(expected)) throw new Error('media_redaction_preview_unavailable');
+        const player = document.createElement(isAudio ? 'audio' : 'video'); player.controls = true; player.src = dataUrl; player.className = 'media-redaction-preview'; player.setAttribute('aria-label', 'Encrypted local media redaction derivative preview');
+        const caption = document.createElement('p'); caption.textContent = `Review required · ${derivative.redaction_kind || 'redaction derivative'} · ${derivative.derivative_sha256 || 'hash unavailable'}`;
+        result.replaceChildren(caption, player);
+      };
+      section.querySelector('#media-redaction-create').addEventListener('click', async () => {
+        const mediaId = value('#media-redaction-media'); const sourceFile = value('#media-redaction-file'); const kind = value('#media-redaction-kind');
+        const start = Number(value('#media-redaction-start')); const end = Number(value('#media-redaction-end'));
+        const regionValues = value('#media-redaction-region').split(',').map((item) => Number(item.trim()));
+        if (!mediaId || !sourceFile || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) { result.textContent = 'Enter a media ID, an active-matter file, and a valid exact start/end interval.'; return; }
+        if (!section.querySelector('#media-redaction-confirmed')?.checked) { result.textContent = 'Confirm the exact local media redaction interval before creating a derivative.'; return; }
+        const body = {confirmed: true, source_file: sourceFile};
+        if (kind === 'audio') body.mute_intervals = [{start_seconds: start, end_seconds: end}];
+        else {
+          if (regionValues.length !== 4 || regionValues.some((item) => !Number.isFinite(item))) { result.textContent = 'Enter four normalized video blur-region values: x, y, width, height.'; return; }
+          body.blur_intervals = [{start_seconds: start, end_seconds: end}]; body.blur_regions = [{x: regionValues[0], y: regionValues[1], width: regionValues[2], height: regionValues[3]}];
+        }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/redaction-derivatives`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+          const derivative = payload?.derivative || {}; const derivativeId = String(derivative.derivative_id || '');
+          if (!derivativeId) throw new Error('media_redaction_derivative_id_unavailable');
+          result.innerHTML = `<strong>Review required.</strong> Encrypted ${escapeHtml(derivative.redaction_kind || 'media')} derivative created. Original media was not changed.<p>Source hash: ${escapeHtml(derivative.media_hash || 'unavailable')} · derivative hash: ${escapeHtml(derivative.derivative_sha256 || 'unavailable')}.</p><button class="secondary compact-action" data-media-redaction-preview="${escapeHtml(derivativeId)}" type="button">Open encrypted derivative</button>`;
+          result.querySelector('[data-media-redaction-preview]')?.addEventListener('click', () => openDerivative(mediaId, derivativeId).catch((error) => { result.innerHTML = renderRecoverableError(error, {title: 'Encrypted media derivative could not be opened'}); }));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Media redaction derivative could not be created'}); }
+      });
+    }());
+    (function installVideoKeyframeReviewControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('keyframe-review-generate')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel keyframe-review-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Video keyframe review</div><p class="field-hint">Generate encrypted local keyframes from a source-hash-bound video inside the active matter. A keyframe or annotation is review evidence, not an authenticity determination.</p><label>Video media safe ID</label><input id="keyframe-review-media" maxlength="120" placeholder="hearing_video_001"><label>Local video file, relative to active matter</label><input id="keyframe-review-file" maxlength="512" placeholder="evidence/hearing_video_001.avi"><label>Timestamps in seconds (comma separated)</label><input id="keyframe-review-timestamps" maxlength="1000" placeholder="0, 10, 20"><button class="secondary" id="keyframe-review-generate" type="button">Generate encrypted local keyframes</button><label>Generated review ID</label><input id="keyframe-review-id" maxlength="120" readonly placeholder="Generated after review"><label>Frame ID</label><input id="keyframe-review-frame" maxlength="120" placeholder="frame-0001"><label>Human-review annotation</label><textarea id="keyframe-review-annotation" rows="3" maxlength="2000" placeholder="Describe the visible item without making an authenticity conclusion"></textarea><label class="check-row"><input id="keyframe-review-confirmed" type="checkbox"> I reviewed this annotation and understand it remains review-required.</label><button class="secondary" id="keyframe-review-annotate" type="button">Record source-bound annotation</button><div aria-live="polite" class="status-strip" id="keyframe-review-result">No local video keyframe review has been created.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#keyframe-review-result');
+      const showFrame = async (mediaId, reviewId, frameId) => {
+        const preview = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/keyframe-reviews/${encodeURIComponent(reviewId)}/frames/${encodeURIComponent(frameId)}`);
+        const dataUrl = String(preview?.data_url || '');
+        if (!dataUrl.startsWith('data:image/png;base64,')) throw new Error('keyframe_preview_unavailable');
+        const frame = preview?.frame || {};
+        const image = document.createElement('img'); image.src = dataUrl; image.alt = `Local encrypted keyframe ${frameId} at ${frame.timestamp_seconds ?? 'unknown'} seconds`; image.className = 'keyframe-preview'; image.loading = 'lazy';
+        const caption = document.createElement('p'); caption.textContent = `Review required · ${frameId} · ${frame.timestamp_seconds ?? 'unknown'}s · ${frame.visual_sha256 || 'hash unavailable'}`;
+        result.replaceChildren(caption, image);
+      };
+      section.querySelector('#keyframe-review-generate').addEventListener('click', async () => {
+        const mediaId = value('#keyframe-review-media'); const sourceFile = value('#keyframe-review-file');
+        const timestamps = value('#keyframe-review-timestamps').split(',').map((item) => Number(item.trim())).filter((item) => Number.isFinite(item) && item >= 0);
+        if (!mediaId || !sourceFile) { result.textContent = 'Enter a video media ID and a local video file relative to the active matter.'; return; }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/keyframe-reviews`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({source_file: sourceFile, timestamps_seconds: timestamps})});
+          const review = payload?.keyframe_review || {}; const reviewId = String(review.review_id || '');
+          if (!reviewId) throw new Error('keyframe_review_id_unavailable');
+          section.querySelector('#keyframe-review-id').value = reviewId;
+          const frames = Array.isArray(review.frames) ? review.frames : [];
+          if (frames[0]?.frame_id) section.querySelector('#keyframe-review-frame').value = String(frames[0].frame_id);
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(String(review.frame_count || frames.length))} encrypted local keyframe(s) generated from source hash ${escapeHtml(review.media_hash || 'unavailable')}. ${review.unavailable_timestamps?.length ? `<p>Unavailable timestamps: ${escapeHtml(review.unavailable_timestamps.join(', '))}. Review the missing frames.</p>` : ''}<div class="row">${frames.map((frame) => `<button class="secondary compact-action" data-keyframe-preview="${escapeHtml(frame.frame_id || '')}" type="button">Open ${escapeHtml(frame.frame_id || 'keyframe')}</button>`).join('')}</div>`;
+          result.querySelectorAll('[data-keyframe-preview]').forEach((button) => button.addEventListener('click', () => showFrame(mediaId, reviewId, button.dataset.keyframePreview).catch((error) => { result.innerHTML = renderRecoverableError(error, {title: 'Encrypted keyframe could not be opened'}); })));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Local keyframes could not be generated'}); }
+      });
+      section.querySelector('#keyframe-review-annotate').addEventListener('click', async () => {
+        const mediaId = value('#keyframe-review-media'); const reviewId = value('#keyframe-review-id'); const frameId = value('#keyframe-review-frame'); const annotationText = value('#keyframe-review-annotation');
+        if (!mediaId || !reviewId || !frameId || !annotationText) { result.textContent = 'Generate a review, choose its frame ID, and enter a human-review annotation.'; return; }
+        if (!section.querySelector('#keyframe-review-confirmed')?.checked) { result.textContent = 'Confirm the human-review annotation before recording it.'; return; }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/keyframe-reviews/${encodeURIComponent(reviewId)}/annotations`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmed: true, frame_id: frameId, annotation_text: annotationText})});
+          const annotation = payload?.annotation || {}; const source = payload?.source || {};
+          result.innerHTML = `<strong>Review required.</strong> Source-bound annotation recorded for ${escapeHtml(source.frame_id || frameId)} at ${escapeHtml(source.timestamp_seconds ?? 'unknown')}s.<p>Visual hash: ${escapeHtml(source.visual_sha256 || 'unavailable')}. This does not determine authenticity.</p><button class="secondary compact-action" data-keyframe-annotation-preview="${escapeHtml(source.frame_id || frameId)}" type="button">Open encrypted keyframe</button>`;
+          result.querySelector('[data-keyframe-annotation-preview]')?.addEventListener('click', () => showFrame(mediaId, reviewId, source.frame_id || frameId).catch((error) => { result.innerHTML = renderRecoverableError(error, {title: 'Encrypted keyframe could not be opened'}); }));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Keyframe annotation could not be recorded'}); }
+      });
+    }());
+    (function installSpeakerLabelReviewControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('speaker-label-review-save')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel speaker-label-review-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Speaker-label review</div><p class="field-hint">Apply a human-confirmed label to one timestamped transcript segment. This does not infer a person’s identity, emotion, credibility, or intent.</p><label>Media safe ID</label><input id="speaker-label-review-media" maxlength="120" placeholder="hearing_audio_001"><label>Transcript segment ID</label><input id="speaker-label-review-segment" maxlength="120" placeholder="segment-0001"><label>Reviewer-supplied label</label><input id="speaker-label-review-label" maxlength="120" placeholder="Speaker A"><label class="check-row"><input id="speaker-label-review-confirmed" type="checkbox"> I reviewed this label and understand it remains review-required.</label><button class="secondary" id="speaker-label-review-save" type="button">Record confirmed label</button><div aria-live="polite" class="status-strip" id="speaker-label-review-result">No human-confirmed speaker label has been recorded.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#speaker-label-review-result');
+      section.querySelector('#speaker-label-review-save').addEventListener('click', async () => {
+        const mediaId = value('#speaker-label-review-media');
+        const segmentId = value('#speaker-label-review-segment');
+        const speakerLabel = value('#speaker-label-review-label');
+        const confirmed = Boolean(section.querySelector('#speaker-label-review-confirmed')?.checked);
+        if (!mediaId || !segmentId || !speakerLabel) { result.textContent = 'Enter a media ID, a timestamped segment ID, and a reviewer-supplied label.'; return; }
+        if (!confirmed) { result.textContent = 'Confirm that you reviewed the speaker label before recording it.'; return; }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/speaker-review`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmed: true, labels: [{segment_id: segmentId, speaker_label: speakerLabel}]})});
+          const source = payload?.source || {}; const change = (payload?.changes || [])[0] || {};
+          const start = change.start_seconds === undefined ? 'unknown time' : `${change.start_seconds}s`;
+          const end = change.end_seconds === undefined ? 'unknown time' : `${change.end_seconds}s`;
+          result.innerHTML = `<strong>Review required.</strong> Label changed from ${escapeHtml(change.before || 'unknown')} to ${escapeHtml(change.after || speakerLabel)}.<p>Exact source span: ${escapeHtml(start)}–${escapeHtml(end)} · segment hash ${escapeHtml(change.text_sha256 || 'unavailable')}.</p><p>No biometric identity, emotion, credibility, or deception inference was used.</p><button class="secondary compact-action" data-speaker-label-source="${escapeHtml(mediaId)}" type="button">Inspect local media binding</button>`;
+          result.querySelector('[data-speaker-label-source]')?.addEventListener('click', async () => {
+            try {
+              const binding = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}`);
+              const media = binding?.media || {};
+              result.innerHTML = `<strong>Review required.</strong> Source binding: ${escapeHtml(media.media_id || source.media_id || mediaId)} · ${escapeHtml(media.source_hash || source.media_hash || 'source hash unavailable')} · ${escapeHtml(media.filename || 'local media')}<p>Timestamped segment ${escapeHtml(segmentId)} remains a human-reviewed label, not an identity finding.</p>`;
+            } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Local media binding could not be opened'}); }
+          });
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Speaker label could not be recorded'}); }
+      });
+    }());
+    (function installTranscriptCorrectionControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('transcript-correction-save')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel transcript-correction-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Transcript correction</div><p class="field-hint">Propose a human correction for one timestamped local-media segment. The original transcript, media, and source span remain unchanged.</p><label>Media safe ID</label><input id="transcript-correction-media" maxlength="120" placeholder="hearing_audio_001"><label>Transcript segment ID</label><input id="transcript-correction-segment" maxlength="120" placeholder="segment-0001"><label>Corrected text</label><textarea id="transcript-correction-text" rows="4" maxlength="5000" placeholder="Human-reviewed correction"></textarea><label>Reviewer notes (optional)</label><textarea id="transcript-correction-notes" rows="2" maxlength="2000" placeholder="Why this segment needs review"></textarea><button class="secondary" id="transcript-correction-save" type="button">Record correction proposal</button><div aria-live="polite" class="status-strip" id="transcript-correction-result">No transcript correction proposal has been recorded.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#transcript-correction-result');
+      section.querySelector('#transcript-correction-save').addEventListener('click', async () => {
+        const mediaId = value('#transcript-correction-media');
+        const segmentId = value('#transcript-correction-segment');
+        const correctedText = value('#transcript-correction-text');
+        if (!mediaId || !segmentId || !correctedText) { result.textContent = 'Enter a media ID, a timestamped segment ID, and corrected text.'; return; }
+        try {
+          const payload = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}/transcript-corrections`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({segment_id: segmentId, corrected_text: correctedText, reviewer_notes: value('#transcript-correction-notes')})});
+          const correction = payload?.correction || {}; const source = payload?.source || {};
+          const start = source.start_seconds === undefined ? 'unknown time' : `${source.start_seconds}s`;
+          const end = source.end_seconds === undefined ? 'unknown time' : `${source.end_seconds}s`;
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(correction.notice || 'Correction proposal recorded.')}<p>Exact source span: ${escapeHtml(start)}–${escapeHtml(end)} · media hash ${escapeHtml(source.media_hash || 'unavailable')}.</p><button class="secondary compact-action" data-transcript-correction-source="${escapeHtml(mediaId)}" type="button">Inspect local media binding</button>`;
+          result.querySelector('[data-transcript-correction-source]')?.addEventListener('click', async (event) => {
+            try {
+              const binding = await fetchJson(`/api/hearing-media/media/${encodeURIComponent(mediaId)}`);
+              const media = binding?.media || {};
+              result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(correction.notice || 'Correction proposal recorded.')}<p>Source binding: ${escapeHtml(media.media_id || mediaId)} · ${escapeHtml(media.source_hash || 'source hash unavailable')} · ${escapeHtml(media.filename || 'local media')}</p><p>Exact source span remains ${escapeHtml(start)}–${escapeHtml(end)}. Original media and transcript were not modified.</p>`;
+              event.currentTarget?.focus?.();
+            } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Local media binding could not be opened'}); }
+          });
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Transcript correction could not be recorded'}); }
+      });
+    }());
+    (function installMetadataReviewControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('metadata-review-apply')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel metadata-review-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Batch metadata review</div><p class="field-hint">Apply reviewer-supplied sidecar labels and handling metadata to active-matter records. Originals and parser output are not changed.</p><label>Batch ID</label><input id="metadata-review-id" maxlength="120" placeholder="metadata_batch_001"><label>Record IDs (comma separated)</label><input id="metadata-review-records" maxlength="5000" placeholder="REC_LEFT, REC_RIGHT"><label>Labels (comma separated)</label><input id="metadata-review-labels" maxlength="4000" placeholder="reviewed, financial"><label>Document date</label><input id="metadata-review-date" placeholder="YYYY-MM-DD or unknown" value="unknown"><label>Custodian safe ID</label><input id="metadata-review-custodian" value="unknown"><label>Confidentiality</label><select id="metadata-review-confidentiality"><option value="review_required">Review required</option><option value="private_record">Private record</option><option value="restricted">Restricted</option><option value="unknown">Unknown</option></select><label>Document type</label><select id="metadata-review-document-type"><option value="unknown">Unknown</option><option value="pleading">Pleading</option><option value="order">Order</option><option value="affidavit">Affidavit</option><option value="correspondence">Correspondence</option><option value="financial_record">Financial record</option><option value="form">Form</option><option value="exhibit">Exhibit</option><option value="communication">Communication</option></select><button class="secondary" id="metadata-review-apply" type="button">Apply reviewed sidecar</button><div aria-live="polite" class="status-strip" id="metadata-review-result">No metadata batch has been applied.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#metadata-review-result');
+      section.querySelector('#metadata-review-apply').addEventListener('click', async () => {
+        const batch_id = value('#metadata-review-id');
+        const record_ids = value('#metadata-review-records').split(',').map((item) => item.trim()).filter(Boolean);
+        if (!batch_id || !record_ids.length) { result.textContent = 'Enter a batch ID and at least one active-matter record ID.'; return; }
+        try {
+          const payload = await fetchJson('/api/evidence/metadata-review/batches', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({batch_id, record_ids, labels: value('#metadata-review-labels').split(',').map((item) => item.trim()).filter(Boolean), document_date: value('#metadata-review-date') || 'unknown', custodian_safe_id: value('#metadata-review-custodian') || 'unknown', confidentiality: value('#metadata-review-confidentiality'), document_type: value('#metadata-review-document-type')})});
+          const batch = payload?.batch || {};
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(batch.notice || '')}<div class="row">${(batch.records || []).map((item) => `<button class="secondary compact-action" data-metadata-review-record="${escapeHtml(item.record_id || '')}" type="button">Inspect ${escapeHtml(item.record_id || 'source')}</button>`).join('')}</div>`;
+          result.querySelectorAll('[data-metadata-review-record]').forEach((button) => button.addEventListener('click', async () => { try { const source = await fetchJson(`/api/evidence/metadata-review/batches/${encodeURIComponent(batch_id)}/source/${encodeURIComponent(button.dataset.metadataReviewRecord)}`); const token = String(source?.source?.source_token || ''); if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('metadata_review_source_token_unavailable'); openRecordInspector({source_token: token}, 0, button); } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata-review source could not be opened'}); } }));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata batch could not be applied'}); }
+      });
+    }());
+    (function installDocumentComparisonControl() {
+      const host = document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('document-comparison-create')) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel document-comparison-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Document comparison</div><p class="field-hint">Compare two active-matter records by admitted text extracts and metadata. Missing table, signature, or page-image inputs stay visible as review blockers.</p><label>Comparison ID</label><input id="document-comparison-id" maxlength="120" placeholder="comparison_001"><label>Left record ID</label><input id="document-comparison-left" maxlength="120" placeholder="Active-matter record"><label>Right record ID</label><input id="document-comparison-right" maxlength="120" placeholder="Different active-matter record"><button class="secondary" id="document-comparison-create" type="button">Create comparison receipt</button><div aria-live="polite" class="status-strip" id="document-comparison-result">No comparison has been created.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const result = section.querySelector('#document-comparison-result');
+      const inspect = async (side, owner) => {
+        const comparisonId = value('#document-comparison-id');
+        try {
+          const payload = await fetchJson(`/api/evidence/document-comparisons/${encodeURIComponent(comparisonId)}/source/${encodeURIComponent(side)}`);
+          const token = String(payload?.source?.source_token || '');
+          if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('document_comparison_source_token_unavailable');
+          openRecordInspector({source_token: token}, 0, owner);
+        } catch (error) {
+          result.innerHTML = renderRecoverableError(error, {title: 'Comparison source could not be opened'});
+        }
+      };
+      section.querySelector('#document-comparison-create').addEventListener('click', async () => {
+        const comparison_id = value('#document-comparison-id');
+        const left_record_id = value('#document-comparison-left');
+        const right_record_id = value('#document-comparison-right');
+        if (!comparison_id || !left_record_id || !right_record_id) {
+          result.textContent = 'Enter a comparison ID and two active-matter record IDs.';
+          return;
+        }
+        try {
+          const payload = await fetchJson('/api/evidence/document-comparisons', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({comparison_id, left_record_id, right_record_id})});
+          const comparison = payload?.comparison || {};
+          const rows = [
+            ['Text', comparison?.text?.status], ['Structure', comparison?.structure?.status],
+            ['Tables', comparison?.tables?.status], ['Signatures', comparison?.signatures?.status],
+            ['Page images', comparison?.page_images?.status],
+          ].map(([label, status]) => `<li>${escapeHtml(label)}: ${escapeHtml(String(status || 'unavailable_requires_review').replaceAll('_', ' '))}</li>`).join('');
+          result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(comparison.notice || '')}<ul>${rows}</ul><div class="row"><button class="secondary compact-action" data-document-comparison-source="left" type="button">Inspect left source</button><button class="secondary compact-action" data-document-comparison-source="right" type="button">Inspect right source</button></div>`;
+          result.querySelectorAll('[data-document-comparison-source]').forEach((button) => button.addEventListener('click', () => inspect(button.dataset.documentComparisonSource, button)));
+        } catch (error) {
+          result.innerHTML = renderRecoverableError(error, {title: 'Document comparison could not be created'});
+        }
+      });
+    }());
+    (function installEntityResolutionControl() {
+      const host = document.querySelector('.record-lineage-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host || document.getElementById('entity-resolution-create')) return;
+      const section = document.createElement('section'); section.className = 'rail-panel entity-resolution-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Cross-document identity review</div><p class="field-hint">Record a possible identity match only from two active-matter sources. It remains review-required until a person explicitly confirms it; confirmation creates a reversible logical merge and never alters originals.</p><label>Candidate ID</label><input id="entity-resolution-id" maxlength="120" placeholder="entity_001"><label>Entity label</label><input id="entity-resolution-label" maxlength="300" placeholder="Fictional person label"><label>Left record ID</label><input id="entity-resolution-left" maxlength="120" placeholder="Active-matter record"><label>Right record ID</label><input id="entity-resolution-right" maxlength="120" placeholder="Different active-matter record"><label>Review note</label><input id="entity-resolution-notes" maxlength="2000" placeholder="Why this needs human review"><div class="row"><button class="secondary" id="entity-resolution-create" type="button">Record candidate</button><button class="secondary" id="entity-resolution-confirm" type="button">Explicitly confirm</button><button class="secondary" id="entity-resolution-revoke" type="button">Revoke merge</button></div><div aria-live="polite" class="status-strip" id="entity-resolution-result">No automatic identity resolution or data merge occurs.</div>';
+      host.insertAdjacentElement('afterend', section);
+      const value = (id) => String(section.querySelector(id)?.value || '').trim(); const result = section.querySelector('#entity-resolution-result');
+      const show = (payload) => { const item=payload?.candidate||{}; result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(item.notice || 'Candidate recorded.')}<p>Status: ${escapeHtml(String(item.resolution_status||'review_required').replaceAll('_',' '))} · Merge: ${escapeHtml(String(item.merge_status||'not_merged').replaceAll('_',' '))}</p>`; };
+      section.querySelector('#entity-resolution-create').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'), entity_label=value('#entity-resolution-label'), left_record_id=value('#entity-resolution-left'), right_record_id=value('#entity-resolution-right'); if(!candidate_id||!entity_label||!left_record_id||!right_record_id){result.textContent='Enter candidate, label, and two active-matter record IDs.'; return;} try{show(await fetchJson('/api/evidence/entity-resolution/candidates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id,entity_label,left_record_id,right_record_id,reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Identity candidate could not be recorded'});}});
+      section.querySelector('#entity-resolution-confirm').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'); if(!candidate_id){result.textContent='Enter an existing candidate ID.';return;} try{show(await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidate_id)}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation:'confirm_same_entity',reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Explicit confirmation could not be recorded'});}});
+      section.querySelector('#entity-resolution-revoke').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'); if(!candidate_id){result.textContent='Enter an existing candidate ID.';return;} try{show(await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidate_id)}/revoke`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Logical merge could not be revoked'});}});
+    }());
+    (function(){const h=document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]')||document.querySelector('.page-quality-control[data-drawer-panel="evidence"]');if(!h||document.getElementById('table-lineage-run'))return;const s=document.createElement('section');s.className='rail-panel table-lineage-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Table lineage review</div><p class="field-hint">Inspect source-bound extracted cells and page coordinates. Corrections are separate review records and never overwrite extraction.</p><label>Source SHA-256</label><input id="table-lineage-hash" maxlength="64"><label>Cells JSON</label><textarea id="table-lineage-cells">[]</textarea><button class="secondary" id="table-lineage-run" type="button">Inspect table lineage</button><div aria-live="polite" class="status-strip" id="table-lineage-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#table-lineage-result');s.querySelector('#table-lineage-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/table-lineage-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#table-lineage-hash').value.trim(),cells:JSON.parse(s.querySelector('#table-lineage-cells').value||'[]')})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml(p.cells.length)} cell(s).</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Table-lineage review could not run'});}});}());
+    (function(){const h=document.querySelector('.document-type-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('page-quality-run'))return;const s=document.createElement('section');s.className='rail-panel page-quality-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Page quality review</div><p class="field-hint">Review supplied OCR and parser metrics page by page. Flags do not replace page-image review.</p><label>Source SHA-256</label><input id="page-quality-hash" maxlength="64"><label>Page metrics JSON</label><textarea id="page-quality-pages">[]</textarea><button class="secondary" id="page-quality-run" type="button">Review page quality</button><div aria-live="polite" class="status-strip" id="page-quality-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#page-quality-result');s.querySelector('#page-quality-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/page-quality-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#page-quality-hash').value.trim(),pages:JSON.parse(s.querySelector('#page-quality-pages').value||'[]')})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml(p.review_page_count)} page(s) need review.</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Page-quality review could not run'});}});}());
+    (function(){const h=document.querySelector('.handwriting-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('document-type-review-run'))return;const s=document.createElement('section');s.className='rail-panel document-type-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Document type review</div><p class="field-hint">Generate review-only type candidates from an exact source hash and excerpt. Labels do not alter metadata or determine legal effect.</p><label>Source SHA-256</label><input id="document-type-review-hash" maxlength="64"><label>Excerpt</label><textarea id="document-type-review-text"></textarea><button class="secondary" id="document-type-review-run" type="button">Review candidates</button><div aria-live="polite" class="status-strip" id="document-type-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#document-type-review-result');s.querySelector('#document-type-review-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/document-type-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#document-type-review-hash').value.trim(),text_excerpt:s.querySelector('#document-type-review-text').value})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml((p.candidate_types||[]).join(', '))}</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Document-type review could not run'});}});}());
+    (function(){const h=document.querySelector('.scanner-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('handwriting-review-run'))return;const s=document.createElement('section');s.className='rail-panel handwriting-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Handwriting review</div><p class="field-hint">Route uncertain OCR or possible handwriting to a human transcription review. This does not recognize handwriting or create text.</p><label>Source SHA-256</label><input id="handwriting-review-hash" maxlength="64"><label><input id="handwriting-review-signal" type="checkbox"> Possible handwriting</label><button class="secondary" id="handwriting-review-run" type="button">Record review routing</button><div aria-live="polite" class="status-strip" id="handwriting-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#handwriting-review-result');s.querySelector('#handwriting-review-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/handwriting-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#handwriting-review-hash').value.trim(),handwriting_signal:s.querySelector('#handwriting-review-signal').checked})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Handwriting review could not be recorded'});}});}());
+    (function(){const h=document.querySelector('.watch-folder-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('scanner-review-plan'))return;const s=document.createElement('section');s.className='rail-panel scanner-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Scanner review plan</div><p class="field-hint">Create a review-only cleanup proposal from an immutable scan hash. No page is deleted, rotated, or OCR’d until separately approved.</p><label>Original SHA-256</label><input id="scanner-review-hash" maxlength="64"><label>Page count</label><input id="scanner-review-pages" type="number" min="1"><button class="secondary" id="scanner-review-plan" type="button">Create review plan</button><div aria-live="polite" class="status-strip" id="scanner-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#scanner-review-result');s.querySelector('#scanner-review-plan').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/scanner-review/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({original_sha256:s.querySelector('#scanner-review-hash').value.trim(),page_count:Number(s.querySelector('#scanner-review-pages').value||0)})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Scanner review plan could not be created'});}});}());
+    (function installWatchFolderControl(){const host=document.querySelector('.matter-completeness-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!host||document.getElementById('watch-folder-scan'))return;const s=document.createElement('section');s.className='rail-panel watch-folder-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Local folder review queue</div><p class="field-hint">Choose a local folder for one explicit candidate scan. Nothing watches, reads, copies, or imports files until you take a separate action.</p><label for="watch-folder-input">Local folder</label><input id="watch-folder-input" type="text" autocomplete="off"><button class="secondary" id="watch-folder-scan" type="button">Scan candidates</button><div aria-live="polite" class="status-strip" id="watch-folder-result">No scan has run.</div>';host.insertAdjacentElement('afterend',s);const i=s.querySelector('#watch-folder-input'),r=s.querySelector('#watch-folder-result');s.querySelector('#watch-folder-scan').addEventListener('click',async()=>{if(!i.value.trim()){r.textContent='Choose a local folder to scan.';return;}try{const p=await fetchJson('/api/evidence/watch-folder/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder:i.value.trim()})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice||'')}<ul>${(p.candidates||[]).map(x=>`<li>${escapeHtml(x.display_name)} · ${escapeHtml(x.extension)} · ${escapeHtml(x.size_bytes)} bytes</li>`).join('')||'<li>No file candidates.</li>'}</ul>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Candidate scan could not run'});}});}());
+    (function installMatterCompletenessControl() {
+      const host=document.querySelector('.entity-resolution-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]'); if(!host||document.getElementById('matter-completeness-refresh'))return;
+      const section=document.createElement('section'); section.className='rail-panel matter-completeness-control'; section.dataset.drawerPanel='evidence'; section.hidden=true;
+      section.innerHTML='<div class="rail-title">Matter completeness review</div><p class="field-hint">Shows observed record and review-work coverage plus blockers. It does not score the case, predict an outcome, assess legal sufficiency, or approve filing.</p><button class="secondary" id="matter-completeness-refresh" type="button">Review completeness</button><div aria-live="polite" class="status-strip" id="matter-completeness-result">No completeness review loaded.</div>'; host.insertAdjacentElement('afterend',section);
+      const result=section.querySelector('#matter-completeness-result'); section.querySelector('#matter-completeness-refresh').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/matter-completeness');const rows=Object.entries(p.dimensions||{});result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice||'')}<ul>${rows.map(([name,row])=>`<li><strong>${escapeHtml(name.replaceAll('_',' '))}</strong> · observed ${escapeHtml(row.observed)}${row.blocker?` · blocker: ${escapeHtml(row.blocker.replaceAll('_',' '))}`:''}</li>`).join('')}</ul>`;}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Completeness review could not be loaded'});}});
+    }());
     // Engineering-only authority update switches stay in the mirrored markup
     // for fixture compatibility, but are never operable or exposed in the
     // production workbench. Public updates require a fresh, explicit network
@@ -340,7 +1238,16 @@
     const welcomeOverlay = document.getElementById('welcome-overlay');
     const helpOverlay = document.getElementById('help-overlay');
     const dismissWelcomeButton = document.getElementById('dismiss-welcome-button');
+    const displayDensitySelect = document.getElementById('display-density');
+    const displayTextScaleSelect = document.getElementById('display-text-scale');
+    const displayPreferencesSave = document.getElementById('display-preferences-save');
+    const displayPreferencesStatus = document.getElementById('display-preferences-status');
     const closeHelpButton = document.getElementById('close-help-button');
+    const errorCenterOverlay = document.getElementById('error-center-overlay');
+    const errorCenterStatus = document.getElementById('error-center-status');
+    const errorCenterList = document.getElementById('error-center-list');
+    const errorCenterClear = document.getElementById('error-center-clear');
+    const errorCenterClose = document.getElementById('error-center-close');
     const toast = document.getElementById('toast');
     const commandPaletteButton = document.getElementById('command-palette-button');
     const commandPalette = document.getElementById('command-palette');
@@ -362,8 +1269,35 @@
     const localWorkbenchButton = document.getElementById('local-workbench-button');
     const privacyOverlay = document.getElementById('privacy-overlay');
     const closePrivacyButton = document.getElementById('close-privacy-button');
+    const refreshMatterKeyStatus = document.getElementById('refresh-matter-key-status');
+    const matterKeyStatusBadge = document.getElementById('matter-key-status-badge');
+    const matterKeyStatusDetail = document.getElementById('matter-key-status-detail');
+    const refreshMatterUnlockStatus = document.getElementById('refresh-matter-unlock-status');
+    const verifyMatterUnlock = document.getElementById('verify-matter-unlock');
+    const lockMatterUnlock = document.getElementById('lock-matter-unlock');
+    const matterUnlockStatusBadge = document.getElementById('matter-unlock-status-badge');
+    const matterUnlockStatusDetail = document.getElementById('matter-unlock-status-detail');
+    const previewSupportBundle = document.getElementById('preview-support-bundle');
+    const buildSupportBundle = document.getElementById('build-support-bundle');
+    const supportBundleBadge = document.getElementById('support-bundle-badge');
+    const supportBundleStatus = document.getElementById('support-bundle-status');
+    const supportBundleResults = document.getElementById('support-bundle-results');
+    const telemetryPreferenceMode = document.getElementById('telemetry-preference-mode');
+    const refreshTelemetryPreference = document.getElementById('refresh-telemetry-preference');
+    const saveTelemetryPreference = document.getElementById('save-telemetry-preference');
+    const telemetryPreferenceBadge = document.getElementById('telemetry-preference-badge');
+    const telemetryPreferenceStatus = document.getElementById('telemetry-preference-status');
+    const telemetryPreferenceResults = document.getElementById('telemetry-preference-results');
+    const runAdversarialCorpus = document.getElementById('run-adversarial-corpus');
+    const adversarialCorpusBadge = document.getElementById('adversarial-corpus-badge');
+    const adversarialCorpusStatus = document.getElementById('adversarial-corpus-status');
+    const adversarialCorpusResults = document.getElementById('adversarial-corpus-results');
     const shortcutsOverlay = document.getElementById('shortcuts-overlay');
     const closeShortcutsButton = document.getElementById('close-shortcuts-button');
+    const shortcutCommandPaletteSelect = document.getElementById('shortcut-command-palette');
+    const shortcutJusticeSelect = document.getElementById('shortcut-justice');
+    const shortcutPreferencesSave = document.getElementById('shortcut-preferences-save');
+    const shortcutPreferencesStatus = document.getElementById('shortcut-preferences-status');
     const buildOverlay = document.getElementById('build-overlay');
     const closeBuildButton = document.getElementById('close-build-button');
     const footerVersion = document.getElementById('footer-version');
@@ -392,6 +1326,63 @@
     const localWorkbenchReadingLevel = document.getElementById('local-workbench-reading-level');
     const localWorkbenchReducedMotion = document.getElementById('local-workbench-reduced-motion');
     const localWorkbenchScreenReader = document.getElementById('local-workbench-screen-reader');
+    const localHealthDashboardRefresh = document.getElementById('local-health-dashboard-refresh');
+    const localHealthDashboardBadge = document.getElementById('local-health-dashboard-badge');
+    const localHealthDashboardStatus = document.getElementById('local-health-dashboard-status');
+    const localHealthDashboardResults = document.getElementById('local-health-dashboard-results');
+    const runtimeJobJournalRefresh = document.getElementById('runtime-job-journal-refresh');
+    const runtimeJobJournalBadge = document.getElementById('runtime-job-journal-badge');
+    const runtimeJobJournalStatus = document.getElementById('runtime-job-journal-status');
+    const runtimeJobJournalResults = document.getElementById('runtime-job-journal-results');
+    const idempotencyProtectionRefresh = document.getElementById('idempotency-protection-refresh');
+    const idempotencyProtectionBadge = document.getElementById('idempotency-protection-badge');
+    const idempotencyProtectionStatus = document.getElementById('idempotency-protection-status');
+    const idempotencyProtectionResults = document.getElementById('idempotency-protection-results');
+    const databaseIntegrityRefresh = document.getElementById('database-integrity-refresh');
+    const databaseIntegrityBadge = document.getElementById('database-integrity-badge');
+    const databaseIntegrityStatus = document.getElementById('database-integrity-status');
+    const databaseIntegrityResults = document.getElementById('database-integrity-results');
+    const powerLossResilienceRun = document.getElementById('power-loss-resilience-run');
+    const powerLossResilienceBadge = document.getElementById('power-loss-resilience-badge');
+    const powerLossResilienceStatus = document.getElementById('power-loss-resilience-status');
+    const powerLossResilienceResults = document.getElementById('power-loss-resilience-results');
+    const storagePressureRefresh = document.getElementById('storage-pressure-refresh');
+    const storagePressureBadge = document.getElementById('storage-pressure-badge');
+    const storagePressureStatus = document.getElementById('storage-pressure-status');
+    const storagePressureResults = document.getElementById('storage-pressure-results');
+    const clockSkewRefresh = document.getElementById('clock-skew-refresh');
+    const clockSkewBadge = document.getElementById('clock-skew-badge');
+    const clockSkewStatus = document.getElementById('clock-skew-status');
+    const clockSkewResults = document.getElementById('clock-skew-results');
+    const performanceGatesSave = document.getElementById('performance-gates-save');
+    const performanceGatesConfirm = document.getElementById('performance-gates-confirm');
+    const performanceGatesBadge = document.getElementById('performance-gates-badge');
+    const performanceGatesStatus = document.getElementById('performance-gates-status');
+    const performanceGatesResults = document.getElementById('performance-gates-results');
+    const performanceGateInputs = Array.from(document.querySelectorAll('[data-performance-metric]'));
+    const failureReplayRun = document.getElementById('failure-replay-run');
+    const failureReplayConfirm = document.getElementById('failure-replay-confirm');
+    const failureReplayScenario = document.getElementById('failure-replay-scenario');
+    const failureReplayBadge = document.getElementById('failure-replay-badge');
+    const failureReplayStatus = document.getElementById('failure-replay-status');
+    const failureReplayResults = document.getElementById('failure-replay-results');
+    const crossDeviceTransferRefresh = document.getElementById('cross-device-transfer-refresh');
+    const crossDeviceTransferExport = document.getElementById('cross-device-transfer-export');
+    const crossDeviceTransferImport = document.getElementById('cross-device-transfer-import');
+    const crossDeviceTransferId = document.getElementById('cross-device-transfer-id');
+    const crossDeviceTransferPassphrase = document.getElementById('cross-device-transfer-passphrase');
+    const crossDeviceTransferConfirm = document.getElementById('cross-device-transfer-confirm');
+    const crossDeviceTransferBadge = document.getElementById('cross-device-transfer-badge');
+    const crossDeviceTransferStatus = document.getElementById('cross-device-transfer-status');
+    const crossDeviceTransferResults = document.getElementById('cross-device-transfer-results');
+    const schemaMigrationLabRefresh = document.getElementById('schema-migration-lab-refresh');
+    const schemaMigrationLabRun = document.getElementById('schema-migration-lab-run');
+    const schemaMigrationLabSource = document.getElementById('schema-migration-lab-source');
+    const schemaMigrationLabScenario = document.getElementById('schema-migration-lab-scenario');
+    const schemaMigrationLabConfirm = document.getElementById('schema-migration-lab-confirm');
+    const schemaMigrationLabBadge = document.getElementById('schema-migration-lab-badge');
+    const schemaMigrationLabStatus = document.getElementById('schema-migration-lab-status');
+    const schemaMigrationLabResults = document.getElementById('schema-migration-lab-results');
     let localWorkbenchReturnFocus = null;
     const productivityStudioOverlay = document.getElementById('productivity-studio-overlay');
     const productivityStudioClose = document.getElementById('productivity-studio-close');
@@ -509,6 +1500,7 @@
     const authorityImpactTarget = document.getElementById('authority-impact-target');
     const authorityImpactRefresh = document.getElementById('authority-impact-refresh');
     const authorityImpactAnalyze = document.getElementById('authority-impact-analyze');
+    const authorityImpactMatter = document.getElementById('authority-impact-matter');
     const authorityImpactApproved = document.getElementById('authority-impact-approved');
     const authorityImpactBuild = document.getElementById('authority-impact-build');
     const authorityImpactResults = document.getElementById('authority-impact-results');
@@ -520,6 +1512,7 @@
     const localAgentProvider = document.getElementById('local-agent-provider');
     const localAgentEndpoint = document.getElementById('local-agent-endpoint');
     const localAgentModel = document.getElementById('local-agent-model');
+    const localAgentTask = document.getElementById('local-agent-task');
     const localAgentRefreshPreview = document.getElementById('local-agent-refresh-preview');
     const localAgentRun = document.getElementById('local-agent-run');
     const localAgentPreviewSummary = document.getElementById('local-agent-preview-summary');
@@ -659,6 +1652,7 @@
     const safetyWorkspaceOverlay=document.getElementById('safety-workspace-overlay'),safetyWorkspaceClose=document.getElementById('safety-workspace-close'),safetyWorkspaceStatus=document.getElementById('safety-workspace-status'),safetyWorkspaceResults=document.getElementById('safety-workspace-results'),safetyRecordId=document.getElementById('safety-record-id'),safetyKind=document.getElementById('safety-kind'),safetySourceId=document.getElementById('safety-source-id'),safetySummary=document.getElementById('safety-summary'),safetyAdd=document.getElementById('safety-add'),safetyRefresh=document.getElementById('safety-refresh'),safetyReceipt=document.getElementById('safety-receipt');
     const scheduleWorkspaceOverlay=document.getElementById('schedule-workspace-overlay'),scheduleWorkspaceClose=document.getElementById('schedule-workspace-close'),scheduleWorkspaceStatus=document.getElementById('schedule-workspace-status'),scheduleWorkspaceResults=document.getElementById('schedule-workspace-results'),scheduleTermId=document.getElementById('schedule-term-id'),scheduleTopic=document.getElementById('schedule-topic'),scheduleSourceId=document.getElementById('schedule-source-id'),scheduleLanguage=document.getElementById('schedule-language'),scheduleAdd=document.getElementById('schedule-add'),scheduleRefresh=document.getElementById('schedule-refresh'),scheduleReceipt=document.getElementById('schedule-receipt');
     const lateReviewOverlay=document.getElementById('late-review-overlay'),lateReviewClose=document.getElementById('late-review-close'),lateReviewTitle=document.getElementById('late-review-title'),lateReviewDescription=document.getElementById('late-review-description'),lateReviewStatus=document.getElementById('late-review-status'),lateReviewResults=document.getElementById('late-review-results'),lateReviewRefresh=document.getElementById('late-review-refresh'),lateReviewReceipt=document.getElementById('late-review-receipt'),lateReviewCreate=document.getElementById('late-review-create'),lateReviewAction=document.getElementById('late-review-action'),lateReviewPrimaryId=document.getElementById('late-review-primary-id'),lateReviewSecondaryId=document.getElementById('late-review-secondary-id'),lateReviewSourceId=document.getElementById('late-review-source-id'),lateReviewKind=document.getElementById('late-review-kind'),lateReviewValue=document.getElementById('late-review-value'),lateReviewHash=document.getElementById('late-review-hash'),lateReviewDetails=document.getElementById('late-review-details'),lateReviewPrimaryLabel=document.getElementById('late-review-primary-label'),lateReviewSecondaryLabel=document.getElementById('late-review-secondary-label'),lateReviewSourceLabel=document.getElementById('late-review-source-label'),lateReviewKindLabel=document.getElementById('late-review-kind-label'),lateReviewValueLabel=document.getElementById('late-review-value-label'),lateReviewHashLabel=document.getElementById('late-review-hash-label'),lateReviewDetailsLabel=document.getElementById('late-review-details-label');let lateReviewConfig=null;
+    const reviewerBundleRoundtrip=document.getElementById('reviewer-bundle-roundtrip'),reviewerBundleHandoffId=document.getElementById('reviewer-bundle-handoff-id'),reviewerBundleId=document.getElementById('reviewer-bundle-id'),reviewerBundleReviewerId=document.getElementById('reviewer-bundle-reviewer-id'),reviewerBundleCommentId=document.getElementById('reviewer-bundle-comment-id'),reviewerBundleRecordId=document.getElementById('reviewer-bundle-record-id'),reviewerBundleAttestationId=document.getElementById('reviewer-bundle-attestation-id'),reviewerBundleReimportId=document.getElementById('reviewer-bundle-reimport-id'),reviewerBundleNote=document.getElementById('reviewer-bundle-note'),reviewerBundleResult=document.getElementById('reviewer-bundle-result'),reviewerBundleExport=document.getElementById('reviewer-bundle-export'),reviewerBundleComment=document.getElementById('reviewer-bundle-comment'),reviewerBundleAttest=document.getElementById('reviewer-bundle-attest'),reviewerBundleReimport=document.getElementById('reviewer-bundle-reimport'),reviewerBundleReconcile=document.getElementById('reviewer-bundle-reconcile'),reviewerBundleSource=document.getElementById('reviewer-bundle-source');let lastReviewerBundle=null;
     const quickExportChat = document.getElementById('quick-export-chat');
     const openAllStarters = document.getElementById('open-all-starters');
     const workflowNavigator = document.getElementById('workflow-navigator');
@@ -672,11 +1666,125 @@
         : `mfl-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
     let localSessionId = createLocalSessionId();
+    const DISPLAY_PREFERENCES_STORAGE_KEY = 'mfl-display-preferences-v1';
+    const displayPreferenceDefaults = Object.freeze({density: 'comfortable', text_scale: 'standard'});
+    const displayPreferenceOptions = Object.freeze({
+      density: new Set(['comfortable', 'compact']),
+      text_scale: new Set(['standard', 'large', 'extra_large']),
+    });
+
+    function loadDisplayPreferences() {
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(DISPLAY_PREFERENCES_STORAGE_KEY) || '{}');
+        return Object.fromEntries(Object.entries(displayPreferenceDefaults).map(([name, fallback]) => [
+          name,
+          displayPreferenceOptions[name].has(saved?.[name]) ? saved[name] : fallback,
+        ]));
+      } catch (_) {
+        return {...displayPreferenceDefaults};
+      }
+    }
+
+    let displayPreferences = loadDisplayPreferences();
+
+    function displayPreferenceLabel(value) {
+      return ({comfortable: 'comfortable spacing', compact: 'compact spacing', standard: 'standard text', large: 'large text', extra_large: 'extra-large text'})[value] || 'standard';
+    }
+
+    function syncDisplayPreferences({announce = false} = {}) {
+      document.body.dataset.density = displayPreferences.density;
+      document.body.dataset.textScale = displayPreferences.text_scale;
+      if (displayDensitySelect) displayDensitySelect.value = displayPreferences.density;
+      if (displayTextScaleSelect) displayTextScaleSelect.value = displayPreferences.text_scale;
+      if (displayPreferencesStatus) {
+        displayPreferencesStatus.textContent = `${displayPreferenceLabel(displayPreferences.text_scale)} and ${displayPreferenceLabel(displayPreferences.density)} are active.${announce ? ' Local display choices saved.' : ''}`;
+      }
+    }
+
+    function saveDisplayPreferences() {
+      const requested = {
+        density: String(displayDensitySelect?.value || ''),
+        text_scale: String(displayTextScaleSelect?.value || ''),
+      };
+      if (!displayPreferenceOptions.density.has(requested.density) || !displayPreferenceOptions.text_scale.has(requested.text_scale)) {
+        if (displayPreferencesStatus) displayPreferencesStatus.textContent = 'Only the listed display choices can be saved.';
+        return;
+      }
+      displayPreferences = requested;
+      try { window.localStorage.setItem(DISPLAY_PREFERENCES_STORAGE_KEY, JSON.stringify(displayPreferences)); } catch (_) { /* The current display choice remains active. */ }
+      syncDisplayPreferences({announce: true});
+    }
+    const KEYBOARD_SHORTCUT_STORAGE_KEY = 'mfl-keyboard-shortcuts-v1';
+    const keyboardShortcutDefaults = Object.freeze({command_palette: 'ctrl+k', justice: 'ctrl+j'});
+    const keyboardShortcutOptions = Object.freeze({
+      command_palette: new Set(['ctrl+k', 'ctrl+shift+p']),
+      justice: new Set(['ctrl+j', 'off']),
+    });
+
+    function loadKeyboardShortcuts() {
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(KEYBOARD_SHORTCUT_STORAGE_KEY) || '{}');
+        return Object.fromEntries(Object.entries(keyboardShortcutDefaults).map(([name, fallback]) => [
+          name,
+          keyboardShortcutOptions[name].has(saved?.[name]) ? saved[name] : fallback,
+        ]));
+      } catch (_) {
+        return {...keyboardShortcutDefaults};
+      }
+    }
+
+    let keyboardShortcuts = loadKeyboardShortcuts();
+
+    function shortcutLabel(value) {
+      return ({'ctrl+k': 'Ctrl K', 'ctrl+shift+p': 'Ctrl Shift P', 'ctrl+j': 'Ctrl J', off: 'Off'})[value] || 'Off';
+    }
+
+    function shortcutAriaValue(value) {
+      return ({'ctrl+k': 'Control+K', 'ctrl+shift+p': 'Control+Shift+P', 'ctrl+j': 'Control+J'})[value] || '';
+    }
+
+    function keyboardShortcutMatches(event, shortcut) {
+      if (shortcut === 'off' || event.altKey || !(event.ctrlKey || event.metaKey)) return false;
+      const key = String(event.key || '').toLocaleLowerCase();
+      if (shortcut === 'ctrl+k') return !event.shiftKey && key === 'k';
+      if (shortcut === 'ctrl+shift+p') return event.shiftKey && key === 'p';
+      if (shortcut === 'ctrl+j') return !event.shiftKey && key === 'j';
+      return false;
+    }
+
+    function syncKeyboardShortcutUi({announce = false} = {}) {
+      if (shortcutCommandPaletteSelect) shortcutCommandPaletteSelect.value = keyboardShortcuts.command_palette;
+      if (shortcutJusticeSelect) shortcutJusticeSelect.value = keyboardShortcuts.justice;
+      document.querySelectorAll('[data-shortcut-command-palette]').forEach((node) => { node.textContent = shortcutLabel(keyboardShortcuts.command_palette); });
+      document.querySelectorAll('[data-shortcut-justice]').forEach((node) => { node.textContent = shortcutLabel(keyboardShortcuts.justice); });
+      const commandAria = shortcutAriaValue(keyboardShortcuts.command_palette);
+      if (commandAria) commandPaletteButton?.setAttribute('aria-keyshortcuts', commandAria);
+      else commandPaletteButton?.removeAttribute('aria-keyshortcuts');
+      if (shortcutPreferencesStatus) {
+        shortcutPreferencesStatus.textContent = `Command palette: ${shortcutLabel(keyboardShortcuts.command_palette)}. Justice key: ${shortcutLabel(keyboardShortcuts.justice)}.${announce ? ' Local preferences saved.' : ''}`;
+      }
+    }
+
+    function saveKeyboardShortcuts() {
+      const requested = {
+        command_palette: String(shortcutCommandPaletteSelect?.value || ''),
+        justice: String(shortcutJusticeSelect?.value || ''),
+      };
+      if (!keyboardShortcutOptions.command_palette.has(requested.command_palette) || !keyboardShortcutOptions.justice.has(requested.justice)) {
+        if (shortcutPreferencesStatus) shortcutPreferencesStatus.textContent = 'Only listed local shortcuts can be saved.';
+        return;
+      }
+      keyboardShortcuts = requested;
+      try { window.localStorage.setItem(KEYBOARD_SHORTCUT_STORAGE_KEY, JSON.stringify(keyboardShortcuts)); } catch (_) { /* In-memory behavior remains usable. */ }
+      syncKeyboardShortcutUi({announce: true});
+    }
     const messages = [];
     let libraryItems = [];
     let promptPacks = [];
     let lastPayload = null;
     let lastSources = [];
+    const sourceCardWindowPageSize = 60;
+    let sourceCardWindowLimit = sourceCardWindowPageSize;
     let matterIntakeRecord = null;
     let lastHandoffSources = [];
     let sourcePreviewPinned = false;
@@ -687,6 +1795,9 @@
     let recordInspectorState = null;
     let recordInspectorOwner = null;
     let recordInspectorZoom = 1;
+    let recordInspectorRequestEpoch = 0;
+    let recordInspectorController = null;
+    let recordInspectorObjectUrl = '';
     let documentIntelligenceOwner = null;
     let documentIntelligenceRecordId = '';
     let documentIntelligenceRuntime = null;
@@ -712,12 +1823,16 @@
     let localAgentPreview = null;
     let localAgentOwner = null;
     let localAgentBusy = false;
+    let localAgentRequestEpoch = 0;
     let authorityVerificationOwner = null;
     let authorityVerificationReceipt = null;
     let authorityVerificationBusy = false;
     let authorityTrustPayload = null;
     let activeWorkflow = 'research';
     const overlayReturnFocus = new WeakMap();
+    const overlayStack = [];
+    const safeErrorEvents = [];
+    const maxSafeErrorEvents = 25;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
@@ -747,8 +1862,9 @@
     }
 
     function safeErrorInfo(error) {
+      const hasSafeEnvelope = Boolean(error?.safeCode);
       return {
-        message: String(error?.message || 'The local service could not complete this action.'),
+        message: hasSafeEnvelope ? String(error?.message || 'The local service could not complete this action.') : 'The local service could not complete this action.',
         code: String(error?.safeCode || 'local_action_failed'),
         scope: String(error?.safeScope || 'Only this local action was affected.'),
         preserved: String(error?.preserved || 'Your matter, draft, and original records were preserved.'),
@@ -756,8 +1872,40 @@
       };
     }
 
+    function recordSafeError(error, title) {
+      const info = safeErrorInfo(error);
+      safeErrorEvents.unshift({
+        code: info.code,
+        title: String(title || 'Local action could not finish').replace(/[\\/]|[A-Za-z]:/g, '').slice(0, 160),
+        scope: info.scope,
+        preserved: info.preserved,
+        recovery: info.recovery,
+        occurred_at: new Date().toISOString(),
+      });
+      safeErrorEvents.splice(maxSafeErrorEvents);
+      renderErrorCenter();
+    }
+
+    function renderErrorCenter() {
+      if (!errorCenterStatus || !errorCenterList) return;
+      if (!safeErrorEvents.length) {
+        errorCenterStatus.textContent = 'No local issues have been recorded in this session.';
+        errorCenterList.innerHTML = '';
+        return;
+      }
+      errorCenterStatus.textContent = `${safeErrorEvents.length} safe recovery item${safeErrorEvents.length === 1 ? '' : 's'} in this session. Return to the original control to retry after reviewing its prerequisites.`;
+      errorCenterList.innerHTML = safeErrorEvents.map((event) => `<li><strong>${escapeHtml(event.title)}</strong><p>Error code: <code>${escapeHtml(event.code)}</code> · ${escapeHtml(formatLocalTime(event.occurred_at))}</p><p><strong>Affected scope:</strong> ${escapeHtml(event.scope)}</p><p><strong>Preserved:</strong> ${escapeHtml(event.preserved)}</p><p><strong>Safe recovery:</strong> ${escapeHtml(event.recovery)}</p></li>`).join('');
+    }
+
+    function openErrorCenter(owner = null) {
+      if (errorCenterOverlay && owner) overlayReturnFocus.set(errorCenterOverlay, owner);
+      renderErrorCenter();
+      openOverlay(errorCenterOverlay);
+    }
+
     function renderRecoverableError(error, {title = 'This local action could not finish'} = {}) {
       const info = safeErrorInfo(error);
+      recordSafeError(error, title);
       return `<section class="recoverable-error" role="alert"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(info.message)}</p><dl><div><dt>Affected scope</dt><dd>${escapeHtml(info.scope)}</dd></div><div><dt>What was preserved</dt><dd>${escapeHtml(info.preserved)}</dd></div><div><dt>Safe recovery</dt><dd>${escapeHtml(info.recovery)}</dd></div></dl><details><summary>Technical details</summary><p>Error code: <code>${escapeHtml(info.code)}</code></p></details></section>`;
     }
 
@@ -817,16 +1965,124 @@
       }, 1500);
     }
 
+    // Clipboard contents are deliberately never read.  For potentially private
+    // app-originated text, clear only while this tab remains focused and no
+    // copy/cut event has superseded our own write.  A blur/visibility change
+    // cancels the timer rather than risking another application's clipboard.
+    const SENSITIVE_CLIPBOARD_CLEAR_MS = 90 * 1000;
+    let sensitiveClipboardClearTimer = 0;
+    let sensitiveClipboardWriteActive = false;
+
+    function cancelSensitiveClipboardClear() {
+      if (sensitiveClipboardClearTimer) window.clearTimeout(sensitiveClipboardClearTimer);
+      sensitiveClipboardClearTimer = 0;
+      sensitiveClipboardWriteActive = false;
+    }
+
+    function scheduleSensitiveClipboardClear() {
+      cancelSensitiveClipboardClear();
+      sensitiveClipboardWriteActive = true;
+      sensitiveClipboardClearTimer = window.setTimeout(async () => {
+        if (!sensitiveClipboardWriteActive || !document.hasFocus() || document.visibilityState !== 'visible') return;
+        try {
+          await navigator.clipboard.writeText('');
+          showToast('Sensitive clipboard content cleared after 90 seconds.');
+        } catch (_) {
+          // Clipboard permission can change after the explicit copy gesture.
+          // Do not retry, inspect, or expose platform details.
+          showToast('Sensitive clipboard clear needs your browser permission. Clear it manually if needed.');
+        } finally {
+          cancelSensitiveClipboardClear();
+        }
+      }, SENSITIVE_CLIPBOARD_CLEAR_MS);
+    }
+
+    async function writeClipboardText(text, {sensitive = false, label = 'content'} = {}) {
+      const value = String(text || '');
+      if (!value) throw makeSafeLocalError({code: 'clipboard_content_unavailable', message: 'There is no content available to copy.', recovery: 'Generate or select the content again, then retry.'});
+      if (!navigator.clipboard?.writeText) throw makeSafeLocalError({code: 'clipboard_write_unavailable', message: 'Clipboard access is unavailable in this local window.', recovery: 'Select the text and copy it manually.'});
+      if (sensitive && !window.confirm(`This ${label} may contain private family-record information. Copy it to this computer's clipboard? It will be cleared after 90 seconds only while this app remains active.`)) {
+        return false;
+      }
+      await navigator.clipboard.writeText(value);
+      if (sensitive) {
+        scheduleSensitiveClipboardClear();
+        showToast(`Copied potentially private ${label}. It will clear after 90 seconds while this app stays active.`);
+      }
+      return true;
+    }
+
+    window.addEventListener('blur', cancelSensitiveClipboardClear);
+    window.addEventListener('pagehide', cancelSensitiveClipboardClear);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') cancelSensitiveClipboardClear(); });
+    document.addEventListener('copy', () => { if (sensitiveClipboardWriteActive) cancelSensitiveClipboardClear(); });
+    document.addEventListener('cut', () => { if (sensitiveClipboardWriteActive) cancelSensitiveClipboardClear(); });
+
+    let localCapabilitySessionId = '';
+
+    function localCapabilitySession() {
+      if (/^[a-f0-9]{32,64}$/i.test(localCapabilitySessionId)) return localCapabilitySessionId;
+      try {
+        const saved = String(window.sessionStorage?.getItem('mfl_local_capability_session_v1') || '');
+        if (/^[a-f0-9]{32,64}$/i.test(saved)) {
+          localCapabilitySessionId = saved;
+          return localCapabilitySessionId;
+        }
+        if (window.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(24);
+          window.crypto.getRandomValues(bytes);
+          localCapabilitySessionId = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+          window.sessionStorage?.setItem('mfl_local_capability_session_v1', localCapabilitySessionId);
+          return localCapabilitySessionId;
+        }
+      } catch (_) {
+        // Storage is optional. The server keeps the explicit compatibility
+        // boundary review-required when a secure browser session is unavailable.
+      }
+      return 'legacy-local-session';
+    }
+
+    function newLocalIdempotencyKey() {
+      try {
+        if (window.crypto?.getRandomValues) {
+          const bytes = new Uint8Array(18);
+          window.crypto.getRandomValues(bytes);
+          return `idem-${Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('')}`;
+        }
+      } catch (_) { /* Fall through to a non-secret uniqueness fallback. */ }
+      return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 18)}`;
+    }
+
+    function isIdempotentMutation(url, options = {}) {
+      const method = String(options.method || 'GET').toUpperCase();
+      if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return false;
+      try {
+        const parsed = new URL(String(url || ''), window.location.origin);
+        return parsed.origin === window.location.origin && parsed.pathname.startsWith('/api/') && parsed.pathname !== '/ask/stream';
+      } catch (_) { return false; }
+    }
+
     async function fetchJson(url, options = {}) {
       let res;
-      try {
-        const headers = new Headers(options.headers || {});
-        if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
-        if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
-        res = await fetch(url, {...options, headers});
-      } catch (err) {
-        if (err?.name === 'AbortError') throw err;
-        throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.'});
+      const mutation = isIdempotentMutation(url, options);
+      const headers = new Headers(options.headers || {});
+      if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
+      if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
+      if (!headers.has('X-MFLL-Client-Session')) headers.set('X-MFLL-Client-Session', localCapabilitySession());
+      if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {
+        const supplied = String(options.idempotencyKey || '').trim();
+        const key = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/.test(supplied) ? supplied : newLocalIdempotencyKey();
+        headers.set('X-MFLL-Idempotency-Key', key);
+      }
+      for (let attempt = 0; attempt < (mutation ? 2 : 1); attempt += 1) {
+        try {
+          res = await fetch(url, {...options, headers});
+          break;
+        } catch (err) {
+          if (err?.name === 'AbortError') throw err;
+          if (attempt === 0 && mutation) continue;
+          throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.'});
+        }
       }
       const text = await res.text();
       let payload = null;
@@ -852,8 +2108,67 @@
       const headers = new Headers(rawHeaders);
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
       if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
+      if (!headers.has('X-MFLL-Client-Session')) headers.set('X-MFLL-Client-Session', localCapabilitySession());
       return headers;
     }
+
+    function isSessionBoundArtifactUrl(value) {
+      try {
+        const url = new URL(String(value || ''), window.location.origin);
+        if (url.origin !== window.location.origin) return false;
+        return /^\/api\/(?:document-intelligence|evidence-work-product|attorney-sandbox-operations|limited-real-matter-pilot|ga-release-candidate|findings-forms|reviewed-filing-packet|authority-change-impact|ga-shipment-readiness)\/artifacts\/[a-f0-9]{64}$/i.test(url.pathname)
+          || /^\/api\/document-workspace\/artifacts\/[a-f0-9]{32}$/i.test(url.pathname)
+          || /^\/api\/document-workspace\/exports\/[a-f0-9]{64}$/i.test(url.pathname)
+          || /^\/api\/artifacts\/[a-f0-9]{64}\/receipt$/i.test(url.pathname);
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function artifactFilename(response, fallback = 'review-required-artifact') {
+      const disposition = String(response.headers.get('content-disposition') || '');
+      const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+      const plain = /filename="?([^";]+)"?/i.exec(disposition);
+      const candidate = encoded ? decodeURIComponent(encoded[1]) : (plain ? plain[1] : fallback);
+      return String(candidate || fallback).replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 180) || fallback;
+    }
+
+    async function downloadSessionBoundArtifact(url, fallbackName = 'review-required-artifact') {
+      const response = await fetch(url, {headers: localRequestHeaders(), cache: 'no-store'});
+      if (!response.ok) {
+        let code = `local_http_${response.status}`;
+        try {
+          const payload = await response.json();
+          const raw = String(payload?.error_code || payload?.code || payload?.detail || '');
+          if (/^[a-z0-9_.:-]{1,80}$/i.test(raw)) code = raw;
+        } catch (_) { /* Safe generic status remains. */ }
+        throw makeSafeLocalError({status: response.status, code});
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = artifactFilename(response, fallbackName);
+      anchor.style.display = 'none';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      return true;
+    }
+
+    // Opaque private-artifact links cannot carry the session header themselves.
+    // Intercept known local artifact routes and perform a same-origin fetch so a
+    // copied URL fails closed outside the local browser session that created it.
+    document.addEventListener('click', (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      if (!link || !isSessionBoundArtifactUrl(link.getAttribute('href'))) return;
+      event.preventDefault();
+      void downloadSessionBoundArtifact(link.href, link.download || 'review-required-artifact').catch((error) => {
+        showToast(safeErrorMessage(error, 'The local artifact could not be opened. The original record was preserved.'));
+      });
+    });
 
     function parseStreamFrame(frame) {
       const lines = String(frame || '').split(/\r?\n/);
@@ -1033,6 +2348,382 @@
       applyLocalWorkbenchPreferences(preferences);
     }
 
+    function healthDependencyDetail(component) {
+      const details = component?.details || {};
+      const id = String(component?.component_id || 'dependency');
+      if (id === 'database') return `${Number(details.active_job_count || 0)} active job(s) in the active matter.`;
+      if (id === 'authority') return details.active_build_available ? `Active build: ${String(details.build_id || 'available')}.` : 'No active admitted build is available for a current-law conclusion.';
+      if (id === 'model') return details.remote_provider_enabled ? 'Remote provider status needs review.' : 'No remote provider is enabled by this check.';
+      if (id === 'ocr') return details.engine_available ? 'A local OCR engine is available.' : 'Scanned pages remain review-required until local OCR is ready.';
+      if (id === 'media') return details.local_video_decoder_available ? 'Local video decoder available.' : 'Video actions will fail closed until a local decoder is installed.';
+      if (id === 'storage') return `${(Number(details.free_bytes || 0) / (1024 ** 3)).toFixed(1)} GiB free; no path disclosed.`;
+      if (id === 'backup') return details.backup_root_configured ? 'External backup root is configured.' : 'External backup is not configured.';
+      if (id === 'clock') return details.utc_timestamp ? `UTC receipt time: ${String(details.utc_timestamp)}.` : 'Clock status needs review.';
+      return 'Local-only status; review before relying on this component.';
+    }
+
+    function renderHealthDependencyDashboard(payload) {
+      const status = String(payload?.status || 'blocked');
+      const rows = Array.isArray(payload?.components) ? payload.components : [];
+      const attention = Array.isArray(payload?.review_attention) ? payload.review_attention : [];
+      const core = Array.isArray(payload?.core_blockers) ? payload.core_blockers : [];
+      if (localHealthDashboardStatus) {
+        localHealthDashboardStatus.textContent = status === 'ready'
+          ? 'Local core dependencies are ready. Review-required safeguards remain in effect.'
+          : status === 'degraded'
+            ? `Local core dependencies are available, with ${attention.length} dependency item(s) needing review.`
+            : `Core dependency blocker${core.length === 1 ? '' : 's'}: ${core.join(', ') || 'status unavailable'}.`;
+      }
+      if (localHealthDashboardBadge) {
+        localHealthDashboardBadge.className = `status-badge ${status === 'ready' ? 'review' : 'blocked'}`;
+        localHealthDashboardBadge.textContent = status === 'ready' ? 'Review required' : status === 'degraded' ? 'Needs review' : 'Blocked';
+      }
+      if (localHealthDashboardResults) {
+        localHealthDashboardResults.innerHTML = rows.length
+          ? rows.map((component) => `<section class="local-health-row"><strong>${escapeHtml(String(component.component_id || 'Dependency'))}</strong><span class="status-badge ${escapeHtml(String(component.status || 'blocked'))}">${escapeHtml(String(component.status || 'blocked'))}</span><p>${escapeHtml(String(component.summary || 'Status unavailable'))}</p><small>${escapeHtml(healthDependencyDetail(component))}</small></section>`).join('')
+          : '<strong>Health dashboard unavailable</strong><p>No component states were returned. Your matter remains unchanged.</p>';
+      }
+    }
+
+    async function loadHealthDependencyDashboard() {
+      if (localHealthDashboardStatus) localHealthDashboardStatus.textContent = 'Checking local dependencies for the active matter…';
+      if (localHealthDashboardRefresh) { localHealthDashboardRefresh.disabled = true; localHealthDashboardRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        renderHealthDependencyDashboard(await fetchJson('/api/runtime/health-dashboard'));
+      } catch (err) {
+        if (localHealthDashboardStatus) localHealthDashboardStatus.innerHTML = renderRecoverableError(err, {title: 'Local dependency status could not be checked'});
+        if (localHealthDashboardBadge) { localHealthDashboardBadge.className = 'status-badge blocked'; localHealthDashboardBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (localHealthDashboardRefresh) { localHealthDashboardRefresh.disabled = false; localHealthDashboardRefresh.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderRuntimeJobJournal(payload) {
+      const jobs = Array.isArray(payload?.jobs) ? payload.jobs : [];
+      const counts = payload?.counts || {};
+      const active = Number(counts.active || 0);
+      const retried = Number(counts.retried || 0);
+      const cancelled = Number(counts.cancelled || 0);
+      if (runtimeJobJournalStatus) runtimeJobJournalStatus.textContent = jobs.length
+        ? `${active} active · ${cancelled} cancelled · ${retried} retried job(s). Inputs, results, errors, and paths stay private.`
+        : 'No durable runtime jobs have been recorded for this active matter.';
+      if (runtimeJobJournalBadge) {
+        runtimeJobJournalBadge.className = 'status-badge review';
+        runtimeJobJournalBadge.textContent = active ? 'Active work' : 'Review required';
+      }
+      if (runtimeJobJournalResults) {
+        runtimeJobJournalResults.innerHTML = jobs.length
+          ? jobs.map((job) => `<section class="local-job-row"><strong>${escapeHtml(String(job.job_type || 'Local job').replaceAll('_', ' '))}</strong><span class="status-badge review">${escapeHtml(String(job.status || 'unknown'))}</span><p>Stage: ${escapeHtml(String(job.stage || 'unknown').replaceAll('_', ' '))} · ${(Number(job.progress || 0) * 100).toFixed(0)}% · attempt ${Number(job.attempt || 0)}</p><small>Input hash: ${escapeHtml(String(job.input_hash || '').slice(0, 16))}… · ${job.terminal ? 'terminal work preserved' : 'review before cancellation or retry'}</small></section>`).join('')
+          : '<strong>No active-matter jobs</strong><p>Imports, OCR, and local model work will appear here when the runtime creates a durable job.</p>';
+      }
+    }
+
+    async function loadRuntimeJobJournal() {
+      if (runtimeJobJournalStatus) runtimeJobJournalStatus.textContent = 'Reading the durable job journal for the active matter…';
+      if (runtimeJobJournalRefresh) { runtimeJobJournalRefresh.disabled = true; runtimeJobJournalRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        renderRuntimeJobJournal(await fetchJson('/api/runtime/job-journal'));
+      } catch (err) {
+        if (runtimeJobJournalStatus) runtimeJobJournalStatus.innerHTML = renderRecoverableError(err, {title: 'Runtime job journal could not be loaded'});
+        if (runtimeJobJournalBadge) { runtimeJobJournalBadge.className = 'status-badge blocked'; runtimeJobJournalBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (runtimeJobJournalRefresh) { runtimeJobJournalRefresh.disabled = false; runtimeJobJournalRefresh.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderIdempotencyProtection(payload) {
+      const ready = String(payload?.status || '') === 'ready';
+      const completed = Number(payload?.completed_entries || 0);
+      const pending = Number(payload?.pending_entries || 0);
+      if (idempotencyProtectionStatus) idempotencyProtectionStatus.textContent = ready
+        ? `Protected retry state: ${completed} completed and ${pending} in-progress local request${pending === 1 ? '' : 's'}. Only an identical retry may replay a completed action.`
+        : 'Retry protection is unavailable. Do not repeat a save, import, review, or export setup action until local runtime health is restored.';
+      if (idempotencyProtectionBadge) {
+        idempotencyProtectionBadge.className = `status-badge ${ready ? 'review' : 'blocked'}`;
+        idempotencyProtectionBadge.textContent = ready ? 'Review required' : 'Unavailable';
+      }
+      if (idempotencyProtectionResults) {
+        const binding = Array.isArray(payload?.scope_binding) ? payload.scope_binding.map(item => String(item).replaceAll('_', ' ')).join(' · ') : 'scope unavailable';
+        idempotencyProtectionResults.innerHTML = ready
+          ? `<strong>Encrypted local retry protection is ready.</strong><p>Bound to: ${escapeHtml(binding)}.</p><p>Responses are stored only in encrypted local runtime state. Record text, prompts, paths, downloads, provider traffic, and automatic retries of a new action are not stored.</p><p>Direct legacy API callers: ${escapeHtml(String(payload?.legacy_callers || 'status unavailable').replaceAll('_', ' '))}.</p>`
+          : '<strong>Retry protection could not be inspected.</strong><p>Your matter was not changed by this status check. Use the local health panel, then retry this inspection.</p>';
+      }
+    }
+
+    async function loadIdempotencyProtection() {
+      if (idempotencyProtectionStatus) idempotencyProtectionStatus.textContent = 'Inspecting encrypted local retry protection…';
+      if (idempotencyProtectionRefresh) { idempotencyProtectionRefresh.disabled = true; idempotencyProtectionRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        renderIdempotencyProtection(await fetchJson('/api/runtime/idempotency-status'));
+      } catch (err) {
+        if (idempotencyProtectionStatus) idempotencyProtectionStatus.innerHTML = renderRecoverableError(err, {title: 'Retry protection could not be inspected'});
+        if (idempotencyProtectionBadge) { idempotencyProtectionBadge.className = 'status-badge blocked'; idempotencyProtectionBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (idempotencyProtectionRefresh) { idempotencyProtectionRefresh.disabled = false; idempotencyProtectionRefresh.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderDatabaseIntegrity(payload) {
+      const passed = String(payload?.status || '') === 'pass';
+      const checks = Array.isArray(payload?.checks) ? payload.checks : [];
+      const guidance = Array.isArray(payload?.recovery_guidance) ? payload.recovery_guidance : [];
+      if (databaseIntegrityStatus) databaseIntegrityStatus.textContent = passed
+        ? `Read-only runtime database check passed in ${Number(payload?.elapsed_ms || 0)} ms. No repair was attempted.`
+        : 'Runtime database integrity needs human review. The original database was preserved and no repair was attempted.';
+      if (databaseIntegrityBadge) {
+        databaseIntegrityBadge.className = `status-badge ${passed ? 'review' : 'blocked'}`;
+        databaseIntegrityBadge.textContent = passed ? 'Review required' : 'Blocked';
+      }
+      if (databaseIntegrityResults) {
+        const checkRows = checks.length
+          ? checks.map((check) => `<li><strong>${escapeHtml(String(check.check_id || 'check').replaceAll('_', ' '))}</strong>: ${escapeHtml(String(check.status || 'unknown'))}${Number(check.finding_count || 0) ? ` · ${Number(check.finding_count)} finding(s)` : ''}</li>`).join('')
+          : '<li>No check detail was returned.</li>';
+        const steps = guidance.length ? `<ol>${guidance.map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}</ol>` : '';
+        databaseIntegrityResults.innerHTML = `<strong>${passed ? 'Non-destructive check completed.' : 'Recovery review required.'}</strong><p>Database location, table rows, record text, prompts, and private payloads are not shown. Network access and destructive repair are disabled.</p><ul>${checkRows}</ul>${steps}`;
+      }
+    }
+
+    async function loadDatabaseIntegrity() {
+      if (databaseIntegrityStatus) databaseIntegrityStatus.textContent = 'Running bounded read-only integrity checks for the active matter…';
+      if (databaseIntegrityRefresh) { databaseIntegrityRefresh.disabled = true; databaseIntegrityRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        renderDatabaseIntegrity(await fetchJson('/api/runtime/database-integrity'));
+      } catch (err) {
+        if (databaseIntegrityStatus) databaseIntegrityStatus.innerHTML = renderRecoverableError(err, {title: 'Runtime database integrity could not be checked'});
+        if (databaseIntegrityBadge) { databaseIntegrityBadge.className = 'status-badge blocked'; databaseIntegrityBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (databaseIntegrityRefresh) { databaseIntegrityRefresh.disabled = false; databaseIntegrityRefresh.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderPowerLossResilience(payload) {
+      const passed = String(payload?.status || '') === 'pass';
+      const operations = Array.isArray(payload?.operations) ? payload.operations : [];
+      const failed = Number(payload?.failed_operation_count || 0);
+      if (powerLossResilienceStatus) powerLossResilienceStatus.textContent = passed
+        ? `${operations.length} synthetic interruption point(s) passed. This is fault-injection evidence only, not a physical power-cut or hardware certification.`
+        : `${failed || 'One or more'} synthetic interruption result(s) need review. The drill did not touch your records; do not infer production resilience until the blocker is resolved.`;
+      if (powerLossResilienceBadge) {
+        powerLossResilienceBadge.className = `status-badge ${passed ? 'review' : 'blocked'}`;
+        powerLossResilienceBadge.textContent = passed ? 'Review required' : 'Blocked';
+      }
+      if (powerLossResilienceResults) {
+        const rows = operations.length
+          ? operations.map((row) => `<li><strong>${escapeHtml(String(row.operation || 'operation').replaceAll('_', ' '))}</strong> · ${escapeHtml(String(row.fault_point || 'fault point').replaceAll('_', ' '))}: ${escapeHtml(String(row.outcome || 'unknown').replaceAll('_', ' '))} · ${escapeHtml(String(row.status || 'unknown'))}</li>`).join('')
+          : '<li>No synthetic drill detail was returned.</li>';
+        powerLossResilienceResults.innerHTML = `<strong>${passed ? 'Synthetic atomic-write drill completed.' : 'Synthetic drill is blocked.'}</strong><p>No matter record or private path was used. The runtime did not cut power, repair storage, or touch a live import, index, backup, or export.</p><ul>${rows}</ul><p>Physical power-loss, filesystem, firmware, backup-medium, packaged-app, and release qualification remain separate evidence requirements.</p>`;
+      }
+    }
+
+    async function runPowerLossResilience() {
+      if (powerLossResilienceStatus) powerLossResilienceStatus.textContent = 'Running disposable synthetic fault injection; no private matter records are read…';
+      if (powerLossResilienceRun) { powerLossResilienceRun.disabled = true; powerLossResilienceRun.setAttribute('aria-busy', 'true'); }
+      try {
+        renderPowerLossResilience(await fetchJson('/api/runtime/power-loss-drill', {method: 'POST'}));
+      } catch (err) {
+        if (powerLossResilienceStatus) powerLossResilienceStatus.innerHTML = renderRecoverableError(err, {title: 'Synthetic power-loss resilience drill could not run'});
+        if (powerLossResilienceBadge) { powerLossResilienceBadge.className = 'status-badge blocked'; powerLossResilienceBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (powerLossResilienceRun) { powerLossResilienceRun.disabled = false; powerLossResilienceRun.removeAttribute('aria-busy'); }
+      }
+    }
+
+    async function loadStoragePressure() {
+      if (storagePressureStatus) storagePressureStatus.textContent = 'Forecasting safe capacity for the active matter…';
+      if (storagePressureRefresh) { storagePressureRefresh.disabled = true; storagePressureRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        const payload = await fetchJson('/api/runtime/storage-pressure');
+        const blocked = String(payload?.status || '') === 'blocked';
+        const freeGiB = (Number(payload?.free_bytes || 0) / (1024 ** 3)).toFixed(1);
+        const candidates = Array.isArray(payload?.cleanup_candidates?.candidate_categories) ? payload.cleanup_candidates.candidate_categories : [];
+        if (storagePressureStatus) storagePressureStatus.textContent = blocked ? 'Writes are blocked before safe space is exhausted. Preserve current data and review capacity or backup recovery options.' : `${freeGiB} GiB free. New durable writes retain a local safety reserve and remain review-required.`;
+        if (storagePressureBadge) { storagePressureBadge.className = `status-badge ${blocked ? 'blocked' : 'review'}`; storagePressureBadge.textContent = blocked ? 'Write blocked' : 'Review required'; }
+        if (storagePressureResults) storagePressureResults.innerHTML = `<strong>${blocked ? 'Safe write gate is blocking new durable writes.' : 'Safe write reserve is available.'}</strong><p>Forecast after the anticipated operation: ${(Number(payload?.forecast_remaining_after_write_bytes || 0) / (1024 ** 3)).toFixed(1)} GiB. No path is shown and no cleanup ran.</p><ul>${candidates.map(row => `<li>${escapeHtml(String(row.candidate_kind || 'candidate').replaceAll('_',' '))}: ${Number(row.count || 0)} candidate(s), ${(Number(row.estimated_reclaimable_bytes || 0)/(1024**2)).toFixed(1)} MiB · explicit review required</li>`).join('') || '<li>No reviewed cleanup candidate is available.</li>'}</ul>`;
+      } catch (err) {
+        if (storagePressureStatus) storagePressureStatus.innerHTML = renderRecoverableError(err, {title: 'Storage pressure could not be checked'});
+        if (storagePressureBadge) { storagePressureBadge.className = 'status-badge blocked'; storagePressureBadge.textContent = 'Unavailable'; }
+      } finally { if (storagePressureRefresh) { storagePressureRefresh.disabled = false; storagePressureRefresh.removeAttribute('aria-busy'); } }
+    }
+
+    async function loadClockSkew() {
+      if (clockSkewStatus) clockSkewStatus.textContent = 'Checking local clock continuity without contacting a time service…';
+      if (clockSkewRefresh) { clockSkewRefresh.disabled = true; clockSkewRefresh.setAttribute('aria-busy','true'); }
+      try { const p=await fetchJson('/api/runtime/clock-skew'); const blocked=Boolean(p?.material_skew_detected); if(clockSkewStatus)clockSkewStatus.textContent=blocked?`Material local clock difference detected (${Number(p?.skew_seconds||0).toFixed(1)} seconds). Review all time-sensitive work; timestamps were not changed.`:String(p?.status||'baseline established').replaceAll('_',' ') + '. Local time remains review-required.'; if(clockSkewBadge){clockSkewBadge.className=`status-badge ${blocked?'blocked':'review'}`;clockSkewBadge.textContent=blocked?'Review blocker':'Review required';} if(clockSkewResults)clockSkewResults.innerHTML=`<strong>${blocked?'Time-sensitive review required.':'Local clock check recorded.'}</strong><p>Network time was not checked and existing timestamps were not rewritten.</p>${blocked?`<p>Affected review domains: ${escapeHtml((p?.affected_review_domains||[]).map(x=>String(x).replaceAll('_',' ')).join(', ')||'time-sensitive work')}.</p>`:'<p>The first check or a restarted session establishes a local baseline; it does not certify real-world time accuracy.</p>'}`;} catch(err){if(clockSkewStatus)clockSkewStatus.innerHTML=renderRecoverableError(err,{title:'Clock continuity could not be checked'});if(clockSkewBadge){clockSkewBadge.className='status-badge blocked';clockSkewBadge.textContent='Unavailable';}} finally {if(clockSkewRefresh){clockSkewRefresh.disabled=false;clockSkewRefresh.removeAttribute('aria-busy');}}
+    }
+
+    function collectPerformanceObservations() {
+      const observations = {};
+      for (const input of performanceGateInputs) {
+        const metric = String(input?.dataset?.performanceMetric || '');
+        const raw = String(input?.value || '').trim();
+        if (!raw) continue;
+        if (!metric || !/^\d+$/.test(raw)) throw new Error('performance_value_invalid');
+        const value = Number(raw);
+        if (!Number.isSafeInteger(value) || value < 0 || value > 86400000) throw new Error('performance_value_out_of_range');
+        observations[metric] = value;
+      }
+      return observations;
+    }
+
+    function renderPerformanceGates(payload) {
+      const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
+      const overBudget = String(payload?.status || '') === 'blocked';
+      const incomplete = String(payload?.status || '') === 'incomplete';
+      if (performanceGatesStatus) {
+        performanceGatesStatus.textContent = overBudget
+          ? `${Number(payload?.over_budget_metric_count || 0)} reviewed metric(s) exceed a local budget. This is a review blocker, not a diagnosis or release decision.`
+          : incomplete
+            ? `${Number(payload?.missing_metric_count || 0)} required metric(s) remain unmeasured. Missing evidence is not treated as a pass.`
+            : 'All listed metrics are within the local budget, but the recorded evidence remains review-required.';
+      }
+      if (performanceGatesBadge) {
+        performanceGatesBadge.className = `status-badge ${overBudget ? 'blocked' : 'review'}`;
+        performanceGatesBadge.textContent = overBudget ? 'Budget blocker' : incomplete ? 'Evidence incomplete' : 'Review required';
+      }
+      if (performanceGatesResults) {
+        const rows = metrics.map((metric) => {
+          const value = metric?.observed === null || metric?.observed === undefined ? 'Not measured' : `${Number(metric.observed).toLocaleString()} ${escapeHtml(String(metric.unit || ''))}`;
+          const status = String(metric?.status || 'not_measured').replaceAll('_', ' ');
+          return `<li><strong>${escapeHtml(String(metric?.label || metric?.metric_id || 'Metric'))}</strong>: ${value} / ${Number(metric?.budget || 0).toLocaleString()} ${escapeHtml(String(metric?.unit || ''))} · ${escapeHtml(status)}</li>`;
+        }).join('');
+        performanceGatesResults.innerHTML = `<strong>Encrypted local performance review recorded.</strong><p>Evidence type: ${escapeHtml(String(payload?.evidence_kind || 'operator supplied').replaceAll('_', ' '))}. Prompts, record text, paths, package contents, and machine identifiers were not saved.</p><ul>${rows || '<li>No allow-listed metric was returned.</li>'}</ul><p>${escapeHtml(String(payload?.boundary || 'Review required.'))}</p>`;
+      }
+    }
+
+    async function savePerformanceGates() {
+      if (!performanceGatesConfirm?.checked) {
+        if (performanceGatesStatus) performanceGatesStatus.textContent = 'Confirm that these values are fictional or locally observed and are not release certification before saving the review.';
+        performanceGatesConfirm?.focus({preventScroll: true});
+        return;
+      }
+      let observations;
+      try { observations = collectPerformanceObservations(); }
+      catch (_) {
+        if (performanceGatesStatus) performanceGatesStatus.textContent = 'Enter whole, non-negative numeric values only. Do not enter names, paths, record text, prompts, or package contents.';
+        return;
+      }
+      if (!Object.keys(observations).length) {
+        if (performanceGatesStatus) performanceGatesStatus.textContent = 'Enter at least one timing, memory, or package-size value. Blank metrics will stay visibly unmeasured.';
+        performanceGateInputs[0]?.focus({preventScroll: true});
+        return;
+      }
+      if (performanceGatesSave) { performanceGatesSave.disabled = true; performanceGatesSave.setAttribute('aria-busy', 'true'); }
+      if (performanceGatesStatus) performanceGatesStatus.textContent = 'Saving a bounded, encrypted local performance review…';
+      try {
+        renderPerformanceGates(await fetchJson('/api/runtime/performance-gates', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({observations, evidence_kind: 'operator_supplied_unverified'})}));
+      } catch (err) {
+        if (performanceGatesStatus) performanceGatesStatus.innerHTML = renderRecoverableError(err, {title: 'Performance gates could not be reviewed'});
+        if (performanceGatesBadge) { performanceGatesBadge.className = 'status-badge blocked'; performanceGatesBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (performanceGatesSave) { performanceGatesSave.disabled = false; performanceGatesSave.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderFailureReplay(payload) {
+      const envelope = payload?.safe_envelope || {};
+      if (failureReplayStatus) failureReplayStatus.textContent = `Safe error ${String(envelope?.code || 'unknown').replaceAll('_', ' ')} replayed locally. The original operation was not run and no raw failure data was used.`;
+      if (failureReplayBadge) { failureReplayBadge.className = 'status-badge review'; failureReplayBadge.textContent = 'Review required'; }
+      if (failureReplayResults) failureReplayResults.innerHTML = `<strong>Sanitized safe-error envelope replayed.</strong><p><code>${escapeHtml(String(envelope?.code || 'unknown'))}</code> · local status ${escapeHtml(String(envelope?.http_status || 'unknown'))}</p><ul><li><strong>Affected scope:</strong> ${escapeHtml(String(envelope?.affected_scope || 'Only this local recovery rehearsal.'))}</li><li><strong>What was preserved:</strong> ${escapeHtml(String(envelope?.preserved || 'No original operation was run.'))}</li><li><strong>Safe recovery:</strong> ${escapeHtml(String(envelope?.recovery || 'Review prerequisites before retrying the original action.'))}</li><li><strong>Contract drill-down:</strong> ${escapeHtml(String(payload?.source_drill_down?.source_id || 'allow-listed safe failure contract'))}</li></ul><p>${escapeHtml(String(payload?.boundary || 'Review required.'))}</p>`;
+    }
+
+    async function runFailureReplay() {
+      if (!failureReplayConfirm?.checked) {
+        if (failureReplayStatus) failureReplayStatus.textContent = 'Confirm that this is a synthetic safe-error rehearsal before continuing.';
+        failureReplayConfirm?.focus({preventScroll: true});
+        return;
+      }
+      const scenario_id = String(failureReplayScenario?.value || '').trim();
+      if (!scenario_id) {
+        if (failureReplayStatus) failureReplayStatus.textContent = 'Choose one allow-listed safe scenario before continuing.';
+        failureReplayScenario?.focus({preventScroll: true});
+        return;
+      }
+      if (failureReplayRun) { failureReplayRun.disabled = true; failureReplayRun.setAttribute('aria-busy', 'true'); }
+      if (failureReplayStatus) failureReplayStatus.textContent = 'Replaying a sanitized local recovery envelope without opening logs or rerunning the original action…';
+      try {
+        renderFailureReplay(await fetchJson('/api/runtime/failure-replay', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({scenario_id, confirmed: true})}));
+      } catch (err) {
+        if (failureReplayStatus) failureReplayStatus.innerHTML = renderRecoverableError(err, {title: 'Safe recovery replay could not run'});
+        if (failureReplayBadge) { failureReplayBadge.className = 'status-badge blocked'; failureReplayBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (failureReplayRun) { failureReplayRun.disabled = false; failureReplayRun.removeAttribute('aria-busy'); }
+      }
+    }
+
+    function renderCrossDeviceTransfer(payload, {action = 'inspect'} = {}) {
+      const bundles = Array.isArray(payload?.bundles) ? payload.bundles : [];
+      const blocked = String(payload?.status || '') === 'blocked';
+      if (crossDeviceTransferBadge) { crossDeviceTransferBadge.className = `status-badge ${blocked ? 'blocked' : 'review'}`; crossDeviceTransferBadge.textContent = blocked ? 'Setup required' : 'Review required'; }
+      if (crossDeviceTransferStatus) crossDeviceTransferStatus.textContent = blocked ? 'An explicit external transfer location is required before a bundle can be created or inspected.' : action === 'export' ? 'Encrypted user-carried bundle created. Move it yourself; the passphrase was not saved.' : action === 'import' ? 'Encrypted bundle verified and imported into an isolated recovery copy. The active matter was not changed.' : `${bundles.length} encrypted user-carried bundle(s) are available for explicit review.`;
+      if (crossDeviceTransferResults) {
+        const receipt = payload?.audit_receipt || {};
+        const rows = bundles.map((row) => `<li><strong>${escapeHtml(String(row.transfer_id || 'transfer'))}</strong> · ${escapeHtml(String(row.bundle_sha256 || '').slice(0, 20))}… · encrypted user-carried bundle</li>`).join('');
+        crossDeviceTransferResults.innerHTML = `<strong>${escapeHtml(String(payload?.status || 'review_required').replaceAll('_',' '))}</strong><p>Network used: no · paths disclosed: no · active matter changed: ${payload?.active_matter_changed ? 'yes' : 'no'}.</p>${rows ? `<ul>${rows}</ul>` : ''}<p>Receipt: ${escapeHtml(String(receipt.transfer_receipt_id || 'not recorded'))}. ${escapeHtml(String(payload?.source_drill_down?.source_id || 'Encrypted transfer contract remains review-required.'))}</p>`;
+      }
+    }
+
+    function crossDeviceTransferPayload() {
+      const transfer_id = String(crossDeviceTransferId?.value || '').trim();
+      const passphrase = String(crossDeviceTransferPassphrase?.value || '');
+      if (!/^[a-z][a-z0-9_-]{2,79}$/i.test(transfer_id) || passphrase.length < 16 || !crossDeviceTransferConfirm?.checked) throw new Error('transfer_confirmation_required');
+      return {transfer_id, passphrase, confirmed: true};
+    }
+
+    async function loadCrossDeviceTransfers() {
+      if (crossDeviceTransferStatus) crossDeviceTransferStatus.textContent = 'Inspecting only opaque encrypted-bundle metadata…';
+      try { renderCrossDeviceTransfer(await fetchJson('/api/runtime/cross-device-transfer')); }
+      catch (err) { if (crossDeviceTransferStatus) crossDeviceTransferStatus.innerHTML = renderRecoverableError(err, {title: 'Transfer bundles could not be inspected'}); if (crossDeviceTransferBadge) { crossDeviceTransferBadge.className = 'status-badge blocked'; crossDeviceTransferBadge.textContent = 'Unavailable'; } }
+    }
+
+    const crossDeviceTransferRoutes = Object.freeze({
+      export: '/api/runtime/cross-device-transfer/export',
+      import: '/api/runtime/cross-device-transfer/import',
+    });
+
+    async function runCrossDeviceTransfer(action) {
+      let payload;
+      try { payload = crossDeviceTransferPayload(); }
+      catch (_) { if (crossDeviceTransferStatus) crossDeviceTransferStatus.textContent = 'Enter a safe transfer ID, a passphrase of at least 16 characters, and confirm the user-carried isolated-recovery boundary.'; return; }
+      const button = action === 'export' ? crossDeviceTransferExport : crossDeviceTransferImport;
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+      if (crossDeviceTransferStatus) crossDeviceTransferStatus.textContent = action === 'export' ? 'Creating an encrypted user-carried bundle without any network request…' : 'Verifying the encrypted bundle and creating an isolated recovery copy…';
+      try { renderCrossDeviceTransfer(await fetchJson(crossDeviceTransferRoutes[action], {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)}), {action}); }
+      catch (err) { if (crossDeviceTransferStatus) crossDeviceTransferStatus.innerHTML = renderRecoverableError(err, {title: `Cross-device transfer ${action} could not complete`}); if (crossDeviceTransferBadge) { crossDeviceTransferBadge.className = 'status-badge blocked'; crossDeviceTransferBadge.textContent = 'Unavailable'; } }
+      finally { if (button) { button.disabled = false; button.removeAttribute('aria-busy'); } if (crossDeviceTransferPassphrase) crossDeviceTransferPassphrase.value = ''; }
+    }
+
+    function renderSchemaMigrationLab(payload, action = 'inspect') {
+      const runs = Array.isArray(payload?.runs) ? payload.runs : [];
+      const passed = String(payload?.status || '').includes('pass');
+      if (schemaMigrationLabBadge) { schemaMigrationLabBadge.className = `status-badge ${passed ? 'review' : 'blocked'}`; schemaMigrationLabBadge.textContent = passed ? 'Review required' : 'Unavailable'; }
+      if (schemaMigrationLabStatus) schemaMigrationLabStatus.textContent = action === 'run' ? 'Synthetic profile-contract and interruption checks completed. Live matter and installed package state were not changed.' : `${runs.length} encrypted synthetic migration-lab result(s) are available for review.`;
+      if (schemaMigrationLabResults) {
+        const receipt = payload?.audit_receipt || {};
+        const rows = runs.map((row) => `<li><strong>${escapeHtml(String(row.run_id || 'migration run'))}</strong> · ${escapeHtml(String(row.check_count || 0))} check(s) · ${escapeHtml(String(row.status || 'review_required').replaceAll('_', ' '))}</li>`).join('');
+        schemaMigrationLabResults.innerHTML = `<strong>${escapeHtml(String(payload?.status || 'review_required').replaceAll('_', ' '))}</strong><p>Live matter changed: no · network used: no · target contract: ${escapeHtml(String(payload?.target_schema || '8.0.0.0'))}.</p>${rows ? `<ul>${rows}</ul>` : ''}<p>Receipt: ${escapeHtml(String(receipt.migration_receipt_id || 'not recorded'))}. ${escapeHtml(String(payload?.source_drill_down?.source_id || 'Synthetic migration contract remains review-required.'))}</p>`;
+      }
+    }
+
+    async function loadSchemaMigrationLab() {
+      if (schemaMigrationLabStatus) schemaMigrationLabStatus.textContent = 'Inspecting encrypted synthetic migration-contract evidence…';
+      try { renderSchemaMigrationLab(await fetchJson('/api/runtime/schema-migration-lab')); }
+      catch (err) { if (schemaMigrationLabStatus) schemaMigrationLabStatus.innerHTML = renderRecoverableError(err, {title: 'Migration-lab evidence could not be inspected'}); if (schemaMigrationLabBadge) { schemaMigrationLabBadge.className = 'status-badge blocked'; schemaMigrationLabBadge.textContent = 'Unavailable'; } }
+    }
+
+    async function runSchemaMigrationLab() {
+      if (!schemaMigrationLabConfirm?.checked) { if (schemaMigrationLabStatus) schemaMigrationLabStatus.textContent = 'Confirm that this synthetic laboratory does not upgrade the active matter or installed application first.'; return; }
+      if (schemaMigrationLabRun) { schemaMigrationLabRun.disabled = true; schemaMigrationLabRun.setAttribute('aria-busy', 'true'); }
+      if (schemaMigrationLabStatus) schemaMigrationLabStatus.textContent = 'Running the bounded synthetic profile-contract and interruption-recovery checks…';
+      try {
+        renderSchemaMigrationLab(await fetchJson('/api/runtime/schema-migration-lab/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({source_schema: String(schemaMigrationLabSource?.value || 'all'), scenario: String(schemaMigrationLabScenario?.value || 'full_suite'), confirmed: true})}), 'run');
+      } catch (err) {
+        if (schemaMigrationLabStatus) schemaMigrationLabStatus.innerHTML = renderRecoverableError(err, {title: 'Synthetic migration checks could not complete'});
+        if (schemaMigrationLabBadge) { schemaMigrationLabBadge.className = 'status-badge blocked'; schemaMigrationLabBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (schemaMigrationLabRun) { schemaMigrationLabRun.disabled = false; schemaMigrationLabRun.removeAttribute('aria-busy'); }
+      }
+    }
+
     function applyLocalWorkbenchPreferences(preferences = {}) {
       const readingLevel = String(preferences.reading_level || 'plain_language');
       const motion = preferences.motion === 'reduced' ? 'reduced' : 'full';
@@ -1127,6 +2818,7 @@
         'duplicate_count', 'run_id', 'recipe_id', 'export_id', 'plan_id', 'recommended_model_tier',
         'context_tokens', 'item_id', 'project_id', 'action_id', 'session_id', 'backup_id', 'file_count',
         'verified', 'encrypted_sha256', 'restore_mode', 'live_matter_overwritten', 'recovery_token',
+        'backup_format', 'chunk_count', 'reused_chunk_count', 'new_chunk_count', 'restore_independent',
         'automatic_download', 'calendar_account_write', 'private_notes_hidden', 'original_immutable',
         'privacy_review_complete', 'filing_ready',
       ];
@@ -1143,6 +2835,17 @@
         exact_span: payload.item.source_ref?.exact_span,
         freshness: payload.item.source_ref?.freshness,
       };
+      if (Array.isArray(payload.snapshots)) result.snapshots = payload.snapshots.map((row) => ({
+        snapshot_id: row.snapshot_id,
+        created_at: row.created_at,
+        backup_format: row.backup_format,
+        file_count: row.file_count,
+        chunk_count: row.chunk_count,
+        verification_status: row.verification_status,
+        restore_eligible: row.restore_eligible,
+        source_contract: row.source_drill_down?.source_id,
+      }));
+      if (payload.recovery_matter) result.recovery_matter = payload.recovery_matter;
       if (payload.counts) result.counts = payload.counts;
       return result;
     }
@@ -1211,7 +2914,7 @@
       ['desktop_notification_center', 'Desktop notification center', 'Create a local corrective-action notification from a review blocker.', 'Notification title', 'Corrective action', 'Event ID', 'Citation requires review', 'Open the exact source.', 'event_001', 'Notifications stay local and never reveal matter text to an external service.'],
       ['courtroom_bundle_exporter', 'Courtroom bundle exporter', 'Create an offline, source-card ZIP with private notes excluded.', 'Card title', 'Exact display text', 'Card ID', 'Exact fictional source', 'Fictional exact record excerpt.', 'card_001', 'The offline bundle is review required and contains no private notes.'],
       ['voice_drafting_commands', 'Voice drafting and commands', 'Turn a supplied transcript into a review-required draft using punctuation commands.', 'Transcript and commands', 'Optional note', 'Draft ID', 'Fictional heading new paragraph review source comma then cite period', 'Review exact support.', 'voice_draft_001', 'Voice text never becomes filing-ready without source and human review.'],
-      ['extension_sdk_permission_center', 'Extension SDK permissions', 'Review an extension permission request before signing, registration, or enablement.', 'Extension ID', 'Requested permission', 'Version', 'fictional_extension', 'matter.records.read', '1_0_0', 'Signed registration and explicit enablement remain separate; arbitrary network access is never allowed.'],
+      ['extension_sdk_permission_center', 'Extension SDK sandbox', 'Run one declared, signed, trusted local extension operation against source metadata only.', 'Trusted extension ID', 'Source SHA-256', 'Source safe ID', 'fictional_extension', ADDON_SAMPLE_HASH, 'record_001', 'The extension must already be externally trusted and explicitly enabled. It receives no network, arbitrary tool, or code-execution access; every result remains review required.'],
     ].map(([id, label, description, primaryLabel, secondaryLabel, tertiaryLabel, primary, secondary, tertiary, boundary]) => ({id, label, description, primaryLabel, secondaryLabel, tertiaryLabel, primary, secondary, tertiary, boundary}));
 
     function addonDefinition(addonId = activeAddonId) {
@@ -1281,7 +2984,7 @@
         case 'desktop_notification_center': return {events: [{event_id: tertiary, severity: 'attention', title: primary, corrective_action: secondary}]};
         case 'courtroom_bundle_exporter': return {cards: [{card_id: tertiary, title: primary, display_text: secondary, source_ref: sourceRef}]};
         case 'voice_drafting_commands': return {transcript_text: primary};
-        case 'extension_sdk_permission_center': return {action: 'permission_review', extension_id: intakeSafeId(primary), permissions: [secondary], version: tertiary};
+        case 'extension_sdk_permission_center': return {action: 'sandbox_run', extension_id: intakeSafeId(primary), operation: 'source_metadata_digest', source_sha256: secondary.toLowerCase(), source_id: tertiary};
         default: throw new Error('This add-on is not available.');
       }
     }
@@ -1545,16 +3248,41 @@
       await productivityAction('Backup schedule saved', () => postProductivity('/api/productivity/backups/schedules', {schedule_id: scheduleId, interval_hours: Number(productivityElement('backup-interval')?.value || 24), retention_count: Number(productivityElement('backup-retention')?.value || 7), enabled: true}));
       const payload = await productivityAction('Encrypted backup', () => postProductivity('/api/productivity/backups/run', {schedule_id: scheduleId}));
       productivityLastBackupId = payload?.backup_id || '';
-      ['backup-verify', 'backup-restore'].forEach((id) => { const button = productivityElement(id); if (button) button.disabled = !productivityLastBackupId; });
+      await loadProductivityBackups({selectSnapshotId: productivityLastBackupId, quiet: true});
+      return payload;
+    }
+
+    function selectedProductivityBackupId() {
+      return String(productivityElement('backup-snapshot')?.value || productivityLastBackupId || '').trim();
+    }
+
+    async function loadProductivityBackups({selectSnapshotId = '', quiet = false} = {}) {
+      const payload = await productivityAction('Backup snapshot browser', () => fetchJson('/api/productivity/backups'));
+      if (!payload) return null;
+      const snapshots = Array.isArray(payload.snapshots) ? payload.snapshots : [];
+      const select = productivityElement('backup-snapshot');
+      const preferred = String(selectSnapshotId || select?.value || productivityLastBackupId || '');
+      if (select) {
+        select.innerHTML = `<option value="">${snapshots.length ? 'Choose a verified snapshot' : 'No active-matter snapshot is available'}</option>${snapshots.map((row) => `<option value="${escapeHtml(String(row.snapshot_id || ''))}" ${row.restore_eligible ? '' : 'disabled'}>${escapeHtml(String(row.created_at || 'Snapshot'))} · ${escapeHtml(String(row.backup_format || 'encrypted snapshot').replaceAll('_',' '))} · ${escapeHtml(String(row.verification_status || 'review required'))}</option>`).join('')}`;
+        const selected = snapshots.find((row) => String(row.snapshot_id || '') === preferred && row.restore_eligible) || snapshots.find((row) => row.restore_eligible);
+        select.value = selected ? String(selected.snapshot_id) : '';
+        productivityLastBackupId = String(select.value || '');
+      }
+      ['backup-verify', 'backup-restore'].forEach((id) => { const button = productivityElement(id); if (button) button.disabled = !selectedProductivityBackupId(); });
+      if (quiet && productivityStudioStatus) productivityStudioStatus.textContent = `${snapshots.length} safe snapshot${snapshots.length === 1 ? '' : 's'} available for review.`;
       return payload;
     }
 
     function verifyProductivityBackup() {
-      return productivityAction('Backup integrity verification', () => fetchJson(`/api/productivity/backups/${encodeURIComponent(productivityLastBackupId)}/verify`));
+      const backupId = selectedProductivityBackupId();
+      if (!backupId) return productivityAction('Backup integrity verification', async () => { throw new Error('Choose a verified snapshot first.'); });
+      return productivityAction('Backup integrity verification', () => fetchJson(`/api/productivity/backups/${encodeURIComponent(backupId)}/verify`));
     }
 
     function restoreProductivityBackup() {
-      return productivityAction('Isolated backup restore', () => postProductivity(`/api/productivity/backups/${encodeURIComponent(productivityLastBackupId)}/restore`, {confirmed: true}));
+      const backupId = selectedProductivityBackupId();
+      if (!backupId) return productivityAction('Isolated backup restore', async () => { throw new Error('Choose a verified snapshot first.'); });
+      return productivityAction('Isolated point-in-time recovery', () => postProductivity(`/api/productivity/backups/${encodeURIComponent(backupId)}/restore`, {confirmed: true}));
     }
 
     async function runDueProductivityBackups() {
@@ -1595,15 +3323,34 @@
       documentWorkspaceStatus.textContent = String(message || 'Ready.');
     }
 
-    function workspaceDownload(documentId, format) {
+    async function refreshWorkspaceExportProvenance(documentId) {
       if (!documentId) return;
-      const link = document.createElement('a');
-      link.href = `/api/document-workspace/documents/${encodeURIComponent(documentId)}/export?format=${encodeURIComponent(format)}`;
-      link.download = '';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      showToast(`${format.toUpperCase()} export started.`);
+      try {
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(documentId)}/export-provenance`);
+        const receipts = Array.isArray(payload?.receipts) ? payload.receipts : [];
+        const latest = receipts.at(-1);
+        if (!latest) return;
+        setDocumentWorkspaceStatus(`Export receipt ${String(latest.receipt_id || '').slice(0, 22)}… · source snapshot ${String(latest.source_snapshot_sha256 || '').slice(0, 12)}… · review required`, 'good');
+      } catch (error) {
+        setDocumentWorkspaceStatus('The export started, but its provenance receipt could not be refreshed. The document and original source remain preserved.', 'warn');
+      }
+    }
+
+    async function workspaceDownload(documentId, format) {
+      if (!documentId) return;
+      try {
+        const session = await fetchJson(
+          `/api/document-workspace/documents/${encodeURIComponent(documentId)}/export-sessions?format=${encodeURIComponent(format)}`,
+          {method: 'POST'},
+        );
+        const downloadUrl = String(session?.download_url || '');
+        if (!isSessionBoundArtifactUrl(downloadUrl)) throw makeSafeLocalError({status: 409, code: 'export_session_not_available'});
+        await downloadSessionBoundArtifact(downloadUrl, `review-required-${String(format || 'txt').toLowerCase()}-export`);
+        showToast(`${format.toUpperCase()} export downloaded with a review-required provenance footer.`);
+        window.setTimeout(() => { refreshWorkspaceExportProvenance(documentId); }, 450);
+      } catch (error) {
+        setDocumentWorkspaceStatus(safeErrorMessage(error, 'The export could not be created. The document and original source remain preserved.'), 'warn');
+      }
     }
 
     function clearWorkspaceProposal() {
@@ -1660,6 +3407,7 @@
       const authorityPairReady = Boolean(authorityImpactBase?.value && authorityImpactTarget?.value && authorityImpactBase?.value !== authorityImpactTarget?.value);
       if (authorityImpactRefresh) authorityImpactRefresh.disabled = !hasActive || deleted;
       if (authorityImpactAnalyze) authorityImpactAnalyze.disabled = !hasActive || deleted || !authorityPairReady;
+      if (authorityImpactMatter) authorityImpactMatter.disabled = !hasActive || deleted || !authorityPairReady;
       if (authorityImpactBuild) authorityImpactBuild.disabled = !hasActive || deleted || !authorityPairReady || !authorityImpactApproved?.checked;
     }
 
@@ -1891,8 +3639,10 @@
       findingsFormsCatalog.innerHTML = rows.length ? rows.map((row) => {
         const current = ['current', 'fresh', 'verified_current'].includes(String(row.freshness_status || '').toLowerCase());
         const fields = Array.isArray(row.required_fields) ? row.required_fields.length : 0;
-        return `<label class="findings-form-choice"><input data-findings-form-id="${escapeHtml(row.form_id || '')}" type="checkbox" ${current ? '' : 'disabled'}/><span><strong>${escapeHtml(row.form_id || 'Form')}</strong> ${escapeHtml(row.title || '')}<small>${escapeHtml(row.freshness_status || 'unknown')} · version ${escapeHtml(row.version_date || 'unknown')} · ${fields} detected field${fields === 1 ? '' : 's'}</small></span></label>`;
+        const sourceButton = row.source_id ? `<button class="text-link" data-findings-form-source="${escapeHtml(row.source_id)}" type="button">Open exact official form source</button>` : '';
+        return `<div class="findings-form-choice"><label><input data-findings-form-id="${escapeHtml(row.form_id || '')}" type="checkbox" ${current ? '' : 'disabled'}/><span><strong>${escapeHtml(row.form_id || 'Form')}</strong> ${escapeHtml(row.title || '')}<small>${escapeHtml(row.freshness_status || 'unknown')} · version ${escapeHtml(row.version_date || 'unknown')} · ${fields} detected field${fields === 1 ? '' : 's'}</small></span></label>${sourceButton}</div>`;
       }).join('') : '<div class="document-workspace-empty"><strong>No verified current forms are available.</strong><span>Configure and verify the external Maine authority generation before selecting forms.</span></div>';
+      findingsFormsCatalog.querySelectorAll('[data-findings-form-source]').forEach((button) => button.addEventListener('click', () => inspectSource(String(button.dataset.findingsFormSource || ''), {pin: true, owner: button})));
     }
 
     async function loadFindingsFormsStatus(documentId) {
@@ -2107,6 +3857,36 @@
         const payload = await fetchJson('/api/authority-change-impact/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({document_id:active.document_id, base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''})});
         renderAuthorityImpact(payload);
         setDocumentWorkspaceStatus(payload.blockers?.length ? 'Authority impact analyzed with visible revalidation blockers.' : 'Authority generations compared. Human revalidation remains required.', payload.blockers?.length ? 'warn' : 'good');
+      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+    }
+
+    function renderAuthorityImpactMatter(payload) {
+      const counts = payload?.counts || {};
+      const blockers = payload?.blockers || [];
+      const documents = payload?.documents || [];
+      const deadlines = payload?.deadlines || {};
+      const affected = documents.filter((row) => row.status === 'direct_source_overlap' || row.status === 'form_catalog_recheck_required' || row.status === 'unavailable_for_impact_review');
+      if (authorityImpactStatusBadge) {
+        authorityImpactStatusBadge.className = 'badge warn';
+        authorityImpactStatusBadge.textContent = `${Number(counts.documents_requiring_recheck || 0)} work item${Number(counts.documents_requiring_recheck || 0) === 1 ? '' : 's'} to review`;
+      }
+      if (authorityImpactResults) {
+        const rows = affected.slice(0, 25).map((row) => `<li><strong>${escapeHtml(String(row.document_type || 'document').replaceAll('_', ' '))}</strong> · <code>${escapeHtml(row.document_id || '')}</code> · ${escapeHtml(String(row.status || '').replaceAll('_', ' '))}</li>`).join('');
+        const deadlineMessage = deadlines.status === 'available'
+          ? `${escapeHtml(String(deadlines.affected_rule_count || 0))} deadline rule${Number(deadlines.affected_rule_count || 0) === 1 ? '' : 's'} matched by admitted source hash.`
+          : 'Deadline inventory could not be read and must be checked separately.';
+        authorityImpactResults.innerHTML = `<div class="document-review-packet-summary"><span><strong>Saved documents checked</strong> ${escapeHtml(counts.documents_scanned || 0)}</span><span><strong>Drafts checked</strong> ${escapeHtml(counts.drafts_scanned || 0)}</span><span><strong>Forms to recheck</strong> ${escapeHtml(counts.forms_requiring_recheck || 0)}</span><span><strong>Packets to recheck</strong> ${escapeHtml(counts.review_packets_requiring_recheck || 0)}</span></div><p>${deadlineMessage}</p><p>Saved research: ${escapeHtml(String(payload?.saved_research?.status || 'not available').replaceAll('_', ' '))}. ${escapeHtml(payload?.saved_research?.notice || '')}</p>${rows ? `<p><strong>Open each listed document and use Analyze impact for its exact source record.</strong></p><ul>${rows}</ul>` : '<p>No direct saved-document source overlap was detected. Human revalidation is still required before relying on prior work.</p>'}${blockers.length ? `<ul>${blockers.slice(0, 50).map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul>` : ''}<p>${escapeHtml(payload?.notice || '')}</p>`;
+      }
+      updateWorkspaceControls();
+    }
+
+    async function analyzeAuthorityImpactMatter() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id) return;
+      try {
+        const payload = await fetchJson('/api/authority-change-impact/matter/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''})});
+        renderAuthorityImpactMatter(payload);
+        setDocumentWorkspaceStatus('Saved matter work was mapped by exact authority source overlap. Every result remains review required.', 'warn');
       } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
     }
 
@@ -2450,6 +4230,7 @@
         lateReviewAction.hidden = !config.review;
         lateReviewAction.textContent = config.review?.label || 'Run review action';
       }
+      if (reviewerBundleRoundtrip) reviewerBundleRoundtrip.hidden = config.inventory !== '/api/reviewer-handoff/inventory';
     }
 
     function renderLateReviewPayload(payload, heading) {
@@ -2505,6 +4286,43 @@
     async function refreshLateReview(){if(!lateReviewConfig)return;try{const p=await fetchJson(lateReviewConfig.inventory);if(lateReviewStatus)lateReviewStatus.textContent='Encrypted local inventory · review required · no external action';renderLateReviewPayload(p,`${lateReviewConfig.title} inventory`);}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e);}}
     async function showLateReviewReceipt(){if(!lateReviewConfig)return;try{const r=await fetchJson(lateReviewConfig.receipt);renderLateReviewPayload(r,`${lateReviewConfig.title} receipt`);}catch(e){if(lateReviewStatus)lateReviewStatus.textContent=e.message;if(lateReviewResults)lateReviewResults.innerHTML=renderRecoverableError(e);}}
 
+    function reviewerBundleValue(element, fallback = '') { return String(element?.value || fallback || '').trim(); }
+    function reviewerBundleHandoff() { return reviewerBundleValue(reviewerBundleHandoffId, reviewerBundleValue(lateReviewPrimaryId)); }
+    function renderReviewerBundleResult(payload, heading) {
+      if (!reviewerBundleResult) return;
+      reviewerBundleResult.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required. No network transfer, legal approval, automatic merge, or filing-ready status was created.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`;
+    }
+    async function exportReviewerBundle() {
+      const handoffId = reviewerBundleHandoff(), bundleId = reviewerBundleValue(reviewerBundleId);
+      if (!handoffId || !bundleId) { if (reviewerBundleResult) reviewerBundleResult.textContent = 'Enter the handoff and bundle safe IDs first.'; return; }
+      try {
+        if (reviewerBundleResult) reviewerBundleResult.textContent = 'Exporting encrypted local review bundle…';
+        const payload = await fetchJson(`/api/reviewer-handoff/${encodeURIComponent(handoffId)}/export`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bundle_id:bundleId})});
+        lastReviewerBundle = payload?.bundle || null;
+        renderReviewerBundleResult(payload, 'Local reviewer bundle exported');
+      } catch (error) { if (reviewerBundleResult) reviewerBundleResult.innerHTML = renderRecoverableError(error, {title:'Local reviewer bundle could not be exported'}); }
+    }
+    async function commentReviewerBundle() {
+      const handoffId=reviewerBundleHandoff(), bundleId=reviewerBundleValue(reviewerBundleId), reviewer=reviewerBundleValue(reviewerBundleReviewerId, reviewerBundleValue(lateReviewSecondaryId)), commentId=reviewerBundleValue(reviewerBundleCommentId), recordId=reviewerBundleValue(reviewerBundleRecordId, reviewerBundleValue(lateReviewSourceId)), body=reviewerBundleValue(reviewerBundleNote);
+      if (!handoffId || !bundleId || !reviewer || !commentId || !recordId || !body) { if (reviewerBundleResult) reviewerBundleResult.textContent='Enter handoff, bundle, reviewer, comment, exact record, and review observation.'; return; }
+      try { const payload=await fetchJson(`/api/reviewer-handoff/${encodeURIComponent(handoffId)}/comments`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bundle_id:bundleId,reviewer_safe_id:reviewer,comment_id:commentId,target_kind:'record',target_id:recordId,body})});renderReviewerBundleResult(payload,'Encrypted record comment added'); } catch(error) { if(reviewerBundleResult)reviewerBundleResult.innerHTML=renderRecoverableError(error,{title:'Reviewer comment could not be added'}); }
+    }
+    async function attestReviewerBundle() {
+      const handoffId=reviewerBundleHandoff(), bundleId=reviewerBundleValue(reviewerBundleId), reviewer=reviewerBundleValue(reviewerBundleReviewerId, reviewerBundleValue(lateReviewSecondaryId)), attestationId=reviewerBundleValue(reviewerBundleAttestationId), statement=reviewerBundleValue(reviewerBundleNote);
+      if (!handoffId || !bundleId || !reviewer || !attestationId || !statement) { if(reviewerBundleResult)reviewerBundleResult.textContent='Enter handoff, bundle, reviewer, attestation ID, and the reviewer statement.'; return; }
+      try { const payload=await fetchJson(`/api/reviewer-handoff/${encodeURIComponent(handoffId)}/attest`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bundle_id:bundleId,reviewer_safe_id:reviewer,attestation_id:attestationId,statement})});renderReviewerBundleResult(payload,'Local reviewer attestation recorded'); } catch(error) { if(reviewerBundleResult)reviewerBundleResult.innerHTML=renderRecoverableError(error,{title:'Reviewer attestation could not be recorded'}); }
+    }
+    async function reimportReviewerBundle() {
+      const handoffId=reviewerBundleHandoff(), reimportId=reviewerBundleValue(reviewerBundleReimportId), reviewer=reviewerBundleValue(reviewerBundleReviewerId, reviewerBundleValue(lateReviewSecondaryId));
+      if (!handoffId || !reimportId || !reviewer || !lastReviewerBundle) { if(reviewerBundleResult)reviewerBundleResult.textContent='Export a local bundle in this workbench, then enter the reimport and reviewer safe IDs.'; return; }
+      try { const payload=await fetchJson(`/api/reviewer-handoff/${encodeURIComponent(handoffId)}/reimport`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reimport_id:reimportId,reviewer_safe_id:reviewer,bundle:lastReviewerBundle,review_note:reviewerBundleValue(reviewerBundleNote)})});renderReviewerBundleResult(payload,'Local reviewer bundle reimported and reconciled'); } catch(error) { if(reviewerBundleResult)reviewerBundleResult.innerHTML=renderRecoverableError(error,{title:'Reviewer bundle could not be reimported'}); }
+    }
+    async function reconcileReviewerBundle() {
+      const handoffId=reviewerBundleHandoff(); if(!handoffId){if(reviewerBundleResult)reviewerBundleResult.textContent='Enter the handoff safe ID first.';return;}
+      try { const payload=await fetchJson(`/api/reviewer-handoff/${encodeURIComponent(handoffId)}/reconcile`);renderReviewerBundleResult(payload,'Immutable reviewer-bundle lineage'); } catch(error) {if(reviewerBundleResult)reviewerBundleResult.innerHTML=renderRecoverableError(error,{title:'Reviewer-bundle lineage could not be reconciled'});}
+    }
+    reviewerBundleExport?.addEventListener('click',exportReviewerBundle);reviewerBundleComment?.addEventListener('click',commentReviewerBundle);reviewerBundleAttest?.addEventListener('click',attestReviewerBundle);reviewerBundleReimport?.addEventListener('click',reimportReviewerBundle);reviewerBundleReconcile?.addEventListener('click',reconcileReviewerBundle);reviewerBundleSource?.addEventListener('click',()=>openSpecializedSourceRecord(reviewerBundleValue(reviewerBundleRecordId,reviewerBundleValue(lateReviewSourceId)),reviewerBundleSource));
+
     async function openSpecializedSourceRecord(recordId, owner=null) {
       const safeId=intakeSafeId(recordId);
       if(!safeId){showToast('Enter a valid source record safe ID first.');return;}
@@ -2541,6 +4359,389 @@
     const openLanguageWorkspace=()=>openLateReview(lateReviewDefinitions.language);
     const openResourceWorkspace=()=>openLateReview(lateReviewDefinitions.resources);
 
+    (function installStructuredCommentThreadControls() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('structured-comment-thread-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'structured-comment-thread-controls';
+      section.className = 'document-review-card structured-comment-thread-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Exact-target review</span><strong>Structured comment threads</strong></div><span class="badge warn">Review required</span></div><p>Attach a local comment to an immutable record span, official-source span, claim, draft revision, or artifact. A resolved thread records a review state only; it does not edit the target or decide a fact, law, or filing result.</p><div class="document-workspace-fields"><label>Thread safe ID<input id="structured-comment-thread-id" maxlength="80" placeholder="thread_001"></label><label>Author safe ID<input id="structured-comment-author" maxlength="80" placeholder="reviewer_001"></label><label>Target kind<select id="structured-comment-target-kind"><option value="record_span">Private record span</option><option value="source_span">Official source span</option><option value="claim">Claim</option><option value="draft_text">Draft revision span</option><option value="artifact">Artifact</option></select></label><label>Target safe ID<input id="structured-comment-target-id" maxlength="240" placeholder="record_001"></label><label>Target SHA-256<input id="structured-comment-target-hash" maxlength="64" placeholder="64-character hash"></label><label>Start character<input id="structured-comment-start" inputmode="numeric" placeholder="0"></label><label>End character<input id="structured-comment-end" inputmode="numeric" placeholder="80"></label><label>Reply safe ID<input id="structured-comment-reply-id" maxlength="80" placeholder="comment_001"></label></div><label>Source-bound review note<textarea id="structured-comment-body" maxlength="4000" placeholder="State what needs review; do not promote an allegation to a finding."></textarea></label><div class="document-workspace-actions"><button class="secondary" id="structured-comment-create" type="button">Create exact-target thread</button><button class="secondary" id="structured-comment-reply" type="button">Add reply</button><button class="secondary" id="structured-comment-load" type="button">Open thread</button><button class="secondary" id="structured-comment-resolve" type="button">Resolve for review</button><button class="secondary" id="structured-comment-source" type="button">Inspect exact record</button></div><div aria-live="polite" class="document-workspace-status" id="structured-comment-result">Create an immutable target-bound thread. Comment bodies stay encrypted in the active matter and are not shown in the inventory.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const byId = (id) => section.querySelector('#' + id);
+      const result = byId('structured-comment-result');
+      const value = (id) => String(byId(id)?.value || '').trim();
+      const numeric = (id) => Number.parseInt(value(id), 10);
+      const threadId = () => value('structured-comment-thread-id');
+      const author = () => value('structured-comment-author');
+      const targetPayload = () => {
+        const kind = value('structured-comment-target-kind'), targetId = value('structured-comment-target-id'), hash = value('structured-comment-target-hash'), start = numeric('structured-comment-start'), end = numeric('structured-comment-end');
+        if (!targetId || !hash) throw new Error('target_reference_required');
+        if (kind === 'record_span') return {target_kind:kind,record_id:targetId,source_hash:hash,character_start:start,character_end:end};
+        if (kind === 'source_span') return {target_kind:kind,source_id:targetId,source_hash:hash,character_start:start,character_end:end};
+        if (kind === 'claim') return {target_kind:kind,claim_id:targetId,claim_hash:hash};
+        if (kind === 'draft_text') return {target_kind:kind,document_id:targetId,revision_hash:hash,character_start:start,character_end:end};
+        return {target_kind:'artifact',artifact_id:targetId,artifact_hash:hash};
+      };
+      const render = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required. The target was not edited, merged, transmitted, or treated as a legal or factual determination.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      byId('structured-comment-create')?.addEventListener('click', async () => {
+        try { const payload = {...targetPayload(),thread_id:threadId(),author_safe_id:author(),body:value('structured-comment-body')}; if (!payload.thread_id || !payload.author_safe_id || !payload.body) throw new Error('thread_author_and_note_required'); render(await fetchJson('/api/review-comments/threads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),'Exact-target thread created'); }
+        catch (error) { if (result) result.innerHTML = renderRecoverableError(error,{title:'Structured comment thread could not be created'}); }
+      });
+      byId('structured-comment-reply')?.addEventListener('click', async () => {
+        const id=threadId(), commentId=value('structured-comment-reply-id');
+        if (!id || !commentId || !author() || !value('structured-comment-body')) { if(result)result.textContent='Enter the thread, reply, author, and review note.'; return; }
+        try { render(await fetchJson(`/api/review-comments/threads/${encodeURIComponent(id)}/comments`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({comment_id:commentId,author_safe_id:author(),body:value('structured-comment-body')})}),'Structured reply added'); }
+        catch(error) { if(result)result.innerHTML=renderRecoverableError(error,{title:'Structured reply could not be added'}); }
+      });
+      byId('structured-comment-load')?.addEventListener('click', async () => { const id=threadId(); if(!id){if(result)result.textContent='Enter the thread safe ID first.';return;} try { render(await fetchJson(`/api/review-comments/threads/${encodeURIComponent(id)}`),'Structured comment thread'); } catch(error) {if(result)result.innerHTML=renderRecoverableError(error,{title:'Structured comment thread could not be opened'});} });
+      byId('structured-comment-resolve')?.addEventListener('click', async () => { const id=threadId(); if(!id || !author() || !value('structured-comment-body')){if(result)result.textContent='Enter the thread, resolver, and review note.';return;} try { render(await fetchJson(`/api/review-comments/threads/${encodeURIComponent(id)}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resolver_safe_id:author(),resolution_note:value('structured-comment-body')})}),'Thread resolved for further review'); } catch(error) {if(result)result.innerHTML=renderRecoverableError(error,{title:'Structured comment thread could not be resolved'});} });
+      byId('structured-comment-source')?.addEventListener('click', () => { if(value('structured-comment-target-kind') !== 'record_span'){if(result)result.textContent='Exact-record inspection applies only to a private record span. Use the target-specific drill-down in the thread for another target kind.';return;} openSpecializedSourceRecord(value('structured-comment-target-id'), byId('structured-comment-source')); });
+    }());
+
+    (function installReviewAssignmentQueueControls() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('review-assignment-queue-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'review-assignment-queue-controls'; section.className = 'document-review-card review-assignment-queue-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Local review coordination</span><strong>Evidence-bound assignment queue</strong></div><span class="badge warn">Review required</span></div><p>Assign a local review task with a role, due date, hash-bound scope, and required evidence. No message is sent, no account is created, and completion is not an approval.</p><div class="document-workspace-fields"><label>Assignment safe ID<input id="review-assignment-id" maxlength="80" placeholder="assignment_001"></label><label>Assignee safe ID<input id="review-assignment-assignee" maxlength="80" placeholder="reviewer_001"></label><label>Required role<select id="review-assignment-role"><option value="reviewer">Reviewer</option><option value="attorney">Attorney</option><option value="paralegal">Paralegal</option><option value="records_reviewer">Records reviewer</option></select></label><label>Due date<input id="review-assignment-due" type="date"></label><label>Scope kind<select id="review-assignment-scope-kind"><option value="record">Record</option><option value="claim">Claim</option><option value="draft">Draft</option><option value="artifact">Artifact</option><option value="reviewer_bundle">Reviewer bundle</option><option value="matter">Matter</option></select></label><label>Scope safe ID<input id="review-assignment-scope-id" maxlength="80" placeholder="record_001"></label><label>Scope SHA-256<input id="review-assignment-scope-hash" maxlength="64" placeholder="64-character hash"></label><label>Required evidence ID<input id="review-assignment-evidence-id" maxlength="80" placeholder="evidence_001"></label><label>Required evidence SHA-256<input id="review-assignment-evidence-hash" maxlength="64" placeholder="64-character hash"></label></div><label>Review instructions<textarea id="review-assignment-note" maxlength="4000" placeholder="Describe the review boundary and what the reviewer must inspect."></textarea></label><div class="document-workspace-actions"><button class="secondary" id="review-assignment-create" type="button">Assign local review</button><button class="secondary" id="review-assignment-claim" type="button">Claim assignment</button><button class="secondary" id="review-assignment-complete" type="button">Complete for review</button><button class="secondary" id="review-assignment-load" type="button">Open assignment</button><button class="secondary" id="review-assignment-queue" type="button">Refresh queue</button><button class="secondary" id="review-assignment-source" type="button">Inspect record scope</button></div><div aria-live="polite" class="document-workspace-status" id="review-assignment-result">Create a local evidence-bound assignment. Required evidence must be acknowledged before a claimed assignment can be completed.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el=(id)=>section.querySelector('#'+id), value=(id)=>String(el(id)?.value||'').trim(), assignmentId=()=>value('review-assignment-id'), assignee=()=>value('review-assignment-assignee'), result=el('review-assignment-result');
+      const show=(payload,heading)=>{if(result)result.innerHTML=`<strong>${escapeHtml(heading)}</strong><p>Review required. No notification, external message, account action, approval, or filing-ready state was created.</p><pre>${escapeHtml(JSON.stringify(payload,null,2))}</pre>`;};
+      const evidence=()=>({evidence_id:value('review-assignment-evidence-id'),evidence_hash:value('review-assignment-evidence-hash'),kind:'source_or_artifact'});
+      el('review-assignment-create')?.addEventListener('click',async()=>{try{const payload={assignment_id:assignmentId(),assignee_safe_id:assignee(),required_role:value('review-assignment-role'),due_date:value('review-assignment-due'),scope_kind:value('review-assignment-scope-kind'),scope_id:value('review-assignment-scope-id'),scope_hash:value('review-assignment-scope-hash'),required_evidence:[evidence()],instructions:value('review-assignment-note')};if(Object.values(payload).some(v=>typeof v==='string'&&!v)||!payload.required_evidence[0].evidence_id||!payload.required_evidence[0].evidence_hash)throw new Error('assignment_fields_required');show(await fetchJson('/api/review-assignments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),'Local review assignment created');}catch(error){if(result)result.innerHTML=renderRecoverableError(error,{title:'Local review assignment could not be created'});}});
+      el('review-assignment-claim')?.addEventListener('click',async()=>{const id=assignmentId();if(!id||!assignee()){if(result)result.textContent='Enter the assignment and assigned reviewer safe IDs.';return;}try{show(await fetchJson(`/api/review-assignments/${encodeURIComponent(id)}/claim`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_safe_id:assignee()})}),'Assignment claimed for review');}catch(error){if(result)result.innerHTML=renderRecoverableError(error,{title:'Assignment could not be claimed'});}});
+      el('review-assignment-complete')?.addEventListener('click',async()=>{const id=assignmentId(), item=evidence();if(!id||!assignee()||!value('review-assignment-note')||!item.evidence_id){if(result)result.textContent='Enter the assignment, reviewer, required evidence ID, and completion note.';return;}try{show(await fetchJson(`/api/review-assignments/${encodeURIComponent(id)}/complete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_safe_id:assignee(),acknowledged_evidence_ids:[item.evidence_id],completion_note:value('review-assignment-note')})}),'Assignment completed for review');}catch(error){if(result)result.innerHTML=renderRecoverableError(error,{title:'Assignment could not be completed'});}});
+      el('review-assignment-load')?.addEventListener('click',async()=>{const id=assignmentId();if(!id){if(result)result.textContent='Enter the assignment safe ID first.';return;}try{show(await fetchJson(`/api/review-assignments/${encodeURIComponent(id)}`),'Local review assignment');}catch(error){if(result)result.innerHTML=renderRecoverableError(error,{title:'Assignment could not be opened'});}});
+      el('review-assignment-queue')?.addEventListener('click',async()=>{try{show(await fetchJson('/api/review-assignments'),'Local review assignment queue');}catch(error){if(result)result.innerHTML=renderRecoverableError(error,{title:'Assignment queue could not be loaded'});}});
+      el('review-assignment-source')?.addEventListener('click',()=>{if(value('review-assignment-scope-kind')!=='record'){if(result)result.textContent='Exact-record inspection applies only when the assignment scope is a record.';return;}openSpecializedSourceRecord(value('review-assignment-scope-id'),el('review-assignment-source'));});
+    }());
+
+    (function installBundleMergeControls(){
+      const host=lateReviewResults?.parentElement;if(!host||document.getElementById('bundle-merge-controls'))return;const s=document.createElement('section');s.id='bundle-merge-controls';s.className='document-review-card bundle-merge-controls';s.innerHTML='<div class="document-review-heading"><div><span>Local review comparison</span><strong>Conflict-aware bundle merge</strong></div><span class="badge warn">Review required</span></div><p>Compare two independent reviewed-bundle manifests by hash. Differing items require an explicit choice. Finalizing creates a new local review bundle only; it never overwrites either source bundle or the active matter.</p><div class="document-workspace-fields"><label>Merge safe ID<input id="bundle-merge-id" maxlength="80" placeholder="merge_001"></label><label>Left bundle safe ID<input id="bundle-merge-left-id" maxlength="80" placeholder="bundle_left"></label><label>Left bundle SHA-256<input id="bundle-merge-left-hash" maxlength="64" placeholder="64-character hash"></label><label>Left item safe ID<input id="bundle-merge-left-item" maxlength="80" placeholder="item_001"></label><label>Left base SHA-256<input id="bundle-merge-left-base" maxlength="64" placeholder="64-character hash"></label><label>Left value SHA-256<input id="bundle-merge-left-value" maxlength="64" placeholder="64-character hash"></label><label>Right bundle safe ID<input id="bundle-merge-right-id" maxlength="80" placeholder="bundle_right"></label><label>Right bundle SHA-256<input id="bundle-merge-right-hash" maxlength="64" placeholder="64-character hash"></label><label>Right item safe ID<input id="bundle-merge-right-item" maxlength="80" placeholder="item_001"></label><label>Right base SHA-256<input id="bundle-merge-right-base" maxlength="64" placeholder="64-character hash"></label><label>Right value SHA-256<input id="bundle-merge-right-value" maxlength="64" placeholder="64-character hash"></label><label>Conflict safe ID<input id="bundle-merge-conflict-id" maxlength="80" placeholder="conflict_item_001"></label><label>Resolver safe ID<input id="bundle-merge-resolver" maxlength="80" placeholder="reviewer_001"></label><label>Choice<select id="bundle-merge-choice"><option value="left">Use left candidate</option><option value="right">Use right candidate</option><option value="defer">Defer / block merge</option></select></label></div><div class="document-workspace-actions"><button class="secondary" id="bundle-merge-create" type="button">Compare bundles</button><button class="secondary" id="bundle-merge-resolve" type="button">Resolve conflict</button><button class="secondary" id="bundle-merge-finalize" type="button">Create merged review bundle</button><button class="secondary" id="bundle-merge-load" type="button">Open merge plan</button></div><div aria-live="polite" class="document-workspace-status" id="bundle-merge-result">No merge writes to a matter. Explicitly resolve every conflict, then create a separate review-required bundle.</div>';host.insertAdjacentElement('beforeend',s);const e=id=>s.querySelector('#'+id),v=id=>String(e(id)?.value||'').trim(),res=e('bundle-merge-result'),id=()=>v('bundle-merge-id'),show=(p,h)=>{if(res)res.innerHTML=`<strong>${escapeHtml(h)}</strong><p>Review required. No source bundle or matter content was overwritten.</p><pre>${escapeHtml(JSON.stringify(p,null,2))}</pre>`;},bundle=(side)=>({bundle_id:v(`bundle-merge-${side}-id`),bundle_hash:v(`bundle-merge-${side}-hash`),items:[{item_id:v(`bundle-merge-${side}-item`),kind:'review_artifact',base_hash:v(`bundle-merge-${side}-base`),value_hash:v(`bundle-merge-${side}-value`)}]});e('bundle-merge-create')?.addEventListener('click',async()=>{try{show(await fetchJson('/api/bundle-merges',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({merge_id:id(),left_bundle:bundle('left'),right_bundle:bundle('right')})}),'Conflict-aware merge plan');}catch(x){if(res)res.innerHTML=renderRecoverableError(x,{title:'Bundle merge plan could not be created'});}});e('bundle-merge-resolve')?.addEventListener('click',async()=>{try{show(await fetchJson(`/api/bundle-merges/${encodeURIComponent(id())}/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conflict_id:v('bundle-merge-conflict-id'),choice:v('bundle-merge-choice'),resolver_safe_id:v('bundle-merge-resolver')})}),'Conflict resolution recorded');}catch(x){if(res)res.innerHTML=renderRecoverableError(x,{title:'Conflict could not be resolved'});}});e('bundle-merge-finalize')?.addEventListener('click',async()=>{try{show(await fetchJson(`/api/bundle-merges/${encodeURIComponent(id())}/finalize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_safe_id:v('bundle-merge-resolver'),confirmed:true})}),'Merged review bundle created');}catch(x){if(res)res.innerHTML=renderRecoverableError(x,{title:'Merge remains blocked'});}});e('bundle-merge-load')?.addEventListener('click',async()=>{try{show(await fetchJson(`/api/bundle-merges/${encodeURIComponent(id())}`),'Bundle merge plan');}catch(x){if(res)res.innerHTML=renderRecoverableError(x,{title:'Merge plan could not be opened'});}});})();
+
+    (function installCalendarIcsV2Control(){const host=calendarWorkspaceResults?.parentElement;if(!host||document.getElementById('calendar-ics-v2-control'))return;const s=document.createElement('section');s.id='calendar-ics-v2-control';s.className='document-review-card';s.innerHTML='<div class="document-review-heading"><div><span>Local calendar interoperability</span><strong>ICS export v2</strong></div><span class="badge warn">Review required</span></div><p>Build an explicit local ICS preview with a stable UID, timezone, sequence, recurrence, alarm, and cancellation state. Nothing is downloaded or written to a calendar account.</p><div class="document-workspace-fields"><label>Export safe ID<input id="calendar-ics-export-id" maxlength="80" placeholder="calendar_export_001"></label><label>Time zone<input id="calendar-ics-time-zone" value="America/New_York"></label><label>Sequence<input id="calendar-ics-sequence" type="number" min="0" value="0"></label><label>Alarm minutes<input id="calendar-ics-alarm" type="number" min="0" value="0"></label><label>Recurrence rule (optional)<input id="calendar-ics-recurrence" placeholder="FREQ=WEEKLY;COUNT=4"></label><label>Status<select id="calendar-ics-status"><option>CONFIRMED</option><option>CANCELLED</option></select></label></div><button class="secondary" id="calendar-ics-export-v2" type="button">Build local ICS preview</button><div aria-live="polite" class="document-workspace-status" id="calendar-ics-result">Add a source-bound event above, then build a review-required local ICS preview.</div>';host.insertAdjacentElement('afterend',s);const q=id=>s.querySelector('#'+id),v=id=>String(q(id)?.value||'').trim(),r=q('calendar-ics-result');q('calendar-ics-export-v2').addEventListener('click',async()=>{const eventId=String(calendarEventId?.value||'').trim();if(!eventId||!v('calendar-ics-export-id')){r.textContent='Enter the existing calendar event and export safe IDs.';return;}try{const p=await fetchJson('/api/calendar/ics-export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({export_id:v('calendar-ics-export-id'),event_ids:[eventId],time_zone:v('calendar-ics-time-zone'),sequence:Number(v('calendar-ics-sequence')||0),alarm_minutes:Number(v('calendar-ics-alarm')||0),recurrence_rule:v('calendar-ics-recurrence'),status:v('calendar-ics-status')})});r.innerHTML='<strong>Local ICS preview created.</strong><p>Review required · no download · no account calendar write.</p><pre>'+escapeHtml(String(p?.content||''))+'</pre>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Local ICS preview could not be created'});}});})();
+
+    (function installEmailHandoffPackageControl() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('email-handoff-package-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'email-handoff-package-controls';
+      section.className = 'document-review-card email-handoff-package-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Explicit external boundary</span><strong>Email review handoff package</strong></div><span class="badge warn">Review required</span></div><p>Build a local EML/ZIP handoff package from an existing email-integrity export. The app does not send mail, choose a recipient, download a file, or determine delivery or authenticity.</p><div class="document-workspace-fields"><label>Package safe ID<input id="email-handoff-package-id" maxlength="80" placeholder="email_package_001"></label><label>Existing export safe ID<input id="email-handoff-export-id" maxlength="80" placeholder="email_export_001"></label><label>Source record safe ID<input id="email-handoff-source-id" maxlength="80" placeholder="record_001"></label><label>Recipient label<input id="email-handoff-recipient" maxlength="160" placeholder="Reviewer-selected recipient label"></label><label>Subject<input id="email-handoff-subject" maxlength="240" placeholder="Review-only evidence handoff"></label></div><label class="document-review-attestation"><input id="email-handoff-privacy" type="checkbox"> I reviewed the recipient label, scope, and attachments and understand this creates a local package only.</label><div class="document-workspace-actions"><button class="secondary" id="email-handoff-build" type="button">Build local EML/ZIP package</button><button class="secondary" id="email-handoff-source" type="button">Inspect source record</button></div><div aria-live="polite" class="document-workspace-status" id="email-handoff-result">First create an email-integrity export in this workspace, then make a review-required local handoff package.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('email-handoff-result');
+      el('email-handoff-build')?.addEventListener('click', async () => {
+        const packageId = value('email-handoff-package-id');
+        const exportId = value('email-handoff-export-id');
+        if (!packageId || !exportId || !value('email-handoff-recipient') || !value('email-handoff-subject') || !el('email-handoff-privacy')?.checked) {
+          if (result) result.textContent = 'Enter package, existing export, recipient label, subject, and acknowledge the privacy boundary.';
+          return;
+        }
+        try {
+          const payload = await fetchJson('/api/email-integrity/handoff-package', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({package_id:packageId, export_ids:[exportId], recipient_label:value('email-handoff-recipient'), subject:value('email-handoff-subject'), privacy_acknowledged:true})});
+          const receipt = payload?.receipt || {};
+          if (result) result.innerHTML = `<strong>Local email handoff package created.</strong><p>Review required · no mail sent · no automatic download · external delivery not performed.</p><p>Manifest: <code>${escapeHtml(String(receipt.manifest_hash || 'not available'))}</code></p><pre>${escapeHtml(JSON.stringify({package_id:receipt.package_id, eml_sha256:receipt.eml_sha256, zip_sha256:receipt.zip_sha256, review_required:receipt.review_required, mail_send:payload?.mail_send, automatic_download:payload?.automatic_download}, null, 2))}</pre>`;
+        } catch (error) {
+          if (result) result.innerHTML = renderRecoverableError(error, {title:'Local email handoff package could not be created'});
+        }
+      });
+      el('email-handoff-source')?.addEventListener('click', () => {
+        const recordId = value('email-handoff-source-id');
+        if (!recordId) { if (result) result.textContent = 'Enter the active-matter source record safe ID to inspect it.'; return; }
+        openSpecializedSourceRecord(recordId, el('email-handoff-source'));
+      });
+    }());
+
+    (function installArchivalPdfReviewControl() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('archival-pdf-review-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'archival-pdf-review-controls';
+      section.className = 'document-review-card archival-pdf-review-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Local archival review</span><strong>PDF review derivative</strong></div><span class="badge warn">Review required</span></div><p>Build a source-bound local PDF review derivative. It is not a filing artifact and does not assert PDF/A conformance: the configured converter and independent conformance validator are unavailable.</p><div class="document-workspace-fields"><label>Export safe ID<input id="archival-pdf-export-id" maxlength="80" placeholder="pdf_export_001"></label><label>Item safe ID<input id="archival-pdf-item-id" maxlength="80" placeholder="pdf_item_001"></label><label>Title<input id="archival-pdf-title" maxlength="240" placeholder="Fictional review export"></label><label>Source record safe ID<input id="archival-pdf-source-id" maxlength="80" placeholder="record_001"></label><label>Source SHA-256<input id="archival-pdf-source-hash" maxlength="64" placeholder="64-character source hash"></label></div><label>Reviewer summary<textarea id="archival-pdf-summary" maxlength="600" placeholder="Describe what needs review; do not state a legal or factual conclusion."></textarea></label><label class="document-review-attestation"><input id="archival-pdf-limitations" type="checkbox"> I understand this creates a local review derivative only and PDF/A conformance is not verified.</label><div class="document-workspace-actions"><button class="secondary" id="archival-pdf-build" type="button">Build local PDF review derivative</button><button class="secondary" id="archival-pdf-inventory" type="button">Inspect PDF receipts</button><button class="secondary" id="archival-pdf-source" type="button">Inspect source record</button></div><div aria-live="polite" class="document-workspace-status" id="archival-pdf-result">Create a source-bound local review PDF after acknowledging the conversion limitation. No file is downloaded automatically.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('archival-pdf-result');
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · local-only · no automatic download · PDF/A conformance not verified.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      el('archival-pdf-build')?.addEventListener('click', async () => {
+        const values = ['archival-pdf-export-id', 'archival-pdf-item-id', 'archival-pdf-title', 'archival-pdf-source-id', 'archival-pdf-source-hash', 'archival-pdf-summary'];
+        if (values.some((id) => !value(id)) || !el('archival-pdf-limitations')?.checked) { if (result) result.textContent = 'Enter the export, item, title, source locator, exact hash, summary, and acknowledge the PDF/A limitation.'; return; }
+        try {
+          const payload = await fetchJson('/api/archival-pdf/exports', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export_id:value('archival-pdf-export-id'), title:value('archival-pdf-title'), acknowledged_pdf_a_limitations:true, items:[{item_id:value('archival-pdf-item-id'), source_hash:value('archival-pdf-source-hash'), source_ref:{record_id:value('archival-pdf-source-id')}, summary:value('archival-pdf-summary')}]})});
+          show({receipt:payload?.receipt, filename:payload?.export?.filename, media_type:payload?.export?.media_type, pdf_a_conformance:payload?.pdf_a_conformance, automatic_download:payload?.automatic_download}, 'Local PDF review derivative created');
+        } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Local PDF review derivative could not be created'}); }
+      });
+      el('archival-pdf-inventory')?.addEventListener('click', async () => { try { show(await fetchJson('/api/archival-pdf/exports'), 'Local PDF review receipts'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'PDF review receipts could not be opened'}); } });
+      el('archival-pdf-source')?.addEventListener('click', () => { const id = value('archival-pdf-source-id'); if (!id) { if (result) result.textContent = 'Enter the active-matter source record safe ID first.'; return; } openSpecializedSourceRecord(id, el('archival-pdf-source')); });
+    }());
+
+    (function installStructuredEvidenceExportControl() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('structured-evidence-export-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'structured-evidence-export-controls';
+      section.className = 'document-review-card structured-evidence-export-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Structured review handoff</span><strong>CSV/JSON evidence export</strong></div><span class="badge warn">Review required</span></div><p>Create a scoped CSV and/or JSON package containing a schema, exact hashes, source locators, and explicit review state. It never exports the matter database or downloads anything automatically.</p><div class="document-workspace-fields"><label>Export safe ID<input id="structured-export-id" maxlength="80" placeholder="evidence_export_001"></label><label>Scope safe ID<input id="structured-export-scope-id" maxlength="80" placeholder="review_scope_001"></label><label>Evidence safe ID<input id="structured-export-evidence-id" maxlength="80" placeholder="evidence_001"></label><label>Source record safe ID<input id="structured-export-source-id" maxlength="80" placeholder="record_001"></label><label>Source SHA-256<input id="structured-export-source-hash" maxlength="64" placeholder="64-character source hash"></label><label>Review state<select id="structured-export-review-state"><option value="review_required">Review required</option><option value="verified">Verified</option><option value="unresolved">Unresolved</option><option value="blocked">Blocked</option></select></label></div><label>Evidence label<textarea id="structured-export-label" maxlength="600" placeholder="Describe the evidence boundary; do not convert an allegation into a finding."></textarea></label><label class="document-review-attestation"><input id="structured-export-privacy" type="checkbox"> I reviewed the selected scope and understand this produces local bytes only; any external transfer needs a separate reviewed action.</label><div class="document-workspace-actions"><button class="secondary" id="structured-export-build" type="button">Build local CSV/JSON package</button><button class="secondary" id="structured-export-inventory" type="button">Inspect export receipts</button><button class="secondary" id="structured-export-source" type="button">Inspect source record</button></div><div aria-live="polite" class="document-workspace-status" id="structured-export-result">Create a source-bound evidence package; review state stays explicit in every structured row.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('structured-export-result');
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · local-only · no automatic download · no raw matter database export.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      el('structured-export-build')?.addEventListener('click', async () => {
+        const required = ['structured-export-id', 'structured-export-scope-id', 'structured-export-evidence-id', 'structured-export-source-id', 'structured-export-source-hash', 'structured-export-label'];
+        if (required.some((id) => !value(id)) || !el('structured-export-privacy')?.checked) { if (result) result.textContent = 'Enter the export, scope, evidence, source locator, exact hash, label, and privacy acknowledgement.'; return; }
+        try {
+          const payload = await fetchJson('/api/evidence-exports/structured', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({export_id:value('structured-export-id'), scope_id:value('structured-export-scope-id'), formats:['csv','json'], privacy_acknowledged:true, rows:[{evidence_id:value('structured-export-evidence-id'), source_hash:value('structured-export-source-hash'), source_ref:{record_id:value('structured-export-source-id')}, review_state:value('structured-export-review-state'), label:value('structured-export-label')}]})});
+          show({receipt:payload?.receipt, manifest_hash:payload?.export?.manifest?.manifest_hash, artifact_formats:Object.keys(payload?.export?.artifacts || {}), automatic_download:payload?.automatic_download, raw_matter_store_exported:payload?.raw_matter_store_exported}, 'Local structured evidence package created');
+        } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Structured evidence package could not be created'}); }
+      });
+      el('structured-export-inventory')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evidence-exports/structured'), 'Structured evidence export receipts'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Structured evidence receipts could not be opened'}); } });
+      el('structured-export-source')?.addEventListener('click', () => { const id = value('structured-export-source-id'); if (!id) { if (result) result.textContent = 'Enter the active-matter source record safe ID first.'; return; } openSpecializedSourceRecord(id, el('structured-export-source')); });
+    }());
+
+    (function installPrintReviewControl() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('print-review-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'print-review-controls';
+      section.className = 'document-review-card print-review-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Accessible review output</span><strong>Print preview</strong></div><span class="badge warn">Review required</span></div><p>Prepare a high-contrast local print preview with a confidentiality header and source/review footer. Printing is always an explicit next step in a separate dialog; nothing prints silently.</p><div class="document-workspace-fields"><label>Preview safe ID<input id="print-review-id" maxlength="80" placeholder="print_preview_001"></label><label>Title<input id="print-review-title" maxlength="240" placeholder="Fictional evidence review"></label><label>Confidentiality marking<input id="print-review-confidentiality" maxlength="120" value="CONFIDENTIAL — REVIEW REQUIRED"></label><label>Source record safe ID<input id="print-review-source-id" maxlength="80" placeholder="record_001"></label><label>Source SHA-256<input id="print-review-source-hash" maxlength="64" placeholder="64-character source hash"></label></div><label>Review summary<textarea id="print-review-summary" maxlength="2000" placeholder="Describe what will be printed. Do not represent an allegation as a finding."></textarea></label><label class="document-review-attestation"><input id="print-review-privacy" type="checkbox"> I reviewed the print scope and privacy boundary; this does not print until I choose a printer in a separate dialog.</label><div class="document-workspace-actions"><button class="secondary" id="print-review-create" type="button">Prepare accessible preview</button><button class="secondary" id="print-review-open" type="button">Open print dialog</button><button class="secondary" id="print-review-inventory" type="button">Inspect preview receipts</button><button class="secondary" id="print-review-source" type="button">Inspect source record</button></div><div aria-live="polite" class="document-workspace-status" id="print-review-result">Prepare a source-bound print preview before opening a separate print dialog.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('print-review-result');
+      let currentPreview = null;
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · local-only · high-contrast preview · no silent print.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      el('print-review-create')?.addEventListener('click', async () => {
+        const required = ['print-review-id', 'print-review-title', 'print-review-confidentiality', 'print-review-source-id', 'print-review-source-hash', 'print-review-summary'];
+        if (required.some((id) => !value(id)) || !el('print-review-privacy')?.checked) { if (result) result.textContent = 'Enter the preview, title, confidentiality marking, source locator, exact hash, summary, and privacy acknowledgement.'; return; }
+        try {
+          const payload = await fetchJson('/api/print-review/previews', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({preview_id:value('print-review-id'), title:value('print-review-title'), confidentiality_marking:value('print-review-confidentiality'), source_hash:value('print-review-source-hash'), source_ref:{record_id:value('print-review-source-id')}, summary:value('print-review-summary'), privacy_acknowledged:true})});
+          currentPreview = payload?.preview || null;
+          show({preview:currentPreview, accessibility:payload?.accessibility, silent_print:payload?.silent_print}, 'Accessible local print preview prepared');
+        } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Print preview could not be prepared'}); }
+      });
+      el('print-review-open')?.addEventListener('click', async () => {
+        if (!currentPreview || !el('print-review-privacy')?.checked) { if (result) result.textContent = 'Prepare a preview and acknowledge the print scope first.'; return; }
+        try {
+          const receipt = await fetchJson(`/api/print-review/previews/${encodeURIComponent(currentPreview.preview_id)}/request-print`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({privacy_acknowledged:true})});
+          const popup = window.open('', 'mflPrintReview', 'width=900,height=760');
+          if (!popup) throw new Error('print_preview_window_blocked');
+          popup.opener = null;
+          const preview = currentPreview;
+          const printable = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(preview.title)}</title><style>@page{margin:0.7in}body{font:16px/1.5 Arial,sans-serif;color:#111;background:#fff;max-width:8in;margin:auto}.confidential{font-weight:800;border:3px solid #111;padding:.5rem;letter-spacing:.04em}header,footer{border-color:#111}header{border-bottom:2px solid #111;margin-bottom:1.5rem}footer{border-top:2px solid #111;margin-top:2rem;font-size:.85rem}button{font:inherit;font-weight:700;padding:.55rem .8rem}@media print{button{display:none}}@media (prefers-contrast:more){body{font-weight:600}.confidential{background:#111;color:#fff}}</style></head><body><header><p class="confidential">${escapeHtml(preview.confidentiality_marking)}</p><h1>${escapeHtml(preview.title)}</h1><p>Review required — not a filing, finding, or legal determination.</p></header><main><h2>Review summary</h2><p>${escapeHtml(preview.summary)}</p><h2>Exact source boundary</h2><p>Source locator: <code>${escapeHtml(JSON.stringify(preview.source_ref))}</code></p><p>Source SHA-256: <code>${escapeHtml(preview.source_hash)}</code></p></main><footer><p>Review required · generated locally · source and review status must be checked before use.</p><p>No system printer was selected by the application.</p></footer><button type="button" onclick="window.print()">Choose printer and print</button></body></html>`;
+          popup.document.open(); popup.document.write(printable); popup.document.close();
+          show({receipt, preview_id:preview.preview_id}, 'Print request recorded; choose a printer in the separate preview');
+        } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Print dialog could not be opened'}); }
+      });
+      el('print-review-inventory')?.addEventListener('click', async () => { try { show(await fetchJson('/api/print-review/previews'), 'Local print preview receipts'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Print preview receipts could not be opened'}); } });
+      el('print-review-source')?.addEventListener('click', () => { const id = value('print-review-source-id'); if (!id) { if (result) result.textContent = 'Enter the active-matter source record safe ID first.'; return; } openSpecializedSourceRecord(id, el('print-review-source')); });
+    }());
+
+    (function installExternalToolBoundaryControl() {
+      const host = lateReviewResults?.parentElement;
+      if (!host || document.getElementById('external-tool-boundary-controls')) return;
+      const section = document.createElement('section');
+      section.id = 'external-tool-boundary-controls';
+      section.className = 'document-review-card external-tool-boundary-controls';
+      section.innerHTML = '<div class="document-review-heading"><div><span>External boundary receipt</span><strong>External-tool transfer record</strong></div><span class="badge warn">Review required</span></div><p>Record the hash, purpose, actor label, destination class, source scope, and privacy acknowledgement for a user-controlled boundary. The app does not transmit data, retain an address, or verify an external delivery.</p><div class="document-workspace-fields"><label>Receipt safe ID<input id="external-boundary-id" maxlength="80" placeholder="boundary_001"></label><label>Export safe ID<input id="external-boundary-export-id" maxlength="80" placeholder="evidence_export_001"></label><label>Export SHA-256<input id="external-boundary-export-hash" maxlength="64" placeholder="64-character export hash"></label><label>Actor safe ID<input id="external-boundary-actor" maxlength="80" placeholder="reviewer_001"></label><label>Destination class<select id="external-boundary-destination"><option value="email">Email</option><option value="cloud_storage">Cloud storage</option><option value="court_portal">Court portal</option><option value="local_tool">Local tool</option><option value="other">Other</option></select></label><label>Source record safe ID<input id="external-boundary-source-id" maxlength="80" placeholder="record_001"></label><label>Source SHA-256<input id="external-boundary-source-hash" maxlength="64" placeholder="64-character source hash"></label></div><label>Purpose<textarea id="external-boundary-purpose" maxlength="600" placeholder="State why the user intends this boundary without entering a destination address."></textarea></label><label class="document-review-attestation"><input id="external-boundary-privacy" type="checkbox"> I acknowledge the privacy risk and reviewed the exact source scope.</label><label class="document-review-attestation"><input id="external-boundary-self-reported" type="checkbox"> I self-report that I completed the external transfer outside this application (the app cannot verify it).</label><div class="document-workspace-actions"><button class="secondary" id="external-boundary-record" type="button">Record local boundary receipt</button><button class="secondary" id="external-boundary-load" type="button">Open receipt</button><button class="secondary" id="external-boundary-inventory" type="button">Inspect boundary receipts</button><button class="secondary" id="external-boundary-source" type="button">Inspect source record</button></div><div aria-live="polite" class="document-workspace-status" id="external-boundary-result">Record a declared boundary only. No external action is started from this screen.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('external-boundary-result');
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · local receipt only · no transmission · destination address not stored.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      el('external-boundary-record')?.addEventListener('click', async () => {
+        const required = ['external-boundary-id', 'external-boundary-export-id', 'external-boundary-export-hash', 'external-boundary-actor', 'external-boundary-source-id', 'external-boundary-source-hash', 'external-boundary-purpose'];
+        if (required.some((id) => !value(id)) || !el('external-boundary-privacy')?.checked) { if (result) result.textContent = 'Enter the receipt, export, actor, source hashes and IDs, purpose, and privacy acknowledgement.'; return; }
+        try {
+          const payload = await fetchJson('/api/external-tool-boundaries', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({receipt_id:value('external-boundary-id'), export_id:value('external-boundary-export-id'), export_hash:value('external-boundary-export-hash'), actor_safe_id:value('external-boundary-actor'), destination_class:value('external-boundary-destination'), purpose:value('external-boundary-purpose'), privacy_risk_acknowledged:true, self_reported_external_transfer:el('external-boundary-self-reported')?.checked === true, source_refs:[{source_hash:value('external-boundary-source-hash'), source_ref:{record_id:value('external-boundary-source-id')}}]})});
+          show(payload, 'Local external-tool boundary receipt recorded');
+        } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'External-tool boundary receipt could not be recorded'}); }
+      });
+      el('external-boundary-load')?.addEventListener('click', async () => { const id = value('external-boundary-id'); if (!id) { if (result) result.textContent = 'Enter the receipt safe ID first.'; return; } try { show(await fetchJson(`/api/external-tool-boundaries/${encodeURIComponent(id)}`), 'External-tool boundary receipt'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'External-tool boundary receipt could not be opened'}); } });
+      el('external-boundary-inventory')?.addEventListener('click', async () => { try { show(await fetchJson('/api/external-tool-boundaries'), 'External-tool boundary receipts'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'External-tool boundary receipts could not be opened'}); } });
+      el('external-boundary-source')?.addEventListener('click', () => { const id = value('external-boundary-source-id'); if (!id) { if (result) result.textContent = 'Enter the active-matter source record safe ID first.'; return; } openSpecializedSourceRecord(id, el('external-boundary-source')); });
+    }());
+
+    (function installAttorneyGoldTaskControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('attorney-gold-task-control')) return;
+      const section = document.createElement('section');
+      section.id = 'attorney-gold-task-control';
+      section.className = 'document-review-card attorney-gold-task-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>External human evidence required</span><strong>Attorney-gold task preparation</strong></div><span class="badge warn">Not attorney reviewed</span></div><p>Create a blinded, hash-only review task for synthetic or public-authority material and inspect the immutable readiness ledger. This screen cannot verify a license, submit a review, adjudicate a result, or turn synthetic data into attorney evidence.</p><div class="document-workspace-fields"><label>Blinded task safe ID<input id="attorney-gold-case-id" maxlength="100" placeholder="gold_case_001"></label><label>Task safe ID<input id="attorney-gold-task" maxlength="100" placeholder="citation_resolution"></label><label>Artifact SHA-256<input id="attorney-gold-artifact-hash" maxlength="64" placeholder="64-character blinded artifact hash"></label><label>Data class<select id="attorney-gold-data-class"><option value="synthetic">Synthetic</option><option value="public_authority">Public authority</option></select></label></div><label class="document-review-attestation"><input id="attorney-gold-confirm" type="checkbox"> I confirm the task contains no private matter text, no answer content, and no representation that it was attorney reviewed.</label><div class="document-workspace-actions"><button class="secondary" id="attorney-gold-create" type="button">Create blinded task</button><button class="secondary" id="attorney-gold-readiness" type="button">Inspect readiness blockers</button></div><div aria-live="polite" class="document-workspace-status" id="attorney-gold-result">No attorney-gold task has been created in this local ledger. External credential, license, review, and adjudication evidence remain required.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const el = (id) => section.querySelector('#' + id);
+      const value = (id) => String(el(id)?.value || '').trim();
+      const result = el('attorney-gold-result');
+      const adminHeaders = {'Content-Type':'application/json', 'X-User-Role':'admin'};
+      const reviewerHeaders = {'X-User-Role':'reviewer'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Not attorney reviewed. The ledger stores hashes and reviewer metadata, not private prompts or answers.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      el('attorney-gold-create')?.addEventListener('click', async () => {
+        if (!value('attorney-gold-case-id') || !value('attorney-gold-task') || !value('attorney-gold-artifact-hash') || !el('attorney-gold-confirm')?.checked) { if (result) result.textContent = 'Enter blinded task IDs and hash, then confirm the no-private-data and no-attorney-review boundary.'; return; }
+        try { show(await fetchJson('/api/evals/human-grounded/cases', {method:'POST', headers:adminHeaders, body:JSON.stringify({case_id:value('attorney-gold-case-id'), task:value('attorney-gold-task'), artifact_sha256:value('attorney-gold-artifact-hash'), data_class:value('attorney-gold-data-class')})}), 'Blinded attorney-gold task prepared'); }
+        catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Blinded attorney-gold task could not be created'}); }
+      });
+      el('attorney-gold-readiness')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/human-grounded/readiness', {headers:reviewerHeaders}), 'Attorney-gold readiness blockers'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Attorney-gold readiness could not be inspected'}); } });
+    }());
+
+    (function installClaimVerifierBenchmarkControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('claim-verifier-benchmark-control')) return;
+      const section = document.createElement('section');
+      section.id = 'claim-verifier-benchmark-control';
+      section.className = 'document-review-card claim-verifier-benchmark-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>External evidence only</span><strong>Claim-verifier benchmark</strong></div><span class="badge warn">Review required</span></div><p>Inspect or run the configured seven-state benchmark over external gold and authority roots. It reports supported, partial, unsupported, contradicted, stale, jurisdiction-mismatch, and unknown results without showing private evaluation text. Missing provenance, license, freshness, or any state blocks the metric.</p><div class="document-workspace-actions"><button class="secondary" id="claim-benchmark-status" type="button">Inspect benchmark readiness</button><button class="secondary" id="claim-benchmark-run" type="button">Run configured benchmark</button></div><div aria-live="polite" class="document-workspace-status" id="claim-benchmark-result">No external claim-gold inputs have been evaluated from this workbench. Synthetic fixtures are software checks, not legal-quality measurement.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#claim-benchmark-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · external roots stay outside the app · unknown stays non-verifiable.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#claim-benchmark-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/claim-support/benchmark', {headers}), 'Claim-verifier benchmark readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Claim-verifier benchmark readiness could not be inspected'}); } });
+      section.querySelector('#claim-benchmark-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Running configured external claim-verifier benchmark…'; show(await fetchJson('/api/evals/claim-support/benchmark', {method:'POST', headers}), 'Claim-verifier benchmark result'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Claim-verifier benchmark could not be run'}); } });
+    }());
+
+    (function installQuoteVerifierBenchmarkControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('quote-verifier-benchmark-control')) return;
+      const section = document.createElement('section');
+      section.id = 'quote-verifier-benchmark-control';
+      section.className = 'document-review-card quote-verifier-benchmark-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Exact spans first</span><strong>Quote-verifier benchmark</strong></div><span class="badge warn">Review required</span></div><p>Inspect or run the configured parser-variant quote benchmark. Exact and normalized spans retain source offsets; fuzzy or semantic matches stay review-required, and mismatched or missing spans never become verified quotes.</p><div class="document-workspace-actions"><button class="secondary" id="quote-benchmark-status" type="button">Inspect quote readiness</button><button class="secondary" id="quote-benchmark-run" type="button">Run configured quote benchmark</button></div><div aria-live="polite" class="document-workspace-status" id="quote-benchmark-result">No external quote-gold inputs have been evaluated from this workbench. A fuzzy result is not an exact quote.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#quote-benchmark-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · parser variants and exact offsets are measured · external paths and quotes are redacted.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#quote-benchmark-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/quote-verifier/benchmark', {headers}), 'Quote-verifier benchmark readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Quote-verifier benchmark readiness could not be inspected'}); } });
+      section.querySelector('#quote-benchmark-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Running configured external quote-verifier benchmark…'; show(await fetchJson('/api/evals/quote-verifier/benchmark', {method:'POST', headers}), 'Quote-verifier benchmark result'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Quote-verifier benchmark could not be run'}); } });
+    }());
+
+    (function installProceduralSafetyBenchmarkControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('procedural-safety-benchmark-control')) return;
+      const section = document.createElement('section');
+      section.id = 'procedural-safety-benchmark-control';
+      section.className = 'document-review-card procedural-safety-benchmark-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Fail-closed release evaluation</span><strong>Procedural-safety benchmark</strong></div><span class="badge warn">Review required</span></div><p>Inspect or run the configured external reviewed scenarios for deadlines, service, posture, forms, venue, and filing blockers. Every scenario type must demonstrate that the canonical filing gate retains its expected blocker; this is a test harness, not procedural advice.</p><div class="document-workspace-actions"><button class="secondary" id="procedural-benchmark-status" type="button">Inspect safety readiness</button><button class="secondary" id="procedural-benchmark-run" type="button">Run configured safety benchmark</button></div><div aria-live="polite" class="document-workspace-status" id="procedural-benchmark-result">No external procedural-safety dataset has been evaluated here. Fixture success does not establish attorney review or a legal conclusion.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#procedural-benchmark-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · expected blockers must stay blocked · external scenario text is not displayed.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#procedural-benchmark-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/procedural-safety/benchmark', {headers}), 'Procedural-safety benchmark readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Procedural-safety benchmark readiness could not be inspected'}); } });
+      section.querySelector('#procedural-benchmark-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Running configured external procedural-safety benchmark…'; show(await fetchJson('/api/evals/procedural-safety/benchmark', {method:'POST', headers}), 'Procedural-safety benchmark result'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Procedural-safety benchmark could not be run'}); } });
+    }());
+
+    (function installAccessibilityBiasBenchmarkControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('accessibility-bias-benchmark-control')) return;
+      const section = document.createElement('section');
+      section.id = 'accessibility-bias-benchmark-control';
+      section.className = 'document-review-card accessibility-bias-benchmark-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Automated evidence only</span><strong>Accessibility and bias checks</strong></div><span class="badge warn">Human review required</span></div><p>Inspect or run configured language, disability, literacy, cultural, and self-represented-user response-safety checks. This validates deterministic safeguards only; it does not replace usability testing by affected people or an independent accessibility assessment.</p><div class="document-workspace-actions"><button class="secondary" id="accessibility-bias-status" type="button">Inspect automated-check readiness</button><button class="secondary" id="accessibility-bias-run" type="button">Run configured automated checks</button></div><div aria-live="polite" class="document-workspace-status" id="accessibility-bias-result">No external accessibility/bias cases have been evaluated here. Human accessibility review remains a release requirement.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#accessibility-bias-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · automated safety checks only · human accessibility evidence remains required.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#accessibility-bias-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/accessibility-bias/benchmark', {headers}), 'Accessibility/bias automated-check readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Accessibility/bias readiness could not be inspected'}); } });
+      section.querySelector('#accessibility-bias-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Running configured accessibility/bias automated checks…'; show(await fetchJson('/api/evals/accessibility-bias/benchmark', {method:'POST', headers}), 'Accessibility/bias automated-check result'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Accessibility/bias automated checks could not be run'}); } });
+    }());
+
+    (function installLongitudinalMatterBenchmarkControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('longitudinal-matter-benchmark-control')) return;
+      const section = document.createElement('section');
+      section.id = 'longitudinal-matter-benchmark-control';
+      section.className = 'document-review-card longitudinal-matter-benchmark-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Fictional software-contract evidence</span><strong>Longitudinal matter integrity</strong></div><span class="badge warn">Review required</span></div><p>Run a disposable fictional multi-session check for encrypted intake state, a source-bound correction history, amended-authority stale work, restart/reopen, and the migration-recovery contract. It never opens a real matter and does not establish attorney review, a pilot, or installed-app migration evidence.</p><div class="document-workspace-actions"><button class="secondary" id="longitudinal-matter-status" type="button">Inspect longitudinal readiness</button><button class="secondary" id="longitudinal-matter-run" type="button">Run fictional integrity check</button></div><div aria-live="polite" class="document-workspace-status" id="longitudinal-matter-result">No fictional longitudinal evaluation has run from this workbench. Configure an external evaluation root; no user matter is a benchmark input.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#longitudinal-matter-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · fictional disposable matter only · no user-matter content, path, or live migration result is displayed.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#longitudinal-matter-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/longitudinal-matter/benchmark', {headers}), 'Longitudinal integrity readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Longitudinal integrity readiness could not be inspected'}); } });
+      section.querySelector('#longitudinal-matter-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Running disposable fictional longitudinal integrity checks…'; show(await fetchJson('/api/evals/longitudinal-matter/benchmark', {method:'POST', headers}), 'Fictional longitudinal integrity result'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Longitudinal integrity check could not be run'}); } });
+    }());
+
+    (function installReleaseMetricEligibilityControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('release-metric-eligibility-control')) return;
+      const section = document.createElement('section');
+      section.id = 'release-metric-eligibility-control';
+      section.className = 'document-review-card release-metric-eligibility-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>External evidence boundary</span><strong>Release metric eligibility</strong></div><span class="badge warn">Enterprise review required</span></div><p>Inspect or verify an externally stored metric-evidence bundle. Each counted metric must be labeled external attorney-reviewed, licensed, reproducible, hash-linked, and signed by a configured external trust key. A passing contract check is not attorney review, a pilot result, organizational approval, or an Enterprise GA decision.</p><div class="document-workspace-actions"><button class="secondary" id="release-metric-eligibility-status" type="button">Inspect evidence readiness</button><button class="secondary" id="release-metric-eligibility-run" type="button">Verify configured evidence</button></div><div aria-live="polite" class="document-workspace-status" id="release-metric-eligibility-result">No external release-metric bundle has been verified in this workbench. User matter data is never an evaluation input.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#release-metric-eligibility-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · external evidence stays outside the application · a passing contract check does not authorize Enterprise GA.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#release-metric-eligibility-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/evals/release-metric-eligibility', {headers}), 'Release-metric evidence readiness'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Release-metric evidence readiness could not be inspected'}); } });
+      section.querySelector('#release-metric-eligibility-run')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Verifying configured license, reproducibility, manifest, and signature evidence…'; show(await fetchJson('/api/evals/release-metric-eligibility', {method:'POST', headers}), 'Release-metric evidence verification'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Release-metric evidence could not be verified'}); } });
+    }());
+
+    (function installJurisdictionPackControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('jurisdiction-pack-control')) return;
+      const section = document.createElement('section');
+      section.id = 'jurisdiction-pack-control';
+      section.className = 'document-review-card jurisdiction-pack-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Signed external configuration</span><strong>Jurisdiction packs</strong></div><span class="badge warn">Jurisdiction decision prohibited</span></div><p>Inspect externally provisioned signed packs that keep authority, citation, form, procedure, terminology, and safety-policy components separate by jurisdiction. Selecting a verified pack records a review-required choice for one matter; it does not decide jurisdiction, import authority, or make a filing-ready claim.</p><div class="matter-intake-grid"><label>Matter safe ID<input id="jurisdiction-pack-matter-id" maxlength="80" placeholder="fictional_matter_001" /></label><label>Verified pack ID<input id="jurisdiction-pack-id" maxlength="80" placeholder="maine_core" /></label></div><div class="document-workspace-actions"><button class="secondary" id="jurisdiction-pack-list" type="button">Inspect signed packs</button><button class="secondary" id="jurisdiction-pack-select" type="button">Select verified pack</button></div><div aria-live="polite" class="document-workspace-status" id="jurisdiction-pack-result">No jurisdiction pack is selected from this control. Authority data remains outside the application package.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#jurisdiction-pack-result');
+      const matterId = section.querySelector('#jurisdiction-pack-matter-id');
+      const packId = section.querySelector('#jurisdiction-pack-id');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · signed metadata only · jurisdiction decision prohibited.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#jurisdiction-pack-list')?.addEventListener('click', async () => { try { show(await fetchJson('/api/jurisdiction-packs', {headers}), 'Signed jurisdiction packs'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Jurisdiction packs could not be inspected'}); } });
+      section.querySelector('#jurisdiction-pack-select')?.addEventListener('click', async () => { const id = String(packId?.value || '').trim(); const matter = String(matterId?.value || '').trim(); if (!id || !matter) { if (result) result.textContent = 'Enter a matter safe ID and a verified pack ID before selecting a pack.'; return; } try { if (result) result.textContent = 'Verifying the signed pack and recording the review-required matter selection…'; show(await fetchJson(`/api/jurisdiction-packs/${encodeURIComponent(id)}/activate`, {method:'POST', headers, body: JSON.stringify({matter_id:matter})}), 'Jurisdiction-pack selection'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Jurisdiction pack could not be selected'}); } });
+    }());
+
+    (function installExtensionCertificationControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('extension-certification-control')) return;
+      const section = document.createElement('section');
+      section.id = 'extension-certification-control';
+      section.className = 'document-review-card extension-certification-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Trusted extension governance</span><strong>Extension certification review</strong></div><span class="badge warn">External admission required</span></div><p>Assess a preconfigured trusted declarative extension for static constraints, dependency boundary, adversarial controls, and user-facing safety wording. A passing assessment still needs an external signed admission record and never authorizes arbitrary code, network access, or filing work.</p><div class="matter-intake-grid"><label>Trusted extension ID<input id="extension-certification-id" maxlength="80" placeholder="metadata_probe" /></label></div><div class="document-workspace-actions"><button class="secondary" id="extension-certification-run" type="button">Run certification assessment</button></div><div aria-live="polite" class="document-workspace-status" id="extension-certification-result">No extension certification assessment has been run here. A configured external trust key and signed extension are required.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#extension-certification-result');
+      const extensionId = section.querySelector('#extension-certification-id');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local-desktop', 'Content-Type':'application/json'};
+      section.querySelector('#extension-certification-run')?.addEventListener('click', async () => { const id = String(extensionId?.value || '').trim(); if (!id) { if (result) result.textContent = 'Enter a trusted extension ID before starting an assessment.'; return; } try { if (result) result.textContent = 'Assessing declared extension constraints and review boundaries…'; const payload = await fetchJson('/api/addons/extension_sdk_permission_center/actions', {method:'POST', headers, body:JSON.stringify({action:'certification_assess', extension_id:id})}); if (result) result.innerHTML = `<strong>Extension certification assessment</strong><p>Review required · external signed admission still required.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'Extension certification assessment could not be completed'}); } });
+    }());
+
+    (function installApiStabilityControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('api-stability-control')) return;
+      const section = document.createElement('section');
+      section.id = 'api-stability-control';
+      section.className = 'document-review-card api-stability-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Versioned compatibility boundary</span><strong>Public API stability</strong></div><span class="badge warn">Review required</span></div><p>Compare the declared local API surface with an externally frozen contract baseline. Removed or changed endpoints are release blockers; added endpoints remain review-required until documented. This does not publish an API or contact any external service.</p><div class="document-workspace-actions"><button class="secondary" id="api-stability-status" type="button">Inspect API contract</button><button class="secondary" id="api-stability-compare" type="button">Compare frozen baseline</button></div><div aria-live="polite" class="document-workspace-status" id="api-stability-result">No external API contract baseline has been compared from this workbench.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#api-stability-result'); const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · no endpoint is published or changed by this comparison.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      section.querySelector('#api-stability-status')?.addEventListener('click', async () => { try { show(await fetchJson('/api/api-stability/status', {headers}), 'Public API contract'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'API contract could not be inspected'}); } });
+      section.querySelector('#api-stability-compare')?.addEventListener('click', async () => { try { if (result) result.textContent = 'Comparing the declared surface with its frozen external baseline…'; show(await fetchJson('/api/api-stability/compare', {method:'POST', headers}), 'API compatibility comparison'); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:'API compatibility could not be compared'}); } });
+    }());
+
+    (function installEnterpriseReleaseClosureControl() {
+      const host = releasePilotHardeningResults?.parentElement;
+      if (!host || document.getElementById('enterprise-release-closure-control')) return;
+      const section = document.createElement('section');
+      section.id = 'enterprise-release-closure-control';
+      section.className = 'document-review-card enterprise-release-closure-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Release evidence boundary</span><strong>Package provenance and GA closure</strong></div><span class="badge warn">No release decision</span></div><p>Inspect exact-package hashes, signed external scan and reproducibility evidence, the content-free incident-response program, organizational signoff evidence, and the two-axis decision packet. These controls never upload, publish, approve, or turn local checks into Store or Enterprise GA approval.</p><div class="document-workspace-actions"><button class="secondary" id="release-provenance-audit" type="button">Audit exact package provenance</button><button class="secondary" id="release-reproducibility-verify" type="button">Verify reproducibility evidence</button><button class="secondary" id="incident-response-tabletop" type="button">Run fictional incident tabletop</button><button class="secondary" id="organizational-signoffs-verify" type="button">Verify signoff evidence</button><button class="secondary" id="enterprise-ga-decision-assemble" type="button">Assemble decision packet</button></div><div aria-live="polite" class="document-workspace-status" id="enterprise-release-closure-result">No release is authorized here. Configure exact MSIX and signed external evidence to inspect blockers only.</div>';
+      host.insertAdjacentElement('beforeend', section);
+      const result = section.querySelector('#enterprise-release-closure-result');
+      const headers = {'X-User-Role':'reviewer', 'X-Tenant-Id':'local_release_evaluation', 'Content-Type':'application/json'};
+      const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Review required · external evidence remains outside the application · no Store, Enterprise, legal, security, or organizational decision is made here.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };
+      const run = async (url, options, heading, loading) => { try { if (result) result.textContent = loading; show(await fetchJson(url, options), heading); } catch (error) { if (result) result.innerHTML = renderRecoverableError(error, {title:`${heading} could not be completed`}); } };
+      section.querySelector('#release-provenance-audit')?.addEventListener('click', () => run('/api/release-provenance/audit', {method:'POST', headers}, 'Exact package provenance', 'Reading the configured MSIX and validating signed scan evidence…'));
+      section.querySelector('#release-reproducibility-verify')?.addEventListener('click', () => run('/api/release-reproducibility/verify', {method:'POST', headers}, 'Release reproducibility evidence', 'Comparing independently recorded package, payload, source, and toolchain hashes…'));
+      section.querySelector('#incident-response-tabletop')?.addEventListener('click', () => run('/api/incident-response/tabletop', {method:'POST', headers, body:JSON.stringify({scenario_id:'fictional_private_record_exposure'})}, 'Fictional incident-response tabletop', 'Running a content-free fictional response contract…'));
+      section.querySelector('#organizational-signoffs-verify')?.addEventListener('click', () => run('/api/organizational-signoffs/verify', {method:'POST', headers}, 'Organizational signoff evidence', 'Checking only configured external evidence hashes and signatures…'));
+      section.querySelector('#enterprise-ga-decision-assemble')?.addEventListener('click', () => run('/api/enterprise-ga-decision/assemble', {method:'POST', headers}, 'Two-axis release decision packet', 'Assembling the evidence packet without authorizing a release…'));
+    }());
+
     function renderMatterCommandCenter(payload) {
       matterCommandCenterPayload = payload || null;
       const snapshot = payload?.snapshot || null;
@@ -2550,6 +4751,9 @@
       const excluded = Array.isArray(snapshot?.excluded_records) ? snapshot.excluded_records : [];
       const packets = Array.isArray(payload?.packet_list) ? payload.packet_list : [];
       const staleReasons = Array.isArray(payload?.stale_reasons) ? payload.stale_reasons : [];
+      const health = payload?.health || {};
+      const healthBlockers = Array.isArray(health?.blockers) ? health.blockers : [];
+      const healthHistory = Array.isArray(payload?.health_history) ? payload.health_history : [];
       const selectedIds = matterCommandCenterSelectedRecordIds();
       const defaultIds = matterCommandCenterRecordIdsFromPayload(payload);
       if (matterCommandCenterSnapshotRecords && !matterCommandCenterSnapshotRecords.value.trim()) {
@@ -2576,6 +4780,13 @@
         const warningMarkup = staleReasons.length
           ? `<div class="matter-command-center-warning"><strong>Stale snapshot warning</strong><ul>${staleReasons.map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul></div>`
           : '<div class="matter-command-center-warning status-ok">The current snapshot still matches the selected record set.</div>';
+        const healthMarkup = healthBlockers.length ? healthBlockers.map((blocker) => {
+          const action = blocker?.corrective_action || {};
+          const recordIds = Array.isArray(blocker?.record_ids) ? blocker.record_ids : [];
+          const recordButtons = recordIds.slice(0, 8).map((recordId) => `<button class="secondary compact-action" data-command-center-inspect-record="${escapeHtml(recordId)}" type="button">Inspect ${escapeHtml(recordId)}</button>`).join('');
+          return `<article class="matter-command-center-warning"><div><strong>${escapeHtml(blocker?.title || blocker?.blocker_id || 'Review blocker')}</strong><span class="badge warn">${escapeHtml(blocker?.severity || 'attention')}</span></div><p>${escapeHtml(blocker?.detail || 'Review is required before proceeding.')}</p><div class="row">${action?.action_id ? `<button class="secondary compact-action" data-command-center-corrective="${escapeHtml(action.action_id)}" type="button">${escapeHtml(action.label || 'Open corrective action')}</button>` : ''}${recordButtons}</div></article>`;
+        }).join('') : '<p class="status-good">No command-center blocker was generated from the current metadata. Human review remains required.</p>';
+        const healthHistoryMarkup = healthHistory.slice(-12).reverse().map((entry) => `<li>${escapeHtml(entry?.observed_at || 'recorded')} · ${escapeHtml(entry?.health_status || 'review required')} · ${escapeHtml(entry?.blocker_count || 0)} blocker(s) · <code>${escapeHtml(String(entry?.health_id || '').slice(0, 12))}</code></li>`).join('') || '<li>No health-history entry has been recorded yet.</li>';
         matterCommandCenterBody.innerHTML = `
           <section class="answer-section">
             <h3>Overview</h3>
@@ -2599,6 +4810,15 @@
             <p class="muted">Full-record coverage stays visible in the snapshot receipt, not hidden in a single opaque export.</p>
           </section>
           <section class="answer-section">
+            <h3>Review blockers and exact corrective actions</h3>
+            <p class="muted">These operational signals do not determine facts, law, or filing readiness. Each corrective action stays inside the active local matter.</p>
+            ${healthMarkup}
+          </section>
+          <section class="answer-section">
+            <h3>Matter health history</h3>
+            <details><summary>${escapeHtml(healthHistory.length)} append-only health observation(s)</summary><ul>${healthHistoryMarkup}</ul></details>
+          </section>
+          <section class="answer-section">
             <h3>Snapshot scope</h3>
             <div class="matter-command-center-record-list">${includedMarkup || '<p class="muted">No included records were returned.</p>'}</div>
             ${excludedMarkup ? `<details><summary>Excluded records (${escapeHtml(excluded.length)})</summary><ul>${excludedMarkup}</ul></details>` : ''}
@@ -2607,9 +4827,52 @@
             <h3>Packet history</h3>
             <div class="matter-command-center-record-list">${packetMarkup}</div>
           </section>`;
+        matterCommandCenterBody.querySelectorAll('[data-command-center-corrective]').forEach((button) => {
+          button.addEventListener('click', () => handleMatterCommandCenterCorrectiveAction(String(button.dataset.commandCenterCorrective || ''), button));
+        });
+        matterCommandCenterBody.querySelectorAll('[data-command-center-inspect-record]').forEach((button) => {
+          button.addEventListener('click', () => inspectMatterCommandCenterRecord(String(button.dataset.commandCenterInspectRecord || ''), button));
+        });
       }
       if (matterCommandCenterCompareLeft && selectedIds.length) matterCommandCenterCompareLeft.value = matterCommandCenterCompareLeft.value || packets.at(-1)?.packet_id || '';
       if (matterCommandCenterCompareRight && selectedIds.length) matterCommandCenterCompareRight.value = matterCommandCenterCompareRight.value || packets.at(-2)?.packet_id || packets.at(-1)?.packet_id || '';
+    }
+
+    function handleMatterCommandCenterCorrectiveAction(actionId, owner) {
+      const action = String(actionId || '');
+      if (action === 'freeze_review_snapshot' || action === 'review_scope_and_refreeze') {
+        matterCommandCenterSnapshotRecords?.focus({preventScroll: true});
+        showToast('Review the active record scope, acknowledge it, then freeze a replacement snapshot.');
+        return;
+      }
+      if (action === 'build_review_required_packet') {
+        matterCommandCenterBuild?.focus({preventScroll: true});
+        showToast('Freeze the reviewed scope first, then build a review-required packet.');
+        return;
+      }
+      if (action === 'record_packet_reviewer_decision') {
+        matterCommandCenterCompareLeft?.focus({preventScroll: true});
+        showToast('Select the packet and record the reviewer outcome in the packet review workflow.');
+        return;
+      }
+      if (action === 'inspect_record_provenance' || action === 'review_record_privacy' || action === 'inspect_parser_or_ocr_result') {
+        owner?.closest('.matter-command-center-warning')?.querySelector('[data-command-center-inspect-record]')?.focus({preventScroll: true});
+        showToast('Inspect each listed active-matter record before clearing this review signal.');
+      }
+    }
+
+    async function inspectMatterCommandCenterRecord(recordId, owner) {
+      const matterId = matterCommandCenterMatterId();
+      if (!matterId || !recordId) return;
+      try {
+        const payload = await fetchJson(`/api/matters/${encodeURIComponent(matterId)}/command-center/records/${encodeURIComponent(recordId)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('command_center_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.page_number || 0), owner);
+      } catch (error) {
+        if (matterCommandCenterStatus) matterCommandCenterStatus.innerHTML = renderRecoverableError(error, {title: 'Active-matter record could not be opened'});
+      }
     }
 
     async function loadMatterCommandCenter({preserveScope = true} = {}) {
@@ -3039,11 +5302,28 @@
       )).filter((node) => !node.hidden && !node.closest('[hidden]') && node.getAttribute('aria-hidden') !== 'true');
     }
 
+    function activeManagedOverlay() {
+      return [...overlayStack].reverse().find((overlay) => overlay && !overlay.hidden)
+        || Array.from(document.querySelectorAll('.overlay-shell')).reverse().find((overlay) => !overlay.hidden)
+        || null;
+    }
+
+    function setOverlayBackgroundState(element, active) {
+      if (!element) return;
+      element.inert = !active;
+      element.setAttribute('aria-hidden', active ? 'false' : 'true');
+      const dialog = element.matches('[role="dialog"]') ? element : element.querySelector('[role="dialog"]');
+      if (dialog) dialog.setAttribute('aria-modal', active ? 'true' : 'false');
+    }
+
     function openOverlay(element) {
       if (!element) return;
+      const previous = activeManagedOverlay();
       if (element.hidden) overlayReturnFocus.set(element, document.activeElement);
+      if (!overlayStack.includes(element)) overlayStack.push(element);
+      if (previous && previous !== element) setOverlayBackgroundState(previous, false);
       element.hidden = false;
-      element.setAttribute('aria-hidden', 'false');
+      setOverlayBackgroundState(element, true);
       const dialog = element.matches('[role="dialog"]') ? element : element.querySelector('[role="dialog"]');
       if (dialog && !dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
       const focusable = overlayFocusableElements(element);
@@ -3060,13 +5340,19 @@
     function closeOverlay(element) {
       if (!element || element.hidden) return;
       const returnTarget = overlayReturnFocus.get(element) || newChatButton || focusModeButton;
-      // A focused descendant must leave before aria-hidden is applied.
-      if (returnTarget && typeof returnTarget.focus === 'function') {
-        returnTarget.focus();
-      }
+      // Hide the closing surface, reactivate a possible parent, then move
+      // focus. A control in a parent dialog cannot be focused while inert.
       element.hidden = true;
       element.setAttribute('aria-hidden', 'true');
+      element.inert = false;
       overlayReturnFocus.delete(element);
+      const stackIndex = overlayStack.lastIndexOf(element);
+      if (stackIndex >= 0) overlayStack.splice(stackIndex, 1);
+      const previous = activeManagedOverlay();
+      if (previous) setOverlayBackgroundState(previous, true);
+      if (returnTarget && typeof returnTarget.focus === 'function') {
+        returnTarget.focus({preventScroll: true});
+      }
     }
 
     function renderParagraphBlocks(text) {
@@ -3381,9 +5667,8 @@
         <button class="secondary" id="copy-handoff-button" type="button">Copy reviewer handoff JSON</button>`;
       const copyHandoff = document.getElementById('copy-handoff-button');
       copyHandoff?.addEventListener('click', async () => {
-        await navigator.clipboard.writeText(JSON.stringify(handoff, null, 2));
+        if (!await writeClipboardText(JSON.stringify(handoff, null, 2), {sensitive: true, label: 'reviewer handoff'})) return;
         copyHandoff.textContent = 'Handoff copied';
-        showToast('Reviewer handoff copied.');
         setTimeout(() => { copyHandoff.textContent = 'Copy reviewer handoff JSON'; }, 1100);
       });
     }
@@ -3456,8 +5741,38 @@
       }
       const query = new URLSearchParams({page: String(safePage)});
       if (download) query.set('download', 'true');
-      const suffix = safePage > 0 && !download ? `#page=${encodeURIComponent(String(safePage))}` : '';
-      window.open(`/api/records/open/${encodeURIComponent(token)}?${query.toString()}${suffix}`, '_blank', 'noopener,noreferrer');
+      const endpoint = `/api/records/open/${encodeURIComponent(token)}?${query.toString()}`;
+      // Open a blank local tab while this user-initiated action is still in its
+      // gesture window. The protected bytes arrive through fetch with the
+      // session-bound header, then the tab receives only a local blob URL.
+      const viewer = download ? null : window.open('about:blank', '_blank');
+      if (viewer) viewer.opener = null;
+      void (async () => {
+        try {
+          const response = await fetch(endpoint, {headers: localRequestHeaders()});
+          if (!response.ok) throw makeSafeLocalError({status: response.status, code: `local_http_${response.status}`, recovery: 'Open the record inspector again to request a new local access capability.'});
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          const disposition = response.headers.get('content-disposition') || '';
+          const filename = disposition.match(/filename="([^"]+)"/)?.[1] || String(binding?.basename || 'record');
+          if (viewer && !viewer.closed && !download) {
+            viewer.location.replace(objectUrl);
+          } else {
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            if (download) link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          }
+          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+        } catch (error) {
+          if (viewer && !viewer.closed) viewer.close();
+          showToast(error?.message || 'The protected local record could not be opened.');
+        }
+      })();
       return true;
     }
 
@@ -3506,7 +5821,88 @@
       return `<div class="record-inspector-table-wrap"><table class="record-inspector-table"><tbody>${rows.map((row) => `<tr>${(Array.isArray(row) ? row : []).map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>${preview.rows_truncated ? '<p class="record-inspector-note">The table preview was shortened.</p>' : ''}</div>`;
     }
 
-    function renderRecordInspector(payload) {
+    // Embedded media cannot attach the capability's session/role headers.
+    // Fetch only the canonical protected route, verify the exact bytes, then
+    // render a short-lived local blob. Never put credentials in a URL.
+    const RECORD_INSPECTOR_PREVIEW_MAX_BYTES = 32 * 1024 * 1024;
+
+    function releaseRecordInspectorPreview() {
+      recordInspectorRequestEpoch += 1;
+      recordInspectorController?.abort();
+      recordInspectorController = null;
+      if (recordInspectorObjectUrl) URL.revokeObjectURL(recordInspectorObjectUrl);
+      recordInspectorObjectUrl = '';
+      recordInspectorViewer.replaceChildren();
+      recordInspectorViewer.setAttribute('aria-busy', 'false');
+    }
+
+    async function loadRecordInspectorMedia(payload, signal) {
+      const kind = String(payload?.viewer_kind || '');
+      if (!['pdf', 'image', 'audio', 'video'].includes(kind)) return '';
+      const token = recordToken({source_token: payload?.token});
+      const pdf = kind === 'pdf';
+      const page = Math.max(1, Number(payload?.page || 1));
+      const endpoint = String((pdf ? payload?.preview_url : payload?.open_url) || '');
+      const expected = new RegExp('^/api/records/' + (pdf ? 'preview/' : 'open/') + token + '\\?page=[0-9]+$');
+      const expectedHash = String(payload?.source_hash || '').toLowerCase();
+      if (!token || !expected.test(endpoint) || (pdf && (!Number.isInteger(page) || endpoint !== '/api/records/preview/' + token + '?page=' + page)) || !payload?.source_hash_verified || !/^[a-f0-9]{64}$/.test(expectedHash)) {
+        throw makeSafeLocalError({code: 'record_preview_binding_invalid'});
+      }
+      const response = await fetch(endpoint, {
+        headers: localRequestHeaders(), signal, mode: 'same-origin', redirect: 'error', cache: 'no-store'
+      });
+      const mime = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+      const safeMime = kind === 'pdf' ? mime === 'image/png'
+        : kind === 'image' ? /^image\/(png|jpeg|gif|webp|bmp|x-ms-bmp|x-icon|vnd.microsoft.icon)$/.test(mime)
+        : mime.startsWith(kind + '/');
+      const previewHash = String(response.headers.get('x-mfl-preview-hash') || '').toLowerCase();
+      const pageCount = Number(response.headers.get('x-mfl-page-count') || 0);
+      const pdfBound = !pdf || (
+        response.headers.get('x-mfl-source-hash') === expectedHash &&
+        response.headers.get('x-mfl-page') === String(page) &&
+        Number.isInteger(pageCount) && pageCount >= page && pageCount <= 100000 &&
+        /^[a-f0-9]{64}$/.test(previewHash) &&
+        /^[a-f0-9]{64}$/.test(response.headers.get('x-mfl-audit-receipt') || '') &&
+        response.headers.get('x-mfl-review-required') === 'true'
+      );
+      if (!response.ok || response.headers.get('x-mfl-hash-verified') !== 'true' || !safeMime || !pdfBound) {
+        await response.body?.cancel();
+        throw makeSafeLocalError({code: 'record_preview_response_rejected'});
+      }
+      const limit = pdf ? 8 * 1024 * 1024 : RECORD_INSPECTOR_PREVIEW_MAX_BYTES;
+      if (Number(response.headers.get('content-length') || 0) > limit || Number(payload.size_bytes || 0) > RECORD_INSPECTOR_PREVIEW_MAX_BYTES) {
+        await response.body?.cancel();
+        throw makeSafeLocalError({code: 'record_preview_too_large', message: 'This record is too large for the bounded embedded preview. Use Open original or Download verified copy.'});
+      }
+      if (!response.body?.getReader) throw makeSafeLocalError({code: 'record_preview_stream_unavailable'});
+      const reader = response.body.getReader();
+      const chunks = [];
+      let size = 0;
+      try {
+        while (true) {
+          if (signal.aborted) throw new DOMException('Preview canceled', 'AbortError');
+          const {done, value} = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > limit) throw makeSafeLocalError({code: 'record_preview_too_large'});
+          chunks.push(value);
+        }
+      } catch (error) {
+        await reader.cancel().catch(() => {});
+        throw error;
+      } finally {
+        reader.releaseLock();
+      }
+      const blob = new Blob(chunks, {type: mime});
+      const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+      const actualHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      if (actualHash !== (pdf ? previewHash : expectedHash)) throw makeSafeLocalError({code: 'record_preview_hash_mismatch'});
+      if (signal.aborted) throw new DOMException('Preview canceled', 'AbortError');
+      if (pdf) payload.page_count = pageCount;
+      return URL.createObjectURL(blob);
+    }
+
+    function renderRecordInspector(payload, mediaUrl = '') {
       recordInspectorState = payload;
       recordInspectorZoom = 1;
       const kind = String(payload?.viewer_kind || 'binary');
@@ -3514,7 +5910,7 @@
       const pageCount = Math.max(0, Number(payload?.page_count || 0));
       recordInspectorTitle.textContent = payload?.filename || 'Document inspector';
       recordInspectorSubtitle.textContent = `${String(payload?.extension || payload?.mime_type || 'record').replace('.', '').toUpperCase()} · ${formatBytes(payload?.size_bytes)} · verified local source`;
-      recordInspectorBadges.innerHTML = `<span class="badge good">Hash verified</span><span class="badge">${escapeHtml(kind.replaceAll('_', ' '))}</span><span class="badge warn">Private record</span>`;
+      recordInspectorBadges.innerHTML = `<span class="badge good">Hash verified</span><span class="badge">${escapeHtml(kind.replaceAll('_', ' '))}</span><span class="badge warn">Private record</span><span class="badge warn">Review required</span>`;
       recordInspectorDetails.innerHTML = recordInspectorMetaMarkup(payload);
       recordInspectorPageControls.hidden = kind !== 'pdf' || !pageCount;
       recordInspectorZoomControls.hidden = kind !== 'image';
@@ -3525,14 +5921,18 @@
         recordInspectorPrevPage.disabled = page <= 1;
         recordInspectorNextPage.disabled = page >= pageCount;
       }
-      const openUrl = String(payload?.open_url || '');
+      const openUrl = mediaUrl;
       const preview = payload?.preview || {};
       if (kind === 'pdf') {
         const initialPage = Math.max(1, Number(payload.page || 1));
-        recordInspectorViewer.innerHTML = `<iframe class="record-inspector-frame" title="PDF preview of ${escapeHtml(payload.filename || 'record')}" src="${escapeHtml(openUrl)}#page=${encodeURIComponent(String(initialPage))}&zoom=page-width"></iframe>`;
-        if (preview.page_text) recordInspectorDetails.insertAdjacentHTML('beforeend', `<h3>Indexed text for page ${escapeHtml(initialPage)}</h3><pre class="record-text-preview">${escapeHtml(preview.page_text)}</pre>`);
+        const recovery = '<p class="record-inspector-note" role="status">Local rendered page derivative · Review required. The original is hash verified and preserved. Use Open original or Download verified copy for full-fidelity review. Indexed source text may include other pages, is not a visual reproduction, and may contain OCR errors.</p>';
+        const textFallback = `<section class="record-pdf-text-fallback"><h3>Indexed source text — page scope not verified</h3><pre class="record-text-preview">${escapeHtml(preview.page_text || 'No indexed page text is available. Open or download the verified original to review this page.')}</pre></section>`;
+        recordInspectorViewer.innerHTML = openUrl
+          ? `${recovery}<div class="record-pdf-raster-stage"><img alt="Locally rendered PDF page ${escapeHtml(initialPage)} of ${escapeHtml(payload.filename || 'record')}" src="${escapeHtml(openUrl)}"/></div><details class="record-pdf-text-fallback"><summary>Read indexed source text</summary>${textFallback}</details>`
+          : `<div class="record-inspector-loading" role="status">Rendering protected PDF page ${escapeHtml(initialPage)} locally… Close the inspector to cancel.</div>${textFallback}`;
+        if (preview.page_text) recordInspectorDetails.insertAdjacentHTML('beforeend', `<h3>Indexed source text — page scope not verified</h3><pre class="record-text-preview">${escapeHtml(preview.page_text)}</pre>`);
       } else if (kind === 'image') {
-        recordInspectorViewer.innerHTML = `<div class="record-image-stage"><img alt="Preview of ${escapeHtml(payload.filename || 'image record')}" id="record-inspector-image" src="${escapeHtml(openUrl)}"/></div>`;
+        recordInspectorViewer.innerHTML = openUrl ? `<div class="record-image-stage"><img alt="Preview of ${escapeHtml(payload.filename || 'image record')}" id="record-inspector-image" src="${escapeHtml(openUrl)}"/></div>` : '';
         if (preview.ocr_text) recordInspectorDetails.insertAdjacentHTML('beforeend', `<h3>Local OCR text</h3><pre class="record-text-preview">${escapeHtml(preview.ocr_text)}</pre>`);
       } else if (kind === 'email') {
         recordInspectorViewer.innerHTML = emailViewerMarkup(preview);
@@ -3543,14 +5943,25 @@
       } else if (kind === 'text' || kind === 'office_text') {
         recordInspectorViewer.innerHTML = `<pre class="record-text-preview">${escapeHtml(preview.text || 'No readable text was returned.')}</pre>${preview.text_truncated ? '<p class="record-inspector-note">The text preview was shortened. Open the verified original for the complete file.</p>' : ''}`;
       } else if (kind === 'audio') {
-        recordInspectorViewer.innerHTML = `<div class="record-media-view"><audio controls preload="metadata" src="${escapeHtml(openUrl)}"></audio></div>`;
+        recordInspectorViewer.innerHTML = openUrl ? `<div class="record-media-view"><audio controls preload="metadata" src="${escapeHtml(openUrl)}"></audio></div>` : '';
       } else if (kind === 'video') {
-        recordInspectorViewer.innerHTML = `<div class="record-media-view"><video controls preload="metadata" src="${escapeHtml(openUrl)}"></video></div>`;
+        recordInspectorViewer.innerHTML = openUrl ? `<div class="record-media-view"><video controls preload="metadata" src="${escapeHtml(openUrl)}"></video></div>` : '';
       } else {
         recordInspectorViewer.innerHTML = `<div class="record-inspector-empty"><div><strong>No safe embedded viewer is available for this format.</strong><p>${escapeHtml(preview.message || 'Use Open original or Download verified copy.')}</p></div></div>`;
       }
       recordInspectorViewer.querySelectorAll('[data-inspect-nested-record]').forEach((button) => button.addEventListener('click', () => openRecordInspector({source_token: button.dataset.inspectNestedRecord}, 0, button)));
       recordInspectorViewer.querySelectorAll('[data-open-nested-record]').forEach((button) => button.addEventListener('click', () => openRecordOriginal({source_token: button.dataset.openNestedRecord}, 0)));
+      if (['pdf', 'image', 'audio', 'video'].includes(kind)) {
+        if (!mediaUrl && kind !== 'pdf') {
+          recordInspectorViewer.innerHTML = '<div class="record-inspector-loading" role="status">Loading the protected original preview…</div>';
+        } else {
+          const media = recordInspectorViewer.querySelector('img, iframe, audio, video');
+          media?.addEventListener('error', () => {
+            if (!media.isConnected) return;
+            recordInspectorViewer.innerHTML = '<div class="record-inspector-empty" role="status">This browser could not display the verified original. Your file was preserved. Use Open original or Download verified copy.</div>';
+          }, {once: true});
+        }
+      }
     }
 
     async function openRecordInspector(binding, page = 0, owner = null) {
@@ -3561,6 +5972,11 @@
         return false;
       }
       closeSourcePreview({force: true});
+      releaseRecordInspectorPreview();
+      const epoch = recordInspectorRequestEpoch;
+      const controller = new AbortController();
+      recordInspectorController = controller;
+      recordInspectorState = null;
       recordInspectorOwner = owner || document.activeElement;
       recordInspector.hidden = false;
       recordInspectorBackdrop.hidden = false;
@@ -3573,19 +5989,35 @@
       recordInspectorDetails.innerHTML = '<div class="record-inspector-loading">Checking source hash and preparing a safe preview…</div>';
       recordInspectorPageControls.hidden = true;
       recordInspectorZoomControls.hidden = true;
+      recordInspectorViewer.setAttribute('aria-busy', 'true');
       try {
-        const payload = await fetchJson(`/api/records/inspect/${encodeURIComponent(token)}?page=${encodeURIComponent(String(safePage))}`);
+        const payload = await fetchJson(`/api/records/inspect/${encodeURIComponent(token)}?page=${encodeURIComponent(String(safePage))}`, {signal: controller.signal});
+        if (epoch !== recordInspectorRequestEpoch || controller.signal.aborted) return false;
         renderRecordInspector(payload);
+        const mediaUrl = await loadRecordInspectorMedia(payload, controller.signal);
+        if (epoch !== recordInspectorRequestEpoch || controller.signal.aborted) {
+          if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+          return false;
+        }
+        recordInspectorObjectUrl = mediaUrl;
+        if (mediaUrl) renderRecordInspector(payload, mediaUrl);
+        trackRecentWorkRecord(payload);
         recordInspectorClose?.focus();
         return true;
       } catch (err) {
-        recordInspectorViewer.innerHTML = `<div class="record-inspector-empty"><div><strong>The verified source could not be inspected.</strong><p>${escapeHtml(err.message)}</p></div></div>`;
-        recordInspectorDetails.innerHTML = '<div class="record-inspector-note">The app failed closed. No filesystem path or unverified file was opened.</div>';
+        if (epoch !== recordInspectorRequestEpoch || controller.signal.aborted) return false;
+        const retainedText = recordInspectorState?.viewer_kind === 'pdf'
+          ? `<section class="record-pdf-text-fallback"><h3>Indexed text — not a visual preview</h3><pre class="record-text-preview">${escapeHtml(recordInspectorState.preview?.page_text || 'No indexed text is available for this page.')}</pre></section>` : '';
+        recordInspectorViewer.innerHTML = '<div class="record-inspector-empty" role="status"><div><strong>The protected preview could not be loaded.</strong><p>The original was preserved. Close and reopen the inspector to retry, or use Open original / Download verified copy. Source files are limited to 32 MB; page rendering is bounded to 25 seconds.</p></div></div>' + retainedText;
+        if (!recordInspectorState) recordInspectorDetails.innerHTML = '<div class="record-inspector-note">The app failed closed. No filesystem path or unverified file was opened.</div>';
         return false;
+      } finally {
+        if (epoch === recordInspectorRequestEpoch) recordInspectorViewer.setAttribute('aria-busy', 'false');
       }
     }
 
     function closeRecordInspector() {
+      releaseRecordInspectorPreview();
       if (!recordInspector || recordInspector.hidden) return;
       recordInspector.hidden = true;
       recordInspectorBackdrop.hidden = true;
@@ -3655,6 +6087,7 @@
       const laneClass = lane === 'private_record' ? 'warn' : lane === 'legal_authority' ? 'good' : 'bad';
       return `<div class="source-preview-badges"><span class="badge ${laneClass}">${escapeHtml(laneLabel)}</span><span class="badge">${escapeHtml(sourceType)}</span></div>
         <h3>${escapeHtml(title)}</h3>
+        ${meta.authority_gap_build_id ? `<p class="status-warn"><strong>Review required.</strong> Coverage-build source: ${escapeHtml(meta.authority_gap_build_id)}. Hash verification is not a current-law or completeness determination.</p>` : ''}
         <dl class="source-preview-grid">${fields.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('')}</dl>
         ${spanMarkup}
         <details class="source-preview-json"><summary>Technical details</summary><pre>${escapeHtml(JSON.stringify(technical, null, 2))}</pre></details>
@@ -3711,7 +6144,8 @@
 
     function showSourcePreview(item, owner, {pin = false, payload = null} = {}) {
       if (!sourcePreviewFlyout || !sourcePreviewBody || !sourcePreviewActions) return;
-      if (!pin && Date.now() < sourcePreviewSuppressUntil) return;
+      // A queued hover/focus event must not replace an opened, fetched dialog.
+      if (!pin && (sourcePreviewPinned || Date.now() < sourcePreviewSuppressUntil)) return;
       window.clearTimeout(sourcePreviewHideTimer);
       const meta = item?.metadata || item || {};
       const title = item?.title || meta.title || sourceIdentity(item) || 'Source details';
@@ -3736,9 +6170,8 @@
       sourcePreviewActions.querySelector('[data-preview-inspect-page]')?.addEventListener('click', () => openRecordInspector(binding, pageNumber, sourcePreviewOwner));
       sourcePreviewActions.querySelector('[data-preview-copy]')?.addEventListener('click', async (event) => {
         const safe = lastHandoffSources.find((row) => sourceIdentity(row) === sourceIdentity(item)) || item;
-        await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
+        if (!await writeClipboardText(JSON.stringify(safe, null, 2), {sensitive: lane === 'private_record', label: 'source card'})) return;
         event.currentTarget.textContent = 'Copied';
-        showToast('Source card copied.');
       });
       if (sourcePreviewPinned) sourcePreviewClose?.focus();
     }
@@ -3759,35 +6192,49 @@
     }
 
     function applyRecordCardFilter() {
-      if (!sourceCards) return;
-      const query = String(recordCardFilter?.value || '').trim().toLocaleLowerCase();
-      const cards = Array.from(sourceCards.querySelectorAll('.source-card'));
-      let visibleCount = 0;
-      cards.forEach((card) => {
-        const matches = !query || card.textContent.toLocaleLowerCase().includes(query);
-        card.hidden = !matches;
-        card.dataset.sourceCard = matches ? 'visible' : 'filtered';
-        if (matches) visibleCount += 1;
-      });
-      if (recordCardFilterClear) recordCardFilterClear.disabled = !query;
-      if (recordCardFilterStatus) {
-        recordCardFilterStatus.textContent = cards.length
-          ? `${visibleCount} of ${cards.length} source card${cards.length === 1 ? '' : 's'} shown.`
-          : 'No source cards to filter.';
-      }
+      sourceCardWindowLimit = sourceCardWindowPageSize;
+      renderSources(lastSources, {preserveFilter: true});
     }
 
-    function renderSources(items) {
+    function sourceCardSearchText(item) {
+      const meta = item?.metadata || item || {};
+      return [item?.title, meta.title, meta.id, item?.citation, meta.citation_hint, item?.snippet, item?.text_excerpt, meta.text_excerpt, meta.description, item?.source_span_preview, meta.source_span_preview, meta.source_type, meta.source_class].filter(Boolean).join(' ');
+    }
+
+    function renderSources(items, {preserveFilter = false, restoreShowMoreFocus = false} = {}) {
       if (!items || !items.length) {
         lastSources = [];
         sourceCards.innerHTML = '<span class="muted">No source cards returned.</span>';
         lastHandoffSources = [];
         closeSourcePreview({force: true});
-        applyRecordCardFilter();
+        if (recordCardFilterClear) recordCardFilterClear.disabled = true;
+        if (recordCardFilterStatus) recordCardFilterStatus.textContent = 'No source cards to filter.';
         return;
       }
       lastSources = items || [];
-      sourceCards.innerHTML = items.map((item, index) => {
+      if (!preserveFilter && recordCardFilter) recordCardFilter.value = '';
+      const query = String(recordCardFilter?.value || '');
+      const sourceWindow = window.MaineWorkbenchComponents?.filterAndWindowItems(
+        lastSources,
+        query,
+        sourceCardWindowLimit,
+        sourceCardSearchText,
+      ) || {
+        allCount: lastSources.length,
+        matchingCount: lastSources.length,
+        visibleItems: lastSources.slice(0, sourceCardWindowLimit),
+        remainingCount: Math.max(0, lastSources.length - sourceCardWindowLimit),
+      };
+      const visibleItems = sourceWindow.visibleItems;
+      if (recordCardFilterClear) recordCardFilterClear.disabled = !query.trim();
+      if (recordCardFilterStatus) {
+        const visibleCount = visibleItems.length;
+        const total = sourceWindow.matchingCount;
+        recordCardFilterStatus.textContent = total
+          ? `${visibleCount} of ${total} matching source card${total === 1 ? '' : 's'} shown${sourceWindow.remainingCount ? '; load more to continue.' : '.'}`
+          : 'No source cards match this filter.';
+      }
+      sourceCards.innerHTML = visibleItems.map((item, index) => {
         const meta = item.metadata || item;
         const title = item.title || meta.title || meta.id || 'Source';
         const sourceType = meta.source_type || meta.source_class || 'source';
@@ -3823,9 +6270,9 @@
           <details class="source-card-technical"><summary>Technical</summary><pre>${escapeHtml(JSON.stringify({retrieved_at: meta.retrieved_at, source_hash: meta.source_hash || meta.hash, parser_status: meta.parser_status, parser_name: meta.parser_name, previous_snapshot_hash: meta.previous_snapshot_hash, source_span: meta.source_span}, null, 2))}</pre></details>
           <div class="source-card-actions">${openAction}${sourceQuestionAction}<button class="secondary compact-action" data-inspect-source="${escapeHtml(sourceId)}" type="button">Quick preview</button><button class="secondary compact-action" data-copy-source="${escapeHtml(sourceId)}" type="button">Copy card</button></div>
         </article>`;
-      }).join('');
+      }).join('') + (sourceWindow.remainingCount ? `<div class="source-card-window" role="status"><span>${escapeHtml(String(sourceWindow.remainingCount))} matching source card${sourceWindow.remainingCount === 1 ? '' : 's'} not rendered yet.</span><button class="secondary compact-action" data-show-more-sources type="button">Show next ${escapeHtml(String(Math.min(sourceCardWindowPageSize, sourceWindow.remainingCount)))}</button></div>` : '');
       sourceCards.querySelectorAll('.source-preview-anchor').forEach((card, index) => {
-        const item = items[index];
+        const item = visibleItems[index];
         card.addEventListener('pointerenter', () => scheduleSourcePreview(item, card));
         card.addEventListener('pointerleave', scheduleSourcePreviewClose);
         card.addEventListener('focusin', () => { if (!sourcePreviewPinned) showSourcePreview(item, card); });
@@ -3839,9 +6286,8 @@
         button.addEventListener('click', async () => {
           const sourceId = button.dataset.copySource;
           const source = lastHandoffSources.find((item) => sourceIdentity(item) === sourceId) || lastSources.find((item) => sourceIdentity(item) === sourceId) || {};
-          await navigator.clipboard.writeText(JSON.stringify(source, null, 2));
+          if (!await writeClipboardText(JSON.stringify(source, null, 2), {sensitive: normalizedSourceLane(source) === 'private_record', label: 'source card'})) return;
           button.textContent = 'Copied';
-          showToast('Source card copied.');
           setTimeout(() => { button.textContent = 'Copy card'; }, 1100);
         });
       });
@@ -3867,7 +6313,11 @@
           openRecordOriginal(recordOpenBinding(item), 0);
         });
       });
-      applyRecordCardFilter();
+      sourceCards.querySelector('[data-show-more-sources]')?.addEventListener('click', () => {
+        sourceCardWindowLimit += sourceCardWindowPageSize;
+        renderSources(lastSources, {preserveFilter: true, restoreShowMoreFocus: true});
+      });
+      if (restoreShowMoreFocus) sourceCards.querySelector('[data-show-more-sources]')?.focus({preventScroll: true});
     }
 
     async function inspectSource(sourceId, {pin = true, owner = null} = {}) {
@@ -3878,13 +6328,19 @@
         await openRecordInspector(binding, Number(local?.metadata?.page_number || local?.page_number || 0), owner);
         return;
       }
+      trackRecentWorkAuthority(sourceId);
       showSourcePreview(local, owner, {pin});
       try {
         const span = local?.metadata?.source_span || {};
         const spanQuery = Number.isInteger(span.start_offset) && Number.isInteger(span.end_offset)
           ? `?start_offset=${encodeURIComponent(span.start_offset)}&end_offset=${encodeURIComponent(span.end_offset)}`
           : '';
-        const payload = await fetchJson(`/inspect-source/${encodeURIComponent(sourceId)}${spanQuery}`);
+        const reviewedBuild = local?.metadata?.authority_gap_build_id;
+        const endpoint = reviewedBuild
+          ? `/api/authority/gaps/sources/${encodeURIComponent(sourceId)}?build_id=${encodeURIComponent(reviewedBuild)}`
+          : `/inspect-source/${encodeURIComponent(sourceId)}${spanQuery}`;
+        const payload = await fetchJson(endpoint);
+        if (reviewedBuild && payload?.status !== 'pass') throw new Error('The reviewed authority build changed or its source is unavailable. Review the active corpus again.');
         if (!sourcePreviewFlyout?.hidden && sourceIdentity(local) === sourceId) {
           showSourcePreview(local, owner || sourcePreviewOwner, {pin: sourcePreviewPinned, payload});
         }
@@ -3953,6 +6409,7 @@
           <button class="secondary compact-action" data-di-action="privacy-scan" type="button">Privacy scan</button>
           <button class="secondary compact-action" data-di-action="redaction-proposal" type="button">Redaction proposal</button>
           <button class="secondary compact-action" data-di-action="redacted-copy" type="button">Create redacted copy</button>
+          <button class="secondary compact-action" data-di-action="safe-review-copy" type="button">Create safe review copy</button>
           <button class="secondary compact-action" data-di-action="ocr-comparison" type="button">OCR comparison</button>
           <button class="secondary compact-action" data-di-action="duplicate-report" type="button">Duplicate report</button>
         </div>`;
@@ -3997,6 +6454,7 @@
             <button class="secondary compact-action" data-di-action="privacy-scan" type="button">Re-run privacy scan</button>
             <button class="secondary compact-action" data-di-action="redaction-proposal" type="button">Show proposal</button>
             <button class="secondary compact-action" data-di-action="redacted-copy" type="button">Create redacted copy</button>
+            <button class="secondary compact-action" data-di-action="safe-review-copy" type="button">Create safe review copy</button>
           </div>
         </section>
         <section>
@@ -4031,7 +6489,7 @@
       });
         documentIntelligenceResults.querySelectorAll('[data-di-copy-span]').forEach((button) => {
           button.addEventListener('click', async () => {
-            await navigator.clipboard.writeText(String(button.dataset.diSpanText || ''));
+            if (!await writeClipboardText(String(button.dataset.diSpanText || ''), {sensitive: true, label: 'document span'})) return;
             button.textContent = 'Copied';
             setTimeout(() => { button.textContent = 'Copy span'; }, 1100);
           });
@@ -4053,6 +6511,15 @@
             }
             if (action === 'redacted-copy') {
               await runDocumentIntelligenceRedactedCopy();
+              return;
+            }
+            if (action === 'safe-review-copy') {
+              await runDocumentIntelligenceSafeReviewCopy();
+              return;
+            }
+            if (action === 'open-original') {
+              closeDocumentIntelligence();
+              await openRecordInspector(recordInspectorState, 0, button);
               return;
             }
             if (action === 'ocr-comparison') {
@@ -4221,6 +6688,34 @@
       }
     }
 
+    async function runDocumentIntelligenceSafeReviewCopy() {
+      const recordId = activeDocumentIntelligenceRecordId();
+      if (!recordId || documentIntelligenceBusy) return;
+      const approved = window.confirm('Create an inert plain-text review copy? The original stays unchanged. This copy can omit formatting, active content, and other fidelity details; it remains private and review-required.');
+      if (!approved) return;
+      documentIntelligenceBusy = true;
+      updateDocumentIntelligenceButtons();
+      if (documentIntelligenceStatus) documentIntelligenceStatus.textContent = 'Creating an inert plain-text review copy…';
+      try {
+        const payload = await fetchJson(`/api/records/${encodeURIComponent(recordId)}/safe-review-copy`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({source_token: recordInspectorState.token, approved: true, reviewer: 'local_operator'}),
+        });
+        const copy = payload?.artifacts?.safe_review_copy || {};
+        const receipt = payload?.artifacts?.receipt || {};
+        const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
+        if (documentIntelligenceResults) documentIntelligenceResults.innerHTML = `<section><h3>Safe review copy created</h3><p class="status-warn">Review required · original preserved · private to this active matter</p><dl><div><dt>Original hash</dt><dd><code>${escapeHtml(String(payload.source_sha256 || '').slice(0, 24))}…</code></dd></div><div><dt>Copy hash</dt><dd><code>${escapeHtml(String(payload.output_sha256 || '').slice(0, 24))}…</code></dd></div><div><dt>Active content</dt><dd>not executed</dd></div></dl><p>This inert text file is not a fidelity-preserving original and may still contain untrusted instructions or private material.</p>${warnings.length ? `<ul>${warnings.map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul>` : ''}<p>${copy.download_url ? `<a class="primary-action compact-action" href="${escapeHtml(copy.download_url)}" download>Download safe review copy</a>` : ''}${receipt.receipt_url ? ` <a class="secondary compact-action" href="${escapeHtml(receipt.receipt_url)}">Open provenance receipt</a>` : ''}</p><button class="secondary compact-action" data-di-action="open-original" type="button">Open immutable original</button></section>`;
+        if (documentIntelligenceStatus) documentIntelligenceStatus.textContent = 'Safe review copy created. Compare it with the immutable original before relying on it.';
+      } catch (err) {
+        if (documentIntelligenceResults) documentIntelligenceResults.innerHTML = `<section><h3>Safe review copy blocked</h3><p class="status-warn">${escapeHtml(err.message)}</p><p>The original record was preserved.</p></section>`;
+        if (documentIntelligenceStatus) documentIntelligenceStatus.textContent = 'A safe review copy was not created.';
+      } finally {
+        documentIntelligenceBusy = false;
+        updateDocumentIntelligenceButtons();
+      }
+    }
+
     async function runDocumentIntelligenceOcrComparison() {
       const recordId = activeDocumentIntelligenceRecordId();
       if (!recordId || documentIntelligenceBusy) return;
@@ -4319,7 +6814,10 @@
       const metrics = payload?.metrics || {};
       const failures = Array.isArray(payload?.failures) ? payload.failures : [];
       const clusters = payload?.failure_triage?.clusters || {};
-      retrievalWorkbenchResults.innerHTML = `<section class="retrieval-summary"><div><span class="badge ${payload.status === 'pass' ? 'good' : 'warn'}">${escapeHtml(String(payload.status || 'blocked'))}</span><span class="badge warn">Attorney gold only</span></div><div class="evidence-work-product-metrics"><strong>Recall@20 ${escapeHtml(metrics.recall_at_20 ?? 0)}</strong><strong>MRR ${escapeHtml(metrics.mrr ?? 0)}</strong><strong>nDCG@20 ${escapeHtml(metrics.ndcg_at_20 ?? 0)}</strong><strong>${escapeHtml(payload.evaluated_rows || 0)} evaluated rows</strong></div><p>${escapeHtml(payload.basis || '')}</p><p><strong>Dataset:</strong> <code>${escapeHtml(String(payload.dataset_sha256 || '').slice(0, 24))}…</code></p>${(payload.blockers || []).length ? `<p class="status-warn">${escapeHtml(payload.blockers.join(', '))}</p>` : ''}</section><details open><summary>Failure clusters</summary><ul>${Object.entries(clusters).map(([key,value]) => `<li>${escapeHtml(String(key).replaceAll('_', ' '))}: ${escapeHtml(value)}</li>`).join('') || '<li>No failures.</li>'}</ul></details><details><summary>Misses (${escapeHtml(failures.length)})</summary><div class="retrieval-result-list">${failures.slice(0, 100).map((row) => `<article class="retrieval-result-card"><strong>${escapeHtml(row.query || '')}</strong><p>Expected: ${escapeHtml((row.expected_source_ids || []).join(', '))}</p><small>Retrieved: ${escapeHtml((row.retrieved_source_ids || []).join(', '))}</small></article>`).join('') || '<p>No misses.</p>'}</div></details>`;
+      const issues = Object.entries(payload?.issue_counts || {}).map(([key,value]) => `${escapeHtml(String(key).replaceAll('_', ' '))}: ${escapeHtml(value)}`).join(' · ') || 'not reported';
+      const freshness = Object.entries(payload?.freshness_counts || {}).map(([key,value]) => `${escapeHtml(String(key).replaceAll('_', ' '))}: ${escapeHtml(value)}`).join(' · ') || 'not reported';
+      const pinpoint = payload?.pinpoint_accuracy == null ? `${escapeHtml(payload?.pinpoint_accuracy_status || 'not measured')}` : escapeHtml(payload.pinpoint_accuracy);
+      retrievalWorkbenchResults.innerHTML = `<section class="retrieval-summary"><div><span class="badge ${payload.status === 'pass' ? 'good' : 'warn'}">${escapeHtml(String(payload.status || 'blocked'))}</span><span class="badge warn">Attorney gold only</span></div><div class="evidence-work-product-metrics"><strong>Recall@5 ${escapeHtml(metrics.recall_at_5 ?? 0)}</strong><strong>Recall@10 ${escapeHtml(metrics.recall_at_10 ?? 0)}</strong><strong>Recall@20 ${escapeHtml(metrics.recall_at_20 ?? 0)}</strong><strong>MRR ${escapeHtml(metrics.mrr ?? 0)}</strong><strong>nDCG@20 ${escapeHtml(metrics.ndcg_at_20 ?? 0)}</strong></div><p><strong>Issue coverage:</strong> ${issues}</p><p><strong>Freshness:</strong> ${freshness} · <strong>provenance-complete rows:</strong> ${escapeHtml(payload?.provenance_rows ?? 0)} · <strong>exact-citation accuracy:</strong> ${escapeHtml(payload?.exact_citation_accuracy ?? 'not measured')} · <strong>pinpoint:</strong> ${pinpoint}</p><p>${escapeHtml(payload.basis || '')}</p><p><strong>Dataset:</strong> <code>${escapeHtml(String(payload.dataset_sha256 || '').slice(0, 24))}…</code> · ${escapeHtml(payload.evaluated_rows || 0)} evaluated rows</p>${(payload.blockers || []).length ? `<p class="status-warn">${escapeHtml(payload.blockers.join(', '))}</p>` : ''}</section><details open><summary>Failure clusters</summary><ul>${Object.entries(clusters).map(([key,value]) => `<li>${escapeHtml(String(key).replaceAll('_', ' '))}: ${escapeHtml(value)}</li>`).join('') || '<li>No failures.</li>'}</ul></details><details><summary>Misses (${escapeHtml(failures.length)})</summary><div class="retrieval-result-list">${failures.slice(0, 100).map((row) => `<article class="retrieval-result-card"><strong>${escapeHtml(row.query || '')}</strong><p>Expected: ${escapeHtml((row.expected_source_ids || []).join(', '))}</p><small>Retrieved: ${escapeHtml((row.retrieved_source_ids || []).join(', '))}</small></article>`).join('') || '<p>No misses.</p>'}</div></details>`;
     }
 
     async function openRetrievalWorkbench(owner) {
@@ -4921,17 +7419,29 @@
     }
 
     localAgentClose?.addEventListener('click', closeLocalAgentDialog);
-    localAgentCancel?.addEventListener('click', closeLocalAgentDialog);
+    localAgentCancel?.addEventListener('click', () => {
+      if (localAgentBusy && localAgentActiveRun) cancelLocalAgentGeneration();
+      else closeLocalAgentDialog();
+    });
     localAgentBackdrop?.addEventListener('click', closeLocalAgentDialog);
     localAgentRefreshPreview?.addEventListener('click', refreshLocalAgentPreview);
     localAgentRun?.addEventListener('click', runApprovedLocalAgent);
+    [localAgentModel, localAgentEndpoint, localAgentTask].forEach((control) => control?.addEventListener('change', () => {
+      if (localAgentBusy) return;
+      localAgentPreview = null;
+      localAgentRun.disabled = true;
+      localAgentStatus.textContent = 'Model or task changed. Rebuild the exact preview before approving.';
+    }));
     localAgentProvider?.addEventListener('change', () => {
       if (localAgentProvider.value === 'ollama') {
         localAgentEndpoint.value = 'http://127.0.0.1:11434';
         if (!localAgentModel.value || localAgentModel.value === 'local-model') localAgentModel.value = 'qwen2.5:7b';
+      } else if (localAgentProvider.value === 'fast_interchange_local') {
+        localAgentEndpoint.value = 'http://127.0.0.1:8105';
+        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'local-model') localAgentModel.value = 'admitted-release-model';
       } else {
         localAgentEndpoint.value = 'http://127.0.0.1:1234';
-        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b') localAgentModel.value = 'local-model';
+        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'admitted-release-model') localAgentModel.value = 'local-model';
       }
       refreshLocalAgentPreview();
     });
@@ -4944,14 +7454,13 @@
     recordInspectorDownload?.addEventListener('click', () => {
       if (recordInspectorState) openRecordOriginal({source_token: recordInspectorState.token}, Number(recordInspectorState.page || 0), {download: true});
     });
-    recordInspectorCopyDetails?.addEventListener('click', async () => {
+      recordInspectorCopyDetails?.addEventListener('click', async () => {
       if (!recordInspectorState) return;
       const safe = {...recordInspectorState};
       delete safe.token;
       delete safe.open_url;
       delete safe.download_url;
-      await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
-      showToast('Safe source details copied.');
+      await writeClipboardText(JSON.stringify(safe, null, 2), {sensitive: true, label: 'private record details'});
     });
     recordInspectorPrevPage?.addEventListener('click', () => changeInspectorPage(-1));
     recordInspectorNextPage?.addEventListener('click', () => changeInspectorPage(1));
@@ -5023,9 +7532,8 @@
     authorityVerificationBackdrop?.addEventListener('click', closeAuthorityVerification);
     authorityVerificationCopy?.addEventListener('click', async () => {
       if (!authorityVerificationReceipt) return;
-      await navigator.clipboard.writeText(JSON.stringify(authorityVerificationReceipt, null, 2));
+      if (!await writeClipboardText(JSON.stringify(authorityVerificationReceipt, null, 2), {label: 'verification receipt'})) return;
       authorityVerificationCopy.textContent = 'Copied';
-      showToast('Verification receipt copied.');
       window.setTimeout(() => { authorityVerificationCopy.textContent = 'Copy verification receipt'; }, 1200);
     });
     matterCommandCenterClose?.addEventListener('click', () => closeOverlay(matterCommandCenterOverlay));
@@ -5564,6 +8072,7 @@
         return;
       }
       const pendingQuestion = question?.value || '';
+      closeRecordInspector();
       activateCorpusButton.disabled = true;
       try {
         const payload = await fetchJson('/api/activate-corpus', {
@@ -5579,6 +8088,7 @@
         closeSourcePreview({force: true});
         showToast('Active matter switched. Prior-matter results were cleared; your unsent question was preserved.');
         await loadCorpusLibrary();
+        await loadRecentWorkRestorePoint();
       } catch (err) {
         corpusStatus.innerHTML = `<span class="status-bad">Could not switch the active corpus: ${escapeHtml(err.message)}</span>`;
       } finally {
@@ -5612,27 +8122,286 @@
       return {
         provider: String(localAgentProvider?.value || 'ollama'),
         endpoint: String(localAgentEndpoint?.value || 'http://127.0.0.1:11434').trim(),
-        model: String(localAgentModel?.value || 'qwen2.5:7b').trim()
+        model: String(localAgentModel?.value || 'qwen2.5:7b').trim(),
+        task: String(localAgentTask?.value || localAgentPayload?.local_agent_task || 'authority_review')
       };
     }
 
-    function localAgentSourceCards(payload) {
-      return sourceItemsFromPayload(payload).map((item) => {
-        const meta = item?.metadata || item || {};
-        return {
-          source_id: item?.source_id || item?.evidence_id || meta.source_id || meta.id || '',
-          title: item?.title || meta.title || sourceBasename(item),
-          snippet: item?.snippet || item?.text_excerpt || meta.text_excerpt || meta.matched_text || '',
-          locator: item?.locator || meta.source_locator_basename || meta.safe_locator || meta.citation_hint || '',
-          metadata: {
-            source_lane: normalizedSourceLane(item),
-            source_class: meta.source_class || meta.source_type || '',
-            authority_status: meta.authority_status || '',
-            freshness_status: meta.freshness_status || meta.freshness || '',
-            instruction_like_text_detected: Boolean(meta.instruction_like_text_detected)
-          }
+    // Model data is transferred only to this local API, never to a remote host.
+    // Inference and model-pack activation retain separate explicit approvals.
+    (function installOfflineModelPacks() {
+      const panel = document.getElementById('model-pack-panel');
+      if (!panel) return;
+      const element = id => document.getElementById(`model-pack-${id}`);
+      let job = null, matter = '', busy = false, cancelRequested = false;
+      let inventory = {}, localHashing = false, noncancellable = false, prefixCanceled = false;
+      let confirmation = null;
+      const resumable = ['uploading','interrupted','failed','canceled','verifying','resuming','canceling','ready_to_activate','activated'];
+      const headers = () => ({'X-User-Role': 'admin'});
+      const path = suffix => `/api/model-packs/imports/${encodeURIComponent(job.job_id)}${suffix}`;
+      const body = extra => JSON.stringify({matter_id: matter, ...extra});
+      const message = text => { element('status').textContent = text; };
+      const failure = error => {
+        const code = String(error?.safeCode || 'model_pack_operation_failed');
+        const recovery = code === 'model_pack_operator_setup_required'
+          ? 'An operator must configure the external model store and independent trust keys first.'
+          : 'Your original ZIP is preserved. Inspect installed packs for recovery state. A failed activation may require explicit recovery before the next worker start.';
+        message(`Pack operation blocked (${code}). ${recovery}`);
+      };
+      const controls = () => {
+        if (confirmation) {
+          for (const name of ['admin','import','refresh','activate','cancel','discard','file','job','version','resume','reactivate','remove','restore','recover','deactivate','abandon']) element(name).disabled = true;
+          return;
+        }
+        panel.dataset.busy = String(busy);
+        element('admin').disabled = busy;
+        element('import').disabled = busy || localAgentBusy || !!inventory.transaction || !!(job && job.status !== 'activated');
+        element('refresh').disabled = busy;
+        element('activate').disabled = busy || job?.status !== 'ready_to_activate';
+        element('cancel').disabled = noncancellable || !job || !!inventory.transaction || (!localHashing && job.recovery_required) || !['uploading','resuming','verifying','ready_to_activate'].includes(job.status) || cancelRequested || (busy && job.status === 'ready_to_activate');
+        element('discard').disabled = busy || !job || job.recovery_required || !!inventory.transaction || ['resuming','verifying','canceling','activating'].includes(job.status);
+        element('file').disabled = busy;
+        element('job').disabled = busy;
+        element('version').disabled = busy;
+        element('resume').disabled = busy || localAgentBusy || !!inventory.transaction || !job || !resumable.includes(job.status);
+        const version = selectedVersion();
+        element('reactivate').disabled = busy || localAgentBusy || !!inventory.transaction || !version || version.removed || version.active;
+        element('remove').disabled = busy || !!inventory.transaction || !version || version.removed || version.active || version.previous;
+        element('restore').disabled = busy || !!inventory.transaction || !version?.removed;
+        element('recover').disabled = busy || localAgentBusy || !inventory.transaction;
+        element('deactivate').disabled = busy || localAgentBusy || inventory.transaction?.kind !== 'activate';
+        element('abandon').disabled = busy || !['remove','restore'].includes(inventory.transaction?.kind);
+      };
+      const selectedVersion = () => [...(inventory.installed || []), ...(inventory.removed || []).map(row => ({...row, removed:true}))].find(row => row.pack_id === element('version').value);
+      const option = (value, text) => { const item = document.createElement('option'); item.value = value; item.textContent = text; return item; };
+      const inventoryRows = () => [...(inventory.jobs || []), ...(inventory.recoverable_jobs || []).map(row => ({...row, recovery_required:true}))];
+      const confirmPackChange = text => {
+        if (confirmation) return Promise.resolve(false);
+        return new Promise(resolve => {
+          confirmation = {resolve, owner:document.activeElement};
+          element('confirmation-text').textContent = text;
+          controls();
+          element('confirmation').showModal();
+          element('confirm-no').focus();
+        });
+      };
+      const finishConfirmation = approved => {
+        if (!confirmation) return;
+        const pending = confirmation; confirmation = null;
+        element('confirmation').close(); controls(); pending.owner?.focus?.(); pending.resolve(approved);
+      };
+      element('confirm-yes').addEventListener('click', () => finishConfirmation(true));
+      element('confirm-no').addEventListener('click', () => finishConfirmation(false));
+      element('confirmation').addEventListener('cancel', event => { event.preventDefault(); finishConfirmation(false); });
+      // Native dialog provides focus trapping; parent modal shortcuts must not
+      // close the source preview or replace that trap while consent is pending.
+      element('confirmation').addEventListener('keydown', event => {
+        event.stopPropagation();
+        if (event.key === 'Escape') { event.preventDefault(); finishConfirmation(false); }
+        if (event.key === 'Tab') {
+          event.preventDefault();
+          (document.activeElement === element('confirm-no') ? element('confirm-yes') : element('confirm-no')).focus();
+        }
+      });
+      const render = row => {
+        job = row;
+        if (row.recovery_required) inventory.recoverable_jobs = [...(inventory.recoverable_jobs || []).filter(item => item.job_id !== row.job_id), row];
+        else {
+          inventory.jobs = [...(inventory.jobs || []).filter(item => item.job_id !== row.job_id), row];
+          inventory.recoverable_jobs = (inventory.recoverable_jobs || []).filter(item => item.job_id !== row.job_id);
+        }
+        element('job').replaceChildren(option('', 'New import — none selected'), ...inventoryRows().map(item => option(item.job_id, `${item.status}${item.recovery_required ? ' · previous session' : ''} · ${item.job_id.slice(0,12)}`)));
+        element('job').value = row.job_id;
+        const complete = ['ready_to_activate','activated'].includes(row.status);
+        element('progress').value = complete ? 1 : Math.min(0.95, Number(row.received_bytes || 0) / Math.max(1, Number(row.total_bytes || 0)) * 0.5 + (row.status === 'verifying' ? 0.2 : 0));
+        element('details').textContent = JSON.stringify({pack_id: row.pack_id || null, signed_details: row.summary || null, review_required: true}, null, 2);
+        const descriptions = {
+          uploading: `Copying to the local staging area: ${Number(row.received_bytes || 0).toLocaleString()} of ${Number(row.total_bytes || 0).toLocaleString()} bytes.`,
+          verifying: `Verifying signatures, exact file hashes, and safe model layout. ${Number(row.verified_bytes || 0).toLocaleString()} artifact bytes checked.`,
+          resuming: 'Checking the committed file prefix before resuming. The original ZIP and active pack are unchanged. Cancel remains available.',
+          activating: 'An activation needs recovery. Inspect installed packs, then finish the interrupted change or recover with no active pack. Worker startup is blocked until resolved.',
+          ready_to_activate: 'Verified for import. Review the signed details below, then separately approve activation. This is not real-model inference or legal-quality certification.',
+          activated: 'Pack activated. Restart the separately operated worker to use it, select an admitted model for the matching task, and rebuild the exact-source preview. No worker was started automatically.',
+          canceling: 'Cancellation requested. Waiting for verification to stop; nothing will be activated.',
+          canceled: 'Import canceled. Select the original ZIP to verify and resume, or discard this staging copy. No inference or legal certification is implied.',
+          failed: `Verification blocked (${row.error || 'model_pack_verification_failed'}). The active pack is unchanged.`,
+          interrupted: 'Verification was interrupted. Select the same original ZIP and choose Verify same file and resume import. Nothing activates automatically.'
         };
-      }).filter((item) => item.snippet);
+        message(descriptions[row.status] || 'Review required. Inspect the pack state before another action.');
+        controls();
+      };
+      const authorize = () => {
+        if (!element('admin').checked) { message('Confirm your local-operator role before changing model packs.'); element('admin').focus(); return false; }
+        const current = String(localAgentPayload?.local_agent_matter_id || '');
+        if (!current || (job && matter && current !== matter)) { message('Open the original matter and rebuild its exact-source preview first. No pack was changed.'); return false; }
+        matter = current;
+        return true;
+      };
+      const post = (suffix, extra = {}) => fetchJson(path(suffix), {method: 'POST', headers: {'Content-Type':'application/json', ...headers()}, body: body(extra)});
+      const loadInventory = async () => {
+        inventory = await fetchJson(`/api/model-packs?matter_id=${encodeURIComponent(matter)}`, {headers:headers()});
+        const selected = job?.job_id || '';
+        element('job').replaceChildren(option('', 'New import — none selected'), ...inventoryRows().map(row => option(row.job_id, `${row.status}${row.recovery_required ? ' · previous session' : ''} · ${row.job_id.slice(0,12)}`)));
+        element('job').value = inventoryRows().some(row => row.job_id === selected) ? selected : '';
+        const version = element('version').value;
+        const versions = [...(inventory.installed || []), ...(inventory.removed || []).map(row => ({...row, removed:true}))];
+        element('version').replaceChildren(option('', 'Select a pack version'), ...versions.map(row => option(row.pack_id, `${row.active ? 'Active' : row.previous ? 'Previous' : row.removed ? 'Recovery storage' : 'Inactive'} · ${row.pack_id.slice(0,16)}`)));
+        element('version').value = versions.some(row => row.pack_id === version) ? version : '';
+        if (selected && element('job').value) render(inventoryRows().find(row => row.job_id === selected));
+        else { job = null; element('details').textContent = JSON.stringify(inventory, null, 2); message(inventory.models?.length ? 'An admitted pack is installed. Review required. Worker startup remains explicit.' : 'Select an import or version to review, or choose a signed offline ZIP. No download will occur.'); }
+        if (inventory.error) message(`Model-pack state blocked (${inventory.error}). ${inventory.transaction ? 'Review the interrupted change below and choose explicit recovery. Worker startup is blocked.' : 'An operator must resolve the admission or store setup before activation.'}`);
+        controls();
+      };
+      element('job').addEventListener('change', () => {
+        if (busy) return;
+        cancelRequested = false;
+        const row = inventoryRows().find(item => item.job_id === element('job').value);
+        if (row) render(row);
+        else { job = null; message('Select an offline ZIP to begin a new import. Existing imports are preserved.'); controls(); }
+      });
+      element('version').addEventListener('change', () => {
+        element('details').textContent = JSON.stringify({version:selectedVersion() || null, transaction:inventory.transaction || null, review_required:true}, null, 2);
+        controls();
+      });
+      element('refresh').addEventListener('click', async () => {
+        if (!authorize() || busy) return;
+        busy = true; controls();
+        try { await loadInventory(); } catch (error) { failure(error); }
+        finally { busy = false; controls(); }
+      });
+      const prefixOf = async (file, count) => {
+        const sha = async data => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', data)), byte => byte.toString(16).padStart(2,'0')).join('');
+        let chain = await sha(new Uint8Array());
+        for (let offset = 0; offset < count && !cancelRequested; offset += 1024**2) {
+          const block = await file.slice(offset, Math.min(count, offset + 1024**2)).arrayBuffer();
+          chain = await sha(new TextEncoder().encode(`${chain}:${offset}:${block.byteLength}:${await sha(block)}`));
+          if (!cancelRequested) message(`Verifying the selected original: ${Math.min(count, offset + block.byteLength).toLocaleString()} of ${count.toLocaleString()} committed bytes. Cancel remains available.`);
+        }
+        return chain;
+      };
+      const transfer = async (resume = false) => {
+        if (!authorize() || busy || localAgentBusy) return;
+        const file = element('file').files?.[0];
+        if (!file || !/\.zip$/i.test(file.name) || !file.size || file.size > 3 * 1024**3) { message('Select a signed, uncompressed model-pack ZIP of at most 3 GiB.'); return; }
+        if (inventory.transaction) { message('Resolve the interrupted pack change before importing.'); return; }
+        if (resume && (!job || !resumable.includes(job.status))) return;
+        if (!resume && job && job.status !== 'activated') { message('Use Verify same file and resume import for the selected job, or select New import.'); return; }
+        if (resume && !(await confirmPackChange(`Resume import ${job.job_id} in this browser session after verifying the selected original file matches every committed chunk? Only an uncommitted staging tail may be discarded. The original ZIP is preserved.`))) return;
+        if (!authorize()) return;
+        const priorJob = resume ? {...job} : null;
+        busy = true; cancelRequested = false; prefixCanceled = false; controls();
+        let poll, lastError;
+        try {
+          if (!resume) {
+            render(await fetchJson('/api/model-packs/imports', {method:'POST', headers:{'Content-Type':'application/json', ...headers()}, body:body({total_bytes:file.size, user_confirmed:true})}));
+          }
+          if (job.total_bytes !== file.size) throw makeSafeLocalError({code:'model_pack_resume_file_size_changed'});
+          if (resume) {
+            localHashing = true; render({...job, status:'resuming'});
+            const chain = await prefixOf(file, Number(job.received_bytes || 0));
+            localHashing = false;
+            if (cancelRequested) return;
+            if (chain !== job.prefix_chain) throw makeSafeLocalError({code:'model_pack_resume_prefix_changed'});
+            render(await post('/resume', {expected_bytes:job.received_bytes, prefix_chain:chain, user_confirmed:true}));
+          }
+          let offset = Number(job.received_bytes || 0);
+          while (offset < file.size && !cancelRequested) {
+            const block = file.slice(offset, Math.min(file.size, offset + 1024**2));
+            let sent = false;
+            for (let attempt = 0; attempt < 7 && !cancelRequested; attempt++) {
+              try {
+                const row = await fetchJson(`${path('/chunks')}?matter_id=${encodeURIComponent(matter)}&offset=${offset}`, {method:'POST', headers:{'Content-Type':'application/octet-stream', ...headers()}, body:block});
+                if (!cancelRequested) render(row);
+                offset = row.received_bytes; sent = true; break;
+              } catch (error) {
+                if (error?.safeCode !== 'local_rate_limited' || attempt === 6) throw error;
+                message('Local transfer paused by the safety rate limit. It will retry; Cancel remains available.');
+                for (let tick = 0; tick < 10 && !cancelRequested; tick++) await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+            if (!sent && !cancelRequested) throw makeSafeLocalError({code:'model_pack_transfer_incomplete'});
+          }
+          if (cancelRequested) return;
+          render({...job, status:'verifying'});
+          let polling = false;
+          poll = setInterval(async () => {
+            if (polling) return;
+            polling = true;
+            try { const row = await fetchJson(`${path('')}?matter_id=${encodeURIComponent(matter)}`, {headers:headers()}); if (busy) render(row); } catch (_) {} finally { polling = false; }
+          }, 2000);
+          render(await post('/inspect'));
+        } catch (error) {
+          if (!cancelRequested) { lastError = error; failure(error); }
+        } finally {
+          clearInterval(poll); busy = false; localHashing = false;
+          if (job && !job.recovery_required) {
+            try { render(await fetchJson(`${path('')}?matter_id=${encodeURIComponent(matter)}`, {headers:headers()})); } catch (_) {}
+          }
+          controls();
+          if (prefixCanceled) { if (priorJob) render(priorJob); message('File-prefix check canceled locally. The server import and original file are preserved.'); }
+          if (lastError) failure(lastError);
+        }
+      };
+      element('import').addEventListener('click', () => transfer(false));
+      element('resume').addEventListener('click', () => transfer(true));
+      element('cancel').addEventListener('click', async () => {
+        if (!job || cancelRequested) return;
+        cancelRequested = true; controls(); message('Requesting cancellation. No pack will be activated.');
+        if (localHashing) { prefixCanceled = true; message('File-prefix check canceled locally. The server import and original file are preserved.'); return; }
+        try { render(await post('/cancel')); } catch (error) { cancelRequested = false; failure(error); controls(); }
+      });
+      element('activate').addEventListener('click', async () => {
+        if (!authorize() || busy || job?.status !== 'ready_to_activate') return;
+        if (!(await confirmPackChange(`Activate signed pack ${job.pack_id} after reviewing its license, task, hashes, and memory limits? Legal review is still required. The worker must be restarted separately.`)) || !authorize()) return;
+        busy = true; noncancellable = true; controls();
+        message('Activating the approved pack. This atomic pointer change cannot be canceled. No worker is started; the original file and previous installed pack are retained.');
+        try { render(await post('/activate', {pack_id:job.pack_id, user_confirmed:true})); localAgentPreview = null; localAgentRun.disabled = true; }
+        catch (error) { try { await loadInventory(); } catch (_) {} failure(error); }
+        finally { busy = false; noncancellable = false; controls(); }
+      });
+      element('discard').addEventListener('click', async () => {
+        if (!authorize() || busy || !job) return;
+        if (!(await confirmPackChange(`Discard staging copy ${job.job_id}? The original ZIP and installed model packs will be preserved.`)) || !authorize()) return;
+        try { await post('/discard'); job = null; cancelRequested = false; message('Partial import discarded. Original and installed packs preserved.'); element('details').textContent = 'No staged pack selected. Review required.'; controls(); }
+        catch (error) { failure(error); }
+      });
+      const changeVersion = async (action) => {
+        if (!authorize() || busy || localAgentBusy) return;
+        const version = selectedVersion(), transaction = inventory.transaction;
+        let url, extra = {user_confirmed:true};
+        const prompts = {
+          reactivate:'Activate this exact version only if it still passes current trust, revocation, and downgrade checks? Restart the worker separately; human legal review remains required.',
+          remove:'Move this inactive whole pack to recoverable storage? Active, previous and pending-review dependencies are protected. No disk space is reclaimed. The original ZIP is preserved.',
+          restore:'Restore this pack to inactive storage after current admission checks? It will not activate or start a worker.',
+          recover:'Finish this exact interrupted change after rechecking its files and current trust policy? It cannot be canceled once recovery begins.',
+          abandon:'Reverse only this interrupted storage move and keep its original storage state? No files are deleted, no model is activated, and the trust high-water mark is retained.',
+          deactivate:'Recover the interrupted activation with NO active pack? Installed files and the trust high-water mark are retained. Stop or restart the separately operated worker before further use.'
+        };
+        if (['recover','deactivate','abandon'].includes(action)) {
+          if (!transaction || (action === 'deactivate' && transaction.kind !== 'activate')) return;
+          url = '/api/model-packs/recovery'; extra = {...extra, transaction_id:transaction.id, action:action === 'recover' ? 'finish' : action};
+        } else {
+          if (!version || inventory.transaction) return;
+          url = `/api/model-packs/${action === 'restore' ? 'removed' : 'installed'}/${encodeURIComponent(version.pack_id)}/${action === 'reactivate' ? 'activate' : action}`;
+          if (action === 'reactivate') extra.expected_active = inventory.active_pack_id || '';
+        }
+        if (!(await confirmPackChange(`${prompts[action]} Exact identity: ${transaction?.id || version?.pack_id}.`)) || !authorize()) return;
+        busy = true; noncancellable = true; controls(); message('Applying the explicitly approved pack change. This operation cannot be canceled. No worker is started automatically.');
+        try {
+          const result = await fetchJson(url, {method:'POST', headers:{'Content-Type':'application/json', ...headers()}, body:body(extra)});
+          if (result.requires_worker_restart) { localAgentPreview = null; localAgentRun.disabled = true; }
+          await loadInventory();
+          message(`Pack change recorded: ${result.status}. Review required. ${result.requires_worker_restart ? 'Restart the separately operated worker and rebuild the exact-source preview.' : 'The original ZIP is preserved; recovery storage does not reclaim disk space.'}`);
+        } catch (error) { try { await loadInventory(); } catch (_) {} failure(error); }
+        finally { busy = false; noncancellable = false; controls(); }
+      };
+      for (const action of ['reactivate','remove','restore','recover','deactivate','abandon']) element(action).addEventListener('click', () => changeVersion(action));
+    }());
+
+    function localAgentSourceCards(payload) {
+      // Only host-issued exact references are eligible. Posted snippets and
+      // authority/freshness labels are never an inference trust boundary.
+      return Array.isArray(payload?.local_agent_source_refs) ? payload.local_agent_source_refs : [];
     }
 
     function renderContextManifest(payload) {
@@ -5736,7 +8505,10 @@
       const receiptHtml = receipt?.receipt_sha256
         ? `<section class="authority-verification-section"><h3>Reproducible receipt</h3><div class="authority-verification-card"><p><strong>Answer:</strong> <code>${escapeHtml(String(receipt.answer_sha256 || ''))}</code></p><p><strong>Authority manifest:</strong> <code>${escapeHtml(String(receipt.authority_manifest_sha256 || ''))}</code></p><p><strong>Receipt:</strong> <code>${escapeHtml(receipt.receipt_sha256)}</code></p></div></section>`
         : '';
-      authorityVerificationBody.innerHTML = `${blockedNotice}<section class="authority-verification-section"><h3>Claim-to-source review</h3><div class="authority-verification-grid">${claimHtml}</div></section><section class="authority-verification-section"><h3>Citation resolution</h3><div class="authority-verification-grid">${citationHtml}</div></section>${quoteHtml}${blockerHtml}${receiptHtml}`;
+      const extractionNote = report.claim_extraction?.producer_bound
+        ? '<p class="authority-verification-scope-note">Reviewing the unchanged answer’s server-bound assertions and exact quotes. App-generated navigation and source-status text are separate from legal claims. Human review remains required.</p>'
+        : '<p class="authority-verification-scope-note">Reviewing candidate claims from the complete submitted text. Caller-provided guidance labels cannot exclude claims.</p>';
+      authorityVerificationBody.innerHTML = `${blockedNotice}<section class="authority-verification-section"><h3>Claim-to-source review</h3>${extractionNote}<div class="authority-verification-grid">${claimHtml}</div></section><section class="authority-verification-section"><h3>Citation resolution</h3><div class="authority-verification-grid">${citationHtml}</div></section>${quoteHtml}${blockerHtml}${receiptHtml}`;
       authorityVerificationCopy.disabled = !receipt?.receipt_sha256;
       authorityVerificationStatus.textContent = status === 'verified_pending_human_review'
         ? 'Source checks completed. Human review remains mandatory.'
@@ -5766,6 +8538,7 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             text: String(text || ''),
+            answer_review_scope: String(payload?.answer_review_scope || ''),
             source_ids: authoritySourceIds(payload),
             quotes: [],
             claims: [],
@@ -5781,8 +8554,50 @@
       }
     }
 
+    let localAgentActiveRun = null;
+    let localAgentCancelRequested = false;
+
+    function localAgentErrorMessage(error) {
+      const explanations = {
+        fast_interchange_capability_mismatch: 'This release is not admitted for the selected task. Choose a matching admitted model and rebuild the preview.',
+        fast_interchange_operator_admission_required: 'No trusted model catalog is configured. A licensed, signed model release must be provisioned before this worker can run.',
+        fast_interchange_worker_token_required: 'The local app has no worker credential. Configure the host-only worker token; never paste it into this window.',
+        fast_interchange_model_not_registered: 'This model is not in the trusted local registry. Choose an installed admitted release.',
+        fast_interchange_admission_unavailable: 'The model admission could not be verified. Check its signature, expiry, revocation, and installed artifacts.'
+      };
+      return explanations[error?.safeCode] || error?.message || 'The local model action could not complete.';
+    }
+
+    async function cancelLocalAgentGeneration() {
+      if (!localAgentActiveRun || localAgentCancelRequested) return;
+      localAgentCancelRequested = true;
+      localAgentCancel.disabled = true;
+      localAgentStatus.textContent = 'Stopping the local worker… waiting for cancellation confirmation. Existing records and answers are unchanged.';
+      try {
+        const result = await fetchJson('/api/local-agent/cancel', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(localAgentActiveRun)
+        });
+        if (localAgentBusy) localAgentStatus.textContent = result.status === 'canceled'
+          ? 'Cancellation confirmed. Waiting for the request to close; no new answer will be accepted.'
+          : 'Cancellation requested. Waiting for the worker to stop; no new answer will be accepted.';
+      } catch (error) {
+        localAgentCancelRequested = false;
+        localAgentCancel.disabled = false;
+        localAgentStatus.textContent = 'Could not confirm cancellation. Retry Cancel generation. The original answer and records are preserved.';
+      }
+    }
+
     function closeLocalAgentDialog() {
       if (!localAgentModal) return;
+      if (document.getElementById('model-pack-panel')?.dataset.busy === 'true') {
+        document.getElementById('model-pack-cancel')?.click();
+        showToast('Waiting for the local pack operation to finish or confirm cancellation.');
+        return;
+      }
+      if (localAgentBusy && localAgentActiveRun) { cancelLocalAgentGeneration(); return; }
+      localAgentRequestEpoch += 1;
+      if (localAgentBusy) showToast('Review closed. An approved model request may still be running; its result will not be shown.');
       localAgentModal.hidden = true;
       localAgentModal.setAttribute('aria-hidden', 'true');
       if (localAgentBackdrop) { localAgentBackdrop.hidden = true; localAgentBackdrop.setAttribute('aria-hidden', 'true'); }
@@ -5798,11 +8613,12 @@
       if (!localAgentPayload || localAgentBusy) return;
       const cards = localAgentSourceCards(localAgentPayload);
       if (!cards.length) {
-        localAgentPreviewSummary.textContent = 'No source excerpts are available for a local model run.';
+        localAgentPreviewSummary.textContent = 'Open a matter and select an exact verified source excerpt before running a local model. Your records and existing answer are unchanged.';
         localAgentRun.disabled = true;
         return;
       }
       localAgentBusy = true;
+      const requestEpoch = localAgentRequestEpoch;
       localAgentRun.disabled = true;
       localAgentRefreshPreview.disabled = true;
       localAgentStatus.textContent = 'Building the exact loopback context manifest…';
@@ -5813,33 +8629,43 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             question: localAgentPayload.question || '',
-            source_cards: cards,
+            source_refs: cards,
+            matter_id: localAgentPayload.local_agent_matter_id || '',
+            task: localAgentPayload.local_agent_task || 'authority_review',
             run_id: localAgentPayload?.context_manifest?.run_id || '',
             ...config
           })
         });
-        localAgentPreview = preview;
+        if (requestEpoch !== localAgentRequestEpoch) return;
+        localAgentPreview = {...preview, approvedConfig: JSON.stringify(config)};
         const manifest = preview.context_manifest || {};
         const lanes = manifest.lane_counts || {};
         localAgentPreviewSummary.innerHTML = `<strong>Approval required.</strong> ${escapeHtml(manifest.entry_count || 0)} source blocks · ${Number(manifest.total_chars || 0).toLocaleString()} characters · Maine law ${escapeHtml(lanes.legal_authority || 0)} · private records ${escapeHtml(lanes.private_record || 0)}.<br><span class="muted">Destination: ${escapeHtml(preview.model?.endpoint_host || '')}:${escapeHtml(preview.model?.endpoint_port || '')} (${escapeHtml(preview.model?.endpoint_class || 'loopback')}).</span>`;
+        if (preview.model_admission?.release_id) {
+          localAgentPreviewSummary.innerHTML += `<p><strong>Exact model:</strong> ${escapeHtml(preview.model_admission.release_id)} · ${escapeHtml(preview.model_admission.capability)}<br><strong>Admission:</strong> ${escapeHtml(preview.model_admission.admission_scope || preview.model_admission.evidence_basis)} · Review required<br><small>Release SHA-256: ${escapeHtml(preview.model_admission.release_fingerprint)}</small></p>`;
+        }
         localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
           <header><span class="context-index">${escapeHtml(entry.index)}</span><strong>${escapeHtml(entry.title)}</strong><span class="badge ${entry.lane === 'private_record' ? 'warn' : 'good'}">${entry.lane === 'private_record' ? 'Private record' : 'Maine law'}</span>${entry.instruction_like_text_detected ? '<span class="badge warn">instructions quarantined</span>' : ''}</header>
           <small>${escapeHtml(entry.locator || entry.source_id)} · ${Number(entry.char_count || 0).toLocaleString()} characters · SHA-256 ${escapeHtml(String(entry.content_sha256 || '').slice(0, 18))}…</small>
           <p>${escapeHtml(entry.preview || '')}</p>
+          <small>Freshness: ${escapeHtml(entry.freshness_status || 'unknown')} · Review required</small>
+          <details><summary>Exact source text supplied to the model</summary><pre class="source-excerpt">${escapeHtml(preview.source_cards?.[Number(entry.index) - 1]?.snippet || '')}</pre></details>
         </article>`).join('');
         localAgentSecurityReport.textContent = JSON.stringify({
           manifest_sha256: manifest.manifest_sha256,
           exact_context_sha256: manifest.exact_context_sha256,
           injection_report: preview.injection_report,
-          model: preview.model
+          model: preview.model,
+          admission: preview.model_admission
         }, null, 2);
         localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked);
         localAgentStatus.textContent = preview.injection_report?.direct_prompt_blocked
           ? 'Run blocked: the user prompt attempted to override protected instructions.'
           : 'Nothing has been transmitted. Review the source list, then approve the exact hash.';
       } catch (err) {
+        if (requestEpoch !== localAgentRequestEpoch) return;
         localAgentPreview = null;
-        localAgentPreviewSummary.innerHTML = `<span class="status-bad">Could not build the local model preview: ${escapeHtml(err.message)}</span>`;
+        localAgentPreviewSummary.innerHTML = `<span class="status-bad">Could not build the local model preview: ${escapeHtml(localAgentErrorMessage(err))}</span>`;
         localAgentContextList.textContent = '';
         localAgentSecurityReport.textContent = '';
         localAgentStatus.textContent = 'Nothing was transmitted.';
@@ -5851,7 +8677,13 @@
 
     function openLocalAgentDialog(payload, owner) {
       if (!localAgentModal || !payload) return;
+      if (localAgentBusy) {
+        showToast('A local model request is still finishing. Wait before starting another request.');
+        return;
+      }
+      localAgentRequestEpoch += 1;
       localAgentPayload = payload;
+      if (localAgentTask) localAgentTask.value = payload.local_agent_task || 'authority_review';
       localAgentOwner = owner || document.activeElement;
       localAgentPreview = null;
       try {
@@ -5868,15 +8700,32 @@
       localAgentContextList.textContent = '';
       localAgentSecurityReport.textContent = '';
       localAgentStatus.textContent = 'Nothing has been transmitted.';
+      localAgentCancel.textContent = 'Cancel';
+      localAgentCancel.disabled = false;
       window.requestAnimationFrame(() => localAgentClose?.focus());
       refreshLocalAgentPreview();
     }
 
     async function runApprovedLocalAgent() {
       if (!localAgentPayload || !localAgentPreview || localAgentBusy) return;
+      if (localAgentPreview.approvedConfig !== JSON.stringify(localAgentConfigPayload())) {
+        localAgentPreview = null;
+        localAgentRun.disabled = true;
+        localAgentStatus.textContent = 'Model settings changed. Refresh the exact source preview before approving again.';
+        return;
+      }
       localAgentBusy = true;
+      const requestEpoch = localAgentRequestEpoch;
+      const original = localAgentPayload;
+      [localAgentProvider, localAgentEndpoint, localAgentModel, localAgentTask].forEach((control) => { if (control) control.disabled = true; });
       localAgentRun.disabled = true;
       localAgentRefreshPreview.disabled = true;
+      localAgentCancelRequested = false;
+      localAgentActiveRun = localAgentPreview.cancellation_supported ? {
+        matter_id: localAgentPreview.matter_id,
+        run_id: localAgentPreview.context_manifest?.run_id
+      } : null;
+      localAgentCancel.textContent = localAgentActiveRun ? 'Cancel generation' : 'Close review (does not cancel generation)';
       localAgentStatus.textContent = 'Running the approved context through the loopback local model…';
       try {
         const config = localAgentConfigPayload();
@@ -5886,19 +8735,27 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             question: localAgentPayload.question || '',
-            source_cards: localAgentSourceCards(localAgentPayload),
+            source_refs: localAgentPreview.source_refs || [],
+            matter_id: localAgentPreview.matter_id || '',
+            task: localAgentPreview.task || 'authority_review',
+            approval_token: localAgentPreview.approval_token || '',
             run_id: localAgentPreview.context_manifest?.run_id || '',
             approved_manifest_sha256: localAgentPreview.context_manifest?.manifest_sha256 || '',
-            retrieval_diagnostics: localAgentPayload.retrieval_diagnostics || localAgentPayload?.metadata?.retrieval_diagnostics || {},
             ...config
           })
         });
-        const original = localAgentPayload;
+        if (requestEpoch !== localAgentRequestEpoch) return;
+        if (localAgentCancelRequested) {
+          localAgentStatus.textContent = 'The request finished before cancellation confirmation. Its answer was discarded; your original answer and records are unchanged.';
+          localAgentPreview = null;
+          return;
+        }
+        localAgentBusy = false;
         closeLocalAgentDialog();
         const displayPayload = {
           ...result,
           question: original.question,
-          citations: sourceItemsFromPayload(original),
+          citations: result.citations || [],
           handoff_safe_source_cards: original.handoff_safe_source_cards || [],
           local_agent_result: true,
           structured_answer: null
@@ -5911,10 +8768,19 @@
         renderBadges(displayPayload);
         showToast('Loopback local model result added with provenance.');
       } catch (err) {
-        localAgentStatus.innerHTML = `<span class="status-bad">Local model run failed: ${escapeHtml(err.message)}</span>`;
-        localAgentRun.disabled = false;
+        if (requestEpoch !== localAgentRequestEpoch) return;
+        localAgentStatus.textContent = err.safeCode === 'fast_interchange_generation_canceled'
+          ? 'Generation canceled. No new answer was accepted; original sources and answers are unchanged.'
+          : `Local model run failed: ${err.message}. Cancellation is not confirmed unless the worker reports it.`;
+        localAgentPreview = null;
+        localAgentRun.disabled = true;
+        localAgentStatus.textContent += ' Refresh the preview to obtain a new single-use approval.';
       } finally {
         localAgentBusy = false;
+        localAgentActiveRun = null;
+        [localAgentProvider, localAgentEndpoint, localAgentModel, localAgentTask].forEach((control) => { if (control) control.disabled = false; });
+        localAgentCancel.disabled = false;
+        localAgentCancel.textContent = 'Close review';
         localAgentRefreshPreview.disabled = false;
       }
     }
@@ -6058,9 +8924,8 @@
         const item = itemAt(button) || {};
         const handoff = Array.isArray(payload?.handoff_safe_source_cards) ? payload.handoff_safe_source_cards : [];
         const safe = handoff.find((row) => sourceIdentity(row) === sourceIdentity(item)) || item;
-        await navigator.clipboard.writeText(JSON.stringify(safe, null, 2));
+        if (!await writeClipboardText(JSON.stringify(safe, null, 2), {sensitive: normalizedSourceLane(safe) === 'private_record', label: 'source card'})) return;
         button.textContent = 'Copied';
-        showToast('Source card copied.');
         window.setTimeout(() => { button.textContent = 'Copy'; }, 1100);
       }));
       container.querySelectorAll('[data-inline-citation-graph]').forEach((button) => button.addEventListener('click', async (event) => {
@@ -6465,6 +9330,7 @@
     }
 
     function resetSession({preserveContext} = {preserveContext: false}) {
+      closeRecordInspector();
       question.value = '';
       if (!preserveContext) {
         matterContext.value = '';
@@ -6777,6 +9643,999 @@
       }
     }
 
+    function renderAuthorityGapReview(payload) {
+      if (!authorityGapResult) return;
+      const missing = Array.isArray(payload?.missing_material_source_classes) ? payload.missing_material_source_classes : [];
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const classes = Object.entries(payload?.source_class_counts || {})
+        .map(([name, count]) => `${escapeHtml(name)}: ${escapeHtml(count)}`).join(' · ') || 'No admitted source metadata was available.';
+      const freshness = Object.entries(payload?.freshness_counts || {})
+        .map(([name, count]) => `${escapeHtml(name)}: ${escapeHtml(count)}`).join(' · ') || 'No freshness metadata was available.';
+      const missingText = missing.length ? ` Missing metadata classes: ${escapeHtml(missing.join(', '))}.` : '';
+      const blockerText = blockers.length ? ` Blockers: ${escapeHtml(blockers.join(', '))}.` : ' No metadata-coverage blocker was found.';
+      authorityGapResult.innerHTML = `<strong>Review required.</strong> Scope: all active corpus metadata; the optional label does not filter sources. Active metadata: ${classes}. Freshness: ${freshness}.${missingText}${blockerText} This is not a conclusion that the authority is complete or current law.`;
+    }
+
+    async function reviewAuthorityGaps() {
+      const issue = String(authorityGapIssue?.value || '').trim();
+      if (authorityGapButton) authorityGapButton.disabled = true;
+      if (authorityGapResult) authorityGapResult.textContent = 'Reviewing the admitted local authority metadata…';
+      try {
+        const payload = await fetchJson(`/api/authority/gaps?issue=${encodeURIComponent(issue)}`);
+        renderAuthorityGapReview(payload);
+      } catch (error) {
+        if (authorityGapResult) authorityGapResult.innerHTML = renderRecoverableError(error, {title: 'Authority coverage review could not be completed'});
+      } finally {
+        if (authorityGapButton) authorityGapButton.disabled = false;
+      }
+    }
+
+    async function browseAuthorityGapSources() {
+      setDrawerOpen(true, 'evidence', {userInitiated: true});
+      if (sourceCards) sourceCards.textContent = 'Loading admitted authority source cards…';
+      if (authorityGapBrowseButton) authorityGapBrowseButton.disabled = true;
+      try {
+        const payload = await fetchJson('/api/authority/gaps');
+        renderAuthorityGapReview(payload);
+        if (!payload?.build_id || payload?.status === 'blocked' || !Array.isArray(payload?.sources)) {
+          renderSources([]);
+          if (sourceCards) sourceCards.textContent = 'No verified active authority build is available. No working files or bundled fixtures were substituted. Review required.';
+          return;
+        }
+        renderSources(payload.sources);
+        if (payload.sources_truncated && sourceCards) sourceCards.insertAdjacentHTML('beforeend', '<p>Showing the first 50 metadata records from this build. This is not a completeness determination.</p>');
+      } catch (error) {
+        renderSources([]);
+        if (sourceCards) sourceCards.innerHTML = renderRecoverableError(error, {title: 'Admitted sources could not be loaded'});
+      } finally {
+        if (authorityGapBrowseButton) authorityGapBrowseButton.disabled = false;
+      }
+      sourceCards?.scrollIntoView({block: 'nearest'});
+    }
+
+    function renderAuthorityFreshnessRows(rows, label) {
+      if (!Array.isArray(rows) || !rows.length) return `<p>No ${escapeHtml(label)} were reported.</p>`;
+      const items = rows.slice(0, 20).map((row) => {
+        const sourceId = String(row?.source_id || 'unidentified-source');
+        const age = Number.isFinite(Number(row?.age_days)) ? ` · ${Number(row.age_days)} days since retrieval` : '';
+        return `<li><button class="text-link" data-authority-freshness-source="${escapeHtml(sourceId)}" type="button">${escapeHtml(sourceId)}</button> · ${escapeHtml(String(row?.source_class || 'source'))} · ${escapeHtml(String(row?.reason || row?.freshness_status || 'review required').replaceAll('_', ' '))}${escapeHtml(age)}</li>`;
+      }).join('');
+      return `<p><strong>${escapeHtml(label)}</strong></p><ul>${items}</ul>`;
+    }
+
+    function renderAuthorityFreshnessDashboard(payload) {
+      if (!authorityFreshnessResult) return;
+      const thresholds = Object.values(payload?.source_class_thresholds || {});
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const build = payload?.last_accepted_build || {};
+      const classSummary = thresholds.map((row) => `${escapeHtml(row.source_class || 'source')}: ${escapeHtml(row.source_count || 0)} checked, ${escapeHtml(row.overdue || 0)} overdue, ${escapeHtml(row.parser_failures || 0)} parser failures`).join(' · ') || 'No admitted source metadata was available.';
+      authorityFreshnessResult.innerHTML = `<strong>Review required.</strong> Last accepted build: <code>${escapeHtml(build.build_id || 'none')}</code> (${build.verified ? 'verified metadata' : 'not verified'}). ${escapeHtml(classSummary)}.${renderAuthorityFreshnessRows(payload?.overdue_sources, 'Operationally overdue source metadata')}${renderAuthorityFreshnessRows(payload?.parser_failures, 'Parser failures')}${renderAuthorityFreshnessRows(payload?.retrieval_date_unknown_sources, 'Missing or invalid retrieval dates')}${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<p>${escapeHtml(payload?.notice || 'Review metadata before relying on authority.')}</p>`;
+      authorityFreshnessResult.querySelectorAll('[data-authority-freshness-source]').forEach((button) => {
+        button.addEventListener('click', () => showSourcePreview({source_id: button.dataset.authorityFreshnessSource, title: button.dataset.authorityFreshnessSource}));
+      });
+    }
+
+    async function reviewAuthorityFreshness() {
+      if (authorityFreshnessButton) authorityFreshnessButton.disabled = true;
+      if (authorityFreshnessResult) authorityFreshnessResult.textContent = 'Reviewing admitted source metadata without changing the authority store…';
+      try {
+        const payload = await fetchJson('/api/authority/freshness');
+        renderAuthorityFreshnessDashboard(payload);
+      } catch (error) {
+        if (authorityFreshnessResult) authorityFreshnessResult.innerHTML = renderRecoverableError(error, {title: 'Authority freshness review could not be completed'});
+      } finally {
+        if (authorityFreshnessButton) authorityFreshnessButton.disabled = false;
+      }
+    }
+
+    function renderAuthorityAvailabilityRows(rows, label) {
+      if (!Array.isArray(rows) || !rows.length) return '';
+      const entries = rows.slice(0, 20).map((row) => {
+        const sourceId = String(row?.source_id || 'unidentified-source');
+        const status = Number.isFinite(Number(row?.http_status)) ? ` · HTTP ${Number(row.http_status)}` : '';
+        return `<li><button class="text-link" data-authority-availability-source="${escapeHtml(sourceId)}" type="button">${escapeHtml(sourceId)}</button> · ${escapeHtml(String(row?.source_class || 'source'))}${escapeHtml(status)}</li>`;
+      }).join('');
+      return `<p><strong>${escapeHtml(label)}</strong></p><ul>${entries}</ul>`;
+    }
+
+    function renderAuthorityAvailabilityMonitor(payload) {
+      if (!authorityAvailabilityResult) return;
+      const categories = payload?.categories || {};
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const build = payload?.last_accepted_build || {};
+      authorityAvailabilityResult.innerHTML = `<strong>Review required.</strong> Last accepted build: <code>${escapeHtml(build.build_id || 'none')}</code> (${build.verified ? 'verified metadata' : 'not verified'}). ${renderAuthorityAvailabilityRows(categories.moved_urls, 'Moved or redirected official URLs')}${renderAuthorityAvailabilityRows(categories.changed_hashes, 'Changed source hashes')}${renderAuthorityAvailabilityRows(categories.tls_failures, 'TLS or certificate failures')}${renderAuthorityAvailabilityRows(categories.access_restrictions, 'Access restrictions')}${renderAuthorityAvailabilityRows(categories.url_metadata_gaps, 'Missing official URL metadata')}${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : '<p>No stored availability issue was reported. A new source check is still required to establish present availability.</p>'}<p>${escapeHtml(payload?.notice || 'Review exact source cards before taking action.')}</p>`;
+      authorityAvailabilityResult.querySelectorAll('[data-authority-availability-source]').forEach((button) => {
+        button.addEventListener('click', () => showSourcePreview({source_id: button.dataset.authorityAvailabilitySource, title: button.dataset.authorityAvailabilitySource}));
+      });
+    }
+
+    async function reviewAuthorityAvailability() {
+      if (authorityAvailabilityButton) authorityAvailabilityButton.disabled = true;
+      if (authorityAvailabilityResult) authorityAvailabilityResult.textContent = 'Reviewing stored official-source metadata without any network request…';
+      try {
+        const payload = await fetchJson('/api/authority/availability');
+        renderAuthorityAvailabilityMonitor(payload);
+      } catch (error) {
+        if (authorityAvailabilityResult) authorityAvailabilityResult.innerHTML = renderRecoverableError(error, {title: 'Official-source availability review could not be completed'});
+      } finally {
+        if (authorityAvailabilityButton) authorityAvailabilityButton.disabled = false;
+      }
+    }
+
+    async function inspectAuthorityParserFixture(fixtureId) {
+      if (!authorityParserRegressionResult || !fixtureId) return;
+      authorityParserRegressionResult.textContent = 'Loading the selected synthetic fixture receipt…';
+      try {
+        const payload = await fetchJson(`/api/authority/parser-regression/${encodeURIComponent(fixtureId)}`);
+        const checks = Array.isArray(payload?.checks) ? payload.checks : [];
+        const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+        authorityParserRegressionResult.innerHTML = `<strong>Review required.</strong> Fixture <code>${escapeHtml(payload?.fixture_id || fixtureId)}</code> · ${escapeHtml(String(payload?.scenario || 'fixture').replaceAll('_', ' '))} · ${escapeHtml(payload?.status || 'unknown')}. Expected ${escapeHtml(payload?.expected_status || 'unknown')}; extracted ${escapeHtml(payload?.extracted_count ?? 0)}. Artifact SHA-256: <code>${escapeHtml(payload?.fixture_sha256 || 'not available')}</code>${checks.length ? `<p>Checks: ${escapeHtml(checks.join(', ').replaceAll('_', ' '))}</p>` : ''}${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<p>This synthetic fixture is not an authority source and cannot support a legal claim.</p>`;
+      } catch (error) {
+        authorityParserRegressionResult.innerHTML = renderRecoverableError(error, {title: 'Parser fixture receipt could not be loaded'});
+      }
+    }
+
+    function renderAuthorityParserRegression(payload) {
+      if (!authorityParserRegressionResult) return;
+      const fixtures = Array.isArray(payload?.fixtures) ? payload.fixtures : [];
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const fixtureRows = fixtures.map((fixture) => `<li><button class="text-link" data-parser-regression-fixture="${escapeHtml(String(fixture?.fixture_id || ''))}" type="button">${escapeHtml(String(fixture?.fixture_id || 'fixture'))}</button> · ${escapeHtml(String(fixture?.scenario || 'scenario').replaceAll('_', ' '))} · ${escapeHtml(String(fixture?.status || 'unknown'))} · SHA-256 ${escapeHtml(String(fixture?.fixture_sha256 || 'unavailable').slice(0, 16))}</li>`).join('') || '<li>No synthetic fixtures are available.</li>';
+      authorityParserRegressionResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.passed_count || 0)} of ${escapeHtml(payload?.fixture_count || 0)} synthetic parser fixtures passed.${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<ul>${fixtureRows}</ul><p>${escapeHtml(payload?.notice || 'Fixtures test parser behavior only.')}</p>`;
+      authorityParserRegressionResult.querySelectorAll('[data-parser-regression-fixture]').forEach((button) => {
+        button.addEventListener('click', () => inspectAuthorityParserFixture(button.dataset.parserRegressionFixture));
+      });
+    }
+
+    async function runAuthorityParserRegression() {
+      if (authorityParserRegressionButton) authorityParserRegressionButton.disabled = true;
+      if (authorityParserRegressionResult) authorityParserRegressionResult.textContent = 'Running local synthetic parser fixtures without contacting official sources…';
+      try {
+        const payload = await fetchJson('/api/authority/parser-regression');
+        renderAuthorityParserRegression(payload);
+      } catch (error) {
+        if (authorityParserRegressionResult) authorityParserRegressionResult.innerHTML = renderRecoverableError(error, {title: 'Parser regression corpus could not be run'});
+      } finally {
+        if (authorityParserRegressionButton) authorityParserRegressionButton.disabled = false;
+      }
+    }
+
+    function renderAuthorityLineage(payload) {
+      if (!authorityLineageResult) return;
+      const build = payload?.build || {};
+      const parsed = payload?.parsed_node || {};
+      const snapshot = payload?.snapshot || {};
+      const retrieval = payload?.retrieval_event || {};
+      const official = payload?.official_source || {};
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const sourceId = String(payload?.source_id || parsed?.source_id || 'source');
+      authorityLineageResult.innerHTML = `<strong>Review required.</strong> <button class="text-link" data-authority-lineage-source="${escapeHtml(sourceId)}" type="button">${escapeHtml(sourceId)}</button> · build <code>${escapeHtml(build.build_id || 'unavailable')}</code> · fingerprint <code>${escapeHtml(String(build.build_fingerprint || 'unavailable').slice(0, 24))}</code>.<p><strong>Parsed node:</strong> ${escapeHtml(parsed.authority_kind || 'unknown')} · ${escapeHtml(parsed.citation || 'no admitted citation')} · ${escapeHtml(parsed.parser_status || 'unknown parser status')} · offsets ${escapeHtml(parsed.source_span?.start_offset ?? 'unknown')}–${escapeHtml(parsed.source_span?.end_offset ?? 'unknown')}.</p><p><strong>Snapshot:</strong> ${snapshot.materialized_in_active_build ? 'materialized in the active build' : 'not materialized'} · SHA-256 <code>${escapeHtml(snapshot.sha256 || 'unavailable')}</code>.</p><p><strong>Recorded retrieval:</strong> ${escapeHtml(retrieval.retrieved_at || 'no admitted retrieval date')} · HTTP ${escapeHtml(retrieval.http_status ?? 'unknown')} · ${escapeHtml(retrieval.robots_policy_result || 'robots metadata unavailable')}.</p><p><strong>Official URL:</strong> ${official.admitted ? escapeHtml(official.url) : 'not admitted for this parsed node'}.</p>${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<p>${escapeHtml(payload?.notice || 'Lineage is a provenance record, not a legal conclusion.')}</p>`;
+      authorityLineageResult.querySelector('[data-authority-lineage-source]')?.addEventListener('click', () => showSourcePreview({source_id: sourceId, title: sourceId}));
+    }
+
+    async function inspectAuthorityLineage() {
+      const sourceId = String(authorityLineageInput?.value || '').trim();
+      if (!sourceId) {
+        if (authorityLineageResult) authorityLineageResult.textContent = 'Enter an admitted source ID from the Authority library first.';
+        authorityLineageInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityLineageButton) authorityLineageButton.disabled = true;
+      if (authorityLineageResult) authorityLineageResult.textContent = 'Tracing the admitted local lineage without contacting any source…';
+      try {
+        const payload = await fetchJson(`/api/authority/lineage/${encodeURIComponent(sourceId)}`);
+        renderAuthorityLineage(payload);
+      } catch (error) {
+        if (authorityLineageResult) authorityLineageResult.innerHTML = renderRecoverableError(error, {title: 'Authority lineage could not be inspected'});
+      } finally {
+        if (authorityLineageButton) authorityLineageButton.disabled = false;
+      }
+    }
+
+    function renderAuthorityFormSynchronization(payload) {
+      if (!authorityFormSyncResult) return;
+      const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      if (!rows.length) {
+        authorityFormSyncResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' ') || 'No comparable form metadata was returned.')}`;
+        return;
+      }
+      authorityFormSyncResult.innerHTML = `<strong>${payload?.completion_blocked ? 'Completion blocked.' : 'Catalog metadata matches; human review still required.'}</strong><ul>${rows.map((row) => {
+        const installed = row?.installed || {};
+        const official = row?.official || {};
+        const sourceId = String(official.source_id || '');
+        const rowBlockers = Array.isArray(row?.blockers) ? row.blockers : [];
+        const sourceAction = sourceId ? ` <button class="text-link" data-authority-form-sync-source="${escapeHtml(sourceId)}" type="button">Open admitted source</button>` : '';
+        return `<li><strong>${escapeHtml(installed.form_id || 'Form')}</strong> · ${escapeHtml(String(row?.status || 'review_required').replaceAll('_', ' '))}${sourceAction}<br><small>Official catalog: ${escapeHtml(official.title || 'no matching admitted form')} · ${escapeHtml(official.freshness_status || 'unknown freshness')} · version ${escapeHtml(official.version_date || 'not admitted')}.</small>${rowBlockers.length ? `<br><small>Blockers: ${escapeHtml(rowBlockers.join(', ').replaceAll('_', ' '))}</small>` : ''}</li>`;
+      }).join('')}</ul><p>${escapeHtml(payload?.notice || 'Form catalog review remains review-required.')}</p>`;
+      authorityFormSyncResult.querySelectorAll('[data-authority-form-sync-source]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const sourceId = String(button.dataset.authorityFormSyncSource || '');
+          if (sourceId) showSourcePreview({source_id: sourceId, title: sourceId});
+        });
+      });
+    }
+
+    async function synchronizeAuthorityForm() {
+      const formId = String(authorityFormSyncIdInput?.value || '').trim();
+      const versionDate = String(authorityFormSyncVersionInput?.value || '').trim();
+      const sha256 = String(authorityFormSyncHashInput?.value || '').trim();
+      if (!formId) {
+        if (authorityFormSyncResult) authorityFormSyncResult.textContent = 'Enter an installed form ID before comparing metadata.';
+        authorityFormSyncIdInput?.focus({preventScroll: true});
+        return;
+      }
+      if (!versionDate && !sha256) {
+        if (authorityFormSyncResult) authorityFormSyncResult.textContent = 'Enter the installed form version date or SHA-256. Form contents are not accepted.';
+        authorityFormSyncVersionInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityFormSyncButton) authorityFormSyncButton.disabled = true;
+      if (authorityFormSyncResult) authorityFormSyncResult.textContent = 'Comparing metadata against the admitted local catalog without contacting any source…';
+      try {
+        const installed = {form_id: formId};
+        if (versionDate) installed.version_date = versionDate;
+        if (sha256) installed.sha256 = sha256;
+        const payload = await fetchJson('/api/authority/forms/synchronize', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({installed_forms: [installed]})});
+        renderAuthorityFormSynchronization(payload);
+      } catch (error) {
+        if (authorityFormSyncResult) authorityFormSyncResult.innerHTML = renderRecoverableError(error, {title: 'Installed-form metadata could not be compared'});
+      } finally {
+        if (authorityFormSyncButton) authorityFormSyncButton.disabled = false;
+      }
+    }
+
+    function renderAuthorityOpinionEnrichment(payload) {
+      if (!authorityOpinionResult) return;
+      const opinion = payload?.opinion || {};
+      const disposition = opinion.disposition || {};
+      const paragraphMap = Array.isArray(opinion.paragraph_map) ? opinion.paragraph_map : [];
+      const citations = Array.isArray(opinion.cited_authorities) ? opinion.cited_authorities : [];
+      const excerpt = opinion.neutral_case_summary || {};
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const sourceId = String(payload?.source_id || '');
+      const sourceAction = sourceId ? `<button class="text-link" data-authority-opinion-source="${escapeHtml(sourceId)}" type="button">Open exact admitted source</button>` : '';
+      authorityOpinionResult.innerHTML = `<strong>Review required.</strong> ${sourceAction}<p><strong>${escapeHtml(opinion.citation || 'No admitted citation')}</strong> · ${escapeHtml(opinion.title || 'Untitled opinion')}<br><small>Decision date: ${escapeHtml(opinion.decision_date || 'not admitted')} · docket: ${escapeHtml(opinion.docket_number || 'not admitted')} · panel: ${escapeHtml(opinion.panel?.value || 'not admitted')}.</small></p><p><strong>Disposition signal:</strong> ${escapeHtml(disposition.value || 'unknown')} · exact offsets ${escapeHtml(disposition.source_span?.start_offset ?? 'unavailable')}–${escapeHtml(disposition.source_span?.end_offset ?? 'unavailable')}.</p><p><strong>Paragraph map:</strong> ${paragraphMap.length} exact numbered paragraph span${paragraphMap.length === 1 ? '' : 's'} · <strong>Cited-authority locations:</strong> ${citations.length} parsed reference${citations.length === 1 ? '' : 's'}.</p>${excerpt.text ? `<details><summary>Open exact source excerpt</summary><p>${escapeHtml(excerpt.text)}</p><small>Offsets ${escapeHtml(excerpt.source_span?.start_offset ?? 'unavailable')}–${escapeHtml(excerpt.source_span?.end_offset ?? 'unavailable')}.</small></details>` : ''}${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<p>${escapeHtml(payload?.notice || 'Inspect the official source before relying on an extracted signal.')}</p>`;
+      authorityOpinionResult.querySelector('[data-authority-opinion-source]')?.addEventListener('click', () => showSourcePreview({source_id: sourceId, title: opinion.citation || sourceId}));
+    }
+
+    async function inspectAuthorityOpinionEnrichment() {
+      const sourceId = String(authorityOpinionInput?.value || '').trim();
+      if (!sourceId) {
+        if (authorityOpinionResult) authorityOpinionResult.textContent = 'Enter an admitted Law Court opinion source ID first.';
+        authorityOpinionInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityOpinionButton) authorityOpinionButton.disabled = true;
+      if (authorityOpinionResult) authorityOpinionResult.textContent = 'Inspecting admitted opinion metadata without contacting any court source…';
+      try {
+        const payload = await fetchJson(`/api/authority/opinions/${encodeURIComponent(sourceId)}/enrichment`);
+        renderAuthorityOpinionEnrichment(payload);
+      } catch (error) {
+        if (authorityOpinionResult) authorityOpinionResult.innerHTML = renderRecoverableError(error, {title: 'Law Court opinion metadata could not be inspected'});
+      } finally {
+        if (authorityOpinionButton) authorityOpinionButton.disabled = false;
+      }
+    }
+
+    function renderAuthorityRuleHistoryTimeline(payload) {
+      if (!authorityRuleHistoryResult) return;
+      const rows = Array.isArray(payload?.timeline) ? payload.timeline : [];
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      if (!rows.length) {
+        authorityRuleHistoryResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' ') || 'No admitted rule timeline was returned.')}`;
+        return;
+      }
+      authorityRuleHistoryResult.innerHTML = `<strong>Review required.</strong><ul>${rows.map((row) => {
+        const sourceId = String(row?.source_id || '');
+        const events = Array.isArray(row?.events) ? row.events : [];
+        const rowBlockers = Array.isArray(row?.blockers) ? row.blockers : [];
+        const sourceAction = sourceId ? ` <button class="text-link" data-authority-rule-history-source="${escapeHtml(sourceId)}" type="button">Open exact admitted source</button>` : '';
+        return `<li><strong>${escapeHtml(row.citation || row.rule_number || 'Rule')}</strong> · ${escapeHtml(row.rule_set || 'rule set not admitted')}${sourceAction}<br><small>${events.length ? events.map((event) => `${escapeHtml(event.event || 'event')} ${escapeHtml(event.date || 'date unavailable')} (offsets ${escapeHtml(event.source_span?.start_offset ?? 'unavailable')}–${escapeHtml(event.source_span?.end_offset ?? 'unavailable')})`).join(' · ') : 'No exact effective or amendment event was admitted.'}</small>${rowBlockers.length ? `<br><small>Blockers: ${escapeHtml(rowBlockers.join(', ').replaceAll('_', ' '))}</small>` : ''}</li>`;
+      }).join('')}</ul>${blockers.length ? `<p><strong>Overall blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}<p>${escapeHtml(payload?.notice || 'Review the official source before relying on a rule-history signal.')}</p>`;
+      authorityRuleHistoryResult.querySelectorAll('[data-authority-rule-history-source]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const sourceId = String(button.dataset.authorityRuleHistorySource || '');
+          if (sourceId) showSourcePreview({source_id: sourceId, title: sourceId});
+        });
+      });
+    }
+
+    async function inspectAuthorityRuleHistoryTimeline() {
+      const query = String(authorityRuleHistoryInput?.value || '').trim();
+      if (!query) {
+        if (authorityRuleHistoryResult) authorityRuleHistoryResult.textContent = 'Enter a rule citation or admitted rule ID first.';
+        authorityRuleHistoryInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityRuleHistoryButton) authorityRuleHistoryButton.disabled = true;
+      if (authorityRuleHistoryResult) authorityRuleHistoryResult.textContent = 'Inspecting admitted rule metadata without contacting any source…';
+      try {
+        const payload = await fetchJson(`/api/authority/rules/history?query=${encodeURIComponent(query)}`);
+        renderAuthorityRuleHistoryTimeline(payload);
+      } catch (error) {
+        if (authorityRuleHistoryResult) authorityRuleHistoryResult.innerHTML = renderRecoverableError(error, {title: 'Rule history could not be inspected'});
+      } finally {
+        if (authorityRuleHistoryButton) authorityRuleHistoryButton.disabled = false;
+      }
+    }
+
+    function authorityBundleHeaders() {
+      return authorityBundleAdminAck?.checked ? {'X-User-Role': 'admin'} : {};
+    }
+
+    function renderAuthorityBundleResult(payload) {
+      if (!authorityBundleResult) return;
+      const active = payload?.active || {};
+      const bundleId = payload?.bundle_id || active.bundle_id || 'none';
+      const sequence = payload?.sequence ?? active.sequence ?? 'unavailable';
+      const archive = payload?.archive_filename ? ` · archive ${escapeHtml(payload.archive_filename)}` : '';
+      authorityBundleResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(String(payload?.status || 'status unavailable').replaceAll('_', ' '))} · bundle <code>${escapeHtml(bundleId)}</code> · sequence ${escapeHtml(sequence)}${archive}.<p>${escapeHtml(payload?.notice || 'Signed bundles are verified locally. No authority data is embedded in the app package.')}</p>`;
+    }
+
+    async function inspectAuthorityBundleStatus() {
+      if (authorityBundleStatusButton) authorityBundleStatusButton.disabled = true;
+      if (authorityBundleResult) authorityBundleResult.textContent = 'Checking local signed-bundle status…';
+      try {
+        renderAuthorityBundleResult(await fetchJson('/api/authority-updates/status'));
+      } catch (error) {
+        if (authorityBundleResult) authorityBundleResult.innerHTML = renderRecoverableError(error, {title: 'Signed-bundle status could not be checked'});
+      } finally {
+        if (authorityBundleStatusButton) authorityBundleStatusButton.disabled = false;
+      }
+    }
+
+    async function exportAuthorityBundle() {
+      if (!authorityBundleAdminAck?.checked) {
+        if (authorityBundleResult) authorityBundleResult.textContent = 'Confirm device authorization before exporting a signed bundle.';
+        authorityBundleAdminAck?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityBundleExportButton) authorityBundleExportButton.disabled = true;
+      if (authorityBundleResult) authorityBundleResult.textContent = 'Verifying and exporting the existing signed bundle locally…';
+      try {
+        const bundleId = String(authorityBundleIdInput?.value || '').trim();
+        renderAuthorityBundleResult(await fetchJson('/api/authority-updates/export', {method: 'POST', headers: {'Content-Type': 'application/json', ...authorityBundleHeaders()}, body: JSON.stringify({bundle_id: bundleId})}));
+      } catch (error) {
+        if (authorityBundleResult) authorityBundleResult.innerHTML = renderRecoverableError(error, {title: 'Signed bundle could not be exported'});
+      } finally {
+        if (authorityBundleExportButton) authorityBundleExportButton.disabled = false;
+      }
+    }
+
+    async function importAuthorityBundle() {
+      if (!authorityBundleAdminAck?.checked) {
+        if (authorityBundleResult) authorityBundleResult.textContent = 'Confirm device authorization before importing a signed bundle.';
+        authorityBundleAdminAck?.focus({preventScroll: true});
+        return;
+      }
+      const file = authorityBundleFileInput?.files?.[0];
+      if (!file) {
+        if (authorityBundleResult) authorityBundleResult.textContent = 'Select a signed .authority-bundle.zip archive first.';
+        authorityBundleFileInput?.focus({preventScroll: true});
+        return;
+      }
+      if (authorityBundleImportButton) authorityBundleImportButton.disabled = true;
+      if (authorityBundleResult) authorityBundleResult.textContent = 'Uploading, hash-verifying, signature-verifying, and atomically importing the selected local archive…';
+      try {
+        const form = new FormData();
+        form.append('bundle', file, file.name);
+        renderAuthorityBundleResult(await fetchJson('/api/authority-updates/import-upload', {method: 'POST', headers: authorityBundleHeaders(), body: form}));
+      } catch (error) {
+        if (authorityBundleResult) authorityBundleResult.innerHTML = renderRecoverableError(error, {title: 'Signed bundle could not be imported'});
+      } finally {
+        if (authorityBundleImportButton) authorityBundleImportButton.disabled = false;
+      }
+    }
+
+    function renderTimelineCorrectionHistory(payload) {
+      if (!timelineCorrectionResult) return;
+      const event = payload?.event || {};
+      const history = Array.isArray(payload?.history) ? payload.history : [];
+      const sourceId = String(event?.source_record_id || '');
+      const hashBound = Boolean(sourceId && event?.source_hash);
+      if (timelineCorrectionDate && String(event?.date_value || '').match(/^\d{4}-\d{2}-\d{2}$/)) timelineCorrectionDate.value = String(event.date_value);
+      if (timelineCorrectionSourceId) timelineCorrectionSourceId.value = sourceId;
+      if (timelineCorrectionSourceButton) timelineCorrectionSourceButton.disabled = !hashBound;
+      const correctionHistory = Array.isArray(event?.correction_history) ? event.correction_history : [];
+      timelineCorrectionResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(event?.event_label || 'Timeline event')} · date ${escapeHtml(event?.date_value || 'unknown')} · source ${escapeHtml(sourceId || 'not bound')}.<p>${hashBound ? 'The current source is hash-bound to the active matter and can be opened in the local record inspector.' : 'No hash-bound source is currently available. Rebind only to an active-matter record.'}</p><details open><summary>Append-only history (${escapeHtml(history.length)})</summary><ul>${history.slice(-20).map((row) => `<li>${escapeHtml(row?.created_at || row?.timestamp || 'recorded')} · ${escapeHtml(row?.summary || row?.action || 'review event')}</li>`).join('') || '<li>No persisted history was returned.</li>'}</ul></details><details><summary>Event corrections (${escapeHtml(correctionHistory.length)})</summary><ul>${correctionHistory.slice(-20).map((row) => `<li>${escapeHtml(row?.corrected_at || 'recorded')} · ${escapeHtml(row?.reason || 'no reason recorded')}</li>`).join('') || '<li>No correction was recorded yet.</li>'}</ul></details>`;
+    }
+
+    function timelineCorrectionId() {
+      return String(timelineCorrectionEventId?.value || '').trim();
+    }
+
+    async function loadTimelineCorrectionHistory() {
+      const eventId = timelineCorrectionId();
+      if (!eventId) {
+        if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Enter a timeline event ID before loading its history.';
+        timelineCorrectionEventId?.focus({preventScroll: true});
+        return;
+      }
+      if (timelineCorrectionLoadButton) timelineCorrectionLoadButton.disabled = true;
+      if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Loading the local append-only history…';
+      try {
+        renderTimelineCorrectionHistory(await fetchJson(`/api/timeline/events/${encodeURIComponent(eventId)}/history`));
+      } catch (error) {
+        if (timelineCorrectionResult) timelineCorrectionResult.innerHTML = renderRecoverableError(error, {title: 'Timeline history could not be loaded'});
+      } finally {
+        if (timelineCorrectionLoadButton) timelineCorrectionLoadButton.disabled = false;
+      }
+    }
+
+    async function saveTimelineCorrection() {
+      const eventId = timelineCorrectionId();
+      const dateValue = String(timelineCorrectionDate?.value || '').trim();
+      const sourceRecordId = String(timelineCorrectionSourceId?.value || '').trim();
+      const reason = String(timelineCorrectionReason?.value || '').trim();
+      if (!eventId || (!dateValue && !sourceRecordId)) {
+        if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Enter an event ID and either a corrected date or an active-matter record ID.';
+        (!eventId ? timelineCorrectionEventId : timelineCorrectionDate)?.focus({preventScroll: true});
+        return;
+      }
+      if (!reason) {
+        if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Explain why the correction is needed before saving it for review.';
+        timelineCorrectionReason?.focus({preventScroll: true});
+        return;
+      }
+      if (timelineCorrectionSaveButton) timelineCorrectionSaveButton.disabled = true;
+      if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Saving an append-only, review-required correction…';
+      try {
+        const body = {reason, reviewer_name: 'local_reviewer'};
+        if (dateValue) body.date_value = dateValue;
+        if (sourceRecordId) body.source_record_id = sourceRecordId;
+        await fetchJson(`/api/timeline/events/${encodeURIComponent(eventId)}`, {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+        if (timelineCorrectionReason) timelineCorrectionReason.value = '';
+        await loadTimelineCorrectionHistory();
+      } catch (error) {
+        if (timelineCorrectionResult) timelineCorrectionResult.innerHTML = renderRecoverableError(error, {title: 'Timeline correction could not be saved'});
+      } finally {
+        if (timelineCorrectionSaveButton) timelineCorrectionSaveButton.disabled = false;
+      }
+    }
+
+    async function inspectTimelineCorrectionSource() {
+      const eventId = timelineCorrectionId();
+      if (!eventId) {
+        if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Load or enter a timeline event ID before opening its bound source.';
+        timelineCorrectionEventId?.focus({preventScroll: true});
+        return;
+      }
+      if (timelineCorrectionSourceButton) timelineCorrectionSourceButton.disabled = true;
+      if (timelineCorrectionResult) timelineCorrectionResult.textContent = 'Verifying the event source against the active matter before opening it…';
+      try {
+        const payload = await fetchJson(`/api/timeline/events/${encodeURIComponent(eventId)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('event_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.source_block?.page_number || 0), timelineCorrectionSourceButton);
+        await loadTimelineCorrectionHistory();
+      } catch (error) {
+        if (timelineCorrectionResult) timelineCorrectionResult.innerHTML = renderRecoverableError(error, {title: 'Bound source could not be opened'});
+      } finally {
+        if (timelineCorrectionSourceButton) timelineCorrectionSourceButton.disabled = false;
+      }
+    }
+
+    function claimDispositionIdValue() {
+      return String(claimDispositionId?.value || '').trim();
+    }
+
+    function renderClaimDisposition(payload) {
+      if (!claimDispositionResult) return;
+      const claim = payload?.claim || {};
+      const claimId = String(claim?.claim_id || '');
+      if (claimDispositionId && claimId) claimDispositionId.value = claimId;
+      if (claimDispositionStatus && claim?.reviewer_status) claimDispositionStatus.value = String(claim.reviewer_status);
+      const relationships = [
+        ['supports', 'Candidate support'],
+        ['contradicts', 'Contradictions'],
+        ['qualifies', 'Qualifications'],
+        ['alternative_explanations', 'Alternative explanations'],
+        ['missing_context', 'Missing context'],
+        ['authenticity_reliability_caveat', 'Reliability caveats'],
+        ['unresolved', 'Unresolved source issues'],
+      ];
+      const cards = relationships.map(([kind, label]) => {
+        const rows = Array.isArray(claim?.[kind]) ? claim[kind] : [];
+        if (!rows.length) return '';
+        return `<details${kind === 'supports' || kind === 'contradicts' ? ' open' : ''}><summary>${escapeHtml(label)} (${escapeHtml(rows.length)})</summary><ul>${rows.slice(0, 30).map((row, index) => { const bound = row?.record_id && row?.source_hash; return `<li><strong>${escapeHtml(row?.record_id || 'No bound source')}</strong> · ${escapeHtml(row?.record_classification || row?.relationship || 'review signal')}<br><small>${escapeHtml(row?.exact_source_span || row?.match_explanation || 'No exact source span was available.')}</small>${bound ? ` <button class="text-link" data-claim-source-kind="${escapeHtml(kind)}" data-claim-source-index="${escapeHtml(index)}" type="button">Inspect exact source</button>` : ''}</li>`; }).join('')}</ul></details>`;
+      }).join('');
+      const blockers = Array.isArray(claim?.disposition_blockers) ? claim.disposition_blockers : [];
+      const history = Array.isArray(payload?.history || claim?.history) ? (payload?.history || claim?.history) : [];
+      claimDispositionResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(claim?.automated_disposition || 'no automated disposition')} · reviewer decision ${escapeHtml(claim?.reviewer_status || 'review_required')}.<p>${escapeHtml(claim?.automated_disposition_notice || 'This comparison does not decide whether the claim is true, legally sufficient, or filing ready.')}</p>${blockers.length ? `<p><strong>Blockers:</strong> ${escapeHtml(blockers.join(', ').replaceAll('_', ' '))}</p>` : ''}${cards || '<p>No source-card relationship was returned.</p>'}<details><summary>Review history (${escapeHtml(history.length)})</summary><ul>${history.slice(-20).map((row) => `<li>${escapeHtml(row?.reviewed_at || row?.created_at || 'recorded')} · ${escapeHtml(row?.reviewer_status || row?.summary || row?.action || 'review')}</li>`).join('') || '<li>No persisted review history was returned.</li>'}</ul></details>`;
+      claimDispositionResult.querySelectorAll('[data-claim-source-kind]').forEach((button) => {
+        button.addEventListener('click', () => inspectClaimDispositionSource(String(button.dataset.claimSourceKind || ''), Number(button.dataset.claimSourceIndex || 0), button));
+      });
+    }
+
+    async function createClaimDisposition() {
+      const statement = String(claimDispositionStatement?.value || '').trim();
+      const selectedRecordIds = String(claimDispositionRecordIds?.value || '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+      if (!statement || !selectedRecordIds.length) {
+        if (claimDispositionResult) claimDispositionResult.textContent = 'Enter one claim and at least one active-matter record ID before creating a review.';
+        (!statement ? claimDispositionStatement : claimDispositionRecordIds)?.focus({preventScroll: true});
+        return;
+      }
+      if (claimDispositionCreateButton) claimDispositionCreateButton.disabled = true;
+      if (claimDispositionResult) claimDispositionResult.textContent = 'Comparing the claim with selected local records…';
+      try {
+        const payload = await fetchJson('/api/evidence/claims', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({statement, selected_record_ids: selectedRecordIds, claim_type: 'factual_claim', scope: 'selected_records', source_of_claim: 'local_reviewer'})});
+        renderClaimDisposition(payload);
+      } catch (error) {
+        if (claimDispositionResult) claimDispositionResult.innerHTML = renderRecoverableError(error, {title: 'Claim review could not be created'});
+      } finally {
+        if (claimDispositionCreateButton) claimDispositionCreateButton.disabled = false;
+      }
+    }
+
+    async function loadClaimDisposition() {
+      const claimId = claimDispositionIdValue();
+      if (!claimId) {
+        if (claimDispositionResult) claimDispositionResult.textContent = 'Enter a claim review ID before loading it.';
+        claimDispositionId?.focus({preventScroll: true});
+        return;
+      }
+      if (claimDispositionLoadButton) claimDispositionLoadButton.disabled = true;
+      if (claimDispositionResult) claimDispositionResult.textContent = 'Loading the local claim review…';
+      try {
+        renderClaimDisposition(await fetchJson(`/api/evidence/claims/${encodeURIComponent(claimId)}`));
+      } catch (error) {
+        if (claimDispositionResult) claimDispositionResult.innerHTML = renderRecoverableError(error, {title: 'Claim review could not be loaded'});
+      } finally {
+        if (claimDispositionLoadButton) claimDispositionLoadButton.disabled = false;
+      }
+    }
+
+    async function recordClaimDispositionDecision() {
+      const claimId = claimDispositionIdValue();
+      const reviewerNotes = String(claimDispositionNotes?.value || '').trim();
+      if (!claimId || !reviewerNotes) {
+        if (claimDispositionResult) claimDispositionResult.textContent = 'Load a claim review and enter a reviewer note before recording a decision.';
+        (!claimId ? claimDispositionId : claimDispositionNotes)?.focus({preventScroll: true});
+        return;
+      }
+      if (claimDispositionReviewButton) claimDispositionReviewButton.disabled = true;
+      if (claimDispositionResult) claimDispositionResult.textContent = 'Recording a review-required decision without changing the source records…';
+      try {
+        const payload = await fetchJson(`/api/evidence/claims/${encodeURIComponent(claimId)}/review`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reviewer_status: String(claimDispositionStatus?.value || 'review_required'), reviewer_notes: reviewerNotes})});
+        if (claimDispositionNotes) claimDispositionNotes.value = '';
+        renderClaimDisposition(payload);
+      } catch (error) {
+        if (claimDispositionResult) claimDispositionResult.innerHTML = renderRecoverableError(error, {title: 'Reviewer decision could not be recorded'});
+      } finally {
+        if (claimDispositionReviewButton) claimDispositionReviewButton.disabled = false;
+      }
+    }
+
+    async function inspectClaimDispositionSource(cardKind, cardIndex, owner) {
+      const claimId = claimDispositionIdValue();
+      if (!claimId || !cardKind || !Number.isInteger(cardIndex) || cardIndex < 0) return;
+      try {
+        const payload = await fetchJson(`/api/evidence/claims/${encodeURIComponent(claimId)}/cards/${encodeURIComponent(cardKind)}/${encodeURIComponent(String(cardIndex))}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('claim_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.source_span?.page_number || 0), owner);
+      } catch (error) {
+        if (claimDispositionResult) claimDispositionResult.innerHTML = renderRecoverableError(error, {title: 'Claim source could not be opened'});
+      }
+    }
+
+    function attachmentCoverageIdValue() {
+      return String(attachmentCoverageId?.value || '').trim();
+    }
+
+    function renderAttachmentCoverage(payload) {
+      if (!attachmentCoverageResult) return;
+      const item = payload?.attachment || null;
+      if (item) {
+        if (attachmentCoverageId) attachmentCoverageId.value = String(item.attachment_id || '');
+        if (attachmentCoverageLabel) attachmentCoverageLabel.value = String(item.attachment_label || '');
+        if (attachmentCoverageSourceId) attachmentCoverageSourceId.value = String(item.source_record_id || '');
+        if (attachmentCoverageState) attachmentCoverageState.value = String(item.coverage_state || 'not_yet_reviewed');
+        if (attachmentCoverageLinkedId) attachmentCoverageLinkedId.value = String(item.linked_record_id || '');
+        if (attachmentCoverageSourceButton) attachmentCoverageSourceButton.disabled = !(item.source_record_id && item.source_hash);
+        const history = Array.isArray(payload?.history || item?.history) ? (payload?.history || item?.history) : [];
+        attachmentCoverageResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(item?.attachment_label || item?.attachment_id || 'Attachment')} · ${escapeHtml(String(item?.coverage_state || 'not_yet_reviewed').replaceAll('_', ' '))}.<p>Scope: ${escapeHtml(item?.coverage_scope || 'active-matter records only')}. This does not determine whether an attachment exists elsewhere.</p><details><summary>Append-only history (${escapeHtml(history.length)})</summary><ul>${history.slice(-20).map((row) => `<li>${escapeHtml(row?.created_at || row?.summary || 'recorded')} · ${escapeHtml(row?.summary || row?.action || 'review')}</li>`).join('') || '<li>No persisted history was returned.</li>'}</ul></details>`;
+        return;
+      }
+      const rows = Array.isArray(payload?.attachments) ? payload.attachments : [];
+      const counts = payload?.state_counts || {};
+      attachmentCoverageResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.notice || 'Coverage is limited to the selected active-matter records.')}<p>${Object.entries(counts).map(([state, count]) => `${escapeHtml(String(state).replaceAll('_', ' '))}: ${escapeHtml(count)}`).join(' · ') || 'No coverage items yet.'}</p><ul>${rows.map((row) => `<li><strong>${escapeHtml(row?.attachment_id || '')}</strong> · ${escapeHtml(row?.attachment_label || '')} · ${escapeHtml(String(row?.coverage_state || '').replaceAll('_', ' '))} <button class="text-link" data-attachment-coverage-load="${escapeHtml(row?.attachment_id || '')}" type="button">Open review</button></li>`).join('') || '<li>No attachment coverage item was recorded yet.</li>'}</ul>`;
+      attachmentCoverageResult.querySelectorAll('[data-attachment-coverage-load]').forEach((button) => button.addEventListener('click', async () => {
+        if (attachmentCoverageId) attachmentCoverageId.value = String(button.dataset.attachmentCoverageLoad || '');
+        await loadAttachmentCoverage();
+      }));
+    }
+
+    async function createAttachmentCoverage() {
+      const attachmentId = attachmentCoverageIdValue();
+      const attachmentLabel = String(attachmentCoverageLabel?.value || '').trim();
+      const sourceRecordId = String(attachmentCoverageSourceId?.value || '').trim();
+      if (!attachmentId || !attachmentLabel || !sourceRecordId) {
+        if (attachmentCoverageResult) attachmentCoverageResult.textContent = 'Enter a coverage ID, label, and active-matter source record ID.';
+        (!attachmentId ? attachmentCoverageId : !attachmentLabel ? attachmentCoverageLabel : attachmentCoverageSourceId)?.focus({preventScroll: true});
+        return;
+      }
+      if (attachmentCoverageCreateButton) attachmentCoverageCreateButton.disabled = true;
+      if (attachmentCoverageResult) attachmentCoverageResult.textContent = 'Recording a source-bound attachment coverage item…';
+      try {
+        const payload = await fetchJson('/api/evidence/attachment-coverage', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({attachment_id: attachmentId, attachment_label: attachmentLabel, source_record_id: sourceRecordId, coverage_state: String(attachmentCoverageState?.value || 'referenced'), linked_record_id: String(attachmentCoverageLinkedId?.value || '').trim()})});
+        renderAttachmentCoverage(payload);
+      } catch (error) {
+        if (attachmentCoverageResult) attachmentCoverageResult.innerHTML = renderRecoverableError(error, {title: 'Attachment coverage could not be recorded'});
+      } finally {
+        if (attachmentCoverageCreateButton) attachmentCoverageCreateButton.disabled = false;
+      }
+    }
+
+    async function refreshAttachmentCoverage() {
+      if (attachmentCoverageRefreshButton) attachmentCoverageRefreshButton.disabled = true;
+      if (attachmentCoverageResult) attachmentCoverageResult.textContent = 'Loading source-bound attachment coverage…';
+      try {
+        renderAttachmentCoverage(await fetchJson('/api/evidence/attachment-coverage'));
+      } catch (error) {
+        if (attachmentCoverageResult) attachmentCoverageResult.innerHTML = renderRecoverableError(error, {title: 'Attachment coverage could not be loaded'});
+      } finally {
+        if (attachmentCoverageRefreshButton) attachmentCoverageRefreshButton.disabled = false;
+      }
+    }
+
+    async function loadAttachmentCoverage() {
+      const attachmentId = attachmentCoverageIdValue();
+      if (!attachmentId) return refreshAttachmentCoverage();
+      if (attachmentCoverageResult) attachmentCoverageResult.textContent = 'Loading the attachment coverage review…';
+      try {
+        renderAttachmentCoverage(await fetchJson(`/api/evidence/attachment-coverage/${encodeURIComponent(attachmentId)}`));
+      } catch (error) {
+        if (attachmentCoverageResult) attachmentCoverageResult.innerHTML = renderRecoverableError(error, {title: 'Attachment coverage could not be loaded'});
+      }
+    }
+
+    async function reviewAttachmentCoverage() {
+      const attachmentId = attachmentCoverageIdValue();
+      const notes = String(attachmentCoverageNotes?.value || '').trim();
+      if (!attachmentId || !notes) {
+        if (attachmentCoverageResult) attachmentCoverageResult.textContent = 'Open a coverage item and enter a reviewer note before updating its state.';
+        (!attachmentId ? attachmentCoverageId : attachmentCoverageNotes)?.focus({preventScroll: true});
+        return;
+      }
+      if (attachmentCoverageReviewButton) attachmentCoverageReviewButton.disabled = true;
+      try {
+        const payload = await fetchJson(`/api/evidence/attachment-coverage/${encodeURIComponent(attachmentId)}/review`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({coverage_state: String(attachmentCoverageState?.value || 'not_yet_reviewed'), linked_record_id: String(attachmentCoverageLinkedId?.value || '').trim(), reviewer_notes: notes})});
+        if (attachmentCoverageNotes) attachmentCoverageNotes.value = '';
+        renderAttachmentCoverage(payload);
+      } catch (error) {
+        if (attachmentCoverageResult) attachmentCoverageResult.innerHTML = renderRecoverableError(error, {title: 'Attachment coverage review could not be recorded'});
+      } finally {
+        if (attachmentCoverageReviewButton) attachmentCoverageReviewButton.disabled = false;
+      }
+    }
+
+    async function inspectAttachmentCoverageSource() {
+      const attachmentId = attachmentCoverageIdValue();
+      if (!attachmentId) return;
+      try {
+        const payload = await fetchJson(`/api/evidence/attachment-coverage/${encodeURIComponent(attachmentId)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('attachment_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.source_block?.page_number || 0), attachmentCoverageSourceButton);
+      } catch (error) {
+        if (attachmentCoverageResult) attachmentCoverageResult.innerHTML = renderRecoverableError(error, {title: 'Attachment source could not be opened'});
+      }
+    }
+
+    function renderFactGraph(payload) {
+      if (!factGraphResult) return;
+      const nodes = Array.isArray(payload?.nodes) ? payload.nodes : []; const edges = Array.isArray(payload?.edges) ? payload.edges : []; const counts = payload?.state_counts || {};
+      const sourceButton = (kind, id) => `<button class="text-link" data-fact-graph-source-kind="${escapeHtml(kind)}" data-fact-graph-source-id="${escapeHtml(id)}" type="button">Inspect source</button>`;
+      factGraphResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.notice || 'Graph records are not findings.')}<p>${Object.entries(counts).map(([state, count]) => `${escapeHtml(String(state).replaceAll('_', ' '))}: ${escapeHtml(count)}`).join(' · ')}</p><details open><summary>Nodes (${escapeHtml(nodes.length)})</summary><ul>${nodes.map((row) => `<li><strong>${escapeHtml(row.node_id)}</strong> · ${escapeHtml(row.node_kind)} · ${escapeHtml(row.label)} · ${escapeHtml(String(row.fact_state).replaceAll('_', ' '))} ${sourceButton('nodes', row.node_id)}</li>`).join('') || '<li>No nodes.</li>'}</ul></details><details open><summary>Relationships (${escapeHtml(edges.length)})</summary><ul>${edges.map((row) => `<li><strong>${escapeHtml(row.source_node_id)}</strong> ${escapeHtml(String(row.relationship).replaceAll('_', ' '))} <strong>${escapeHtml(row.target_node_id)}</strong> · ${escapeHtml(String(row.fact_state).replaceAll('_', ' '))} ${sourceButton('edges', row.edge_id)}</li>`).join('') || '<li>No relationships.</li>'}</ul></details>`;
+      factGraphResult.querySelectorAll('[data-fact-graph-source-kind]').forEach((button) => button.addEventListener('click', () => inspectFactGraphSource(String(button.dataset.factGraphSourceKind || ''), String(button.dataset.factGraphSourceId || ''), button)));
+    }
+    async function createFactGraphNode() { const node_id=String(factGraphNodeId?.value||'').trim(), label=String(factGraphNodeLabel?.value||'').trim(), source_record_id=String(factGraphNodeSource?.value||'').trim(); if(!node_id||!label||!source_record_id){if(factGraphResult)factGraphResult.textContent='Enter a node ID, label, and active-matter source record ID.';return;} if(factGraphNodeButton)factGraphNodeButton.disabled=true;try{renderFactGraph(await fetchJson('/api/evidence/fact-graph/nodes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({node_id,node_kind:String(factGraphNodeKind?.value||'event'),label,source_record_id,fact_state:String(factGraphNodeState?.value||'not_yet_reviewed')})}).then(async()=>fetchJson('/api/evidence/fact-graph')));}catch(error){if(factGraphResult)factGraphResult.innerHTML=renderRecoverableError(error,{title:'Fact-graph node could not be created'});}finally{if(factGraphNodeButton)factGraphNodeButton.disabled=false;}}
+    async function createFactGraphEdge() { const edge_id=String(factGraphEdgeId?.value||'').trim(), source_node_id=String(factGraphEdgeFrom?.value||'').trim(), target_node_id=String(factGraphEdgeTo?.value||'').trim(), source_record_id=String(factGraphEdgeSource?.value||'').trim(); if(!edge_id||!source_node_id||!target_node_id||!source_record_id){if(factGraphResult)factGraphResult.textContent='Enter an edge ID, both node IDs, and an active-matter source record ID.';return;} if(factGraphEdgeButton)factGraphEdgeButton.disabled=true;try{await fetchJson('/api/evidence/fact-graph/edges',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({edge_id,source_node_id,target_node_id,relationship:String(factGraphEdgeRelationship?.value||'relates_to'),source_record_id,fact_state:String(factGraphEdgeState?.value||'not_yet_reviewed')})});await refreshFactGraph();}catch(error){if(factGraphResult)factGraphResult.innerHTML=renderRecoverableError(error,{title:'Fact-graph relationship could not be created'});}finally{if(factGraphEdgeButton)factGraphEdgeButton.disabled=false;}}
+    async function refreshFactGraph() { if(factGraphRefreshButton)factGraphRefreshButton.disabled=true;try{renderFactGraph(await fetchJson('/api/evidence/fact-graph'));}catch(error){if(factGraphResult)factGraphResult.innerHTML=renderRecoverableError(error,{title:'Fact graph could not be loaded'});}finally{if(factGraphRefreshButton)factGraphRefreshButton.disabled=false;}}
+    async function inspectFactGraphSource(kind,id,owner) { try { const payload=await fetchJson(`/api/evidence/fact-graph/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/source`);const source=payload?.source||{};const token=String(source.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('fact_graph_source_token_unavailable');openRecordInspector({source_token:token},Number(source?.source_block?.page_number||0),owner);} catch(error){if(factGraphResult)factGraphResult.innerHTML=renderRecoverableError(error,{title:'Fact-graph source could not be opened'});} }
+
+    function renderIssueProofMatrix(payload) {
+      if (!issueProofResult) return;
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const issues = Array.isArray(payload?.issues) ? payload.issues : [];
+      const sourceButton = (itemId) => `<button class="text-link" data-issue-proof-source="${escapeHtml(itemId)}" type="button">Inspect source</button>`;
+      const reviewButton = (itemId) => `<button class="text-link" data-issue-proof-review="${escapeHtml(itemId)}" type="button">Open review</button>`;
+      issueProofResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.notice || 'The matrix is a review aid, not a legal or factual determination.')}<details open><summary>Issues (${escapeHtml(issues.length)})</summary><ul>${issues.map((row) => `<li><strong>${escapeHtml(row.issue_label || row.issue_id || '')}</strong> · ${escapeHtml(row.item_count)} item(s) · ${escapeHtml(row.supports)} support candidate(s) · ${escapeHtml(row.contradicts)} contradiction(s) · ${escapeHtml(row.missing_proof)} missing-proof item(s) · ${escapeHtml(row.unverified_authority_candidates)} unverified authority candidate(s)</li>`).join('') || '<li>No issue is mapped yet.</li>'}</ul></details><details open><summary>Matrix items (${escapeHtml(items.length)})</summary><ul>${items.map((row) => `<li><strong>${escapeHtml(row.issue_label || row.issue_id || '')}</strong> → ${escapeHtml(row.proof_label || row.proof_item_id || '')} · ${escapeHtml(String(row.evidence_role || '').replaceAll('_', ' '))} · ${escapeHtml(String(row.review_state || 'review_required').replaceAll('_', ' '))} · ${escapeHtml(row.authority_candidate_status === 'unverified_candidate' ? 'authority candidate unverified' : 'no authority candidate')} ${sourceButton(row.item_id)} ${reviewButton(row.item_id)}</li>`).join('') || '<li>No matrix item was recorded yet.</li>'}</ul></details>`;
+      issueProofResult.querySelectorAll('[data-issue-proof-source]').forEach((button) => button.addEventListener('click', () => inspectIssueProofSource(String(button.dataset.issueProofSource || ''), button)));
+      issueProofResult.querySelectorAll('[data-issue-proof-review]').forEach((button) => button.addEventListener('click', () => loadIssueProofItem(String(button.dataset.issueProofReview || ''))));
+    }
+
+    function issueProofRequiredValues() {
+      return {
+        item_id: String(issueProofItemId?.value || '').trim(),
+        issue_id: String(issueProofIssueId?.value || '').trim(),
+        issue_label: String(issueProofIssueLabel?.value || '').trim(),
+        proof_item_id: String(issueProofProofId?.value || '').trim(),
+        proof_label: String(issueProofProofLabel?.value || '').trim(),
+        source_record_id: String(issueProofSource?.value || '').trim(),
+      };
+    }
+
+    async function createIssueProofItem() {
+      const values = issueProofRequiredValues();
+      if (Object.values(values).some((value) => !value)) {
+        if (issueProofResult) issueProofResult.textContent = 'Enter the matrix, issue, proof-item, and active-matter source fields before recording a review item.';
+        return;
+      }
+      if (issueProofCreateButton) issueProofCreateButton.disabled = true;
+      if (issueProofResult) issueProofResult.textContent = 'Recording a source-bound issue-to-proof matrix item…';
+      try {
+        const result = await fetchJson('/api/evidence/issue-proof-matrix/items', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({...values, evidence_role: String(issueProofRole?.value || 'supports'), authority_candidate: String(issueProofAuthority?.value || '').trim(), review_state: String(issueProofReviewState?.value || 'review_required')}),
+        });
+        if (issueProofItemId) issueProofItemId.value = String(result?.item?.item_id || values.item_id);
+        await refreshIssueProofMatrix();
+      } catch (error) {
+        if (issueProofResult) issueProofResult.innerHTML = renderRecoverableError(error, {title: 'Issue-to-proof matrix item could not be recorded'});
+      } finally {
+        if (issueProofCreateButton) issueProofCreateButton.disabled = false;
+      }
+    }
+
+    async function refreshIssueProofMatrix() {
+      if (issueProofRefreshButton) issueProofRefreshButton.disabled = true;
+      if (issueProofResult) issueProofResult.textContent = 'Loading source-bound issue-to-proof matrix…';
+      try {
+        renderIssueProofMatrix(await fetchJson('/api/evidence/issue-proof-matrix'));
+      } catch (error) {
+        if (issueProofResult) issueProofResult.innerHTML = renderRecoverableError(error, {title: 'Issue-to-proof matrix could not be loaded'});
+      } finally {
+        if (issueProofRefreshButton) issueProofRefreshButton.disabled = false;
+      }
+    }
+
+    async function loadIssueProofItem(itemId = String(issueProofItemId?.value || '').trim()) {
+      if (!itemId) return refreshIssueProofMatrix();
+      try {
+        const payload = await fetchJson(`/api/evidence/issue-proof-matrix/items/${encodeURIComponent(itemId)}`);
+        const item = payload?.item || {};
+        if (issueProofItemId) issueProofItemId.value = String(item.item_id || itemId);
+        if (issueProofIssueId) issueProofIssueId.value = String(item.issue_id || '');
+        if (issueProofIssueLabel) issueProofIssueLabel.value = String(item.issue_label || '');
+        if (issueProofProofId) issueProofProofId.value = String(item.proof_item_id || '');
+        if (issueProofProofLabel) issueProofProofLabel.value = String(item.proof_label || '');
+        if (issueProofRole) issueProofRole.value = String(item.evidence_role || 'supports');
+        if (issueProofSource) issueProofSource.value = String(item.source_record_id || '');
+        if (issueProofAuthority) issueProofAuthority.value = String(item.authority_candidate || '');
+        if (issueProofReviewState) issueProofReviewState.value = String(item.review_state || 'review_required');
+        if (issueProofResult) issueProofResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(item.notice || 'Loaded source-bound matrix item.')}<p>Append-only review entries: ${escapeHtml((payload?.history || []).length)}.</p>`;
+      } catch (error) {
+        if (issueProofResult) issueProofResult.innerHTML = renderRecoverableError(error, {title: 'Issue-to-proof matrix item could not be loaded'});
+      }
+    }
+
+    async function reviewIssueProofItem() {
+      const itemId = String(issueProofItemId?.value || '').trim();
+      const reviewerNotes = String(issueProofNotes?.value || '').trim();
+      if (!itemId || !reviewerNotes) {
+        if (issueProofResult) issueProofResult.textContent = 'Open a matrix item and enter a reviewer note before recording its review state.';
+        return;
+      }
+      if (issueProofReviewButton) issueProofReviewButton.disabled = true;
+      try {
+        await fetchJson(`/api/evidence/issue-proof-matrix/items/${encodeURIComponent(itemId)}/review`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({review_state: String(issueProofReviewState?.value || 'review_required'), reviewer_notes: reviewerNotes})});
+        await loadIssueProofItem(itemId);
+      } catch (error) {
+        if (issueProofResult) issueProofResult.innerHTML = renderRecoverableError(error, {title: 'Issue-to-proof review state could not be recorded'});
+      } finally {
+        if (issueProofReviewButton) issueProofReviewButton.disabled = false;
+      }
+    }
+
+    async function inspectIssueProofSource(itemId, owner) {
+      try {
+        const payload = await fetchJson(`/api/evidence/issue-proof-matrix/items/${encodeURIComponent(itemId)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('issue_proof_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.source_block?.page_number || 0), owner);
+      } catch (error) {
+        if (issueProofResult) issueProofResult.innerHTML = renderRecoverableError(error, {title: 'Issue-to-proof source could not be opened'});
+      }
+    }
+
+    function renderMatterChangeDigest(payload) {
+      if (!changeDigestResult) return;
+      const digest = payload?.digest || payload || {};
+      const linkedRecords = [
+        ...(Array.isArray(digest?.new_records) ? digest.new_records : []),
+        ...(Array.isArray(digest?.changed_records) ? digest.changed_records : []),
+      ];
+      const checkpointId = String(digest?.checkpoint_id || changeDigestCheckpointId?.value || '');
+      const sourceButton = (recordId) => `<button class="text-link" data-change-digest-record="${escapeHtml(recordId)}" type="button">Inspect source</button>`;
+      changeDigestResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(digest?.notice || 'Change digest is a review aid.')}<p>${escapeHtml(digest?.new_records?.length || 0)} new record(s) · ${escapeHtml(digest?.changed_records?.length || 0)} changed record(s) · ${escapeHtml(digest?.unavailable_since_checkpoint?.length || 0)} unavailable record(s) · ${escapeHtml(digest?.new_candidate_contradictions?.length || 0)} new candidate contradiction(s) · ${escapeHtml(digest?.new_calendar_review_items?.length || 0)} calendar-review item(s) · ${escapeHtml(digest?.stale_work?.length || 0)} item(s) to revisit.</p><details open><summary>Records to inspect (${escapeHtml(linkedRecords.length)})</summary><ul>${linkedRecords.map((row) => `<li><strong>${escapeHtml(row.record_id || '')}</strong> · ${escapeHtml(row.current_source_hash ? 'changed source' : 'new source')} ${sourceButton(row.record_id)}</li>`).join('') || '<li>No new or changed current record was found.</li>'}</ul></details><details><summary>Review-work changes (${escapeHtml(digest?.review_section_changes?.length || 0)})</summary><ul>${(digest?.review_section_changes || []).map((row) => `<li>${escapeHtml(String(row.section || '').replaceAll('_', ' '))} changed since checkpoint.</li>`).join('') || '<li>No stored review-work section changed.</li>'}</ul></details>`;
+      changeDigestResult.querySelectorAll('[data-change-digest-record]').forEach((button) => button.addEventListener('click', () => inspectMatterChangeDigestSource(checkpointId, String(button.dataset.changeDigestRecord || ''), button)));
+    }
+
+    async function createMatterChangeDigestCheckpoint() {
+      const checkpoint_id = String(changeDigestCheckpointId?.value || '').trim();
+      const checkpoint_label = String(changeDigestCheckpointLabel?.value || '').trim();
+      if (!checkpoint_id || !checkpoint_label) {
+        if (changeDigestResult) changeDigestResult.textContent = 'Enter a checkpoint ID and label before recording a review baseline.';
+        return;
+      }
+      if (changeDigestCreateButton) changeDigestCreateButton.disabled = true;
+      if (changeDigestResult) changeDigestResult.textContent = 'Recording an active-matter comparison checkpoint…';
+      try {
+        const payload = await fetchJson('/api/evidence/matter-change-digest/checkpoints', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({checkpoint_id, checkpoint_label})});
+        if (changeDigestResult) changeDigestResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.checkpoint?.notice || 'Checkpoint recorded.')}<p>Generate the digest later to compare current records and review work.</p>`;
+      } catch (error) {
+        if (changeDigestResult) changeDigestResult.innerHTML = renderRecoverableError(error, {title: 'Matter-change checkpoint could not be created'});
+      } finally {
+        if (changeDigestCreateButton) changeDigestCreateButton.disabled = false;
+      }
+    }
+
+    async function generateMatterChangeDigest() {
+      const checkpointId = String(changeDigestCheckpointId?.value || '').trim();
+      if (!checkpointId) {
+        if (changeDigestResult) changeDigestResult.textContent = 'Enter an existing checkpoint ID before generating a change digest.';
+        return;
+      }
+      if (changeDigestGenerateButton) changeDigestGenerateButton.disabled = true;
+      if (changeDigestResult) changeDigestResult.textContent = 'Comparing active-matter records and review work to the checkpoint…';
+      try {
+        renderMatterChangeDigest(await fetchJson(`/api/evidence/matter-change-digest/${encodeURIComponent(checkpointId)}/generate`, {method: 'POST'}));
+      } catch (error) {
+        if (changeDigestResult) changeDigestResult.innerHTML = renderRecoverableError(error, {title: 'Matter-change digest could not be generated'});
+      } finally {
+        if (changeDigestGenerateButton) changeDigestGenerateButton.disabled = false;
+      }
+    }
+
+    async function inspectMatterChangeDigestSource(checkpointId, recordId, owner) {
+      try {
+        const payload = await fetchJson(`/api/evidence/matter-change-digest/${encodeURIComponent(checkpointId)}/records/${encodeURIComponent(recordId)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('change_digest_source_token_unavailable');
+        openRecordInspector({source_token: token}, 0, owner);
+      } catch (error) {
+        if (changeDigestResult) changeDigestResult.innerHTML = renderRecoverableError(error, {title: 'Matter-change source could not be opened'});
+      }
+    }
+
+    function renderRecordLineage(payload) {
+      if (!recordLineageResult) return;
+      const links = Array.isArray(payload?.links) ? payload.links : [];
+      const counts = payload?.relationship_counts || {};
+      const sourceButton = (linkId, side) => `<button class="text-link" data-record-lineage-link="${escapeHtml(linkId)}" data-record-lineage-side="${escapeHtml(side)}" type="button">Inspect ${escapeHtml(side)}</button>`;
+      recordLineageResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.notice || 'Lineage links are provenance proposals.')}<p>${Object.entries(counts).filter(([, count]) => Number(count)).map(([name, count]) => `${escapeHtml(String(name).replaceAll('_', ' '))}: ${escapeHtml(count)}`).join(' · ') || 'No lineage relationship is recorded.'}</p><ul>${links.map((row) => `<li><strong>${escapeHtml(row.link_id || '')}</strong> · ${escapeHtml(String(row.relationship || '').replaceAll('_', ' '))} · ${escapeHtml(row?.original?.record_id || '')} → ${escapeHtml(row?.derivative?.record_id || '')} ${sourceButton(row.link_id, 'original')} ${sourceButton(row.link_id, 'derivative')}</li>`).join('') || '<li>No lineage link was recorded yet.</li>'}</ul>`;
+      recordLineageResult.querySelectorAll('[data-record-lineage-link]').forEach((button) => button.addEventListener('click', () => inspectRecordLineageSource(String(button.dataset.recordLineageLink || ''), String(button.dataset.recordLineageSide || ''), button)));
+    }
+
+    async function createRecordLineageLink() {
+      const link_id = String(recordLineageLinkId?.value || '').trim();
+      const original_record_id = String(recordLineageOriginal?.value || '').trim();
+      const derivative_record_id = String(recordLineageDerivative?.value || '').trim();
+      if (!link_id || !original_record_id || !derivative_record_id) {
+        if (recordLineageResult) recordLineageResult.textContent = 'Enter a link ID and two different active-matter record IDs.';
+        return;
+      }
+      if (recordLineageCreateButton) recordLineageCreateButton.disabled = true;
+      try {
+        await fetchJson('/api/evidence/record-lineage/links', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({link_id, relationship: String(recordLineageRelationship?.value || 'derived_copy'), original_record_id, derivative_record_id, reviewer_notes: String(recordLineageNotes?.value || '').trim()})});
+        await refreshRecordLineage();
+      } catch (error) {
+        if (recordLineageResult) recordLineageResult.innerHTML = renderRecoverableError(error, {title: 'Record lineage link could not be recorded'});
+      } finally {
+        if (recordLineageCreateButton) recordLineageCreateButton.disabled = false;
+      }
+    }
+
+    async function refreshRecordLineage() {
+      if (recordLineageRefreshButton) recordLineageRefreshButton.disabled = true;
+      try {
+        renderRecordLineage(await fetchJson('/api/evidence/record-lineage'));
+      } catch (error) {
+        if (recordLineageResult) recordLineageResult.innerHTML = renderRecoverableError(error, {title: 'Record lineage could not be loaded'});
+      } finally {
+        if (recordLineageRefreshButton) recordLineageRefreshButton.disabled = false;
+      }
+    }
+
+    async function inspectRecordLineageSource(linkId, side, owner) {
+      try {
+        const payload = await fetchJson(`/api/evidence/record-lineage/links/${encodeURIComponent(linkId)}/${encodeURIComponent(side)}/source`);
+        const source = payload?.source || {};
+        const token = String(source.source_token || '');
+        if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('record_lineage_source_token_unavailable');
+        openRecordInspector({source_token: token}, Number(source?.source_block?.page_number || 0), owner);
+      } catch (error) {
+        if (recordLineageResult) recordLineageResult.innerHTML = renderRecoverableError(error, {title: 'Record lineage source could not be opened'});
+      }
+    }
+
+    function renderAuthorityBuilds(payload) {
+      if (!authorityBuildSelect) return;
+      const builds = Array.isArray(payload?.builds) ? payload.builds : [];
+      const selected = authorityBuildSelect.value;
+      authorityBuildSelect.replaceChildren();
+      if (!builds.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No verified local authority builds are available.';
+        authorityBuildSelect.append(option);
+        return;
+      }
+      for (const build of builds) {
+        const id = String(build?.build_id || '');
+        if (!id) continue;
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${id}${build.active ? ' — active' : ' — staged'} · ${Number(build.source_count || 0)} sources`;
+        option.selected = id === selected;
+        authorityBuildSelect.append(option);
+      }
+    }
+
+    async function inspectAuthorityBuildDiff() {
+      const buildId = String(authorityBuildSelect?.value || '').trim();
+      if (!buildId) {
+        if (authorityBuildResult) authorityBuildResult.textContent = 'Refresh builds, then select a verified authority build.';
+        return;
+      }
+      if (authorityBuildResult) authorityBuildResult.textContent = 'Comparing source IDs and hashes for review…';
+      try {
+        const payload = await fetchJson(`/api/authority/builds/${encodeURIComponent(buildId)}/diff`);
+        const diff = payload?.source_diff || {};
+        const added = Array.isArray(diff.added) ? diff.added.length : 0;
+        const removed = Array.isArray(diff.removed) ? diff.removed.length : 0;
+        const changed = Array.isArray(diff.hash_changed) ? diff.hash_changed.length : 0;
+        authorityBuildResult.innerHTML = `<strong>Review required.</strong> Compared ${escapeHtml(buildId)} with ${escapeHtml(payload?.active_build_id || 'no active build')}: ${added} added, ${removed} removed, ${changed} changed source hash(es). This does not determine legal effect, freshness, or completeness.`;
+      } catch (error) {
+        if (authorityBuildResult) authorityBuildResult.innerHTML = renderRecoverableError(error, {title: 'Build diff could not be completed'});
+      }
+    }
+
+    async function refreshAuthorityBuilds() {
+      if (authorityBuildRefreshButton) authorityBuildRefreshButton.disabled = true;
+      if (authorityBuildResult) authorityBuildResult.textContent = 'Loading verified local authority builds…';
+      try {
+        const payload = await fetchJson('/api/authority/builds');
+        renderAuthorityBuilds(payload);
+        if (authorityBuildResult) authorityBuildResult.textContent = `${Number(payload?.count || 0)} local build(s) available. Select one to inspect its source-hash diff.`;
+      } catch (error) {
+        if (authorityBuildResult) authorityBuildResult.innerHTML = renderRecoverableError(error, {title: 'Authority builds could not be loaded'});
+      } finally {
+        if (authorityBuildRefreshButton) authorityBuildRefreshButton.disabled = false;
+      }
+    }
+
+    async function changeActiveAuthorityBuild(operation) {
+      const buildId = String(authorityBuildSelect?.value || '').trim();
+      if (!buildId || !authorityBuildAcknowledgement?.checked) {
+        if (authorityBuildResult) authorityBuildResult.textContent = 'Select a verified build and confirm that you reviewed its diff first.';
+        return;
+      }
+      const button = operation === 'rollback' ? authorityBuildRollbackButton : authorityBuildActivateButton;
+      if (button) button.disabled = true;
+      if (authorityBuildResult) authorityBuildResult.textContent = operation === 'rollback' ? 'Restoring the selected verified local build…' : 'Activating the selected verified local build…';
+      try {
+        const payload = await fetchJson(`/api/authority/${operation === 'rollback' ? 'rollback' : 'activate'}`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({build_id: buildId, acknowledged: true}),
+        });
+        authorityBuildAcknowledgement.checked = false;
+        authorityBuildResult.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload?.operation || operation)} completed for ${escapeHtml(payload?.build_id || buildId)}. Verify source cards and legal freshness before relying on this build.`;
+        await refreshAuthorityBuilds();
+        await loadAuthorityStatus();
+      } catch (error) {
+        if (authorityBuildResult) authorityBuildResult.innerHTML = renderRecoverableError(error, {title: 'Active authority build could not be changed'});
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+
     async function loadSources() {
       sourcesButton.disabled = true;
       try {
@@ -6829,10 +10688,12 @@
           window.setTimeout(async () => {
             await loadAuthorityStatus();
             await loadSources();
+            await refreshAuthorityBuilds();
           }, 1200);
         } else {
           await loadAuthorityStatus();
           await loadSources();
+          await refreshAuthorityBuilds();
         }
       } catch (err) {
         if (authorityUpdateProgress) authorityUpdateProgress.innerHTML = renderRecoverableError(err, {title: 'Authority update could not finish'});
@@ -7042,15 +10903,13 @@
       showToast('Started a fresh chat.');
     });
     copyButton.addEventListener('click', async () => {
-      await navigator.clipboard.writeText((lastPayload && lastPayload.answer) || answer.textContent || '');
+      if (!await writeClipboardText((lastPayload && lastPayload.answer) || answer.textContent || '', {sensitive: true, label: 'answer'})) return;
       copyButton.textContent = 'Copied';
-      showToast('Latest answer copied.');
       setTimeout(() => { copyButton.textContent = 'Copy answer'; }, 1100);
     });
     copySourcesButton?.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(JSON.stringify(lastHandoffSources || [], null, 2));
-      copySourcesButton.textContent = 'Source cards copied';
-      showToast('Redacted reviewer-safe source cards copied.');
+      if (!await writeClipboardText(JSON.stringify(lastHandoffSources || [], null, 2), {sensitive: true, label: 'source cards'})) return;
+      copySourcesButton.textContent = 'Redacted reviewer-safe source cards copied.';
       setTimeout(() => { copySourcesButton.textContent = 'Copy source cards'; }, 1100);
     });
     downloadButton.addEventListener('click', () => {
@@ -7120,6 +10979,45 @@
     authorityPinpointInput?.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') { event.preventDefault(); resolveAuthorityPinpoint(); }
     });
+    authorityGapButton?.addEventListener('click', reviewAuthorityGaps);
+    authorityGapBrowseButton?.addEventListener('click', browseAuthorityGapSources);
+    authorityGapIssue?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); reviewAuthorityGaps(); }
+    });
+    authorityBuildRefreshButton?.addEventListener('click', refreshAuthorityBuilds);
+    authorityBuildSelect?.addEventListener('change', inspectAuthorityBuildDiff);
+    authorityBuildActivateButton?.addEventListener('click', () => changeActiveAuthorityBuild('activate'));
+    authorityBuildRollbackButton?.addEventListener('click', () => changeActiveAuthorityBuild('rollback'));
+    authorityFreshnessButton?.addEventListener('click', reviewAuthorityFreshness);
+    authorityAvailabilityButton?.addEventListener('click', reviewAuthorityAvailability);
+    authorityParserRegressionButton?.addEventListener('click', runAuthorityParserRegression);
+    authorityLineageButton?.addEventListener('click', inspectAuthorityLineage);
+    authorityFormSyncButton?.addEventListener('click', synchronizeAuthorityForm);
+    authorityOpinionButton?.addEventListener('click', inspectAuthorityOpinionEnrichment);
+    authorityRuleHistoryButton?.addEventListener('click', inspectAuthorityRuleHistoryTimeline);
+    authorityBundleStatusButton?.addEventListener('click', inspectAuthorityBundleStatus);
+    authorityBundleExportButton?.addEventListener('click', exportAuthorityBundle);
+    authorityBundleImportButton?.addEventListener('click', importAuthorityBundle);
+    timelineCorrectionLoadButton?.addEventListener('click', loadTimelineCorrectionHistory);
+    timelineCorrectionSaveButton?.addEventListener('click', saveTimelineCorrection);
+    timelineCorrectionSourceButton?.addEventListener('click', inspectTimelineCorrectionSource);
+    claimDispositionCreateButton?.addEventListener('click', createClaimDisposition);
+    claimDispositionLoadButton?.addEventListener('click', loadClaimDisposition);
+    claimDispositionReviewButton?.addEventListener('click', recordClaimDispositionDecision);
+    attachmentCoverageCreateButton?.addEventListener('click', createAttachmentCoverage);
+    attachmentCoverageRefreshButton?.addEventListener('click', refreshAttachmentCoverage);
+    attachmentCoverageReviewButton?.addEventListener('click', reviewAttachmentCoverage);
+    attachmentCoverageSourceButton?.addEventListener('click', inspectAttachmentCoverageSource);
+    factGraphNodeButton?.addEventListener('click', createFactGraphNode);
+    factGraphEdgeButton?.addEventListener('click', createFactGraphEdge);
+    factGraphRefreshButton?.addEventListener('click', refreshFactGraph);
+    issueProofCreateButton?.addEventListener('click', createIssueProofItem);
+    issueProofRefreshButton?.addEventListener('click', refreshIssueProofMatrix);
+    issueProofReviewButton?.addEventListener('click', reviewIssueProofItem);
+    changeDigestCreateButton?.addEventListener('click', createMatterChangeDigestCheckpoint);
+    changeDigestGenerateButton?.addEventListener('click', generateMatterChangeDigest);
+    recordLineageCreateButton?.addEventListener('click', createRecordLineageLink);
+    recordLineageRefreshButton?.addEventListener('click', refreshRecordLineage);
     authorityUpdateRefreshButton?.addEventListener('click', async () => {
       await loadAuthorityStatus();
       await loadSources();
@@ -7144,7 +11042,7 @@
       if (topicFilter.value && topicFilter.value !== 'all') {
         url.searchParams.set('topic', topicFilter.value);
       }
-      await navigator.clipboard.writeText(url.toString());
+      await writeClipboardText(url.toString(), {label: 'privacy-safe settings link'});
       showToast('Privacy-safe settings link copied. Questions, context, records, and local paths were not included.');
     });
     drawerRefreshCorpus?.addEventListener('click', async () => { await loadCorpusLibrary(); showToast('Corpus status refreshed.'); });
@@ -7160,6 +11058,20 @@
     localWorkbenchButton?.addEventListener('click', openLocalWorkbench);
     localWorkbenchClose?.addEventListener('click', closeLocalWorkbench);
     localWorkbenchRefresh?.addEventListener('click', loadLocalWorkbenchStatus);
+    localHealthDashboardRefresh?.addEventListener('click', loadHealthDependencyDashboard);
+    runtimeJobJournalRefresh?.addEventListener('click', loadRuntimeJobJournal);
+    idempotencyProtectionRefresh?.addEventListener('click', loadIdempotencyProtection);
+    databaseIntegrityRefresh?.addEventListener('click', loadDatabaseIntegrity);
+    powerLossResilienceRun?.addEventListener('click', runPowerLossResilience);
+    storagePressureRefresh?.addEventListener('click', loadStoragePressure);
+    clockSkewRefresh?.addEventListener('click', loadClockSkew);
+    performanceGatesSave?.addEventListener('click', savePerformanceGates);
+    failureReplayRun?.addEventListener('click', runFailureReplay);
+    crossDeviceTransferRefresh?.addEventListener('click', loadCrossDeviceTransfers);
+    crossDeviceTransferExport?.addEventListener('click', () => runCrossDeviceTransfer('export'));
+    crossDeviceTransferImport?.addEventListener('click', () => runCrossDeviceTransfer('import'));
+    schemaMigrationLabRefresh?.addEventListener('click', loadSchemaMigrationLab);
+    schemaMigrationLabRun?.addEventListener('click', runSchemaMigrationLab);
     localWorkbenchReleaseReadiness?.addEventListener('click', inspectLocalWorkbenchReleaseReadiness);
     localWorkbenchSavePreferences?.addEventListener('click', saveLocalWorkbenchPreferences);
     localWorkbenchOverlay?.addEventListener('mousedown', (event) => {
@@ -7198,6 +11110,7 @@
     authorityImpactApproved?.addEventListener('change', updateWorkspaceControls);
     authorityImpactRefresh?.addEventListener('click', () => loadAuthorityImpactStatus(documentWorkspaceState.active?.document_id || ''));
     authorityImpactAnalyze?.addEventListener('click', analyzeAuthorityImpact);
+    authorityImpactMatter?.addEventListener('click', analyzeAuthorityImpactMatter);
     authorityImpactBuild?.addEventListener('click', buildAuthorityImpactPacket);
 
     const layoutPreferenceKey = 'mfl-workbench-layout-v1';
@@ -7229,6 +11142,20 @@
     let responsiveLayoutMode = '';
     const inlineDrawerQuery = window.matchMedia('(min-width: 960px)');
     const fullWorkbenchQuery = window.matchMedia('(min-width: 1360px)');
+
+    function syncViewportContract() {
+      const width = Math.max(0, Math.round(window.visualViewport?.width || window.innerWidth || 0));
+      const profile = width >= 1360 ? 'full' : width >= 960 ? 'compact' : 'overlay';
+      document.body.dataset.viewportProfile = profile;
+      if (viewportProof) {
+        const label = profile === 'full'
+          ? 'full desktop workspace'
+          : profile === 'compact'
+            ? 'compact desktop workspace'
+            : 'overlay workspace';
+        viewportProof.textContent = `Responsive layout: ${label}; ${width}px available. Chat and its primary action remain available; workbench panels use the view menu or an overlay.`;
+      }
+    }
 
     function currentResponsiveLayoutMode() {
       if (fullWorkbenchQuery.matches) return 'full';
@@ -7284,6 +11211,7 @@
     }
 
     function syncResponsiveLayout({initial = false} = {}) {
+      syncViewportContract();
       const nextMode = currentResponsiveLayoutMode();
       const modeChanged = nextMode !== responsiveLayoutMode;
       responsiveLayoutMode = nextMode;
@@ -7336,7 +11264,7 @@
       activeV8View = nextView;
       document.body.dataset.v8View = nextView;
       if (v8ActiveViewLabel) v8ActiveViewLabel.textContent = nextView === 'workspace' ? 'Workbench' : 'Chat';
-      document.querySelectorAll('[data-v8-view]').forEach((button) => {
+      document.querySelectorAll('button[data-v8-view]').forEach((button) => {
         const selected = button.dataset.v8View === nextView;
         button.setAttribute('aria-pressed', selected ? 'true' : 'false');
       });
@@ -7355,7 +11283,9 @@
     toggleSideCardsButton?.addEventListener('click', () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true}));
     closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
-    document.querySelectorAll('[data-v8-view]').forEach((button) => {
+    // The body also stores the active view; never bind navigation to its
+    // bubbled clicks, which would reset every drawer interaction to Evidence.
+    document.querySelectorAll('button[data-v8-view]').forEach((button) => {
       button.addEventListener('click', () => setV8View(button.dataset.v8View, {userInitiated: true}));
     });
     document.querySelectorAll('[data-v8-panel]').forEach((button) => {
@@ -7374,11 +11304,20 @@
           setV8View('workspace', {userInitiated: true, drawerPanel: 'setup'});
           window.requestAnimationFrame(() => selectDrawerTab('setup'));
         }
+        if (button.dataset.v8Action === 'errors') openErrorCenter(button);
         if (button.dataset.v8Action === 'settings') welcomeButton?.click();
       });
     });
     document.querySelectorAll('[data-drawer-tab]').forEach((button) => {
-      button.addEventListener('click', () => selectDrawerTab(button.dataset.drawerTab || 'setup'));
+      const activateDrawerTab = () => selectDrawerTab(button.dataset.drawerTab || 'setup');
+      // Keep the tab strip dependable for mouse, touch, pen, and keyboard input.
+      // Some desktop accessibility layers deliver a completed pointer gesture
+      // without a synthetic click. Selection is idempotent, so the normal click
+      // remains intact while pointer and mouse activation provide the same safe
+      // behavior.
+      button.addEventListener('mousedown', activateDrawerTab);
+      button.addEventListener('pointerup', activateDrawerTab);
+      button.addEventListener('click', activateDrawerTab);
       button.addEventListener('keydown', (event) => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
@@ -7432,7 +11371,15 @@
     helpButton?.addEventListener('click', () => openOverlay(helpOverlay));
     welcomeButton?.addEventListener('click', () => openOverlay(welcomeOverlay));
     closeHelpButton?.addEventListener('click', () => closeOverlay(helpOverlay));
+    errorCenterClose?.addEventListener('click', () => closeOverlay(errorCenterOverlay));
+    errorCenterClear?.addEventListener('click', () => {
+      safeErrorEvents.length = 0;
+      renderErrorCenter();
+      errorCenterClear.focus({preventScroll: true});
+    });
     dismissWelcomeButton?.addEventListener('click', () => closeOverlay(welcomeOverlay));
+    displayPreferencesSave?.addEventListener('click', saveDisplayPreferences);
+    syncDisplayPreferences();
     document.querySelectorAll('[data-welcome-role]').forEach((button) => {
       button.addEventListener('click', () => {
         const role = button.dataset.welcomeRole || 'parent';
@@ -7521,11 +11468,7 @@
     window.setInterval(() => {
       if (document.visibilityState === 'visible') checkLocalService({announce: true});
     }, 30000);
-    if (viewportProof) {
-      window.addEventListener('load', () => {
-        viewportProof.textContent = `innerWidth=${window.innerWidth}; scrollWidth=${document.documentElement.scrollWidth}; bodyClientWidth=${document.body.clientWidth}`;
-      });
-    }
+    window.addEventListener('load', syncViewportContract, {once: true});
     loadCorpusLibrary();
     loadQuestionLibrary();
     loadPromptPacks();
@@ -7550,7 +11493,7 @@
       {id:'open_calendar_workspace',group:'Specialized workbenches',label:'Service, deadlines & hearings',hint:'Build source-bound deadline candidates',aliases:'slice 23 service notice calendar',run:()=>openLateReview(lateReviewDefinitions.calendar)},
       {id:'open_docket_workspace',group:'Specialized workbenches',label:'Docket & MRECS reconciliation',hint:'Compare docket entries with local records',aliases:'slice 24 docket mrecs missing records',run:()=>openLateReview(lateReviewDefinitions.docket)},
       {id:'open_discovery_workspace',group:'Specialized workbenches',label:'Discovery & disclosure',hint:'Map requests, responses, productions and gaps',aliases:'slice 25 discovery disclosure',run:()=>openLateReview(lateReviewDefinitions.discovery)},
-      {id:'open_exhibits_workspace',group:'Specialized workbenches',label:'Exhibits, Bates & provenance',hint:'Create derivative labels and binder receipts',aliases:'slice 26 exhibit binder bates custody',run:()=>openLateReview(lateReviewDefinitions.exhibits)},
+      {id:'open_exhibits_workspace',group:'Specialized workbenches',label:'Exhibits, Bates & provenance',hint:'Create derivative labels and binder receipts',aliases:'slice 26 exhibit binder bates custody',run:()=>openExhibitsWorkspace()},
       {id:'open_statements_workspace',group:'Specialized workbenches',label:'Witness & statement comparison',hint:'Compare exact source-bound statements',aliases:'slice 27 witness testimony statements',run:()=>openLateReview(lateReviewDefinitions.statements)},
       {id:'open_hearing_workspace',group:'Specialized workbenches',label:'Hearing preparation',hint:'Assemble issues, authority and missing proof',aliases:'slice 28 hearing courtroom pack',run:()=>openLateReview(lateReviewDefinitions.hearings)},
       {id:'open_appellate_workspace',group:'Specialized workbenches',label:'Appellate preservation',hint:'Verify record citations and missing components',aliases:'slice 29 appeal transcript citation',run:()=>openLateReview(lateReviewDefinitions.appellate)},
@@ -7570,10 +11513,27 @@
       {id:'open_language_workspace',group:'Specialized workbenches',label:'Plain language & translation',hint:'Create review-required accessible working copies',aliases:'slice 43 accessibility translation',run:openLanguageWorkspace},
       {id:'open_resource_workspace',group:'Specialized workbenches',label:'Maine resource navigator',hint:'Record verified resource candidates',aliases:'slice 44 resource warm handoff',run:openResourceWorkspace},
       {id:'open_smart_matter_inbox',group:'Productivity Studio',label:'Smart Matter Inbox',hint:'Review an explicit local candidate manifest',aliases:'inbox watch import duplicate',run:()=>openProductivityStudio('inbox')},
+      {id:'open_workspace_tabs',group:'Workspace',label:'Open workspace tabs',hint:'Keep source, record, draft, and comparison contexts without clearing chat',aliases:'tabs context multitask source record draft comparison',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('workspace-tabs-id')?.focus({preventScroll:true}),80);}},
+      {id:'open_command_history',group:'Workspace',label:'Open command history',hint:'Replay safe reads; mutations always need a new confirmation',aliases:'history replay rerun search command audit',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('command-history-id')?.focus({preventScroll:true}),80);}},
+      {id:'open_bulk_review_queue',group:'Workspace',label:'Open bulk review queue',hint:'Triage source-bound records and review items with keyboard actions',aliases:'bulk triage queue claim citation privacy correction keyboard',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('bulk-review-id')?.focus({preventScroll:true}),80);}},
+      {id:'open_favorites',group:'Workspace',label:'Open favorites and pins',hint:'Save local review shortcuts with role-filtered visibility',aliases:'favorite pin matter record source draft workspace',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('favorite-id')?.focus({preventScroll:true}),80);}},
+      {id:'open_user_labels',group:'Workspace',label:'Open user-defined labels',hint:'Create encrypted labels and migrate them collision-safely',aliases:'labels tags export import migration collision',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('user-label-id')?.focus({preventScroll:true}),80);}},
+      {id:'open_daily_matter_brief',group:'Workspace',label:'Open daily matter brief',hint:'Generate an explicit local digest of review work and candidate blockers',aliases:'daily brief digest changed records deadlines blockers',run:()=>{openDocumentWorkspace();window.setTimeout(()=>document.getElementById('daily-brief-id')?.focus({preventScroll:true}),80);}},
       {id:'open_workflow_recipes',group:'Productivity Studio',label:'Saved workflow recipes',hint:'Run confirmed allow-listed local steps',aliases:'recipe automation workflow',run:()=>openProductivityStudio('recipes')},
       {id:'open_media_transcription',group:'Productivity Studio',label:'Audio/video evidence transcription',hint:'Create a source-bound local transcript',aliases:'audio video transcript hearing',run:()=>openProductivityStudio('media')},
       {id:'open_calendar_interop',group:'Productivity Studio',label:'Calendar interoperability',hint:'Create a review-required ICS file',aliases:'calendar ics dates export',run:()=>openProductivityStudio('calendar')},
       {id:'open_hardware_optimizer',group:'Productivity Studio',label:'Local model hardware optimizer',hint:'Choose safe context and concurrency limits',aliases:'gpu cpu memory model optimize',run:()=>openProductivityStudio('hardware')},
+      {id:'open_local_dependency_health',group:'Safety',label:'Check local dependency health',hint:'Inspect local API, database, authority, engines, storage, backup, and clock status',aliases:'health dashboard dependency ocr media storage backup clock local',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>localHealthDashboardRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_runtime_job_journal',group:'Safety',label:'Open runtime job journal',hint:'Review active, cancelled, retried, and terminal local work without exposing inputs',aliases:'jobs queue cancellation retry progress ocr imports runtime journal',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>runtimeJobJournalRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_idempotency_protection',group:'Safety',label:'Inspect duplicate action protection',hint:'Review encrypted local retry protection before repeating a save, import, review, or export setup',aliases:'retry duplicate idempotency save import export action protection',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>idempotencyProtectionRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_database_integrity',group:'Safety',label:'Run safe database integrity check',hint:'Run a bounded read-only check; preserve and recover, never repair in place',aliases:'database sqlite integrity corruption recovery backup non destructive',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>databaseIntegrityRefresh?.focus({preventScroll:true}),80);}},
+      {id:'run_power_loss_resilience',group:'Safety',label:'Run synthetic power-loss resilience drill',hint:'Admin-only fault injection of atomic writes; it never cuts power or touches records',aliases:'power loss crash resilience import encrypted state index backup export fault injection',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>powerLossResilienceRun?.focus({preventScroll:true}),80);}},
+      {id:'open_storage_pressure',group:'Safety',label:'Forecast safe storage capacity',hint:'Review reserved write capacity and cleanup candidates; nothing is deleted automatically',aliases:'storage disk space reserve cleanup import backup export capacity',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>storagePressureRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_clock_skew',group:'Safety',label:'Check local clock continuity',hint:'Flag a material local clock change for deadline, freshness, audit, and certificate review',aliases:'clock time skew deadline audit freshness certificate UTC',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>clockSkewRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_performance_gates',group:'Safety',label:'Review performance regression gates',hint:'Record bounded local timing, memory, and package-size observations; missing evidence remains visible',aliases:'performance latency launch import search ask draft packet memory package budget regression',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>performanceGatesSave?.focus({preventScroll:true}),80);}},
+      {id:'open_failure_replay',group:'Safety',label:'Replay a safe recovery envelope',hint:'Practice an allow-listed error code and recovery message without opening logs or rerunning private work',aliases:'failure error recovery replay safe diagnostic outage storage session authority',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>failureReplayRun?.focus({preventScroll:true}),80);}},
+      {id:'open_cross_device_transfer',group:'Safety',label:'Open encrypted cross-device transfer',hint:'Create or import a user-carried encrypted bundle without cloud transfer or live-matter merge',aliases:'transfer portable bundle move device passphrase encrypted recovery offline',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>crossDeviceTransferRefresh?.focus({preventScroll:true}),80);}},
+      {id:'open_schema_migration_lab',group:'Safety',label:'Open schema migration laboratory',hint:'Exercise synthetic profile-contract recovery checks without changing the matter or installed package',aliases:'schema migration upgrade rollback forward recovery interruption profile synthetic',run:async()=>{await openLocalWorkbench(); window.setTimeout(()=>schemaMigrationLabRefresh?.focus({preventScroll:true}),80);}},
       {id:'open_research_pinboard',group:'Productivity Studio',label:'Research notebook & citation pinboard',hint:'Pin and inspect an exact source span',aliases:'research notebook pin citation source',run:()=>openProductivityStudio('pinboard')},
       {id:'open_redaction_studio',group:'Productivity Studio',label:'Redaction studio',hint:'Review privacy candidates against an immutable original',aliases:'redact privacy pii derivative',run:()=>openProductivityStudio('redaction')},
       {id:'open_matter_next_actions',group:'Productivity Studio',label:'Matter health & next actions',hint:'Turn blockers into a corrective review queue',aliases:'health actions blockers status',run:()=>openProductivityStudio('actions')},
@@ -7602,6 +11562,8 @@
     ];
     let commandIndex = 0;
     let filteredCommands = [...commandDefinitions];
+    let commandBarDefinitions = [];
+    let commandBarTimer = 0;
     let constitutionalPopoverPinned = false;
     let constitutionalCloseTimer = 0;
 
@@ -7624,21 +11586,14 @@
     }
 
     function renderCommands(filter = '') {
-      const needle = filter.trim().toLowerCase();
-      filteredCommands = commandDefinitions.filter((command) => {
-        const haystack = `${command.group} ${command.label} ${command.hint} ${command.aliases || ''}`.toLowerCase();
-        return !needle || haystack.includes(needle);
-      });
+      const componentLibrary = window.MaineWorkbenchComponents;
+      const commandView = componentLibrary?.filterAndGroupCommands(
+        [...commandDefinitions, ...commandBarDefinitions],
+        filter,
+      ) || {items: [], groups: []};
+      filteredCommands = commandView.items;
       commandIndex = Math.min(commandIndex, Math.max(0, filteredCommands.length - 1));
-      const groups = [];
-      filteredCommands.forEach((command, index) => {
-        let group = groups.find((item) => item.name === command.group);
-        if (!group) {
-          group = {name: command.group, commands: []};
-          groups.push(group);
-        }
-        group.commands.push({command, index});
-      });
+      const groups = commandView.groups;
       commandList.innerHTML = groups.map((group) => `
         <div class="command-group" role="presentation">${escapeHtml(group.name)}</div>
         ${group.commands.map(({command, index}) => `
@@ -7684,10 +11639,37 @@
     }
 
     function runCommand(id) {
-      const command = commandDefinitions.find((item) => item.id === id);
+      const command = [...commandDefinitions, ...commandBarDefinitions].find((item) => item.id === id);
       if (!command) return;
       closeOverlay(commandPalette);
       command.run();
+    }
+
+    async function loadCommandBarResults(query) {
+      const needle = String(query || '').trim();
+      if (needle.length < 2) { commandBarDefinitions = []; renderCommands(commandSearch.value); return; }
+      try {
+        const payload = await fetchJson('/api/command-bar/search?q=' + encodeURIComponent(needle) + '&limit=20');
+        commandBarDefinitions = (payload.results || []).map((item, index) => ({
+          id: `command-bar-${index}-${String(item.result_id || 'result').replace(/[^a-z0-9_-]/gi, '-')}`,
+          group: `Search · ${item.kind || 'result'}`,
+          label: item.label || 'Local result',
+          hint: `${item.hint || ''} · permission: ${item.permission_required || 'review required'}`,
+          aliases: `${item.kind || ''} ${item.label || ''} ${item.hint || ''}`,
+          run: () => {
+            const target = item.target || {};
+            if (target.action === 'open_record' && /^[a-f0-9]{64}$/i.test(String(target.source_token || ''))) { openRecordInspector({source_token: target.source_token}, 0, commandPaletteButton); return; }
+            if (target.action === 'open_draft') { openDocumentWorkspace(); return; }
+            if (target.action === 'open_privacy') { openOverlay(privacyOverlay); return; }
+            if (target.action === 'open_source') { setDrawerOpen(true, 'evidence'); window.setTimeout(() => authoritySearch?.focus({preventScroll:true}), 20); return; }
+            setDrawerOpen(true, 'setup');
+          },
+        }));
+        renderCommands(commandSearch.value);
+      } catch (_) {
+        commandBarDefinitions = [];
+        renderCommands(commandSearch.value);
+      }
     }
 
     function openJustice() {
@@ -7738,6 +11720,188 @@
       else localStatusCloseTimer = window.setTimeout(close, delay);
     }
 
+    async function loadMatterKeyStatus() {
+      if (!matterKeyStatusDetail) return;
+      matterKeyStatusDetail.textContent = 'Checking non-secret protection status for the active matter…';
+      if (matterKeyStatusBadge) {
+        matterKeyStatusBadge.className = 'status-badge review';
+        matterKeyStatusBadge.textContent = 'Checking';
+      }
+      try {
+        const payload = await fetchJson('/api/security/privacy/matter-key');
+        const status = String(payload?.status || 'unknown').replaceAll('_', ' ');
+        const blockers = Array.isArray(payload?.blockers) ? payload.blockers.map((item) => String(item).replaceAll('_', ' ')) : [];
+        const auditVerified = payload?.audit?.verified === true;
+        const keyCount = Number.isFinite(Number(payload?.key_count)) ? Number(payload.key_count) : null;
+        const recovery = payload?.recovery_enabled === true ? 'Recovery is enrolled; its secret is not shown.' : 'Recovery is not enrolled.';
+        const detail = blockers.length
+          ? `Blocked: ${blockers.join(', ')}. The workbench did not reveal any matter, key, or recovery material.`
+          : `${keyCount === null ? 'No key count was disclosed.' : `${keyCount} local data key${keyCount === 1 ? '' : 's'} tracked.`} ${recovery} Audit chain ${auditVerified ? 'verified' : 'needs review'}.`;
+        matterKeyStatusDetail.textContent = `${status}. ${detail} This status remains review required.`;
+        if (matterKeyStatusBadge) {
+          matterKeyStatusBadge.className = `status-badge ${payload?.status === 'active' && auditVerified ? 'good' : 'review'}`;
+          matterKeyStatusBadge.textContent = payload?.status === 'active' && auditVerified ? 'Protected · review required' : 'Review required';
+        }
+      } catch (err) {
+        matterKeyStatusDetail.innerHTML = renderRecoverableError(err, {title: 'Active-matter safeguards could not be checked'});
+        if (matterKeyStatusBadge) {
+          matterKeyStatusBadge.className = 'status-badge review';
+          matterKeyStatusBadge.textContent = 'Unavailable';
+        }
+      }
+    }
+
+    async function loadMatterUnlockStatus() {
+      if (!matterUnlockStatusDetail) return;
+      matterUnlockStatusDetail.textContent = 'Checking the optional local user-presence policy…';
+      if (matterUnlockStatusBadge) {
+        matterUnlockStatusBadge.className = 'status-badge review';
+        matterUnlockStatusBadge.textContent = 'Checking';
+      }
+      try {
+        const payload = await fetchJson('/api/security/privacy/matter-unlock');
+        const status = String(payload?.status || 'unknown').replaceAll('_', ' ');
+        const blocked = Array.isArray(payload?.blockers) ? payload.blockers.length > 0 : false;
+        const availability = payload?.provider_availability?.status === 'available' ? 'Windows Hello is available on this device.' : 'Windows Hello is unavailable or not configured; the matter remains protected by its local encrypted-data policy.';
+        const session = payload?.unlocked_for_session === true ? 'This app session is currently unlocked.' : 'No local unlock grant is active.';
+        matterUnlockStatusDetail.textContent = `${status}. ${availability} ${session} No biometric data is collected or displayed. Review required.`;
+        if (matterUnlockStatusBadge) {
+          matterUnlockStatusBadge.className = `status-badge ${payload?.unlocked_for_session === true && !blocked ? 'good' : 'review'}`;
+          matterUnlockStatusBadge.textContent = payload?.unlocked_for_session === true && !blocked ? 'Locally unlocked · review required' : 'Review required';
+        }
+      } catch (err) {
+        matterUnlockStatusDetail.innerHTML = renderRecoverableError(err, {title: 'Matter-unlock policy could not be checked'});
+        if (matterUnlockStatusBadge) {
+          matterUnlockStatusBadge.className = 'status-badge review';
+          matterUnlockStatusBadge.textContent = 'Unavailable';
+        }
+      }
+    }
+
+    async function runMatterUnlockAction(action) {
+      if (!matterUnlockStatusDetail) return;
+      try {
+        matterUnlockStatusDetail.textContent = action === 'verify' ? 'Requesting local user presence for the active matter…' : 'Ending this local unlock session…';
+        const session = await fetchJson('/api/security/privacy/session', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: `security_privacy_matter_unlock_${action}`}),
+        });
+        const capability = session?.session || {};
+        const payload = await fetchJson(`/api/security/privacy/matter-unlock/${action}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-MFLL-Session-Token': String(capability.token || ''),
+            'X-CSRF-Token': String(capability.csrf_token || ''),
+          },
+          body: JSON.stringify({approved: true}),
+        });
+        matterUnlockStatusDetail.textContent = action === 'verify'
+          ? (payload?.unlocked_for_session === true ? 'Local user presence verified. This app session is unlocked for the active matter and remains review required.' : 'The active matter was not unlocked. Review the local policy and Windows Hello availability.')
+          : 'The local unlock grant has ended. Re-authenticate through Windows Hello before accessing an enabled matter.';
+        await loadMatterUnlockStatus();
+      } catch (err) {
+        matterUnlockStatusDetail.innerHTML = renderRecoverableError(err, {title: action === 'verify' ? 'Matter unlock could not be completed' : 'Matter lock could not be completed'});
+      }
+    }
+
+    async function previewPrivacySafeSupportBundle() {
+      if (supportBundleStatus) supportBundleStatus.textContent = 'Preparing the inclusion preview without reading matter records or logs…';
+      try {
+        const payload = await fetchJson('/api/security/privacy/diagnostics/preview', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({sections: ['product', 'security_policy', 'local_environment']}),
+        });
+        const selected = payload?.selected_sections || [];
+        const excluded = payload?.excluded_categories || [];
+        if (supportBundleResults) supportBundleResults.innerHTML = `<strong>Preview only</strong><p>Included: ${escapeHtml(selected.join(', ') || 'nothing')}.</p><p>Excluded: ${escapeHtml(excluded.join(', ') || 'matter content, prompts, paths, credentials, raw logs')}.</p>`;
+        if (supportBundleStatus) supportBundleStatus.textContent = 'Inclusion preview ready. No matter content or support file was created.';
+        if (supportBundleBadge) { supportBundleBadge.className = 'status-badge review'; supportBundleBadge.textContent = 'Review preview'; }
+      } catch (err) {
+        if (supportBundleStatus) supportBundleStatus.innerHTML = renderRecoverableError(err, {title: 'Support-bundle preview could not be created'});
+      }
+    }
+
+    async function buildPrivacySafeSupportBundle() {
+      if (!window.confirm('Create a local support file containing only the listed non-matter diagnostics? It will not be sent anywhere automatically.')) return;
+      if (supportBundleStatus) supportBundleStatus.textContent = 'Creating the approved privacy-safe support file…';
+      try {
+        const payload = await fetchJson('/api/security/privacy/diagnostics/build', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({approved: true, sections: ['product', 'security_policy', 'local_environment']}),
+        });
+        const bundle = payload?.bundle || {};
+        const blob = new Blob([JSON.stringify(bundle, null, 2) + '\n'], {type: 'application/json'});
+        const href = URL.createObjectURL(blob);
+        if (supportBundleResults) supportBundleResults.innerHTML = `<strong>Support file ready</strong><p>Hash <code>${escapeHtml(String(bundle.bundle_sha256 || '').slice(0, 24))}…</code> · no automatic sharing.</p><p><a class="secondary compact-action" href="${href}" download="${escapeHtml(payload.filename || 'maine-family-law-llm-support.json')}">Download reviewed support file</a></p>`;
+        window.setTimeout(() => URL.revokeObjectURL(href), 60_000);
+        if (supportBundleStatus) supportBundleStatus.textContent = 'Support file created locally. Review it before using a separate transfer method.';
+        if (supportBundleBadge) { supportBundleBadge.className = 'status-badge review'; supportBundleBadge.textContent = 'Created locally'; }
+      } catch (err) {
+        if (supportBundleStatus) supportBundleStatus.innerHTML = renderRecoverableError(err, {title: 'Support file could not be created'});
+      }
+    }
+
+    function renderTelemetryPreference(payload) {
+      const preference = payload?.preference || {};
+      const verification = payload?.verification || {};
+      const mode = String(preference?.mode || 'off');
+      const enabled = mode === 'local_metrics';
+      if (telemetryPreferenceMode) telemetryPreferenceMode.value = enabled ? 'local_metrics' : 'off';
+      if (telemetryPreferenceStatus) telemetryPreferenceStatus.textContent = enabled
+        ? 'Local-only, content-free metrics are enabled for this matter. Remote export remains unavailable and review is required.'
+        : 'Local telemetry is off. No new performance or error metrics are recorded unless you explicitly opt in.';
+      if (telemetryPreferenceResults) telemetryPreferenceResults.innerHTML = `<strong>${enabled ? 'Local metrics enabled' : 'Telemetry off'}</strong><p>Stored rows: ${escapeHtml(String(verification?.row_count || 0))} · remote exporters: ${escapeHtml(verification?.remote_exporters_enabled === true ? 'enabled' : 'unavailable')} · private payload logging: ${escapeHtml(verification?.private_payload_logging_enabled === true ? 'enabled' : 'disabled')}.</p><p>Only bounded local counts and safe labels are permitted. Prompts, record text, names, paths, credentials, and external endpoints are refused.</p>`;
+      if (telemetryPreferenceBadge) { telemetryPreferenceBadge.className = `status-badge ${enabled ? 'review' : 'good'}`; telemetryPreferenceBadge.textContent = enabled ? 'Local-only · review required' : 'Off by default'; }
+    }
+
+    async function loadTelemetryPreference() {
+      if (!telemetryPreferenceStatus) return;
+      telemetryPreferenceStatus.textContent = 'Loading the content-free local telemetry preference…';
+      try {
+        renderTelemetryPreference(await fetchJson('/api/security/privacy/telemetry'));
+      } catch (err) {
+        telemetryPreferenceStatus.innerHTML = renderRecoverableError(err, {title: 'Telemetry preference could not be loaded'});
+        if (telemetryPreferenceBadge) { telemetryPreferenceBadge.className = 'status-badge review'; telemetryPreferenceBadge.textContent = 'Unavailable'; }
+      }
+    }
+
+    async function saveTelemetryPreferenceChoice() {
+      const mode = String(telemetryPreferenceMode?.value || 'off');
+      if (telemetryPreferenceStatus) telemetryPreferenceStatus.textContent = mode === 'local_metrics'
+        ? 'Saving your explicit local-only telemetry choice…'
+        : 'Turning local telemetry off…';
+      try {
+        const payload = await fetchJson('/api/security/privacy/telemetry', {
+          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mode, approved: true}),
+        });
+        renderTelemetryPreference({preference: payload?.preference || {}, verification: payload?.preference?.audit_record ? {row_count: 1, remote_exporters_enabled: false, private_payload_logging_enabled: false} : {row_count: 0, remote_exporters_enabled: false, private_payload_logging_enabled: false}});
+      } catch (err) {
+        if (telemetryPreferenceStatus) telemetryPreferenceStatus.innerHTML = renderRecoverableError(err, {title: 'Telemetry preference could not be saved'});
+      }
+    }
+
+    async function runLocalAdversarialCorpus() {
+      if (adversarialCorpusStatus) adversarialCorpusStatus.textContent = 'Running fixed synthetic local defensive checks. Your matter is not being read…';
+      try {
+        const payload = await fetchJson('/api/security/privacy/adversarial-corpus/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+        const passed = Number(payload?.safe_count || 0);
+        const total = Number(payload?.result_count || 0);
+        const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+        const unsafe = Array.isArray(payload?.unsafe_case_ids) ? payload.unsafe_case_ids : [];
+        const isPass = payload?.status === 'pass' && unsafe.length === 0;
+        if (adversarialCorpusStatus) adversarialCorpusStatus.textContent = isPass
+          ? `Synthetic checks passed (${passed}/${total}). Review-required safeguards remain in force.`
+          : `Synthetic checks found a blocker (${passed}/${total} safe). Do not treat the release as ready until it is resolved.`;
+        if (adversarialCorpusResults) adversarialCorpusResults.innerHTML = `<strong>${isPass ? 'Local synthetic checks passed' : 'Local synthetic checks blocked'}</strong><p>${escapeHtml((payload?.required_categories || []).join(' · ') || 'No categories reported')}.</p>${blockers.length ? `<p>Blockers: ${escapeHtml(blockers.join(', '))}</p>` : '<p>No corpus blockers were reported.</p>'}${unsafe.length ? `<p>Unsafe synthetic case IDs: ${escapeHtml(unsafe.join(', '))}</p>` : '<p>No unsafe synthetic case was reported.</p>'}<p>These checks do not inspect matter data, prove frozen-app behavior, or replace human release review.</p>`;
+        if (adversarialCorpusBadge) { adversarialCorpusBadge.className = `status-badge ${isPass ? 'review' : 'blocked'}`; adversarialCorpusBadge.textContent = isPass ? 'Synthetic pass' : 'Blocked'; }
+      } catch (err) {
+        if (adversarialCorpusStatus) adversarialCorpusStatus.innerHTML = renderRecoverableError(err, {title: 'Local defensive checks could not complete'});
+        if (adversarialCorpusBadge) { adversarialCorpusBadge.className = 'status-badge blocked'; adversarialCorpusBadge.textContent = 'Blocked'; }
+      }
+    }
+
     matterShortcutButton?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
     matterButton?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
     trustRecordAction?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
@@ -7778,13 +11942,25 @@
         await openDocumentWorkspace();
       } else if (workflow === 'privacy') {
         openOverlay(privacyOverlay);
+        void loadTelemetryPreference();
       }
       setWorkflowFocus(workflow);
     }));
-    privacyButton?.addEventListener('click', () => openOverlay(privacyOverlay));
-    footerPrivacyButton?.addEventListener('click', () => openOverlay(privacyOverlay));
+    privacyButton?.addEventListener('click', () => { openOverlay(privacyOverlay); void loadMatterKeyStatus(); void loadMatterUnlockStatus(); void loadTelemetryPreference(); });
+    footerPrivacyButton?.addEventListener('click', () => { openOverlay(privacyOverlay); void loadMatterKeyStatus(); void loadMatterUnlockStatus(); void loadTelemetryPreference(); });
     closePrivacyButton?.addEventListener('click', () => closeOverlay(privacyOverlay));
+    refreshMatterKeyStatus?.addEventListener('click', () => { void loadMatterKeyStatus(); });
+    refreshMatterUnlockStatus?.addEventListener('click', () => { void loadMatterUnlockStatus(); });
+    verifyMatterUnlock?.addEventListener('click', () => { void runMatterUnlockAction('verify'); });
+    lockMatterUnlock?.addEventListener('click', () => { void runMatterUnlockAction('lock'); });
+    previewSupportBundle?.addEventListener('click', () => { void previewPrivacySafeSupportBundle(); });
+    buildSupportBundle?.addEventListener('click', () => { void buildPrivacySafeSupportBundle(); });
+    refreshTelemetryPreference?.addEventListener('click', () => { void loadTelemetryPreference(); });
+    saveTelemetryPreference?.addEventListener('click', () => { void saveTelemetryPreferenceChoice(); });
+    runAdversarialCorpus?.addEventListener('click', () => { void runLocalAdversarialCorpus(); });
     closeShortcutsButton?.addEventListener('click', () => closeOverlay(shortcutsOverlay));
+    shortcutPreferencesSave?.addEventListener('click', saveKeyboardShortcuts);
+    syncKeyboardShortcutUi();
     closeBuildButton?.addEventListener('click', () => closeOverlay(buildOverlay));
     closeConstitutionalPopoverButton?.addEventListener('click', () => {
       constitutionalIdentity?.focus({preventScroll: true});
@@ -7860,6 +12036,11 @@
     productivityElement('actions-run')?.addEventListener('click', runProductivityActions);
     productivityElement('courtroom-run')?.addEventListener('click', runProductivityCourtroom);
     productivityElement('backup-run')?.addEventListener('click', runProductivityBackup);
+    productivityElement('backup-list')?.addEventListener('click', () => { loadProductivityBackups().catch((error) => { if (productivityStudioResult) productivityStudioResult.innerHTML = renderRecoverableError(error, {title: 'Backup snapshots could not be loaded'}); }); });
+    productivityElement('backup-snapshot')?.addEventListener('change', () => {
+      productivityLastBackupId = selectedProductivityBackupId();
+      ['backup-verify', 'backup-restore'].forEach((id) => { const button = productivityElement(id); if (button) button.disabled = !productivityLastBackupId; });
+    });
     productivityElement('backup-verify')?.addEventListener('click', verifyProductivityBackup);
     productivityElement('backup-restore')?.addEventListener('click', restoreProductivityBackup);
     courtroomPresentationClose?.addEventListener('click', closeCourtroomPresentation);
@@ -7872,10 +12053,10 @@
 
     commandPaletteButton?.addEventListener('click', openCommandPalette);
     closeCommandPaletteButton?.addEventListener('click', closeCommandPalette);
-    commandSearch?.addEventListener('input', () => { commandIndex = 0; renderCommands(commandSearch.value); });
+    commandSearch?.addEventListener('input', () => { commandIndex = 0; renderCommands(commandSearch.value); window.clearTimeout(commandBarTimer); commandBarTimer = window.setTimeout(() => loadCommandBarResults(commandSearch.value), 180); });
     commandSearch?.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowDown') { event.preventDefault(); commandIndex = Math.min(commandIndex + 1, filteredCommands.length - 1); renderCommands(commandSearch.value); }
-      if (event.key === 'ArrowUp') { event.preventDefault(); commandIndex = Math.max(commandIndex - 1, 0); renderCommands(commandSearch.value); }
+      if (event.key === 'ArrowDown') { event.preventDefault(); commandIndex = window.MaineWorkbenchComponents.moveListIndex(commandIndex, filteredCommands.length, 1); renderCommands(commandSearch.value); }
+      if (event.key === 'ArrowUp') { event.preventDefault(); commandIndex = window.MaineWorkbenchComponents.moveListIndex(commandIndex, filteredCommands.length, -1); renderCommands(commandSearch.value); }
       if (event.key === 'Home') { event.preventDefault(); commandIndex = 0; renderCommands(commandSearch.value); }
       if (event.key === 'End') { event.preventDefault(); commandIndex = Math.max(0, filteredCommands.length - 1); renderCommands(commandSearch.value); }
       if (event.key === 'Enter' && filteredCommands[commandIndex]) { event.preventDefault(); runCommand(filteredCommands[commandIndex].id); }
@@ -7906,7 +12087,155 @@
       question.removeAttribute('aria-invalid');
       question.style.height = 'auto';
       question.style.height = `${Math.min(question.scrollHeight, 180)}px`;
+      queueRecentWorkSave();
     });
+
+    // Recent work is local, encrypted server-side, and scoped to the selected
+    // matter.  It deliberately saves no filesystem path or reusable record
+    // capability; record references are revalidated before they can reopen.
+    const recentWorkState = {sources: [], saveTimer: 0, restorePoint: null, loading: false};
+
+    function recentWorkNotice() {
+      let section = document.getElementById('recent-work-restore');
+      if (section || !question?.parentElement) return section;
+      section = document.createElement('section');
+      section.id = 'recent-work-restore';
+      section.className = 'document-review-card recent-work-restore';
+      section.hidden = true;
+      section.setAttribute('aria-live', 'polite');
+      question.parentElement.insertAdjacentElement('beforebegin', section);
+      return section;
+    }
+
+    function renderRecentWorkNotice() {
+      const section = recentWorkNotice();
+      const point = recentWorkState.restorePoint;
+      if (!section) return;
+      if (!point) { section.hidden = true; return; }
+      const count = Array.isArray(point.selected_sources) ? point.selected_sources.length : 0;
+      const draft = String(point.unsent_draft || '');
+      section.hidden = false;
+      section.innerHTML = `<div class="document-review-heading"><div><span>Encrypted active-matter restore point</span><strong>Recent work is available</strong></div><span class="badge warn">Review required</span></div><p>A locally saved workspace from ${escapeHtml(point.saved_at || 'an earlier session')} can restore a scroll position${draft ? ', unsent draft text' : ''}${count ? `, and ${count} selected source${count === 1 ? '' : 's'}` : ''}. It will not alter records, drafts, or findings.</p><div class="document-workspace-actions"><button class="primary-action" id="recent-work-restore-action" type="button">Restore safe context</button>${count ? '<button class="secondary" id="recent-work-source-action" type="button">Open saved source</button>' : ''}<button class="secondary" id="recent-work-clear-action" type="button">Clear saved context</button></div><div class="document-workspace-status" id="recent-work-status">Review the restored draft and source context before relying on it.</div>`;
+      section.querySelector('#recent-work-restore-action')?.addEventListener('click', restoreRecentWork);
+      section.querySelector('#recent-work-source-action')?.addEventListener('click', (event) => openRecentWorkSource(event.currentTarget));
+      section.querySelector('#recent-work-clear-action')?.addEventListener('click', clearRecentWork);
+    }
+
+    function currentRecentWorkPayload() {
+      return {
+        workspace_id: 'chat',
+        scroll_position: Math.max(0, Math.round(window.scrollY || document.documentElement?.scrollTop || 0)),
+        selected_sources: recentWorkState.sources.slice(0, 24),
+        unsent_draft: String(question?.value || ''),
+      };
+    }
+
+    function queueRecentWorkSave() {
+      if (!corpusSelect?.value || recentWorkState.loading) return;
+      window.clearTimeout(recentWorkState.saveTimer);
+      recentWorkState.saveTimer = window.setTimeout(async () => {
+        try {
+          const payload = await fetchJson('/api/recent-work', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(currentRecentWorkPayload())});
+          const point = payload?.restore_point || null;
+          if (point) recentWorkState.restorePoint = {...point, unsent_draft: String(question?.value || '')};
+        } catch (_) {
+          // A restore point is a convenience.  The active UI remains usable if
+          // local encrypted persistence is unavailable.
+        }
+      }, 850);
+    }
+
+    function trackRecentWorkRecord(payload) {
+      const recordId = String(payload?.evidence_id || '').trim();
+      const sourceHash = String(payload?.source_hash || '').trim().toLowerCase();
+      if (!/^[A-Za-z0-9._:-]{1,240}$/.test(recordId) || !/^[a-f0-9]{64}$/.test(sourceHash)) return;
+      const row = {lane: 'private_matter_record', record_id: recordId, source_hash: sourceHash, page: Math.max(0, Number(payload?.page || 0))};
+      recentWorkState.sources = [row, ...recentWorkState.sources.filter((item) => !(item.lane === row.lane && item.record_id === row.record_id && item.source_hash === row.source_hash && Number(item.page || 0) === row.page))].slice(0, 24);
+      queueRecentWorkSave();
+    }
+
+    function trackRecentWorkAuthority(sourceId) {
+      const id = String(sourceId || '').trim();
+      if (!/^[A-Za-z0-9._:-]{1,240}$/.test(id)) return;
+      const row = {lane: 'official_authority', source_id: id};
+      recentWorkState.sources = [row, ...recentWorkState.sources.filter((item) => !(item.lane === row.lane && item.source_id === row.source_id))].slice(0, 24);
+      queueRecentWorkSave();
+    }
+
+    async function loadRecentWorkRestorePoint() {
+      if (!corpusSelect?.value || recentWorkState.loading) return;
+      recentWorkState.loading = true;
+      try {
+        const payload = await fetchJson('/api/recent-work?workspace_id=chat');
+        const point = payload?.restore_point || null;
+        recentWorkState.restorePoint = point;
+        recentWorkState.sources = Array.isArray(point?.selected_sources) ? point.selected_sources.slice(0, 24) : [];
+        renderRecentWorkNotice();
+      } catch (_) {
+        recentWorkState.restorePoint = null;
+      } finally {
+        recentWorkState.loading = false;
+      }
+    }
+
+    function resizeQuestionForRecentWork() {
+      if (!question) return;
+      question.style.height = 'auto';
+      question.style.height = `${Math.min(question.scrollHeight, 180)}px`;
+    }
+
+    function restoreRecentWork() {
+      const point = recentWorkState.restorePoint;
+      const status = document.getElementById('recent-work-status');
+      if (!point) return;
+      const savedDraft = String(point.unsent_draft || '');
+      if (question && question.value && question.value !== savedDraft && !window.confirm('Replace the current unsent question with the encrypted saved draft?')) {
+        if (status) status.textContent = 'Current unsent text was preserved. The saved restore point remains available.';
+        return;
+      }
+      if (question) {
+        question.value = savedDraft;
+        resizeQuestionForRecentWork();
+      }
+      window.scrollTo({top: Math.max(0, Number(point.scroll_position || 0)), behavior: 'auto'});
+      if (status) status.textContent = 'Safe context restored locally. Review the draft, source references, and review-required status before relying on them.';
+      question?.focus({preventScroll: true});
+    }
+
+    async function openRecentWorkSource(owner) {
+      const status = document.getElementById('recent-work-status');
+      try {
+        const payload = await fetchJson('/api/recent-work/chat/sources/0');
+        const source = payload?.source || {};
+        if (source.lane === 'private_matter_record') {
+          const token = String(source.source_token || '');
+          if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('recent_work_source_token_unavailable');
+          await openRecordInspector({source_token: token}, Number(source.page || 0), owner);
+        } else if (source.lane === 'official_authority') {
+          await inspectSource(String(source.source_id || ''), {pin: true, owner});
+        } else {
+          throw new Error('recent_work_source_unavailable');
+        }
+      } catch (error) {
+        if (status) status.innerHTML = renderRecoverableError(error, {title: 'Saved source could not be reopened'});
+      }
+    }
+
+    async function clearRecentWork() {
+      const status = document.getElementById('recent-work-status');
+      try {
+        await fetchJson('/api/recent-work?workspace_id=chat', {method: 'DELETE'});
+        recentWorkState.restorePoint = null;
+        recentWorkState.sources = [];
+        renderRecentWorkNotice();
+        showToast('Saved recent-work context was cleared for this active matter.');
+      } catch (error) {
+        if (status) status.innerHTML = renderRecoverableError(error, {title: 'Saved context could not be cleared'});
+      }
+    }
+
+    window.addEventListener('scroll', queueRecentWorkSave, {passive: true});
+    window.setTimeout(loadRecentWorkRestorePoint, 1200);
 
     document.querySelectorAll('.overlay-shell').forEach((overlay) => {
       overlay.addEventListener('mousedown', (event) => {
@@ -7916,7 +12245,7 @@
 
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Tab') return;
-      const activeOverlay = Array.from(document.querySelectorAll('.overlay-shell')).find((overlay) => !overlay.hidden);
+      const activeOverlay = activeManagedOverlay();
       if (!activeOverlay) return;
       const focusable = overlayFocusableElements(activeOverlay);
       if (!focusable.length) return;
@@ -7947,19 +12276,18 @@
 
     document.addEventListener('keydown', (event) => {
       if (event.defaultPrevented) return;
-      const ctrlOrMeta = event.ctrlKey || event.metaKey;
-      if (ctrlOrMeta && event.key.toLowerCase() === 'k') {
+      if (keyboardShortcutMatches(event, keyboardShortcuts.command_palette)) {
         event.preventDefault();
         openCommandPalette();
         return;
       }
-      if (ctrlOrMeta && event.key.toLowerCase() === 'j') {
+      if (keyboardShortcutMatches(event, keyboardShortcuts.justice)) {
         event.preventDefault();
         openJustice();
         return;
       }
       if (event.key === 'Escape') {
-        const activeOverlay = Array.from(document.querySelectorAll('.overlay-shell')).reverse().find((overlay) => !overlay.hidden);
+        const activeOverlay = activeManagedOverlay();
         if (activeOverlay) {
           event.preventDefault();
           closeOverlay(activeOverlay);
@@ -7996,6 +12324,428 @@
       }
     });
 
+    (function installStructuredDraftOutlineControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('draft-outline-create')) return;
+      const section = document.createElement('section');
+      section.className = 'document-review-card draft-outline-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Before prose</span><strong>Source-bound draft outline</strong></div><span class="badge warn">Review required</span></div><p>Choose one active-matter record and one official source before drafting. This keeps private evidence and legal authority separate and creates no legal conclusion or filing.</p><div class="document-workspace-fields"><label>Outline safe ID<input id="draft-outline-id" maxlength="80" placeholder="outline_001"></label><label>Issue safe ID<input id="draft-outline-issue-id" maxlength="80" placeholder="issue_001"></label><label>Issue label<input id="draft-outline-issue-label" maxlength="300" placeholder="Fictional parenting-time issue"></label><label>Reviewer safe ID<input id="draft-outline-reviewer" maxlength="80" placeholder="reviewer_001"></label></div><label>Purpose (optional)<input id="draft-outline-purpose" maxlength="1000" placeholder="What the reviewer needs to organize before prose"></label><div class="document-workspace-fields"><label>Private evidence<select id="draft-outline-evidence"><option value="">Load active-matter records first</option></select></label><label>Official authority source ID<input id="draft-outline-authority-id" maxlength="240" placeholder="Official source ID from a source card"></label></div><div class="document-workspace-actions"><button class="secondary" id="draft-outline-records" type="button">Load matter records</button><button class="secondary" id="draft-outline-authority-load" type="button">Check official source</button><button class="primary-action" id="draft-outline-create" type="button">Create review outline</button></div><label class="document-review-attestation"><input id="draft-outline-confirm" type="checkbox"> I confirm this is a local reviewer work product and I will verify facts, authority, currentness, and exact spans before relying on prose.</label><div aria-live="polite" class="document-workspace-status" id="draft-outline-result">Load an active-matter record and confirm an official source to begin.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section);
+      const result = section.querySelector('#draft-outline-result');
+      const evidenceSelect = section.querySelector('#draft-outline-evidence');
+      let authorityCandidate = null;
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const loadEvidence = async () => {
+        result.textContent = 'Loading hash-bound records from the active matter…';
+        try {
+          const payload = await fetchJson('/api/drafting/outline-evidence-candidates');
+          const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
+          evidenceSelect.innerHTML = '<option value="">Choose one source-bound private record</option>';
+          candidates.forEach((candidate) => {
+            const option = document.createElement('option');
+            option.value = JSON.stringify({record_id: candidate.record_id, source_hash: candidate.source_hash});
+            option.textContent = String(candidate.title || candidate.record_id) + ' · ' + String(candidate.record_id || 'record');
+            evidenceSelect.append(option);
+          });
+          result.textContent = candidates.length ? 'Choose a private record, then check one official authority source.' : 'No hash-bound records are available in the active matter. Import and index a record first.';
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Matter records could not be loaded'}); }
+      };
+      const loadAuthority = async () => {
+        const sourceId = value('#draft-outline-authority-id');
+        if (!sourceId) { result.textContent = 'Enter the official source ID from a source card.'; return; }
+        result.textContent = 'Checking the selected official source…';
+        try {
+          const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId));
+          authorityCandidate = payload?.candidate || null;
+          if (!authorityCandidate) throw new Error('authority_candidate_unavailable');
+          result.innerHTML = '<strong>Official authority selected for review.</strong> ' + escapeHtml(authorityCandidate.citation || authorityCandidate.source_id) + '<p>Freshness: ' + escapeHtml(authorityCandidate.freshness_status || 'unknown') + ' · exact span: ' + escapeHtml(authorityCandidate.exact_span ? 'available' : 'not supplied') + '.</p>';
+        } catch (error) { authorityCandidate = null; result.innerHTML = renderRecoverableError(error, {title: 'Official source could not be used'}); }
+      };
+      const inspectEvidence = async (outlineId, recordId, owner) => {
+        try {
+          const payload = await fetchJson('/api/drafting/outlines/' + encodeURIComponent(outlineId) + '/evidence/' + encodeURIComponent(recordId) + '/source');
+          const token = String(payload?.source?.source_token || '');
+          if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('outline_record_token_unavailable');
+          openRecordInspector({source_token: token}, Number(payload?.source?.source_block?.page_number || 0), owner);
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Private-record source could not be opened'}); }
+      };
+      section.querySelector('#draft-outline-records').addEventListener('click', loadEvidence);
+      section.querySelector('#draft-outline-authority-load').addEventListener('click', loadAuthority);
+      section.querySelector('#draft-outline-create').addEventListener('click', async () => {
+        let evidence = null;
+        try { evidence = JSON.parse(String(evidenceSelect.value || '')); } catch (_) { evidence = null; }
+        if (!evidence || !authorityCandidate) { result.textContent = 'Choose one active-matter record and check one official authority source before creating an outline.'; return; }
+        if (!section.querySelector('#draft-outline-confirm')?.checked) { result.textContent = 'Confirm the review-required boundary before creating an outline.'; return; }
+        const outlineId = value('#draft-outline-id');
+        const issueId = value('#draft-outline-issue-id');
+        const issueLabel = value('#draft-outline-issue-label');
+        const reviewerSafeId = value('#draft-outline-reviewer');
+        if (!outlineId || !issueId || !issueLabel || !reviewerSafeId) { result.textContent = 'Enter the outline, issue, issue label, and reviewer safe IDs.'; return; }
+        result.textContent = 'Creating encrypted, source-bound outline…';
+        try {
+          const payload = await fetchJson('/api/drafting/outlines', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({outline_id: outlineId, issue_id: issueId, issue_label: issueLabel, reviewer_safe_id: reviewerSafeId, purpose: value('#draft-outline-purpose'), selected_evidence: [evidence], selected_authority: [authorityCandidate], user_confirmed: true})});
+          const outline = payload?.outline || {};
+          const authority = (outline.authority || [])[0] || authorityCandidate;
+          result.innerHTML = '<strong>Review-required outline created.</strong> ' + escapeHtml(outline.issue_label || issueLabel) + '<p>Private record and authority remain separate. No prose, factual finding, legal conclusion, or filing-ready status was created.</p><div class="document-workspace-actions"><button class="secondary compact-action" data-outline-evidence type="button">Open exact private record</button><button class="secondary compact-action" data-outline-authority type="button">Open official source</button></div>';
+          result.querySelector('[data-outline-evidence]')?.addEventListener('click', (event) => inspectEvidence(outline.outline_id || outlineId, evidence.record_id, event.currentTarget));
+          result.querySelector('[data-outline-authority]')?.addEventListener('click', () => inspectSource(String(authority.source_id || authorityCandidate.source_id), {pin: true}));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Draft outline could not be created'}); }
+      });
+      loadEvidence();
+    }());
+    (function installSentenceSupportMapControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('sentence-support-map-create')) return;
+      const section = document.createElement('section');
+      section.className = 'document-review-card sentence-support-map-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Sentence review</span><strong>Sentence-level support map</strong></div><span class="badge warn">Review required</span></div><p>Map every sentence in the saved working draft to source signals. Support, contradiction, qualification, and missing context stay separate; no signal decides truth, legal effect, or filing readiness.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="sentence-support-map-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="sentence-support-map-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><div class="document-workspace-actions"><button class="secondary" id="sentence-support-map-authority-check" type="button">Check official source</button><button class="primary-action" id="sentence-support-map-create" type="button">Map saved draft sentences</button></div><label class="document-review-attestation"><input id="sentence-support-map-confirm" type="checkbox"> I confirm this is a review aid and will inspect the exact record, authority, context, freshness, and verifier status before relying on any sentence.</label><div aria-live="polite" class="document-workspace-status" id="sentence-support-map-result">Save or open a draft, check an official source, then create a review-required sentence map.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section);
+      const result = section.querySelector('#sentence-support-map-result');
+      let authorityCandidate = null;
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const checkAuthority = async () => {
+        const sourceId = value('#sentence-support-map-authority');
+        if (!sourceId) { result.textContent = 'Enter an official source ID from a source card.'; return; }
+        result.textContent = 'Checking the official source and its source hash…';
+        try {
+          const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId));
+          authorityCandidate = payload?.candidate || null;
+          if (!authorityCandidate) throw new Error('sentence_support_authority_unavailable');
+          result.innerHTML = '<strong>Authority selected for review.</strong> ' + escapeHtml(authorityCandidate.citation || authorityCandidate.source_id) + '<p>Freshness: ' + escapeHtml(authorityCandidate.freshness_status || 'unknown') + ' · exact span: ' + escapeHtml(authorityCandidate.exact_span ? 'available' : 'not supplied') + '.</p>';
+        } catch (error) { authorityCandidate = null; result.innerHTML = renderRecoverableError(error, {title: 'Official source could not be checked'}); }
+      };
+      const inspectCard = async (documentId, mapId, sentenceId, lane, cardIndex, owner) => {
+        try {
+          const payload = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/sentence-support-maps/' + encodeURIComponent(mapId) + '/sentences/' + encodeURIComponent(sentenceId) + '/' + encodeURIComponent(lane) + '/' + encodeURIComponent(String(cardIndex)) + '/source');
+          const source = payload?.source || {};
+          if (source.lane === 'private_matter_record') {
+            const token = String(source.source_token || '');
+            if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('sentence_support_record_token_unavailable');
+            openRecordInspector({source_token: token}, Number(source?.page_number || 0), owner);
+          } else {
+            await inspectSource(String(source.source_id || ''), {pin: true, owner});
+          }
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Sentence-map source could not be opened'}); }
+      };
+      const renderMap = (map) => {
+        const documentId = String(map?.document_id || documentWorkspaceState.active?.document_id || '');
+        const mapId = String(map?.map_id || '');
+        const sentences = Array.isArray(map?.sentences) ? map.sentences : [];
+        const kinds = [['supports', 'Support'], ['contradictions', 'Contradictions'], ['qualifications', 'Qualifications']];
+        result.innerHTML = '<strong>Review required.</strong> ' + escapeHtml(String(map?.summary?.sentence_count || sentences.length)) + ' sentence(s) mapped. ' + escapeHtml(String(map?.summary?.missing_context_sentences || 0)) + ' sentence(s) still need context.<p>' + escapeHtml(map?.notice || 'No source signal decides a factual or legal conclusion.') + '</p><details open><summary>Sentence map</summary><ol>' + sentences.map((sentence) => {
+          const cards = kinds.map(([kind, label]) => { const rows = Array.isArray(sentence?.[kind]) ? sentence[kind] : []; return rows.length ? '<div><strong>' + escapeHtml(label) + ':</strong> ' + rows.map((card, index) => '<button class="text-link" data-sentence-map-card="' + escapeHtml(sentence.sentence_id || '') + '" data-sentence-map-lane="' + escapeHtml(kind) + '" data-sentence-map-index="' + escapeHtml(index) + '" type="button">' + escapeHtml(card.title || card.citation || card.record_id || card.source_id || 'source') + '</button>').join(' · ') + '</div>' : ''; }).join('');
+          const missing = Array.isArray(sentence?.missing_context) ? sentence.missing_context : [];
+          return '<li><strong>' + escapeHtml(sentence?.sentence_kind || 'sentence') + ':</strong> ' + escapeHtml(sentence?.text || '') + cards + (missing.length ? '<div><strong>Missing context:</strong> ' + escapeHtml(missing.join(', ').replaceAll('_', ' ')) + '</div>' : '') + '</li>';
+        }).join('') + '</ol></details>';
+        result.querySelectorAll('[data-sentence-map-card]').forEach((button) => button.addEventListener('click', (event) => inspectCard(documentId, mapId, String(button.dataset.sentenceMapCard || ''), String(button.dataset.sentenceMapLane || ''), Number(button.dataset.sentenceMapIndex || 0), event.currentTarget)));
+      };
+      section.querySelector('#sentence-support-map-authority-check').addEventListener('click', checkAuthority);
+      section.querySelector('#sentence-support-map-create').addEventListener('click', async () => {
+        const documentId = String(documentWorkspaceState.active?.document_id || '');
+        const reviewerSafeId = value('#sentence-support-map-reviewer');
+        if (!documentId) { result.textContent = 'Save or open the draft you want to map before running sentence review.'; return; }
+        if (!reviewerSafeId || !authorityCandidate) { result.textContent = 'Enter a reviewer safe ID and check an official authority source first.'; return; }
+        if (!section.querySelector('#sentence-support-map-confirm')?.checked) { result.textContent = 'Confirm the review boundary before mapping the draft.'; return; }
+        result.textContent = 'Mapping every sentence against the active matter and selected authority…';
+        try {
+          const payload = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/sentence-support-maps', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reviewer_safe_id: reviewerSafeId, selected_authority: [authorityCandidate], user_confirmed: true})});
+          renderMap(payload?.map || {});
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Sentence support map could not be created'}); }
+      });
+    }());
+    (function installCitationInsertionControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('citation-insertion-create')) return;
+      const section = document.createElement('section');
+      section.className = 'document-review-card citation-insertion-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Verified citation only</span><strong>Citation insertion assistant</strong></div><span class="badge warn">Review required</span></div><p>Insert only the citation and pinpoint supplied by a selected, hash-bound official source span. The assistant creates a proposed revision; it never silently changes your draft.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="citation-insertion-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="citation-insertion-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label>Exact draft text to cite<textarea id="citation-insertion-text" rows="3" maxlength="4000" placeholder="Paste exact text from the saved draft. If it occurs more than once, specify the occurrence below."></textarea></label><label>Occurrence number (zero-based)<input id="citation-insertion-occurrence" type="number" min="0" value="0"></label><div class="document-workspace-actions"><button class="secondary" id="citation-insertion-authority-check" type="button">Check source span and pinpoint</button><button class="primary-action" id="citation-insertion-create" type="button">Create citation proposal</button></div><label class="document-review-attestation"><input id="citation-insertion-confirm" type="checkbox"> I confirm the selected source span and will review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="citation-insertion-result">Open a saved draft, check an authority source with a verified pinpoint, then create a proposal.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section);
+      const result = section.querySelector('#citation-insertion-result'); let authority = null;
+      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      section.querySelector('#citation-insertion-authority-check').addEventListener('click', async () => {
+        const sourceId = value('#citation-insertion-authority'); if (!sourceId) { result.textContent = 'Enter an official source ID from a source card.'; return; }
+        result.textContent = 'Checking the exact authority span and supplied pinpoint…';
+        try {
+          const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId)); authority = payload?.candidate || null;
+          if (!authority?.pinpoint) throw new Error('verified_pinpoint_unavailable');
+          result.innerHTML = '<strong>Verified citation source selected.</strong> ' + escapeHtml(authority.citation || sourceId) + ', ' + escapeHtml(authority.pinpoint) + '<p>Use remains review required; inspect the exact source span before committing the draft revision.</p>';
+        } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'A source-provided pinpoint is required'}); }
+      });
+      section.querySelector('#citation-insertion-create').addEventListener('click', async () => {
+        const documentId = String(documentWorkspaceState.active?.document_id || ''); const reviewerSafeId = value('#citation-insertion-reviewer'); const selectedText = value('#citation-insertion-text');
+        if (!documentId) { result.textContent = 'Save or open the draft before creating a citation proposal.'; return; }
+        if (!reviewerSafeId || !selectedText || !authority) { result.textContent = 'Enter a reviewer safe ID and exact draft text, then check a source-provided pinpoint.'; return; }
+        if (!section.querySelector('#citation-insertion-confirm')?.checked) { result.textContent = 'Confirm the review boundary before creating a proposal.'; return; }
+        result.textContent = 'Creating source-bound citation receipt…';
+        try {
+          const created = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/citation-insertions', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reviewer_safe_id: reviewerSafeId, selected_text: selectedText, occurrence_index: Number(value('#citation-insertion-occurrence') || 0), authority, user_confirmed: true})});
+          const receipt = created?.receipt || {}; const proposed = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/citation-insertions/' + encodeURIComponent(String(receipt.receipt_id || '')) + '/propose', {method: 'POST'});
+          documentWorkspaceState.proposal = proposed?.proposal || null;
+          if (documentWorkspaceState.proposal) { renderWorkspaceDiff(documentWorkspaceState.proposal); documentWorkspaceCommit.disabled = false; documentWorkspaceReject.disabled = false; }
+          result.innerHTML = '<strong>Reviewable citation proposal created.</strong> ' + escapeHtml(authority.citation || '') + ', ' + escapeHtml(authority.pinpoint || '') + '<p>The original remains preserved. Review the line-by-line diff and use the normal explicit commit control to accept or reject it.</p><button class="secondary compact-action" data-citation-open-source type="button">Open exact official source</button>';
+          result.querySelector('[data-citation-open-source]')?.addEventListener('click', () => inspectSource(String(authority.source_id || ''), {pin: true}));
+        } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Citation proposal could not be created'}); }
+      });
+    }());
+    (function installQuoteSafeDraftingControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('quote-safe-create')) return;
+      const section = document.createElement('section'); section.className = 'document-review-card quote-safe-drafting-control';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Exact source language</span><strong>Quote-safe drafting</strong></div><span class="badge warn">Review required</span></div><p>Replace an exact saved-draft phrase only with text verified against a selected official source span. Fuzzy source matches are blocked; normalization-only matches need separate approval.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="quote-safe-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="quote-safe-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label>Exact saved-draft text to replace<textarea id="quote-safe-selected" rows="2" maxlength="4000"></textarea></label><label>Quote text from selected source span<textarea id="quote-safe-text" rows="3" maxlength="4000"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="quote-safe-authority-check" type="button">Check source span</button><button class="primary-action" id="quote-safe-create" type="button">Create quote proposal</button></div><label class="document-review-attestation"><input id="quote-safe-normalized" type="checkbox"> I approve a normalization-only match if spacing, case, or quote marks differ but the source words match.</label><label class="document-review-attestation"><input id="quote-safe-confirm" type="checkbox"> I will inspect the full source context and review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="quote-safe-result">Open a saved draft and check an official source before creating a quote proposal.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section); const result = section.querySelector('#quote-safe-result'); let authority = null; const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      section.querySelector('#quote-safe-authority-check').addEventListener('click', async () => { const sourceId = value('#quote-safe-authority'); if (!sourceId) { result.textContent = 'Enter an official source ID.'; return; } try { result.textContent = 'Checking selected authority source span…'; const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId)); authority = payload?.candidate || null; if (!authority?.exact_span) throw new Error('exact_source_span_unavailable'); result.innerHTML = '<strong>Source span available for review.</strong> ' + escapeHtml(authority.citation || sourceId) + '<p>Only exact or explicitly approved normalization matches may become a quote proposal.</p>'; } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'An exact source span is required'}); } });
+      section.querySelector('#quote-safe-create').addEventListener('click', async () => { const documentId = String(documentWorkspaceState.active?.document_id || ''); const reviewerSafeId = value('#quote-safe-reviewer'); const selectedText = value('#quote-safe-selected'); const quoteText = value('#quote-safe-text'); if (!documentId || !reviewerSafeId || !selectedText || !quoteText || !authority) { result.textContent = 'Open a saved draft, enter reviewer ID and both exact text fields, and check an official source span.'; return; } if (!section.querySelector('#quote-safe-confirm')?.checked) { result.textContent = 'Confirm the review boundary before creating a quote proposal.'; return; } try { result.textContent = 'Verifying quote text against the selected source span…'; const created = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/quote-receipts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer_safe_id:reviewerSafeId, selected_text:selectedText, quote_text:quoteText, authority, normalized_quote_approved:Boolean(section.querySelector('#quote-safe-normalized')?.checked), user_confirmed:true})}); const receipt = created?.receipt || {}; const proposed = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/quote-receipts/' + encodeURIComponent(String(receipt.receipt_id || '')) + '/propose', {method:'POST'}); documentWorkspaceState.proposal = proposed?.proposal || null; if (documentWorkspaceState.proposal) { renderWorkspaceDiff(documentWorkspaceState.proposal); documentWorkspaceCommit.disabled=false; documentWorkspaceReject.disabled=false; } result.innerHTML = '<strong>Reviewable quote proposal created.</strong> Match status: ' + escapeHtml(receipt?.quote?.status || 'review required') + '.<p>The original remains preserved; review the normal line-by-line proposal and explicitly commit or reject it.</p><button class="secondary compact-action" data-quote-safe-source type="button">Open exact official source</button>'; result.querySelector('[data-quote-safe-source]')?.addEventListener('click', () => inspectSource(String(authority.source_id || ''), {pin:true})); } catch (error) { result.innerHTML = renderRecoverableError(error, {title:'Quote proposal could not be created'}); } });
+    }());
+    (function installDraftRequirementProfilesControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('draft-requirement-create')) return;
+      const section = document.createElement('section'); section.className='document-review-card draft-requirement-profile-control';
+      section.innerHTML='<div class="document-review-heading"><div><span>Local reviewer checklist</span><strong>Draft requirement profile</strong></div><span class="badge warn">Review required</span></div><p>Configure a local text checklist for this matter. It is not a court-approved form, rule, deadline, or filing determination.</p><div class="document-workspace-fields"><label>Profile safe ID<input id="draft-requirement-id" maxlength="80" placeholder="motion_review_001"></label><label>Reviewer safe ID<input id="draft-requirement-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Profile label<input id="draft-requirement-label" maxlength="300" placeholder="Fictional motion review"></label><label>Maximum characters<input id="draft-requirement-limit" type="number" min="1" max="1500000" value="10000"></label></div><label>Required section labels (one per line)<textarea id="draft-requirement-sections" rows="3" maxlength="8000" placeholder="Background&#10;Requested relief&#10;Source review"></textarea></label><label>Review gates (one per line; optional)<textarea id="draft-requirement-gates" rows="2" maxlength="4000" placeholder="Human review required&#10;Source and citation review required"></textarea></label><label class="document-review-attestation"><input id="draft-requirement-confirm" type="checkbox"> I confirm this is a local reviewer checklist, not a representation of court requirements.</label><div class="document-workspace-actions"><button class="secondary" id="draft-requirement-create" type="button">Save local profile</button><button class="primary-action" id="draft-requirement-evaluate" type="button">Evaluate saved draft</button></div><div aria-live="polite" class="document-workspace-status" id="draft-requirement-result">Create a local profile, then evaluate the saved draft.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section); const result=section.querySelector('#draft-requirement-result'); const value=(s)=>String(section.querySelector(s)?.value||'').trim(); const lines=(s)=>value(s).split(/\n/).map((item)=>item.trim()).filter(Boolean);
+      section.querySelector('#draft-requirement-create').addEventListener('click',async()=>{ const profile_id=value('#draft-requirement-id'),reviewer_safe_id=value('#draft-requirement-reviewer'),label=value('#draft-requirement-label'); if(!profile_id||!reviewer_safe_id||!label||!lines('#draft-requirement-sections').length){result.textContent='Enter a profile ID, reviewer ID, label, and at least one required section.';return;} if(!section.querySelector('#draft-requirement-confirm')?.checked){result.textContent='Confirm the local-reviewer boundary before saving a profile.';return;} try{result.textContent='Saving encrypted local requirement profile…';const payload=await fetchJson('/api/drafting/requirement-profiles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_id,label,reviewer_safe_id,required_sections:lines('#draft-requirement-sections'),max_characters:Number(value('#draft-requirement-limit')||0),review_gates:lines('#draft-requirement-gates'),user_confirmed:true})});result.innerHTML='<strong>Review-required profile saved.</strong> '+escapeHtml(payload?.profile?.label||label)+'. It can only evaluate local checklist conditions.';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Requirement profile could not be saved'});}});
+      section.querySelector('#draft-requirement-evaluate').addEventListener('click',async()=>{const documentId=String(documentWorkspaceState.active?.document_id||''),profileId=value('#draft-requirement-id');if(!documentId||!profileId){result.textContent='Save or open a draft and enter the saved profile ID.';return;}try{result.textContent='Evaluating saved draft against local profile…';const payload=await fetchJson('/api/drafting/documents/'+encodeURIComponent(documentId)+'/requirement-profiles/'+encodeURIComponent(profileId)+'/evaluate',{method:'POST'});result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(payload.character_count||0))+' / '+escapeHtml(String(payload.max_characters||0))+' characters.<p>Missing sections: '+escapeHtml((payload.missing_sections||[]).join(', ')||'none')+'. Blockers: '+escapeHtml((payload.blockers||[]).join(', ').replaceAll('_',' ')||'none')+'.</p><p>'+escapeHtml(payload.notice||'')+'</p>';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Requirement profile could not evaluate draft'});}});
+    }());
+    (function installRevisionRationaleControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('revision-rationale-save'))return;const section=document.createElement('section');section.className='document-review-card revision-rationale-control';section.innerHTML='<div class="document-review-heading"><div><span>Why this change</span><strong>Revision rationale ledger</strong></div><span class="badge warn">Review required</span></div><p>Record the reviewer reason, affected claim IDs, and verifier-impact state for the exact saved draft revision. This rationale is not verification or approval.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="revision-rationale-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Verifier impact<select id="revision-rationale-impact"><option value="not_run">Verifier not run</option><option value="needs_recheck">Needs recheck</option><option value="no_known_verifier_change">No known verifier change</option><option value="introduced_support_gap">Introduced support gap</option><option value="introduced_citation_change">Introduced citation change</option></select></label></div><label>Change summary<textarea id="revision-rationale-summary" rows="2" maxlength="2000"></textarea></label><label>Reason for change<textarea id="revision-rationale-reason" rows="3" maxlength="4000"></textarea></label><label>Affected claim IDs (comma separated, optional)<input id="revision-rationale-claims" maxlength="4000"></label><label class="document-review-attestation"><input id="revision-rationale-confirm" type="checkbox"> I confirm this is a local review record for the exact saved revision.</label><div class="document-workspace-actions"><button class="secondary" id="revision-rationale-save" type="button">Record rationale</button><button class="secondary" id="revision-rationale-load" type="button">Load rationale history</button></div><div aria-live="polite" class="document-workspace-status" id="revision-rationale-result">Open a saved draft to record its revision rationale.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',section);const r=section.querySelector('#revision-rationale-result'),v=(s)=>String(section.querySelector(s)?.value||'').trim();const load=async()=>{const id=String(documentWorkspaceState.active?.document_id||'');if(!id){r.textContent='Open a saved draft first.';return;}try{const p=await fetchJson('/api/drafting/documents/'+encodeURIComponent(id)+'/revision-rationales');r.innerHTML='<strong>Review required.</strong> '+escapeHtml(String((p.rationales||[]).length))+' rationale record(s).<ul>'+(p.rationales||[]).slice(-10).map((x)=>'<li>'+escapeHtml(x.change_summary||'')+' · '+escapeHtml(String(x.verifier_impact||'').replaceAll('_',' '))+'</li>').join('')+'</ul>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Rationale history could not be loaded'});}};section.querySelector('#revision-rationale-save').addEventListener('click',async()=>{const id=String(documentWorkspaceState.active?.document_id||''),reviewer_safe_id=v('#revision-rationale-reviewer'),change_summary=v('#revision-rationale-summary'),reason=v('#revision-rationale-reason');if(!id||!reviewer_safe_id||!change_summary||!reason){r.textContent='Open a saved draft and enter reviewer ID, summary, and reason.';return;}if(!section.querySelector('#revision-rationale-confirm')?.checked){r.textContent='Confirm the exact-revision review boundary.';return;}try{await fetchJson('/api/drafting/documents/'+encodeURIComponent(id)+'/revision-rationales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_safe_id,change_summary,reason,affected_claim_ids:v('#revision-rationale-claims').split(',').map(x=>x.trim()).filter(Boolean),verifier_impact:v('#revision-rationale-impact'),user_confirmed:true})});await load();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Revision rationale could not be recorded'});}});section.querySelector('#revision-rationale-load').addEventListener('click',load);
+    }());
+    (function installImplementationFeasibilityControl() {const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('implementation-feasibility-create'))return;const s=document.createElement('section');s.className='document-review-card implementation-feasibility-control';s.innerHTML='<div class="document-review-heading"><div><span>Operational review only</span><strong>Implementation feasibility review</strong></div><span class="badge warn">Review required</span></div><p>Flag possible internal conflicts, undefined terms, missing dates, and operational ambiguity from source-bound reviewer text. It does not decide validity, enforceability, legal effect, or an outcome.</p><div class="document-workspace-fields"><label>Review ID<input id="implementation-feasibility-id" placeholder="implementation_001"></label><label>Reviewer ID<input id="implementation-feasibility-reviewer" placeholder="reviewer_001"></label><label>Source record<select id="implementation-feasibility-record"></select></label><label>Topic<input id="implementation-feasibility-topic" placeholder="schedule"></label></div><label>Clause text<textarea id="implementation-feasibility-text" rows="3" placeholder="Reviewer-entered proposal clause"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="implementation-feasibility-records" type="button">Load records</button></div><label class="document-review-attestation"><input id="implementation-feasibility-confirm" type="checkbox"> I confirm this is an ambiguity review, not a legal determination.</label><div class="document-workspace-actions"><button class="primary-action" id="implementation-feasibility-create" type="button">Flag review items</button><button class="secondary" id="implementation-feasibility-load" type="button">Load review</button></div><div aria-live="polite" class="document-workspace-status" id="implementation-feasibility-result">Load a record and enter a reviewer clause.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#implementation-feasibility-result');const records=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');q('#implementation-feasibility-record').innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q('#implementation-feasibility-record').append(o);});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const render=x=>r.innerHTML='<strong>Review required.</strong> '+escapeHtml(String((x.flags||[]).length))+' potential ambiguity item(s).<p>'+escapeHtml(x.notice||'')+'</p>';q('#implementation-feasibility-records').addEventListener('click',records);q('#implementation-feasibility-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(q('#implementation-feasibility-record').value);}catch(_){r.textContent='Load a source record first.';return;}if(!v('#implementation-feasibility-id')||!v('#implementation-feasibility-reviewer')||!v('#implementation-feasibility-topic')||!v('#implementation-feasibility-text')||!q('#implementation-feasibility-confirm').checked){r.textContent='Enter IDs, topic, clause text, and confirm the review boundary.';return;}try{const p=await fetchJson('/api/implementation-feasibility-reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review_id:v('#implementation-feasibility-id'),reviewer_safe_id:v('#implementation-feasibility-reviewer'),clauses:[{clause_id:'clause_001',topic:v('#implementation-feasibility-topic').replace(/[^a-zA-Z0-9_-]/g,'_').toLowerCase(),text:v('#implementation-feasibility-text'),source_ref:source}],user_confirmed:true})});render(p.review||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Feasibility review could not be created'});}});q('#implementation-feasibility-load').addEventListener('click',async()=>{try{render((await fetchJson('/api/implementation-feasibility-reviews/'+encodeURIComponent(v('#implementation-feasibility-id')))).review||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Feasibility review could not be loaded'});}});records();}());
+    (function installImplementationFeasibilitySourceDrilldown(){const s=document.querySelector('.implementation-feasibility-control');if(!s)return;const r=s.querySelector('#implementation-feasibility-result'),attach=()=>{if(!r||!r.textContent.includes('Review required')||r.querySelector('[data-implementation-source]'))return;r.insertAdjacentHTML('beforeend','<div class="document-workspace-actions"><button class="secondary compact-action" data-implementation-source type="button">Open source record</button></div>');r.querySelector('[data-implementation-source]')?.addEventListener('click',async(e)=>{try{const id=String(s.querySelector('#implementation-feasibility-id')?.value||'').trim(),p=await fetchJson('/api/implementation-feasibility-reviews/'+encodeURIComponent(id)+'/clauses/clause_001/source'),t=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(t))throw new Error('implementation_source_token_unavailable');openRecordInspector({source_token:t},0,e.currentTarget);}catch(error){r.innerHTML=renderRecoverableError(error,{title:'Clause source could not be opened'});}});};s.querySelector('#implementation-feasibility-create')?.addEventListener('click',()=>window.setTimeout(attach,350));s.querySelector('#implementation-feasibility-load')?.addEventListener('click',()=>window.setTimeout(attach,250));}());
+    (function installCommunicationPlanControl(){const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('communication-plan-create'))return;const s=document.createElement('section');s.className='document-review-card communication-plan-control';s.innerHTML='<div class="document-review-heading"><div><span>Neutral draft only</span><strong>Communication plan</strong></div><span class="badge warn">Review required</span></div><p>Draft reviewer-selected neutral exchange or communication terms from source-bound records. It does not determine safety, consent, agreement, or enforceability.</p><div class="document-workspace-fields"><label>Plan ID<input id="communication-plan-id" placeholder="communication_001"></label><label>Reviewer ID<input id="communication-plan-reviewer" placeholder="reviewer_001"></label><label>Source record<select id="communication-plan-record"></select></label><label>Topic<input id="communication-plan-topic" placeholder="exchange"></label></div><label>Term text<textarea id="communication-plan-text" rows="3"></textarea></label><button class="secondary" id="communication-plan-records" type="button">Load records</button><label class="document-review-attestation"><input id="communication-plan-confirm" type="checkbox"> I confirm this is a neutral review draft.</label><div class="document-workspace-actions"><button class="primary-action" id="communication-plan-create" type="button">Create plan</button><button class="secondary" id="communication-plan-load" type="button">Load plan</button></div><div aria-live="polite" class="document-workspace-status" id="communication-plan-result">Load a record and enter a neutral term.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#communication-plan-result');const records=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');q('#communication-plan-record').innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q('#communication-plan-record').append(o);});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const render=x=>r.innerHTML='<strong>Review required.</strong> '+escapeHtml(String((x.terms||[]).length))+' neutral term(s).<p>'+escapeHtml(x.notice||'')+'</p>';q('#communication-plan-records').addEventListener('click',records);q('#communication-plan-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(q('#communication-plan-record').value);}catch(_){r.textContent='Load a source record first.';return;}if(!v('#communication-plan-id')||!v('#communication-plan-reviewer')||!v('#communication-plan-topic')||!v('#communication-plan-text')||!q('#communication-plan-confirm').checked){r.textContent='Enter IDs, topic, term, source, and confirm the review boundary.';return;}try{const p=await fetchJson('/api/communication-plans',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan_id:v('#communication-plan-id'),reviewer_safe_id:v('#communication-plan-reviewer'),terms:[{term_id:'term_001',topic:v('#communication-plan-topic').replace(/[^a-zA-Z0-9_-]/g,'_').toLowerCase(),text:v('#communication-plan-text')}],source_refs:[source],user_confirmed:true})});render(p.plan||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Communication plan could not be created'});}});q('#communication-plan-load').addEventListener('click',async()=>{try{render((await fetchJson('/api/communication-plans/'+encodeURIComponent(v('#communication-plan-id')))).plan||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Communication plan could not be loaded'});}});records();}());
+    (function installCommunicationPlanSourceDrilldown(){const s=document.querySelector('.communication-plan-control');if(!s)return;const r=s.querySelector('#communication-plan-result'),attach=()=>{if(!r||!r.textContent.includes('Review required')||r.querySelector('[data-communication-source]'))return;r.insertAdjacentHTML('beforeend','<div class="document-workspace-actions"><button class="secondary compact-action" data-communication-source type="button">Open source record</button></div>');r.querySelector('[data-communication-source]')?.addEventListener('click',async(e)=>{try{const id=String(s.querySelector('#communication-plan-id')?.value||'').trim(),src=JSON.parse(String(s.querySelector('#communication-plan-record')?.value||'')),p=await fetchJson('/api/communication-plans/'+encodeURIComponent(id)+'/sources/'+encodeURIComponent(String(src.record_id||''))),t=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(t))throw new Error('communication_source_token_unavailable');openRecordInspector({source_token:t},0,e.currentTarget);}catch(error){r.innerHTML=renderRecoverableError(error,{title:'Communication source could not be opened'});}});};s.querySelector('#communication-plan-create')?.addEventListener('click',()=>window.setTimeout(attach,350));s.querySelector('#communication-plan-load')?.addEventListener('click',()=>window.setTimeout(attach,250));}());
+    (function installComplianceLogControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('compliance-log-create'))return;const s=document.createElement('section');s.className='document-review-card compliance-log-control';s.innerHTML='<div class="document-review-heading"><div><span>Observation only</span><strong>Compliance log</strong></div><span class="badge warn">Review required</span></div><p>Record a source-bound allegation or observation against an exact order term. It does not determine compliance, violation, contempt, credibility, or a finding.</p><div class="document-workspace-fields"><label>Log ID<input id="compliance-log-id"></label><label>Reviewer ID<input id="compliance-log-reviewer"></label><label>Order term<select id="compliance-log-term"></select></label><label>Event record<select id="compliance-log-record"></select></label><label>Date<input id="compliance-log-date"></label><label>State<select id="compliance-log-state"><option value="observation">Observation</option><option value="allegation">Allegation</option></select></label></div><label>Event text<textarea id="compliance-log-text" rows="2"></textarea></label><button class="secondary" id="compliance-log-inputs" type="button">Load terms and records</button><label class="document-review-attestation"><input id="compliance-log-confirm" type="checkbox"> I confirm this is not a finding.</label><div class="document-workspace-actions"><button class="primary-action" id="compliance-log-create" type="button">Record event</button><button class="secondary" id="compliance-log-load" type="button">Load event</button></div><div aria-live="polite" class="document-workspace-status" id="compliance-log-result">Load exact order terms and a source record.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#compliance-log-result'),load=async()=>{try{const [t,p]=await Promise.all([fetchJson('/api/orders/terms'),fetchJson('/api/drafting/outline-evidence-candidates')]);q('#compliance-log-term').innerHTML='';(t.terms||[]).forEach(x=>{const o=document.createElement('option');o.value=x.term_id;o.textContent=x.term_id;q('#compliance-log-term').append(o);});q('#compliance-log-record').innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q('#compliance-log-record').append(o);});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Terms or records could not be loaded'});}};const render=x=>r.innerHTML='<strong>Review required.</strong> '+escapeHtml(x.event?.state||'unknown')+'.<p>'+escapeHtml(x.notice||'')+'</p>';q('#compliance-log-inputs').addEventListener('click',load);q('#compliance-log-create').addEventListener('click',async()=>{let src;try{src=JSON.parse(q('#compliance-log-record').value);}catch(_){r.textContent='Load an event source first.';return;}if(!v('#compliance-log-id')||!v('#compliance-log-reviewer')||!v('#compliance-log-term')||!v('#compliance-log-date')||!v('#compliance-log-text')||!q('#compliance-log-confirm').checked){r.textContent='Enter IDs, term, event, and confirm the review boundary.';return;}try{const p=await fetchJson('/api/compliance-logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({log_id:v('#compliance-log-id'),reviewer_safe_id:v('#compliance-log-reviewer'),term_id:v('#compliance-log-term'),event_id:'event_001',date_candidate:v('#compliance-log-date'),text:v('#compliance-log-text'),event_state:v('#compliance-log-state'),event_source_ref:src,user_confirmed:true})});render(p.log||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Compliance log could not be created'});}});q('#compliance-log-load').addEventListener('click',async()=>{try{render((await fetchJson('/api/compliance-logs/'+encodeURIComponent(v('#compliance-log-id')))).log||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Compliance log could not be loaded'});}});load();}());
+    (function installComplianceLogSourceDrilldown(){const s=document.querySelector('.compliance-log-control');if(!s)return;const r=s.querySelector('#compliance-log-result'),attach=()=>{if(!r||!r.textContent.includes('Review required')||r.querySelector('[data-compliance-source]'))return;r.insertAdjacentHTML('beforeend','<div class="document-workspace-actions"><button class="secondary compact-action" data-compliance-source type="button">Open event source</button></div>');r.querySelector('[data-compliance-source]')?.addEventListener('click',async(e)=>{try{const id=String(s.querySelector('#compliance-log-id')?.value||'').trim(),p=await fetchJson('/api/compliance-logs/'+encodeURIComponent(id)+'/event-source'),t=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(t))throw new Error('compliance_source_token_unavailable');openRecordInspector({source_token:t},0,e.currentTarget);}catch(error){r.innerHTML=renderRecoverableError(error,{title:'Event source could not be opened'});}});};s.querySelector('#compliance-log-create')?.addEventListener('click',()=>window.setTimeout(attach,350));s.querySelector('#compliance-log-load')?.addEventListener('click',()=>window.setTimeout(attach,250));}());
+    (function installHardwareBenchmarkControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('hardware-benchmark-create'))return;const s=document.createElement('section');s.className='document-review-card hardware-benchmark-control';s.innerHTML='<div class="document-review-heading"><div><span>Local-only measurement</span><strong>Hardware benchmark</strong></div><span class="badge warn">Review required</span></div><p>Measure local CPU, RAM, storage, and a bounded CPU probe. No model is run, downloaded, or admitted; model throughput stays explicitly unmeasured.</p><div class="document-workspace-fields"><label>Benchmark ID<input id="hardware-benchmark-id" placeholder="hardware_001"></label></div><label class="document-review-attestation"><input id="hardware-benchmark-confirm" type="checkbox"> I confirm this bounded local probe may run; it will not change settings or make network requests.</label><div class="document-workspace-actions"><button class="primary-action" id="hardware-benchmark-create" type="button">Measure hardware</button><button class="secondary" id="hardware-benchmark-load" type="button">Load result</button></div><div aria-live="polite" class="document-workspace-status" id="hardware-benchmark-result">Run a local measurement to receive reviewable bounded recommendations.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#hardware-benchmark-result'),render=x=>r.innerHTML='<strong>Review required.</strong> CPU cores: '+escapeHtml(String(x.system?.cpu_logical_cores||'unknown'))+' · model throughput: '+escapeHtml(x.model_throughput?.status||'not measured')+'.<p>Recommended worker cap: '+escapeHtml(String(x.bounded_recommendation?.max_parallel_workers||'unknown'))+'. No setting was changed.</p>';q('#hardware-benchmark-create').addEventListener('click',async()=>{if(!v('#hardware-benchmark-id')||!q('#hardware-benchmark-confirm').checked){r.textContent='Enter a benchmark ID and confirm the local-only measurement boundary.';return;}try{r.textContent='Measuring local hardware…';render(await fetchJson('/api/runtime/hardware-benchmarks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({benchmark_id:v('#hardware-benchmark-id'),user_confirmed:true})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Hardware measurement could not run'});}});q('#hardware-benchmark-load').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/hardware-benchmarks/'+encodeURIComponent(v('#hardware-benchmark-id'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Hardware result could not be loaded'});}});}());
+    (function installModelAdmissionBenchmarkControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('model-benchmark-create'))return;const s=document.createElement('section');s.className='document-review-card model-benchmark-control';s.innerHTML='<div class="document-review-heading"><div><span>Loopback model test</span><strong>Model admission benchmark</strong></div><span class="badge warn">Review required</span></div><p>Run latency, context, structured-output, and safety checks against a selected loopback model. Results never admit or enable the model.</p><div class="document-workspace-fields"><label>Benchmark ID<input id="model-benchmark-id"></label><label>Provider<select id="model-benchmark-provider"><option value="ollama">Ollama</option><option value="openai_compatible_local">OpenAI-compatible local</option></select></label><label>Loopback endpoint<input id="model-benchmark-endpoint" value="http://127.0.0.1:11434"></label><label>Model<input id="model-benchmark-model" value="qwen2.5:7b"></label></div><label class="document-review-attestation"><input id="model-benchmark-confirm" type="checkbox"> I confirm this loopback model may receive synthetic benchmark prompts only.</label><div class="document-workspace-actions"><button class="primary-action" id="model-benchmark-create" type="button">Run local benchmark</button></div><div aria-live="polite" class="document-workspace-status" id="model-benchmark-result">No local model is admitted by this benchmark.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#model-benchmark-result');q('#model-benchmark-create').addEventListener('click',async()=>{if(!v('#model-benchmark-id')||!q('#model-benchmark-confirm').checked){r.textContent='Enter an ID and confirm synthetic loopback prompts.';return;}try{r.textContent='Running bounded local model tests…';const p=await fetchJson('/api/runtime/model-admission-benchmarks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({benchmark_id:v('#model-benchmark-id'),provider:v('#model-benchmark-provider'),endpoint:v('#model-benchmark-endpoint'),model:v('#model-benchmark-model'),user_confirmed:true})});r.innerHTML='<strong>Review required.</strong> Baseline: '+escapeHtml(p.baseline_status||'unknown')+' · structured output: '+escapeHtml(String(p.structured_output?.passed))+' · safety prompt blocked: '+escapeHtml(String(p.safety?.direct_prompt_blocked))+'.<p>No model was admitted or enabled.</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Local model benchmark could not run'});}});}());
+    (function installTaskModelRoutingControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('task-model-route'))return;const s=document.createElement('section');s.className='document-review-card task-model-routing-control';s.innerHTML='<div class="document-review-heading"><div><span>Admission-gated selection</span><strong>Task-specific local model routing</strong></div><span class="badge warn">Review required</span></div><p>Check whether an admitted local model can serve a task. Registered or merely verified artifacts cannot be selected; the app falls back safely when none is admitted.</p><div class="document-workspace-fields"><label>Task<input id="task-model-route-task" value="summarization"></label><label>Preferred admitted model (optional)<input id="task-model-route-model"></label></div><div class="document-workspace-actions"><button class="primary-action" id="task-model-route" type="button">Check route</button></div><div aria-live="polite" class="document-workspace-status" id="task-model-route-result">No model is selected until it passes the admission boundary.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#task-model-route-result');q('#task-model-route').addEventListener('click',async()=>{if(!v('#task-model-route-task')){r.textContent='Enter a task name.';return;}try{const p=await fetchJson('/api/local-workbench/models/route',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:v('#task-model-route-task'),preferred_model_id:v('#task-model-route-model')})});r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'. '+escapeHtml(p.selected_model?.display_name||'Safe fallback selected.')+'<p>'+escapeHtml(p.admission_boundary||'')+'</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Task route could not be checked'});}});}());
+    (function installWarmModelPoolControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('warm-model-pool-warm'))return;const s=document.createElement('section');s.className='document-review-card warm-model-pool-control';s.innerHTML='<div class="document-review-heading"><div><span>Resource-bounded local runtime</span><strong>Warm model pool</strong></div><span class="badge warn">Review required</span></div><p>Keep only a separately task-admitted, loopback-configured worker warm. The pool uses a synthetic prompt only and refuses any worker it cannot explicitly release under memory or thermal pressure.</p><div class="document-workspace-fields"><label>Task<input id="warm-model-pool-task" value="summarization"></label><label>Preferred admitted model (optional)<input id="warm-model-pool-model"></label><label>Thermal state<select id="warm-model-pool-thermal"><option value="unknown">Not measured</option><option value="normal">Normal</option><option value="elevated">Elevated (release)</option><option value="critical">Critical (release)</option></select></label></div><label class="document-review-attestation"><input id="warm-model-pool-confirm" type="checkbox"> I confirm a synthetic loopback warm-up may run. No private matter text is sent to the model.</label><div class="document-workspace-actions"><button class="primary-action" id="warm-model-pool-warm" type="button">Warm safely</button><button class="secondary" id="warm-model-pool-status" type="button">Check pool</button><button class="secondary" id="warm-model-pool-release" type="button">Release selected worker</button></div><div aria-live="polite" class="document-workspace-status" id="warm-model-pool-result">No worker is warm until it passes task admission, loopback validation, and explicit-release checks.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#warm-model-pool-result'),thermal=()=>v('#warm-model-pool-thermal')||'unknown';let selectedId='';const render=p=>{selectedId=String(p.worker?.model_id||p.route?.selected_model_id||selectedId||'');const pressure=p.pressure||{};r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'.<p>Memory pressure: '+escapeHtml(String(!!pressure.memory_pressure))+' · thermal state: '+escapeHtml(pressure.thermal_state||'unknown')+'. '+escapeHtml(p.route?.admission_boundary||'Only a task-admitted model may be warmed.')+'</p>';};q('#warm-model-pool-warm').addEventListener('click',async()=>{if(!v('#warm-model-pool-task')||!q('#warm-model-pool-confirm').checked){r.textContent='Enter a task and confirm the synthetic loopback warm-up boundary.';return;}try{r.textContent='Checking admission and safely warming the local worker…';render(await fetchJson('/api/runtime/warm-model-pool/warm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:v('#warm-model-pool-task'),preferred_model_id:v('#warm-model-pool-model'),thermal_state:thermal(),user_confirmed:true})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Local worker could not be warmed'});}});q('#warm-model-pool-status').addEventListener('click',async()=>{try{const p=await fetchJson('/api/runtime/warm-model-pool?thermal_state='+encodeURIComponent(thermal()));const worker=(p.workers||[])[0];if(worker)selectedId=String(worker.model_id||selectedId);render({status:worker?.status||'no_warm_worker_review_required',worker,pressure:p.pressure});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Warm pool status could not be loaded'});}});q('#warm-model-pool-release').addEventListener('click',async()=>{if(!selectedId){r.textContent='Check the pool or warm an admitted worker before releasing it.';return;}try{render(await fetchJson('/api/runtime/warm-model-pool/release',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model_id:selectedId,reason:thermal()==='critical'||thermal()==='elevated'?'thermal_pressure':'operator_requested'})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Local worker could not be released'});}});}());
+    (function installContextCacheControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('context-cache-save'))return;const s=document.createElement('section');s.className='document-review-card context-cache-control';s.innerHTML='<div class="document-review-heading"><div><span>Encrypted and source-bound</span><strong>Prompt-prefix and retrieval cache</strong></div><span class="badge warn">Review required</span></div><p>Save a bounded cache artifact only with exact source hashes. Public-authority scope refuses private-record references; all entries remain encrypted inside this matter and invalidate when a source hash changes.</p><div class="document-workspace-fields"><label>Cache ID<input id="context-cache-id" placeholder="retrieval_001"></label><label>Kind<select id="context-cache-kind"><option value="retrieval">Retrieval</option><option value="prompt_prefix">Prompt prefix</option></select></label><label>Scope<select id="context-cache-scope"><option value="matter">This matter (encrypted)</option><option value="public_authority">Public authority only (encrypted)</option></select></label></div><label>Source references JSON<textarea id="context-cache-sources" rows="3" placeholder="[{&quot;source_id&quot;:&quot;source_001&quot;,&quot;content_sha256&quot;:&quot;64-character hash&quot;,&quot;private_record&quot;:false}]"></textarea></label><label>Cache artifact JSON or text<textarea id="context-cache-artifact" rows="2" placeholder="A bounded, reviewable retrieval result or prompt prefix."></textarea></label><label>Source changes JSON (to invalidate)<textarea id="context-cache-changes" rows="2" placeholder="[{&quot;source_id&quot;:&quot;source_001&quot;,&quot;content_sha256&quot;:&quot;new 64-character hash&quot;}]"></textarea></label><div class="document-workspace-actions"><button class="primary-action" id="context-cache-save" type="button">Save encrypted cache</button><button class="secondary" id="context-cache-load" type="button">Load cache</button><button class="secondary" id="context-cache-invalidate" type="button">Invalidate changed sources</button><button class="secondary" id="context-cache-source" type="button">Open first source</button></div><div aria-live="polite" class="document-workspace-status" id="context-cache-result">Cache entries remain review-required and are not answer authority.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#context-cache-result');let refs=[];const parse=(value,label)=>{try{return JSON.parse(value);}catch(_){throw new Error(label+' must be valid JSON.');}};const render=p=>{const e=p.entry||p;r.innerHTML='<strong>Review required.</strong> '+escapeHtml(e.status||'unknown')+'.<p>'+escapeHtml(e.kind||'cache')+' · '+escapeHtml(e.scope||'scope')+' · '+escapeHtml(String((e.source_refs||[]).length))+' exact source hash(es). '+escapeHtml(e.invalidation_reason||'')+'</p>';refs=e.source_refs||refs;};q('#context-cache-save').addEventListener('click',async()=>{try{const raw=v('#context-cache-artifact'),artifact=raw.startsWith('{')||raw.startsWith('[')?parse(raw,'Cache artifact'):raw,source_refs=parse(v('#context-cache-sources'),'Source references');if(!v('#context-cache-id')||!raw){r.textContent='Enter a cache ID, source references, and a bounded artifact.';return;}r.textContent='Encrypting source-bound cache artifact…';render(await fetchJson('/api/runtime/context-cache',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cache_id:v('#context-cache-id'),kind:v('#context-cache-kind'),scope:v('#context-cache-scope'),source_refs,artifact})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Cache entry could not be saved'});}});q('#context-cache-load').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/context-cache/'+encodeURIComponent(v('#context-cache-id'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Cache entry could not be loaded'});}});q('#context-cache-invalidate').addEventListener('click',async()=>{try{const p=await fetchJson('/api/runtime/context-cache/invalidate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({changes:parse(v('#context-cache-changes'),'Source changes')})});r.innerHTML='<strong>Review required.</strong> Invalidated '+escapeHtml(String((p.invalidated_cache_ids||[]).length))+' cache entry or entries; rebuild only from current source hashes.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Cache invalidation could not run'});}});q('#context-cache-source').addEventListener('click',async e=>{try{const ref=refs[0];if(!ref){r.textContent='Load a cache entry with a source reference first.';return;}const p=await fetchJson('/api/runtime/context-cache/'+encodeURIComponent(v('#context-cache-id'))+'/sources/'+encodeURIComponent(String(ref.source_id||'')));const token=String(p?.source_ref?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('Cache source has no record-inspector token.');openRecordInspector({source_token:token},0,e.currentTarget);}catch(error){r.innerHTML=renderRecoverableError(error,{title:'Exact cached source could not be opened'});}});}());
+    (function installSpeculativeRetrievalControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('speculative-retrieval-intent'))return;const s=document.createElement('section');s.className='document-review-card speculative-retrieval-control';s.innerHTML='<div class="document-review-heading"><div><span>Local preview only</span><strong>Speculative retrieval</strong></div><span class="badge warn">No answer committed</span></div><p>As you type a likely research intent, the workbench may preview local source cards. It sends nothing externally, creates no answer, and can be discarded at any time.</p><div class="document-workspace-fields"><label>Preview ID<input id="speculative-retrieval-id" value="preview_001"></label><label>Typed intent<input id="speculative-retrieval-intent" autocomplete="off" placeholder="Try: service deadline under Maine rules"></label></div><div class="document-workspace-actions"><button class="secondary" id="speculative-retrieval-discard" type="button">Discard preview</button><button class="secondary" id="speculative-retrieval-source" type="button">Inspect first candidate</button></div><div aria-live="polite" class="document-workspace-status" id="speculative-retrieval-result">Type a substantive research intent to start a local, discardable preview.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#speculative-retrieval-result');let timer=0,candidates=[];const render=p=>{const x=p.preview||p;candidates=x.candidate_sources||[];r.innerHTML='<strong>Review required; no answer committed.</strong> '+escapeHtml(x.status||'unknown')+'.<p>Likely lanes: '+escapeHtml((x.intent_lanes||[]).join(', ')||'none')+' · candidate sources: '+escapeHtml(String(candidates.length))+'. '+escapeHtml((x.blockers||[]).join(', '))+'</p>';};q('#speculative-retrieval-intent').addEventListener('input',()=>{clearTimeout(timer);timer=window.setTimeout(async()=>{const intent=v('#speculative-retrieval-intent');if(intent.length<4){r.textContent='Keep typing a substantive research intent; no preview has been started.';return;}try{r.textContent='Searching local authority preview only…';render(await fetchJson('/api/runtime/speculative-retrieval',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preview_id:v('#speculative-retrieval-id'),typed_intent:intent})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Local retrieval preview could not run'});}},450);});q('#speculative-retrieval-discard').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/speculative-retrieval/'+encodeURIComponent(v('#speculative-retrieval-id'))+'/discard',{method:'POST'}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Retrieval preview could not be discarded'});}});q('#speculative-retrieval-source').addEventListener('click',async()=>{try{const row=candidates[0];if(!row){r.textContent='Wait for a local preview with a candidate source first.';return;}const p=await fetchJson('/api/runtime/speculative-retrieval/'+encodeURIComponent(v('#speculative-retrieval-id'))+'/candidates/'+encodeURIComponent(String(row.source_id||'')));const c=p.candidate||{};r.innerHTML='<strong>Review required; no answer committed.</strong><p>'+escapeHtml(c.title||c.source_id||'Unknown source')+' · '+escapeHtml(c.citation||'no citation')+' · '+escapeHtml(c.freshness_status||'freshness unknown')+'</p><p>'+escapeHtml(c.locator||'No local locator was supplied.')+'</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Candidate source could not be inspected'});}});}());
+    (function installContextBudgetControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('context-budget-create'))return;const s=document.createElement('section');s.className='document-review-card context-budget-control';s.innerHTML='<div class="document-review-heading"><div><span>Hardware and verifier bounded</span><strong>Adaptive context budget</strong></div><span class="badge warn">Review required</span></div><p>Allocate a local-model context budget from task type, exact source density, current hardware limits, and citation, quote, and claim verifier reservations. This does not run a model or waive any verifier.</p><div class="document-workspace-fields"><label>Budget ID<input id="context-budget-id" placeholder="budget_001"></label><label>Task<select id="context-budget-task"><option value="research">Research</option><option value="draft">Draft</option><option value="review">Review</option><option value="summarization">Summarization</option><option value="classification">Classification</option></select></label><label>Requested maximum tokens (optional)<input id="context-budget-requested" type="number" min="0"></label></div><label>Exact source references JSON<textarea id="context-budget-sources" rows="3" placeholder="[{&quot;source_id&quot;:&quot;source_001&quot;,&quot;content_sha256&quot;:&quot;64-character hash&quot;,&quot;char_count&quot;:1600,&quot;lane&quot;:&quot;legal_authority&quot;}]"></textarea></label><div class="document-workspace-fields"><label><input id="context-budget-citation" type="checkbox" checked> Reserve citation verification</label><label><input id="context-budget-quote" type="checkbox"> Reserve quote verification</label><label><input id="context-budget-claim" type="checkbox" checked> Reserve claim verification</label></div><div class="document-workspace-actions"><button class="primary-action" id="context-budget-create" type="button">Allocate budget</button><button class="secondary" id="context-budget-load" type="button">Load allocation</button><button class="secondary" id="context-budget-source" type="button">Inspect first source</button></div><div aria-live="polite" class="document-workspace-status" id="context-budget-result">Provide exact source hashes before requesting a reviewable allocation.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#context-budget-result');let refs=[];const sources=()=>{try{return JSON.parse(v('#context-budget-sources'));}catch(_){throw new Error('Exact source references must be valid JSON.');}};const render=p=>{const b=p.budget||p;refs=b.source_refs||refs;r.innerHTML='<strong>Review required.</strong> '+escapeHtml(b.status||'unknown')+'.<p>Context: '+escapeHtml(String(b.allocation?.context_tokens||0))+' tokens · verifier reserve: '+escapeHtml(String(b.allocation?.verifier_reserve_tokens||0))+' · source content: '+escapeHtml(String(b.allocation?.source_content_tokens||0))+' · blockers: '+escapeHtml((b.blockers||[]).join(', ')||'none')+'.</p>';};q('#context-budget-create').addEventListener('click',async()=>{try{if(!v('#context-budget-id')){r.textContent='Enter a budget ID.';return;}r.textContent='Calculating local hardware and verifier budget…';render(await fetchJson('/api/runtime/context-budgets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({budget_id:v('#context-budget-id'),task:v('#context-budget-task'),source_refs:sources(),requested_context_tokens:Number(v('#context-budget-requested')||0),verifier_requirements:{citation:q('#context-budget-citation').checked,quote:q('#context-budget-quote').checked,claim:q('#context-budget-claim').checked}})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Context budget could not be allocated'});}});q('#context-budget-load').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/context-budgets/'+encodeURIComponent(v('#context-budget-id'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Context budget could not be loaded'});}});q('#context-budget-source').addEventListener('click',async()=>{try{const ref=refs[0];if(!ref){r.textContent='Load an allocation with source references first.';return;}const p=await fetchJson('/api/runtime/context-budgets/'+encodeURIComponent(v('#context-budget-id'))+'/sources/'+encodeURIComponent(String(ref.source_id||'')));r.innerHTML='<strong>Review required.</strong><p>Source '+escapeHtml(p.source_ref?.source_id||'unknown')+' · '+escapeHtml(p.source_ref?.lane||'unknown lane')+' · '+escapeHtml(String(p.source_ref?.char_count||0))+' characters · hash '+escapeHtml(p.source_ref?.content_sha256||'unknown')+'.</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Budget source could not be inspected'});}});}());
+    (function installBatchInferenceSchedulerControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('batch-inference-create'))return;const s=document.createElement('section');s.className='document-review-card batch-inference-control';s.innerHTML='<div class="document-review-heading"><div><span>Compatible background work</span><strong>Batch inference scheduler</strong></div><span class="badge warn">Review required</span></div><p>Coalesce only compatible local extract, classify, or embed jobs. Each child keeps its own exact source hash and can be cancelled without cancelling compatible siblings. Scheduling never starts a model automatically.</p><div class="document-workspace-fields"><label>Batch ID<input id="batch-inference-id" placeholder="batch_001"></label><label>Cancel child ID<input id="batch-inference-item-id" placeholder="item_001"></label></div><label>Items JSON<textarea id="batch-inference-items" rows="4" placeholder="[{&quot;item_id&quot;:&quot;item_001&quot;,&quot;job_kind&quot;:&quot;extract&quot;,&quot;source_ref&quot;:{&quot;source_id&quot;:&quot;source_001&quot;,&quot;content_sha256&quot;:&quot;64-character hash&quot;},&quot;execution_profile&quot;:{&quot;context_budget_id&quot;:&quot;budget_001&quot;}}]"></textarea></label><label class="document-review-attestation"><input id="batch-inference-confirm" type="checkbox"> I confirm this schedules review-required local background work only; it does not authorize a model run.</label><div class="document-workspace-actions"><button class="primary-action" id="batch-inference-create" type="button">Schedule compatible jobs</button><button class="secondary" id="batch-inference-load" type="button">Load batch</button><button class="secondary" id="batch-inference-source" type="button">Inspect child source</button><button class="secondary" id="batch-inference-cancel" type="button">Cancel child</button></div><div aria-live="polite" class="document-workspace-status" id="batch-inference-result">Use exact hashes and an explicit confirmation to plan a local batch.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#batch-inference-result');let items=[];const parse=()=>{try{return JSON.parse(v('#batch-inference-items'));}catch(_){throw new Error('Items must be valid JSON.');}};const render=p=>{const b=p.batch||p;items=b.items||items;r.innerHTML='<strong>Review required.</strong> '+escapeHtml(b.status||'unknown')+'.<p>Items: '+escapeHtml(String((b.items||[]).length))+' · compatible groups: '+escapeHtml(String(b.coalesced_group_count||0))+' · automatic execution: '+escapeHtml(String(!b.execution_not_automatic))+'.</p>';};q('#batch-inference-create').addEventListener('click',async()=>{try{if(!v('#batch-inference-id')||!q('#batch-inference-confirm').checked){r.textContent='Enter a batch ID and confirm the non-execution boundary.';return;}r.textContent='Grouping compatible local background work…';render(await fetchJson('/api/runtime/batch-inference',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({batch_id:v('#batch-inference-id'),items:parse(),user_confirmed:true})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Batch could not be scheduled'});}});q('#batch-inference-load').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/batch-inference/'+encodeURIComponent(v('#batch-inference-id'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Batch could not be loaded'});}});q('#batch-inference-source').addEventListener('click',async()=>{try{const id=v('#batch-inference-item-id')||String(items[0]?.item_id||'');if(!id){r.textContent='Load a batch and choose a child item first.';return;}const p=await fetchJson('/api/runtime/batch-inference/'+encodeURIComponent(v('#batch-inference-id'))+'/items/'+encodeURIComponent(id)+'/source');r.innerHTML='<strong>Review required.</strong><p>Child source: '+escapeHtml(p.source_ref?.source_id||'unknown')+' · hash '+escapeHtml(p.source_ref?.content_sha256||'unknown')+'.</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Child source could not be inspected'});}});q('#batch-inference-cancel').addEventListener('click',async()=>{try{const id=v('#batch-inference-item-id')||String(items[0]?.item_id||'');if(!id){r.textContent='Choose a child item to cancel.';return;}render(await fetchJson('/api/runtime/batch-inference/'+encodeURIComponent(v('#batch-inference-id'))+'/items/'+encodeURIComponent(id)+'/cancel',{method:'POST'}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Child cancellation could not be requested'});}});}());
+    (function installLowMemoryModeControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('low-memory-mode-enable'))return;const s=document.createElement('section');s.className='document-review-card low-memory-mode-control';s.innerHTML='<div class="document-review-heading"><div><span>Safe degraded operation</span><strong>Low-memory mode</strong></div><span class="badge warn">Review required</span></div><p>When memory is constrained, use lexical retrieval, compact admitted models or deterministic fallback, single-item batches, smaller context, and release warm workers. This is a reversible local posture, not a claim that a result is complete.</p><label class="document-review-attestation"><input id="low-memory-mode-confirm" type="checkbox"> I confirm the app may enable the reduced-resource posture for this matter.</label><div class="document-workspace-actions"><button class="primary-action" id="low-memory-mode-enable" type="button">Enable low-memory mode</button><button class="secondary" id="low-memory-mode-status" type="button">Check status</button><button class="secondary" id="low-memory-mode-disable" type="button">Return to normal mode</button></div><div aria-live="polite" class="document-workspace-status" id="low-memory-mode-result">Check local memory before changing the runtime posture.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),r=q('#low-memory-mode-result'),render=p=>r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'.<p>Detected low memory: '+escapeHtml(String(!!p.detected_low_memory))+' · retrieval: '+escapeHtml(p.fallbacks?.retrieval||'unknown')+' · batches: '+escapeHtml(String(p.fallbacks?.max_batch_items||'unknown'))+' item.</p>';const set=async active=>{if(!q('#low-memory-mode-confirm').checked){r.textContent='Confirm the reversible reduced-resource posture first.';return;}try{r.textContent='Applying local resource posture…';render(await fetchJson('/api/runtime/low-memory-mode',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active,user_confirmed:true})}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Low-memory mode could not be changed'});}};q('#low-memory-mode-enable').addEventListener('click',()=>set(true));q('#low-memory-mode-disable').addEventListener('click',()=>set(false));q('#low-memory-mode-status').addEventListener('click',async()=>{try{render(await fetchJson('/api/runtime/low-memory-mode'));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Low-memory status could not be loaded'});}});}());
+    (function installRuntimeCrashRecoveryControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('runtime-crash-recovery-run'))return;const s=document.createElement('section');s.className='document-review-card runtime-crash-recovery-control';s.innerHTML='<div class="document-review-heading"><div><span>Durable work recovery</span><strong>Runtime crash recovery</strong></div><span class="badge warn">Review required</span></div><p>Inspect the active matter after an interrupted local worker. Expired leases may be requeued when safe; completed and cancelled work stay preserved, and terminal failures are not silently retried.</p><div class="document-workspace-fields"><label>Job ID to inspect<input id="runtime-crash-recovery-job"></label></div><div class="document-workspace-actions"><button class="primary-action" id="runtime-crash-recovery-run" type="button">Recover interrupted work</button><button class="secondary" id="runtime-crash-recovery-job-open" type="button">Inspect job receipt</button></div><div aria-live="polite" class="document-workspace-status" id="runtime-crash-recovery-result">No recovery action has been run for this active matter.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#runtime-crash-recovery-result'),render=p=>{const restarted=p.restarted_workers||[],done=p.completed_preserved||[],discarded=p.discarded_work||[],failed=p.terminal_failures_preserved||[];r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'.<p>Requeued or pending: '+escapeHtml(String(restarted.length))+' · completed preserved: '+escapeHtml(String(done.length))+' · discarded: '+escapeHtml(String(discarded.length))+' · terminal failures retained: '+escapeHtml(String(failed.length))+'.</p>';if(restarted[0]?.job_id)q('#runtime-crash-recovery-job').value=restarted[0].job_id;};q('#runtime-crash-recovery-run').addEventListener('click',async()=>{try{r.textContent='Inspecting durable local jobs and expired leases…';render(await fetchJson('/api/runtime/crash-recovery',{method:'POST'}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Interrupted work could not be recovered'});}});q('#runtime-crash-recovery-job-open').addEventListener('click',async()=>{if(!v('#runtime-crash-recovery-job')){r.textContent='Run recovery or enter a job ID first.';return;}try{const p=await fetchJson('/api/runtime/crash-recovery/jobs/'+encodeURIComponent(v('#runtime-crash-recovery-job')));r.innerHTML='<strong>Review required.</strong><p>'+escapeHtml(p.job?.job_type||'job')+' · '+escapeHtml(p.job?.status||'unknown')+' · attempt '+escapeHtml(String(p.job?.attempt||0))+' · event receipts: '+escapeHtml(String((p.events||[]).length))+'.</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Job receipt could not be inspected'});}});}());
+    (function installUnifiedMatterSearchControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('unified-matter-search-run'))return;const s=document.createElement('section');s.className='document-review-card unified-matter-search-control';s.innerHTML='<div class="document-review-heading"><div><span>Active matter only</span><strong>Unified matter search</strong></div><span class="badge warn">Review required</span></div><p>Search local record metadata, dates, citations, annotations, privacy state, and review state from one surface. Matches organize records; they do not decide facts or law.</p><div class="document-workspace-fields"><label>Search<input id="unified-matter-search-q" placeholder="order, date, citation, annotation"></label></div><div class="document-workspace-actions"><button class="primary-action" id="unified-matter-search-run" type="button">Search active matter</button><button class="secondary" id="unified-matter-search-open" type="button">Open first matching record</button></div><div aria-live="polite" class="document-workspace-status" id="unified-matter-search-result">Enter two or more characters to search the active matter.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#unified-matter-search-result');let rows=[];q('#unified-matter-search-run').addEventListener('click',async()=>{if(v('#unified-matter-search-q').length<2){r.textContent='Enter at least two characters.';return;}try{r.textContent='Searching active-matter metadata locally…';const p=await fetchJson('/api/matter-search?q='+encodeURIComponent(v('#unified-matter-search-q')));rows=p.results||[];r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'.<p>'+escapeHtml(String(rows.length))+' matching record(s). '+escapeHtml(p.notice||'')+'</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Unified matter search could not run'});}});q('#unified-matter-search-open').addEventListener('click',e=>{const token=String(rows[0]?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token)){r.textContent='Search and select a matching record with an available capability first.';return;}openRecordInspector({source_token:token},0,e.currentTarget);});}());
+    (function installFavoritesControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('favorite-create'))return;const s=document.createElement('section');s.className='document-review-card favorites-control';s.innerHTML='<div class="document-review-heading"><div><span>Encrypted local shortcuts</span><strong>Favorites and pins</strong></div><span class="badge warn">Review required</span></div><p>Save an active-matter shortcut with a local role filter. This is not identity verification or an access-control decision.</p><div class="document-workspace-fields"><label>Favorite ID<input id="favorite-id" maxlength="120" placeholder="record_pin_001"></label><label>Kind<select id="favorite-kind"><option value="record">Private record</option><option value="official_source">Official source</option><option value="draft">Draft</option><option value="workspace">Workspace</option><option value="matter">Matter</option></select></label><label>Role<select id="favorite-role"><option value="other_reviewer">Other reviewer</option><option value="self_represented">Self-represented</option><option value="advocate">Advocate</option><option value="paralegal">Paralegal</option><option value="attorney">Attorney</option></select></label><label>Visibility<select id="favorite-visibility"><option value="private">Private to this local role</option><option value="review_team">Review team</option><option value="attorney_only">Attorney only</option></select></label></div><label>Label<input id="favorite-label" maxlength="160" placeholder="Fictional order record"></label><label>Target safe ID<input id="favorite-target" maxlength="240"></label><div class="document-workspace-actions"><button class="secondary" id="favorite-use-record" type="button">Use first active record</button><button class="secondary" id="favorite-refresh" type="button">List visible favorites</button></div><label class="document-review-attestation"><input id="favorite-confirm" type="checkbox"> I confirm this stores an encrypted local shortcut and local role filter only.</label><div class="document-workspace-actions"><button class="primary-action" id="favorite-create" type="button">Pin favorite</button><button class="secondary" id="favorite-open" type="button">Open selected</button><button class="secondary" id="favorite-remove" type="button">Remove selected</button></div><div aria-live="polite" class="document-workspace-status" id="favorite-result">Use a selected record or a safe target ID, then confirm before pinning.</div><div id="favorite-list" class="document-workspace-status"></div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#favorite-result'),list=q('#favorite-list');let rows=[],record=null;const target=()=>v('#favorite-kind')==='record'?{record_id:record?.record_id||v('#favorite-target'),source_hash:record?.source_hash||'',page:0}:{target_id:v('#favorite-target')};const render=p=>{rows=p?.favorites||rows;list.innerHTML=rows.length?'<ul>'+rows.map(row=>'<li><button class="text-link" type="button" data-favorite-select="'+escapeHtml(row.favorite_id||'')+'">'+escapeHtml(row.label||row.favorite_id||'favorite')+'</button> · '+escapeHtml(String(row.visibility||'').replaceAll('_',' '))+' · review required</li>').join('')+'</ul>':'No favorites are visible for this local role.';list.querySelectorAll('[data-favorite-select]').forEach(b=>b.addEventListener('click',()=>{const row=rows.find(x=>x.favorite_id===b.dataset.favoriteSelect);if(row){q('#favorite-id').value=row.favorite_id||'';q('#favorite-kind').value=row.kind||'record';q('#favorite-label').value=row.label||'';q('#favorite-target').value=String(row.target?.record_id||row.target?.target_id||'');}}));};const refresh=async()=>{try{render(await fetchJson('/api/favorites?viewer_role='+encodeURIComponent(v('#favorite-role'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Favorites could not be loaded'});}};q('#favorite-use-record').addEventListener('click',async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');record=(p.candidates||[])[0]||null;if(!record)throw new Error('no_active_matter_record');q('#favorite-kind').value='record';q('#favorite-target').value=String(record.record_id||'');q('#favorite-label').value=q('#favorite-label').value||String(record.title||'Selected record');r.textContent='First active-matter record selected and hash-bound for a favorite.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Record could not be selected'});}});q('#favorite-create').addEventListener('click',async()=>{if(!v('#favorite-id')||!v('#favorite-label')||!v('#favorite-target')||!q('#favorite-confirm').checked){r.textContent='Enter ID, label, target, and confirmation.';return;}try{await fetchJson('/api/favorites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({favorite_id:v('#favorite-id'),kind:v('#favorite-kind'),label:v('#favorite-label'),target:target(),visibility:v('#favorite-visibility'),owner_role:v('#favorite-role'),user_confirmed:true})});r.textContent='Encrypted local favorite pinned. Review-required status remains visible.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Favorite could not be pinned'});}});q('#favorite-refresh').addEventListener('click',refresh);q('#favorite-open').addEventListener('click',async e=>{if(!v('#favorite-id'))return;try{const p=await fetchJson('/api/favorites/'+encodeURIComponent(v('#favorite-id'))+'/open?viewer_role='+encodeURIComponent(v('#favorite-role')));const fav=p.favorite||{},t=p.target||{};if(fav.kind==='record'){if(!/^[a-f0-9]{64}$/i.test(String(t.source_token||'')))throw new Error('favorite_record_token_unavailable');await openRecordInspector({source_token:t.source_token},Number(t.page||0),e.currentTarget);}else if(fav.kind==='official_source'){await inspectSource(String(t.target_id||''),{pin:true,owner:e.currentTarget});}else{r.textContent='Favorite context selected. Open its matching workspace; chat and matter data remain unchanged.';}}catch(e2){r.innerHTML=renderRecoverableError(e2,{title:'Favorite could not be opened'});}});q('#favorite-remove').addEventListener('click',async()=>{if(!v('#favorite-id'))return;try{await fetchJson('/api/favorites/'+encodeURIComponent(v('#favorite-id'))+'?owner_role='+encodeURIComponent(v('#favorite-role')),{method:'DELETE'});r.textContent='Favorite removed; source and matter data were preserved.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Favorite could not be removed'});}});refresh();}());
+    (function installBulkReviewQueueControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('bulk-review-create'))return;const s=document.createElement('section');s.className='document-review-card bulk-review-queue-control';s.innerHTML='<div class="document-review-heading"><div><span>Source-bound triage</span><strong>Bulk review queue</strong></div><span class="badge warn">Review required</span></div><p>Triage records, claims, citations, privacy findings, and corrections without converting an allegation or review label into a finding.</p><div class="document-workspace-fields"><label>Item ID<input id="bulk-review-id" maxlength="120" placeholder="review_001"></label><label>Kind<select id="bulk-review-kind"><option value="record">Record</option><option value="claim">Claim</option><option value="citation">Citation</option><option value="privacy_finding">Privacy finding</option><option value="correction">Correction</option></select></label><label>Reviewer safe ID<input id="bulk-review-reviewer" maxlength="120" placeholder="reviewer_001"></label><label>State<select id="bulk-review-state"><option value="needs_review">Needs review</option><option value="qualified">Qualified</option><option value="resolved_with_review">Resolved with review</option><option value="deferred">Deferred</option></select></label></div><label>Review label<input id="bulk-review-label" maxlength="300" placeholder="Fictional record needs review"></label><div class="document-workspace-actions"><button class="secondary" id="bulk-review-use-record" type="button">Use first active record</button></div><label class="document-review-attestation"><input id="bulk-review-confirm" type="checkbox"> I confirm this is a review action, not a factual, privacy, legal, or filing determination.</label><div class="document-workspace-actions"><button class="primary-action" id="bulk-review-create" type="button">Add queue item</button><button class="secondary" id="bulk-review-refresh" type="button">Refresh queue</button><button class="secondary" id="bulk-review-triage" type="button">Apply triage</button><button class="secondary" id="bulk-review-source" type="button">Open exact source</button></div><div aria-live="polite" class="document-workspace-status" id="bulk-review-result">Use an active-matter record, label the review item, and confirm before adding it.</div><div id="bulk-review-list" class="document-workspace-status" tabindex="0" aria-label="Bulk review queue. Use up and down arrows to select; R marks needs review; D marks deferred after confirmation."></div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#bulk-review-result'),list=q('#bulk-review-list');let rows=[],selected=0,record=null;const selectRow=i=>{selected=Math.max(0,Math.min(i,rows.length-1));const row=rows[selected];if(row){q('#bulk-review-id').value=row.item_id||'';q('#bulk-review-kind').value=row.kind||'record';q('#bulk-review-label').value=row.label||'';q('#bulk-review-state').value=row.state==='new'?'needs_review':row.state||'needs_review';}render();};const render=()=>{list.innerHTML=rows.length?'<strong>Keyboard triage: ↑/↓ select · R needs review · D defer</strong><ul>'+rows.map((row,i)=>'<li'+(i===selected?' aria-current="true"':'')+'><button class="text-link" type="button" data-bulk-review-select="'+escapeHtml(row.item_id||'')+'">'+escapeHtml(row.label||row.item_id||'item')+'</button> · '+escapeHtml(String(row.kind||'').replaceAll('_',' '))+' · '+escapeHtml(String(row.state||'new').replaceAll('_',' '))+' · review required</li>').join('')+'</ul>':'No queue items are stored for this active matter.';list.querySelectorAll('[data-bulk-review-select]').forEach(button=>button.addEventListener('click',()=>selectRow(rows.findIndex(x=>x.item_id===button.dataset.bulkReviewSelect))));};const refresh=async()=>{try{rows=(await fetchJson('/api/bulk-review-queue')).items||[];selected=Math.min(selected,Math.max(0,rows.length-1));render();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Bulk review queue could not be loaded'});}};q('#bulk-review-use-record').addEventListener('click',async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');record=(p.candidates||[])[0]||null;if(!record)throw new Error('no_active_matter_record');q('#bulk-review-label').value=q('#bulk-review-label').value||String(record.title||'Selected record');r.textContent='First active-matter record selected. Enter an item ID and confirm the review boundary.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'An active-matter record could not be selected'});}});q('#bulk-review-create').addEventListener('click',async()=>{if(!record||!v('#bulk-review-id')||!v('#bulk-review-label')||!q('#bulk-review-confirm').checked){r.textContent='Select an active-matter record, enter an ID and label, and confirm.';return;}try{await fetchJson('/api/bulk-review-queue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_id:v('#bulk-review-id'),kind:v('#bulk-review-kind'),label:v('#bulk-review-label'),source_ref:{record_id:record.record_id,source_hash:record.source_hash,page:0},user_confirmed:true})});r.textContent='Source-bound review item added. It remains review required.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Review item could not be added'});}});const triage=async state=>{if(!v('#bulk-review-id')||!v('#bulk-review-reviewer')||!q('#bulk-review-confirm').checked){r.textContent='Select an item, enter reviewer safe ID, and confirm the review boundary.';return;}try{await fetchJson('/api/bulk-review-queue/'+encodeURIComponent(v('#bulk-review-id'))+'/triage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:state||v('#bulk-review-state'),reviewer_safe_id:v('#bulk-review-reviewer'),user_confirmed:true})});r.textContent='Triage saved as review-required; no finding or filing status was created.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Triage could not be saved'});}};q('#bulk-review-refresh').addEventListener('click',refresh);q('#bulk-review-triage').addEventListener('click',()=>triage());q('#bulk-review-source').addEventListener('click',async e=>{if(!v('#bulk-review-id')){r.textContent='Select an item first.';return;}try{const p=await fetchJson('/api/bulk-review-queue/'+encodeURIComponent(v('#bulk-review-id'))+'/source');const token=String(p.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('bulk_review_source_token_unavailable');await openRecordInspector({source_token:token},Number(p.source?.page||0),e.currentTarget);}catch(e2){r.innerHTML=renderRecoverableError(e2,{title:'Exact review source could not be opened'});}});list.addEventListener('keydown',e=>{if(!rows.length)return;if(e.key==='ArrowDown'){e.preventDefault();selectRow((selected+1)%rows.length);}else if(e.key==='ArrowUp'){e.preventDefault();selectRow((selected-1+rows.length)%rows.length);}else if(e.key.toLowerCase()==='r'){e.preventDefault();triage('needs_review');}else if(e.key.toLowerCase()==='d'){e.preventDefault();triage('deferred');}});refresh();}());
+    (function installCommandHistoryControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('command-history-record'))return;const s=document.createElement('section');s.className='document-review-card command-history-control';s.innerHTML='<div class="document-review-heading"><div><span>Replay boundary</span><strong>Command history</strong></div><span class="badge warn">Review required</span></div><p>Replay only safe local reads. A mutation is preserved as an intent and must receive a fresh confirmation; it is never silently re-executed.</p><div class="document-workspace-fields"><label>Command ID<input id="command-history-id" maxlength="120" placeholder="search_001"></label><label>Operation<select id="command-history-operation"><option value="matter_search">Active-matter search (safe read)</option><option value="authority_search">Authority search (safe read)</option><option value="smart_view_run">Saved smart view (safe read)</option><option value="open_workspace_tab">Open workspace tab (mutation intent)</option><option value="create_smart_view">Create smart view (mutation intent)</option><option value="clear_recent_work">Clear recent work (mutation intent)</option></select></label></div><label>Query or safe target ID<input id="command-history-value" maxlength="240" placeholder="order, source, or saved view ID"></label><label class="document-review-attestation"><input id="command-history-confirm" type="checkbox"> I confirm I am recording a local command. Mutation intents require a new confirmation before use.</label><div class="document-workspace-actions"><button class="primary-action" id="command-history-record" type="button">Record command</button><button class="secondary" id="command-history-refresh" type="button">Load history</button><button class="secondary" id="command-history-replay" type="button">Replay selected</button></div><div aria-live="polite" class="document-workspace-status" id="command-history-result">Record a safe read to rerun it later, or retain a mutation intent for fresh review.</div><div id="command-history-list" class="document-workspace-status"></div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#command-history-result'),list=q('#command-history-list');let commands=[];const isRead=()=>['matter_search','authority_search','smart_view_run'].includes(v('#command-history-operation'));const parameters=()=>{const op=v('#command-history-operation'),value=v('#command-history-value');return op==='matter_search'||op==='authority_search'?{query:value}:op==='smart_view_run'?{view_id:value}:{target_id:value};};const render=payload=>{commands=payload?.commands||commands;list.innerHTML=commands.length?'<strong>Encrypted local command history</strong><ul>'+commands.map(c=>'<li><button class="text-link" type="button" data-command-history-select="'+escapeHtml(c.command_id||'')+'">'+escapeHtml(c.command_id||'command')+'</button> · '+escapeHtml(String(c.operation||'').replaceAll('_',' '))+' · '+escapeHtml(c.kind||'')+' · '+escapeHtml(String(c.status||'').replaceAll('_',' '))+'</li>').join('')+'</ul>':'No command history is stored for this active matter.';list.querySelectorAll('[data-command-history-select]').forEach(button=>button.addEventListener('click',()=>{const c=commands.find(x=>x.command_id===button.dataset.commandHistorySelect);if(!c)return;q('#command-history-id').value=c.command_id||'';q('#command-history-operation').value=c.operation||'matter_search';q('#command-history-value').value=String(c.parameters?.query||c.parameters?.view_id||c.parameters?.target_id||'');q('#command-history-confirm').checked=false;}));};const refresh=async()=>{try{render(await fetchJson('/api/command-history'));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Command history could not be loaded'});}};const showReplay=async payload=>{const command=payload?.command||{},result=payload?.result||{};if(payload?.status==='reconfirmation_required'){r.textContent='This is a mutation intent. Check the fresh confirmation box, then replay only to record renewed approval; the original action will not execute here.';return;}if(command.kind==='mutation'){r.innerHTML='<strong>Fresh confirmation recorded.</strong> The mutation was not executed. Return to its original workspace and review its exact fields before taking any action.';return;}const rows=result.results||result.sources||[];r.innerHTML='<strong>Safe local read replayed.</strong> '+escapeHtml(String(rows.length))+' result(s) · review required.'+(rows.length?'<div class="document-workspace-actions"><button class="secondary compact-action" id="command-history-open-source" type="button">Open first source</button></div>':'');q('#command-history-open-source')?.addEventListener('click',e=>{const row=rows[0]||{};const token=String(row.source_token||'');if(/^[a-f0-9]{64}$/i.test(token)){openRecordInspector({source_token:token},0,e.currentTarget);return;}const source=String(row.source_id||'');if(source)inspectSource(source,{pin:true,owner:e.currentTarget});else r.textContent='The replay returned no inspectable source.';});};q('#command-history-record').addEventListener('click',async()=>{const read=isRead();if(!v('#command-history-id')||!v('#command-history-value')||(!read&&!q('#command-history-confirm').checked)){r.textContent=read?'Enter a command ID and query or saved-view ID.':'Enter a command ID and target, then confirm the mutation intent.';return;}try{const p=await fetchJson('/api/command-history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command_id:v('#command-history-id'),operation:v('#command-history-operation'),kind:read?'read':'mutation',parameters:parameters(),user_confirmed:Boolean(q('#command-history-confirm').checked)})});r.textContent=read?'Safe read recorded. Use Replay selected to run it locally.':'Mutation intent recorded. It remains review-required and will require a new confirmation.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Command could not be recorded'});}});q('#command-history-refresh').addEventListener('click',refresh);q('#command-history-replay').addEventListener('click',async()=>{if(!v('#command-history-id')){r.textContent='Select or enter a command ID first.';return;}try{const p=await fetchJson('/api/command-history/'+encodeURIComponent(v('#command-history-id'))+'/replay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reconfirmed:Boolean(q('#command-history-confirm').checked)})});await showReplay(p);await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Command replay could not run'});}});refresh();}());
+    (function installWorkspaceTabsControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('workspace-tabs-create'))return;const s=document.createElement('section');s.className='document-review-card workspace-tabs-control';s.innerHTML='<div class="document-review-heading"><div><span>Active matter only</span><strong>Workspace tabs</strong></div><span class="badge warn">Review required</span></div><p>Keep selected record, official-source, draft, and comparison contexts available without clearing the chat. Tabs are local, encrypted references—not findings, saved source text, or authority approval.</p><div class="document-workspace-fields"><label>Tab ID<input id="workspace-tabs-id" maxlength="120" placeholder="record_review_001"></label><label>Context type<select id="workspace-tabs-kind"><option value="record">Private record</option><option value="official_source">Official source</option><option value="draft">Draft</option><option value="comparison">Comparison</option></select></label><label>Label<input id="workspace-tabs-label" maxlength="160" placeholder="Review selected record"></label></div><div class="document-workspace-fields"><label>Target safe ID<input id="workspace-tabs-target" maxlength="240" placeholder="record or source ID"></label><label>Record SHA-256 <span class="muted">(record only)</span><input id="workspace-tabs-hash" maxlength="64" placeholder="hash-bound active-matter record"></label></div><div class="document-workspace-actions"><button class="secondary" id="workspace-tabs-use-record" type="button">Use first active record</button><button class="secondary" id="workspace-tabs-use-draft" type="button">Use open draft</button></div><label class="document-review-attestation"><input id="workspace-tabs-confirm" type="checkbox"> I confirm this opens a local review context without changing the chat, record, source, draft, or comparison.</label><div class="document-workspace-actions"><button class="primary-action" id="workspace-tabs-create" type="button">Open tab</button><button class="secondary" id="workspace-tabs-refresh" type="button">List tabs</button><button class="secondary" id="workspace-tabs-activate" type="button">Activate tab</button><button class="secondary" id="workspace-tabs-open" type="button">Open tab context</button><button class="secondary" id="workspace-tabs-close" type="button">Close tab</button></div><div aria-live="polite" class="document-workspace-status" id="workspace-tabs-result">Open a source-bound active-matter context; the chat remains in place.</div><div id="workspace-tabs-list" class="document-workspace-status"></div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#workspace-tabs-result'),list=q('#workspace-tabs-list');let tabs=[],active='';const target=()=>{const kind=v('#workspace-tabs-kind');if(kind==='record')return {record_id:v('#workspace-tabs-target'),source_hash:v('#workspace-tabs-hash'),page:0};if(kind==='official_source')return {source_id:v('#workspace-tabs-target')};if(kind==='draft')return {document_id:v('#workspace-tabs-target')};return {comparison_id:v('#workspace-tabs-target')};};const render=payload=>{tabs=payload?.tabs||tabs;active=String(payload?.active_tab_id||active);list.innerHTML=tabs.length?'<strong>Open review contexts</strong><ul>'+tabs.map(tab=>'<li><button class="text-link" type="button" data-workspace-tab-select="'+escapeHtml(tab.tab_id||'')+'">'+escapeHtml(tab.label||tab.tab_id||'tab')+'</button> · '+escapeHtml(String(tab.kind||'').replaceAll('_',' '))+(tab.tab_id===active?' · active':'')+' · review required</li>').join('')+'</ul>':'No workspace tabs are open for this active matter.';list.querySelectorAll('[data-workspace-tab-select]').forEach(button=>button.addEventListener('click',()=>{q('#workspace-tabs-id').value=String(button.dataset.workspaceTabSelect||'');const tab=tabs.find(x=>x.tab_id===button.dataset.workspaceTabSelect);if(tab){q('#workspace-tabs-kind').value=tab.kind||'record';q('#workspace-tabs-label').value=tab.label||'';q('#workspace-tabs-target').value=String(tab.target?.record_id||tab.target?.source_id||tab.target?.document_id||tab.target?.comparison_id||'');q('#workspace-tabs-hash').value=String(tab.target?.source_hash||'');}}));};const refresh=async()=>{try{const p=await fetchJson('/api/workspace-tabs');render(p);r.textContent=(p.tabs||[]).length?'Select a tab to activate, reopen, or close it.':'No tab is open yet.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Workspace tabs could not be loaded'});}};q('#workspace-tabs-use-record').addEventListener('click',async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');const row=(p.candidates||[])[0];if(!row)throw new Error('no_active_matter_record');q('#workspace-tabs-kind').value='record';q('#workspace-tabs-target').value=String(row.record_id||'');q('#workspace-tabs-hash').value=String(row.source_hash||'');q('#workspace-tabs-label').value=q('#workspace-tabs-label').value||String(row.title||'Selected record');r.textContent='First active-matter record selected. Review its hash and label, then confirm before opening a tab.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'An active-matter record could not be selected'});}});q('#workspace-tabs-use-draft').addEventListener('click',()=>{const id=String(documentWorkspaceState.active?.document_id||'');if(!id){r.textContent='Open a saved draft first.';return;}q('#workspace-tabs-kind').value='draft';q('#workspace-tabs-target').value=id;q('#workspace-tabs-hash').value='';q('#workspace-tabs-label').value=q('#workspace-tabs-label').value||'Open draft';r.textContent='The currently open draft was selected; opening its tab will not clear chat state.';});q('#workspace-tabs-create').addEventListener('click',async()=>{if(!v('#workspace-tabs-id')||!v('#workspace-tabs-label')||!v('#workspace-tabs-target')||!q('#workspace-tabs-confirm').checked){r.textContent='Enter tab ID, label, target, and confirmation.';return;}try{const p=await fetchJson('/api/workspace-tabs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tab_id:v('#workspace-tabs-id'),kind:v('#workspace-tabs-kind'),label:v('#workspace-tabs-label'),target:target(),user_confirmed:true})});active=String(p.active_tab_id||'');r.innerHTML='<strong>Review-required tab opened.</strong> Chat state was not cleared; inspect the exact selected context before relying on it.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Workspace tab could not be opened'});}});q('#workspace-tabs-refresh').addEventListener('click',refresh);q('#workspace-tabs-activate').addEventListener('click',async()=>{if(!v('#workspace-tabs-id')){r.textContent='Select or enter a tab ID first.';return;}try{const p=await fetchJson('/api/workspace-tabs/'+encodeURIComponent(v('#workspace-tabs-id'))+'/activate',{method:'POST'});active=String(p.active_tab_id||'');r.textContent='Tab activated. Chat state remains unchanged.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Workspace tab could not be activated'});}});q('#workspace-tabs-open').addEventListener('click',async e=>{if(!v('#workspace-tabs-id')){r.textContent='Select or enter a tab ID first.';return;}try{const p=await fetchJson('/api/workspace-tabs/'+encodeURIComponent(v('#workspace-tabs-id'))+'/target');const tab=p.tab||{},t=p.target||{};if(tab.kind==='record'){const token=String(t.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('workspace_tab_record_token_unavailable');await openRecordInspector({source_token:token},Number(t.page||0),e.currentTarget);}else if(tab.kind==='official_source'){await inspectSource(String(t.source_id||''),{pin:true,owner:e.currentTarget});}else if(tab.kind==='draft'){await openDocumentWorkspace();r.textContent='Draft workspace opened. Select the saved draft by its ID; chat state remains unchanged.';}else{r.textContent='Comparison context is retained for review. Open the source-bound comparison from the relevant review workspace; it does not change chat state.';}}catch(e2){r.innerHTML=renderRecoverableError(e2,{title:'Workspace context could not be opened'});}});q('#workspace-tabs-close').addEventListener('click',async()=>{if(!v('#workspace-tabs-id')){r.textContent='Select or enter a tab ID first.';return;}try{const p=await fetchJson('/api/workspace-tabs/'+encodeURIComponent(v('#workspace-tabs-id')),{method:'DELETE'});active=String(p.active_tab_id||'');r.textContent='Tab closed. The chat and underlying matter data were preserved.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Workspace tab could not be closed'});}});refresh();}());
+    (function installSmartViewsControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('smart-view-create'))return;const s=document.createElement('section');s.className='document-review-card smart-views-control';s.innerHTML='<div class="document-review-heading"><div><span>Encrypted local filters</span><strong>Saved smart views</strong></div><span class="badge warn">Review required</span></div><p>Save a local view for deadlines, blockers, missing proof, unread records, or the review queue. It filters; it does not calculate a deadline or make a finding.</p><div class="document-workspace-fields"><label>View ID<input id="smart-view-id" placeholder="review_queue_001"></label><label>Kind<select id="smart-view-kind"><option value="deadlines">Deadlines</option><option value="blockers">Blockers</option><option value="missing_proof">Missing proof</option><option value="unread_records">Unread records</option><option value="review_queue">Review queue</option></select></label></div><label>Title<input id="smart-view-title" placeholder="My review queue"></label><label class="document-review-attestation"><input id="smart-view-confirm" type="checkbox"> I confirm this saves only a local review filter.</label><div class="document-workspace-actions"><button class="primary-action" id="smart-view-create" type="button">Save view</button><button class="secondary" id="smart-view-run" type="button">Run view</button><button class="secondary" id="smart-view-open" type="button">Open first result</button></div><div aria-live="polite" class="document-workspace-status" id="smart-view-result">Save a filter, then run it against the active matter.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#smart-view-result');let rows=[];q('#smart-view-create').addEventListener('click',async()=>{if(!v('#smart-view-id')||!v('#smart-view-title')||!q('#smart-view-confirm').checked){r.textContent='Enter an ID, title, and confirmation.';return;}try{const p=await fetchJson('/api/smart-views',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({view_id:v('#smart-view-id'),kind:v('#smart-view-kind'),title:v('#smart-view-title'),user_confirmed:true})});r.innerHTML='<strong>Review required.</strong> Saved '+escapeHtml(p.view?.title||'view')+'.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Smart view could not be saved'});}});q('#smart-view-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/smart-views/'+encodeURIComponent(v('#smart-view-id'))+'/run');rows=p.results||[];r.innerHTML='<strong>Review required.</strong> '+escapeHtml(p.status||'unknown')+'.<p>'+escapeHtml(String(rows.length))+' matching review item(s). '+escapeHtml(p.notice||'')+'</p>';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Smart view could not run'});}});q('#smart-view-open').addEventListener('click',e=>{const token=String(rows[0]?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token)){r.textContent='Run a view with an inspectable record first.';return;}openRecordInspector({source_token:token},0,e.currentTarget);});}());
+    (function installSettlementScenarioControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('settlement-scenario-create'))return;const section=document.createElement('section');section.className='document-review-card settlement-scenario-control';section.innerHTML='<div class="document-review-heading"><div><span>Proposal comparison only</span><strong>Settlement scenario comparator</strong></div><span class="badge warn">Review required</span></div><p>Compare two user-entered scenarios across schedules, property, support, implementation, and unresolved terms. It does not recommend, approve, enforce, or predict an agreement.</p><div class="document-workspace-fields"><label>Comparison ID<input id="settlement-scenario-id" placeholder="settlement_001"></label><label>Reviewer ID<input id="settlement-scenario-reviewer" placeholder="reviewer_001"></label><label>Source record<select id="settlement-scenario-record"></select></label></div><label>Scenario A terms (one per line)<textarea id="settlement-scenario-a" rows="3" placeholder="schedule: reviewer-entered term&#10;unresolved: reviewer-entered gap"></textarea></label><label>Scenario B terms (one per line)<textarea id="settlement-scenario-b" rows="3" placeholder="support: reviewer-entered term"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="settlement-scenario-records" type="button">Load records</button></div><label class="document-review-attestation"><input id="settlement-scenario-confirm" type="checkbox"> I confirm this is a user-entered comparison, not an agreement determination.</label><div class="document-workspace-actions"><button class="primary-action" id="settlement-scenario-create" type="button">Compare scenarios</button><button class="secondary" id="settlement-scenario-load" type="button">Load comparison</button></div><div aria-live="polite" class="document-workspace-status" id="settlement-scenario-result">Load a source record and enter both scenarios.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',section);const q=x=>section.querySelector(x),v=x=>String(q(x)?.value||'').trim(),lines=x=>v(x).split(/\n/).map(y=>y.trim()).filter(Boolean),result=q('#settlement-scenario-result');const build=(id,label,items,source)=>{const areas={schedules:[],property:[],support:[],implementation:[],unresolved_terms:[]};items.forEach(item=>{const at=item.indexOf(':');const key=(at<0?'unresolved_terms':item.slice(0,at)).trim().toLowerCase().replaceAll(' ','_');const map={schedule:'schedules',schedules:'schedules',property:'property',support:'support',implementation:'implementation',unresolved:'unresolved_terms',unresolved_terms:'unresolved_terms'};areas[map[key]||'unresolved_terms'].push(at<0?item:item.slice(at+1).trim());});return {scenario_id:id,label,...areas,source_ref:source};};const load=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');q('#settlement-scenario-record').innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q('#settlement-scenario-record').append(o);});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const render=x=>result.innerHTML='<strong>Review required.</strong> Different areas: '+escapeHtml((x.different_areas||[]).join(', ')||'none recorded')+'. Unresolved terms: '+escapeHtml(String((x.unresolved_terms||[]).length))+'.<p>'+escapeHtml(x.notice||'')+'</p>';q('#settlement-scenario-records').addEventListener('click',load);q('#settlement-scenario-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(q('#settlement-scenario-record').value);}catch(_){result.textContent='Load a source record first.';return;}if(!v('#settlement-scenario-id')||!v('#settlement-scenario-reviewer')||!lines('#settlement-scenario-a').length||!lines('#settlement-scenario-b').length||!q('#settlement-scenario-confirm').checked){result.textContent='Enter IDs, both scenario terms, source, and confirm the review boundary.';return;}try{const p=await fetchJson('/api/settlement-scenario-comparisons',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({comparison_id:v('#settlement-scenario-id'),reviewer_safe_id:v('#settlement-scenario-reviewer'),scenarios:[build('scenario_a','Scenario A',lines('#settlement-scenario-a'),source),build('scenario_b','Scenario B',lines('#settlement-scenario-b'),source)],user_confirmed:true})});render(p.comparison||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Scenario comparison could not be created'});}});q('#settlement-scenario-load').addEventListener('click',async()=>{try{const p=await fetchJson('/api/settlement-scenario-comparisons/'+encodeURIComponent(v('#settlement-scenario-id')));render(p.comparison||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Scenario comparison could not be loaded'});}});load();}());
+    (function installSettlementScenarioSourceDrilldown() {const section=document.querySelector('.settlement-scenario-control');if(!section)return;const result=section.querySelector('#settlement-scenario-result');const attach=()=>{if(!result||!result.textContent.includes('Review required')||result.querySelector('[data-settlement-source]'))return;result.insertAdjacentHTML('beforeend','<div class="document-workspace-actions"><button class="secondary compact-action" data-settlement-source type="button">Open source record</button></div>');result.querySelector('[data-settlement-source]')?.addEventListener('click',async(event)=>{try{const id=String(section.querySelector('#settlement-scenario-id')?.value||'').trim();const payload=await fetchJson('/api/settlement-scenario-comparisons/'+encodeURIComponent(id)+'/scenarios/scenario_a/source');const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('settlement_source_token_unavailable');openRecordInspector({source_token:token},0,event.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Scenario source could not be opened'});}});};section.querySelector('#settlement-scenario-create')?.addEventListener('click',()=>window.setTimeout(attach,350));section.querySelector('#settlement-scenario-load')?.addEventListener('click',()=>window.setTimeout(attach,250));}());
+    (function installDebtReconciliationControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('debt-reconciliation-create'))return;
+      const section=document.createElement('section');section.className='document-review-card debt-reconciliation-control';section.innerHTML='<div class="document-review-heading"><div><span>Statement comparison only</span><strong>Debt reconciliation</strong></div><span class="badge warn">Review required</span></div><p>Compare reviewer-entered statement periods, balances, responsibility assertions, payments, and missing periods from a selected record. It does not determine a debt, balance, responsibility, payment, or validity.</p><div class="document-workspace-fields"><label>Workspace safe ID<input id="debt-reconciliation-id" maxlength="80" placeholder="debt_review_001"></label><label>Reviewer safe ID<input id="debt-reconciliation-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Statement source<select id="debt-reconciliation-record"><option value="">Load active-matter records</option></select></label><label>Creditor label<input id="debt-reconciliation-creditor" maxlength="300" placeholder="Fictional creditor label"></label><label>Period label<input id="debt-reconciliation-period" maxlength="128" placeholder="Reviewer-entered period"></label><label>Reported balance<input id="debt-reconciliation-balance" maxlength="500" placeholder="Under review"></label><label>Responsibility assertion<input id="debt-reconciliation-responsibility" maxlength="1000" placeholder="Reviewer-entered assertion"></label><label>Payment note<input id="debt-reconciliation-payment" maxlength="1000" placeholder="Reviewer-entered note"></label></div><label class="document-review-attestation"><input id="debt-reconciliation-missing" type="checkbox"> This source leaves a period missing or incomplete.</label><div class="document-workspace-actions"><button class="secondary" id="debt-reconciliation-records" type="button">Load records</button></div><label class="document-review-attestation"><input id="debt-reconciliation-confirm" type="checkbox"> I confirm this is a review-only statement comparison, not a debt or responsibility determination.</label><div class="document-workspace-actions"><button class="primary-action" id="debt-reconciliation-create" type="button">Create comparison</button><button class="secondary" id="debt-reconciliation-load" type="button">Load comparison</button></div><div aria-live="polite" class="document-workspace-status" id="debt-reconciliation-result">Load a statement source before creating a comparison.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#debt-reconciliation-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim(),select=section.querySelector('#debt-reconciliation-record');
+      const loadRecords=async()=>{try{const payload=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=payload?.candidates||[];select.innerHTML='<option value="">Choose an active-matter record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose the record for this statement comparison.':'No hash-bound records are available; import a fictional record first.';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Matter records could not be loaded'});}};
+      const render=(workspace)=>{const statements=workspace?.statements||[],gaps=workspace?.conflicts_or_gaps||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(statements.length))+' statement(s); '+escapeHtml(String(gaps.length))+' conflict or missing-period item(s).<p>'+escapeHtml(workspace?.notice||'')+'</p><div class="document-workspace-actions">'+statements.map((statement)=>'<button class="secondary compact-action" data-debt-statement="'+escapeHtml(statement.statement_id||'')+'" type="button">Open statement source</button>').join('')+'</div>';result.querySelectorAll('[data-debt-statement]').forEach((button)=>button.addEventListener('click',async(event)=>{try{const payload=await fetchJson('/api/debt-reconciliation-workspaces/'+encodeURIComponent(String(workspace.workspace_id||value('#debt-reconciliation-id')))+'/statements/'+encodeURIComponent(String(button.dataset.debtStatement||''))+'/source');const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('debt_reconciliation_source_token_unavailable');openRecordInspector({source_token:token},Number(payload?.source?.page||0),event.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Statement source could not be opened'});}}));};
+      section.querySelector('#debt-reconciliation-records').addEventListener('click',loadRecords);section.querySelector('#debt-reconciliation-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(String(select.value||''));}catch(_){source=null;}const workspace_id=value('#debt-reconciliation-id'),reviewer_safe_id=value('#debt-reconciliation-reviewer');if(!workspace_id||!reviewer_safe_id||!source||!value('#debt-reconciliation-creditor')||!value('#debt-reconciliation-period')){result.textContent='Enter workspace, reviewer, creditor, period, and choose a source record.';return;}if(!section.querySelector('#debt-reconciliation-confirm')?.checked){result.textContent='Confirm the review-only boundary.';return;}try{const payload=await fetchJson('/api/debt-reconciliation-workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace_id,reviewer_safe_id,statements:[{statement_id:'statement_001',account_key:'account_001',creditor_label:value('#debt-reconciliation-creditor'),period_label:value('#debt-reconciliation-period'),reported_balance:value('#debt-reconciliation-balance'),responsibility_assertion:value('#debt-reconciliation-responsibility'),payment_note:value('#debt-reconciliation-payment'),missing_period:Boolean(section.querySelector('#debt-reconciliation-missing')?.checked),source_ref:source}],user_confirmed:true})});render(payload?.workspace||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Debt comparison could not be created'});}});section.querySelector('#debt-reconciliation-load').addEventListener('click',async()=>{const id=value('#debt-reconciliation-id');if(!id){result.textContent='Enter a workspace ID to reload it.';return;}try{render((await fetchJson('/api/debt-reconciliation-workspaces/'+encodeURIComponent(id))?.workspace||{}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Debt comparison could not be loaded'});}});loadRecords();
+    }());
+    (function repairDebtReconciliationLoadControl() {
+      const section=document.querySelector('.debt-reconciliation-control');const button=section?.querySelector('#debt-reconciliation-load'),result=section?.querySelector('#debt-reconciliation-result');if(!section||!button||!result)return;
+      button.addEventListener('click',async(event)=>{event.stopImmediatePropagation();const id=String(section.querySelector('#debt-reconciliation-id')?.value||'').trim();if(!id){result.textContent='Enter a workspace ID to reload it.';return;}try{const payload=await fetchJson('/api/debt-reconciliation-workspaces/'+encodeURIComponent(id));const workspace=payload?.workspace||{};result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String((workspace.statements||[]).length))+' statement(s); '+escapeHtml(String((workspace.conflicts_or_gaps||[]).length))+' conflict or missing-period item(s).<p>'+escapeHtml(workspace.notice||'')+'</p>';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Debt comparison could not be loaded'});}},true);
+    }());
+    (function installAssetTracingControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('asset-tracing-create'))return;
+      const section=document.createElement('section');section.className='document-review-card asset-tracing-control';section.innerHTML='<div class="document-review-heading"><div><span>Claimed provenance only</span><strong>Asset tracing ledger</strong></div><span class="badge warn">Review required</span></div><p>Track reviewer-entered claimed source, transfer note, valuation date, characterization assertion, dispute state, and supporting record. It does not determine ownership, marital characterization, value, or division.</p><div class="document-workspace-fields"><label>Ledger safe ID<input id="asset-tracing-id" maxlength="80" placeholder="asset_ledger_001"></label><label>Reviewer safe ID<input id="asset-tracing-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Supporting record<select id="asset-tracing-record"><option value="">Load active-matter records</option></select></label><label>Asset safe ID<input id="asset-tracing-asset-id" maxlength="80" placeholder="asset_001"></label><label>Asset label<input id="asset-tracing-label" maxlength="300" placeholder="Fictional asset label"></label><label>Claimed source<input id="asset-tracing-claimed-source" maxlength="1000" placeholder="Reviewer-entered claimed source"></label><label>Valuation date reference<input id="asset-tracing-date" maxlength="64" placeholder="2026-01-01 or unknown"></label><label>Characterization assertion<input id="asset-tracing-characterization" maxlength="1000" placeholder="Reviewer-entered assertion"></label><label>Transfer note<input id="asset-tracing-transfer" maxlength="1000" placeholder="Reviewer-entered transfer note"></label></div><label class="document-review-attestation"><input id="asset-tracing-disputed" type="checkbox"> Characterization is disputed or unresolved.</label><div class="document-workspace-actions"><button class="secondary" id="asset-tracing-records" type="button">Load records</button></div><label class="document-review-attestation"><input id="asset-tracing-confirm" type="checkbox"> I confirm this is an evidence-organizing ledger, not an ownership, valuation, characterization, or division determination.</label><div class="document-workspace-actions"><button class="primary-action" id="asset-tracing-create" type="button">Create tracing ledger</button><button class="secondary" id="asset-tracing-load" type="button">Load ledger</button></div><div aria-live="polite" class="document-workspace-status" id="asset-tracing-result">Load a supporting record before creating a tracing entry.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#asset-tracing-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim(),select=section.querySelector('#asset-tracing-record');
+      const loadRecords=async()=>{try{result.textContent='Loading hash-bound records from the active matter…';const payload=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=payload?.candidates||[];select.innerHTML='<option value="">Choose an active-matter record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose a record that supports this reviewer-entered tracing entry.':'No hash-bound records are available; import a fictional record first.';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Matter records could not be loaded'});}};
+      const render=(ledger)=>{const assets=ledger?.assets||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(assets.length))+' tracing assertion(s).<p>'+escapeHtml(ledger?.notice||'')+'</p><div class="document-workspace-actions">'+assets.flatMap((asset)=>(asset.supporting_records||[]).map((source)=>'<button class="secondary compact-action" data-asset-tracing-asset="'+escapeHtml(asset.asset_id||'')+'" data-asset-tracing-record="'+escapeHtml(source.record_id||'')+'" type="button">Open '+escapeHtml(asset.label||'support')+'</button>')).join('')+'</div>';result.querySelectorAll('[data-asset-tracing-record]').forEach((button)=>button.addEventListener('click',async(event)=>{try{const payload=await fetchJson('/api/asset-tracing-ledgers/'+encodeURIComponent(String(ledger.ledger_id||value('#asset-tracing-id')))+'/assets/'+encodeURIComponent(String(button.dataset.assetTracingAsset||''))+'/sources/'+encodeURIComponent(String(button.dataset.assetTracingRecord||'')));const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('asset_tracing_source_token_unavailable');openRecordInspector({source_token:token},Number(payload?.source?.page||0),event.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Asset-tracing source record could not be opened'});}}));};
+      section.querySelector('#asset-tracing-records').addEventListener('click',loadRecords);section.querySelector('#asset-tracing-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(String(select.value||''));}catch(_){source=null;}const ledger_id=value('#asset-tracing-id'),reviewer_safe_id=value('#asset-tracing-reviewer'),asset_id=value('#asset-tracing-asset-id');if(!ledger_id||!reviewer_safe_id||!asset_id||!value('#asset-tracing-label')||!value('#asset-tracing-claimed-source')||!value('#asset-tracing-characterization')||!source){result.textContent='Enter ledger, reviewer, asset, claimed source, characterization, and choose a supporting record.';return;}if(!section.querySelector('#asset-tracing-confirm')?.checked){result.textContent='Confirm the non-determinative review boundary.';return;}try{result.textContent='Saving encrypted source-bound tracing ledger…';const payload=await fetchJson('/api/asset-tracing-ledgers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ledger_id,reviewer_safe_id,assets:[{asset_id,label:value('#asset-tracing-label'),claimed_source:value('#asset-tracing-claimed-source'),valuation_date:value('#asset-tracing-date'),transfers:[{transfer_id:'transfer_001',date_candidate:value('#asset-tracing-date'),description:value('#asset-tracing-transfer')||'No transfer note entered'}],characterization_assertion:value('#asset-tracing-characterization'),characterization_disputed:Boolean(section.querySelector('#asset-tracing-disputed')?.checked),supporting_records:[source]}],user_confirmed:true})});render(payload?.ledger||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Tracing ledger could not be created'});}});section.querySelector('#asset-tracing-load').addEventListener('click',async()=>{const id=value('#asset-tracing-id');if(!id){result.textContent='Enter a ledger ID to reload it.';return;}try{result.textContent='Loading encrypted tracing ledger…';const payload=await fetchJson('/api/asset-tracing-ledgers/'+encodeURIComponent(id));render(payload?.ledger||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Tracing ledger could not be loaded'});}});loadRecords();
+    }());
+    (function installFinancialAffidavitControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('financial-affidavit-create'))return;
+      const section=document.createElement('section');section.className='document-review-card financial-affidavit-control';section.innerHTML='<div class="document-review-heading"><div><span>Source-bound organization</span><strong>Financial affidavit review</strong></div><span class="badge warn">Review required</span></div><p>Organize income, expenses, assets, debts, and unknowns from selected matter records. Mismatched reviewer-entered values remain visible; no totals, value, debt, or sworn conclusion is calculated.</p><div class="document-workspace-fields"><label>Workspace safe ID<input id="financial-affidavit-id" maxlength="80" placeholder="financial_review_001"></label><label>Reviewer safe ID<input id="financial-affidavit-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Source record<select id="financial-affidavit-record"><option value="">Load active-matter records</option></select></label></div><label>Rows (one “category | label | reported value | reconciliation key” per line)<textarea id="financial-affidavit-rows" rows="5" maxlength="12000" placeholder="income | reviewer-entered income | value under review | income_001&#10;debt | reviewer-entered balance | value under review | debt_001"></textarea></label><label>Unknowns (one per line)<textarea id="financial-affidavit-unknowns" rows="3" maxlength="6000" placeholder="Need a complete fictional statement period"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="financial-affidavit-records" type="button">Load records</button></div><label class="document-review-attestation"><input id="financial-affidavit-confirm" type="checkbox"> I confirm this is source-bound review organization only, not a calculation, valuation, affidavit, or sworn statement.</label><div class="document-workspace-actions"><button class="primary-action" id="financial-affidavit-create" type="button">Save review workspace</button><button class="secondary" id="financial-affidavit-load" type="button">Load workspace</button></div><div aria-live="polite" class="document-workspace-status" id="financial-affidavit-result">Load a source record and add review rows before saving.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#financial-affidavit-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim(),lines=(selector)=>value(selector).split(/\n/).map((line)=>line.trim()).filter(Boolean),select=section.querySelector('#financial-affidavit-record');
+      const loadRecords=async()=>{try{result.textContent='Loading hash-bound records from the active matter…';const payload=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=payload?.candidates||[];select.innerHTML='<option value="">Choose an active-matter record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose the record supporting these review rows.':'No hash-bound records are available; import a fictional record first.';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Matter records could not be loaded'});}};
+      const render=(workspace)=>{const mismatches=workspace?.reconciliation_mismatches||[];const entries=workspace?.entries||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(entries.length))+' source-bound row(s); '+escapeHtml(String(mismatches.length))+' mismatch(es).<p>'+escapeHtml(workspace?.notice||'')+'</p><div class="document-workspace-actions">'+entries.map((entry)=>'<button class="secondary compact-action" data-financial-affidavit-entry="'+escapeHtml(entry.entry_id||'')+'" type="button">Open '+escapeHtml(entry.label||'source')+'</button>').join('')+'</div>';result.querySelectorAll('[data-financial-affidavit-entry]').forEach((button)=>button.addEventListener('click',async(event)=>{try{const payload=await fetchJson('/api/financial-affidavit-workspaces/'+encodeURIComponent(String(workspace.workspace_id||value('#financial-affidavit-id')))+'/entries/'+encodeURIComponent(String(button.dataset.financialAffidavitEntry||''))+'/source');const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('financial_affidavit_source_token_unavailable');openRecordInspector({source_token:token},Number(payload?.source?.page||0),event.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Financial source record could not be opened'});}}));};
+      section.querySelector('#financial-affidavit-records').addEventListener('click',loadRecords);section.querySelector('#financial-affidavit-create').addEventListener('click',async()=>{let source;try{source=JSON.parse(String(select.value||''));}catch(_){source=null;}const allowed=['income','expense','asset','debt','unknown'];const entries=lines('#financial-affidavit-rows').map((line,index)=>{const parts=line.split('|').map((piece)=>piece.trim());return {entry_id:'entry_'+String(index+1).padStart(3,'0'),category:allowed.includes(String(parts[0]||'').toLowerCase())?String(parts[0]).toLowerCase():'unknown',label:parts[1]||'Reviewer-entered row',reported_value:parts[2]||'',reconciliation_key:(parts[3]||('row_'+String(index+1).padStart(3,'0'))).replace(/[^a-zA-Z0-9_-]/g,'_').toLowerCase(),source_ref:source};});if(!value('#financial-affidavit-id')||!value('#financial-affidavit-reviewer')||!source||!entries.length){result.textContent='Enter workspace and reviewer IDs, choose an active-matter source record, and add at least one row.';return;}if(!section.querySelector('#financial-affidavit-confirm')?.checked){result.textContent='Confirm the no-calculation, review-only boundary.';return;}try{result.textContent='Saving encrypted source-bound financial review…';const payload=await fetchJson('/api/financial-affidavit-workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace_id:value('#financial-affidavit-id'),reviewer_safe_id:value('#financial-affidavit-reviewer'),entries,unknowns:lines('#financial-affidavit-unknowns'),user_confirmed:true})});render(payload?.workspace||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Financial review workspace could not be saved'});}});section.querySelector('#financial-affidavit-load').addEventListener('click',async()=>{const id=value('#financial-affidavit-id');if(!id){result.textContent='Enter a workspace ID to reload it.';return;}try{result.textContent='Loading encrypted financial review…';const payload=await fetchJson('/api/financial-affidavit-workspaces/'+encodeURIComponent(id));render(payload?.workspace||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Financial review workspace could not be loaded'});}});loadRecords();
+    }());
+    (function installChildSupportWorksheetControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('child-support-worksheet-create'))return;
+      const section=document.createElement('section');section.className='document-review-card child-support-worksheet-control';section.innerHTML='<div class="document-review-heading"><div><span>Preparation only</span><strong>Child-support worksheet inputs</strong></div><span class="badge warn">Review required</span></div><p>Organize user-entered worksheet inputs and missing facts against a selected current official source. It cannot calculate support, determine income or a deviation, or complete a worksheet.</p><div class="document-workspace-fields"><label>Workspace safe ID<input id="child-support-workspace-id" maxlength="80" placeholder="support_worksheet_001"></label><label>Reviewer safe ID<input id="child-support-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Current official source ID<input id="child-support-authority" maxlength="240" placeholder="Source ID from a current official source card"></label></div><label>Inputs (one “field: value” per line; gross_income, health_insurance, child_care, support_paid, children, overnights, or other)<textarea id="child-support-inputs" rows="5" maxlength="12000" placeholder="gross_income: reviewer-entered value&#10;children: unknown"></textarea></label><label>Missing facts (one per line)<textarea id="child-support-missing" rows="3" maxlength="6000" placeholder="Need current pay information"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="child-support-authority-check" type="button">Check current official source</button></div><label class="document-review-attestation"><input id="child-support-confirm" type="checkbox"> I confirm these are preparation inputs only and that no support calculation or worksheet completion will be inferred.</label><div class="document-workspace-actions"><button class="primary-action" id="child-support-worksheet-create" type="button">Save preparation workspace</button><button class="secondary" id="child-support-worksheet-load" type="button">Load workspace</button></div><div aria-live="polite" class="document-workspace-status" id="child-support-result">Check a current official source before saving worksheet-preparation inputs.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#child-support-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim(),lines=(selector)=>value(selector).split(/\n/).map((line)=>line.trim()).filter(Boolean);let authority=null;
+      const check=async()=>{const source=value('#child-support-authority');if(!source){result.textContent='Enter a current official source ID.';return;}try{result.textContent='Checking official source hash, span, and freshness…';const payload=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=payload?.candidate||null;if(!authority||!['fresh','current'].includes(String(authority.freshness_status||'').toLowerCase()))throw new Error('current_official_source_required');result.innerHTML='<strong>Current official source selected.</strong> '+escapeHtml(authority.citation||authority.source_id)+'.<p>Inputs will stay review-required and uncalculated.</p>';}catch(error){authority=null;result.innerHTML=renderRecoverableError(error,{title:'A current official source is required'});}};
+      const render=(workspace)=>{const inputs=workspace?.inputs||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(inputs.length))+' input(s) and '+escapeHtml(String((workspace?.missing_facts||[]).length))+' missing fact(s) retained without calculation.<p>'+escapeHtml(workspace?.notice||'')+'</p><div class="document-workspace-actions"><button class="secondary compact-action" data-child-support-source type="button">Open official source</button></div>';result.querySelector('[data-child-support-source]')?.addEventListener('click',()=>inspectSource(String(workspace?.authority?.source_id||authority?.source_id||''),{pin:true}));};
+      section.querySelector('#child-support-authority-check').addEventListener('click',check);section.querySelector('#child-support-worksheet-create').addEventListener('click',async()=>{const raw=lines('#child-support-inputs');const inputs=raw.map((line,index)=>{const split=line.indexOf(':');const field=(split<0?'other':line.slice(0,split)).trim().toLowerCase();const allowed=['gross_income','health_insurance','child_care','support_paid','children','overnights','other'];return {input_id:'input_'+String(index+1).padStart(3,'0'),field_id:allowed.includes(field)?field:'other',label:field||'other',value:split<0?line:line.slice(split+1).trim(),state:(line.toLowerCase().includes('unknown')?'unknown':'user_entered_unverified')};});if(!value('#child-support-workspace-id')||!value('#child-support-reviewer')||!authority||!inputs.length){result.textContent='Enter workspace and reviewer IDs, at least one input, and check a current official source.';return;}if(!section.querySelector('#child-support-confirm')?.checked){result.textContent='Confirm the no-calculation preparation boundary.';return;}try{result.textContent='Saving encrypted, review-only worksheet preparation…';const payload=await fetchJson('/api/child-support-worksheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace_id:value('#child-support-workspace-id'),reviewer_safe_id:value('#child-support-reviewer'),authority_source_id:authority.source_id,inputs,missing_facts:lines('#child-support-missing'),user_confirmed:true})});render(payload?.workspace||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Worksheet preparation could not be saved'});}});section.querySelector('#child-support-worksheet-load').addEventListener('click',async()=>{const id=value('#child-support-workspace-id');if(!id){result.textContent='Enter a workspace ID to reload it.';return;}try{result.textContent='Loading encrypted worksheet preparation…';const payload=await fetchJson('/api/child-support-worksheets/'+encodeURIComponent(id));render(payload?.workspace||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Worksheet preparation could not be loaded'});}});
+    }());
+    (function installOrderCalendarExtractionControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('order-calendar-extraction-create'))return;
+      const section=document.createElement('section');section.className='document-review-card order-calendar-extraction-control';section.innerHTML='<div class="document-review-heading"><div><span>Confirmed exact term only</span><strong>Order-to-calendar candidate</strong></div><span class="badge warn">Review required</span></div><p>Create a local calendar candidate from a reviewer-confirmed exact order term. It does not decide the order governs, interpret it, notify anyone, or write an external calendar.</p><div class="document-workspace-fields"><label>Candidate safe ID<input id="order-calendar-extraction-id" maxlength="80" placeholder="calendar_candidate_001"></label><label>Reviewer safe ID<input id="order-calendar-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Confirmed exact term<select id="order-calendar-term"><option value="">Load reviewer-confirmed terms</option></select></label><label>Reviewer-entered date<input id="order-calendar-date" maxlength="64" placeholder="2026-07-04"></label><label>Local event label<input id="order-calendar-label" maxlength="300" placeholder="Review-required local candidate"></label></div><div class="document-workspace-actions"><button class="secondary" id="order-calendar-terms" type="button">Load confirmed terms</button></div><label class="document-review-attestation"><input id="order-calendar-confirm" type="checkbox"> I confirm I reviewed the selected exact term and want only a local, review-required candidate.</label><div class="document-workspace-actions"><button class="primary-action" id="order-calendar-extraction-create" type="button">Create local candidate</button><button class="secondary" id="order-calendar-extraction-load" type="button">Load candidate</button></div><div aria-live="polite" class="document-workspace-status" id="order-calendar-result">Load a reviewer-confirmed exact term before creating a local candidate.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#order-calendar-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim(),termSelect=section.querySelector('#order-calendar-term');
+      const loadTerms=async()=>{try{result.textContent='Loading confirmed exact order terms from this matter…';const payload=await fetchJson('/api/orders/terms');const terms=(payload?.terms||[]).filter((term)=>term?.operative_candidate_review?.confirmed===true&&term?.operative_candidate_review?.status==='reviewer_confirmed_candidate');termSelect.innerHTML='<option value="">Choose a reviewer-confirmed exact term</option>';terms.forEach((term)=>{const option=document.createElement('option');option.value=JSON.stringify(term);option.textContent=String(term.subject||'order term')+' · '+String(term.term_id||'');termSelect.append(option);});result.textContent=terms.length?'Choose one exact term. Its source hash will be revalidated before any candidate is saved.':'No reviewer-confirmed exact order terms are available. Review a source-bound order term first.';}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Confirmed order terms could not be loaded'});}};
+      const render=(extraction)=>{const event=extraction?.candidate_event||{};result.innerHTML='<strong>Review required.</strong> Local candidate '+escapeHtml(event.label||'')+' · '+escapeHtml(event.date_candidate||'unknown date')+'.<p>'+escapeHtml(extraction?.notice||'No external calendar was changed.')+'</p><div class="document-workspace-actions"><button class="secondary compact-action" data-order-calendar-source type="button">Open exact order source</button></div>';result.querySelector('[data-order-calendar-source]')?.addEventListener('click',async(eventTarget)=>{try{const payload=await fetchJson('/api/calendar/order-term-extractions/'+encodeURIComponent(String(extraction.extraction_id||value('#order-calendar-extraction-id')))+'/source');const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('order_calendar_source_token_unavailable');openRecordInspector({source_token:token},Number(payload?.source?.page||0),eventTarget.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Exact order source could not be opened'});}});};
+      section.querySelector('#order-calendar-terms').addEventListener('click',loadTerms);section.querySelector('#order-calendar-extraction-create').addEventListener('click',async()=>{let term;try{term=JSON.parse(String(termSelect.value||''));}catch(_){term=null;}if(!term||!value('#order-calendar-extraction-id')||!value('#order-calendar-reviewer')||!value('#order-calendar-date')||!value('#order-calendar-label')){result.textContent='Enter candidate, reviewer, date, label, and choose a confirmed exact term.';return;}if(!section.querySelector('#order-calendar-confirm')?.checked){result.textContent='Confirm the exact-term and local-candidate boundary first.';return;}try{result.textContent='Creating encrypted local calendar candidate…';const payload=await fetchJson('/api/calendar/order-term-extractions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({extraction_id:value('#order-calendar-extraction-id'),reviewer_safe_id:value('#order-calendar-reviewer'),term_id:term.term_id,date_candidate:value('#order-calendar-date'),label:value('#order-calendar-label'),user_confirmed:true})});render(payload);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Local calendar candidate could not be created'});}});section.querySelector('#order-calendar-extraction-load').addEventListener('click',async()=>{const id=value('#order-calendar-extraction-id');if(!id){result.textContent='Enter a local candidate ID to reload it.';return;}try{result.textContent='Loading encrypted local calendar candidate…';const payload=await fetchJson('/api/calendar/order-term-extractions/'+encodeURIComponent(id));render(payload?.extraction||{});}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Local calendar candidate could not be loaded'});}});loadTerms();
+    }());
+    (function installParentingScheduleSimulationControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('schedule-simulation-v2-create'))return;const s=document.createElement('section');s.className='document-review-card schedule-simulation-v2-control';s.innerHTML='<div class="document-review-heading"><div><span>Neutral comparison only</span><strong>Parenting schedule simulation</strong></div><span class="badge warn">Review required</span></div><p>Compare two reviewer-entered calendar scenarios from hash-bound records. It does not recommend a schedule or determine custody.</p><div class="document-workspace-fields"><label>Simulation ID<input id="schedule-sim-id" placeholder="schedule_sim_001"></label><label>Reviewer ID<input id="schedule-sim-reviewer" placeholder="reviewer_001"></label><label>Scenario A date<input id="schedule-sim-a-date" placeholder="2026-07-04"></label><label>Scenario B date<input id="schedule-sim-b-date" placeholder="2026-07-04"></label><label>Source record<select id="schedule-sim-record"></select></label></div><button class="secondary" id="schedule-sim-records" type="button">Load records</button><label class="document-review-attestation"><input id="schedule-sim-confirm" type="checkbox"> I confirm this is a neutral review comparison, not a custody recommendation.</label><div class="document-workspace-actions"><button class="primary-action" id="schedule-simulation-v2-create" type="button">Compare neutral scenarios</button><button class="secondary" id="schedule-sim-load" type="button">Load comparison</button></div><div aria-live="polite" class="document-workspace-status" id="schedule-sim-result">Load a source record before comparing scenarios.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#schedule-sim-result'),load=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');q('#schedule-sim-record').innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q('#schedule-sim-record').append(o);});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Records could not be loaded'});}};const show=x=>r.innerHTML='<strong>Review required.</strong> Overlaps: '+escapeHtml(String((x.date_overlaps||[]).length))+' · recommendation unavailable.<p>'+escapeHtml(x.notice||'No calendar write or custody recommendation.')+'</p>';q('#schedule-sim-records').addEventListener('click',load);q('#schedule-simulation-v2-create').addEventListener('click',async()=>{let src;try{src=JSON.parse(q('#schedule-sim-record').value);}catch(_){r.textContent='Load a source record first.';return;}if(!q('#schedule-sim-confirm').checked){r.textContent='Confirm the neutral-comparison boundary.';return;}try{const p=await fetchJson('/api/parenting-schedule/simulations-v2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({simulation_id:v('#schedule-sim-id'),reviewer_safe_id:v('#schedule-sim-reviewer'),user_confirmed:true,scenarios:[{scenario_id:'scenario_a',label:'Scenario A',events:[{date_candidate:v('#schedule-sim-a-date'),label:'Reviewer-entered event',source_ref:src}]},{scenario_id:'scenario_b',label:'Scenario B',events:[{date_candidate:v('#schedule-sim-b-date'),label:'Reviewer-entered event',source_ref:src}]}]})});show(p);}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Schedule scenarios could not be compared'});}});q('#schedule-sim-load').addEventListener('click',async()=>{try{show(await fetchJson('/api/parenting-schedule/simulations-v2/'+encodeURIComponent(v('#schedule-sim-id'))));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Comparison could not be loaded'});}});load();
+    }());
+    (function installParentingScheduleSimulationSourceDrilldown() {
+      const section=document.querySelector('.schedule-simulation-v2-control');if(!section)return;
+      const result=section.querySelector('#schedule-sim-result'),value=(selector)=>String(section.querySelector(selector)?.value||'').trim();
+      const attach=()=>{if(!result||!result.textContent.includes('Review required')||result.querySelector('[data-schedule-simulation-source]'))return;result.insertAdjacentHTML('beforeend','<div class="document-workspace-actions"><button class="secondary compact-action" data-schedule-simulation-source type="button">Open exact source record</button></div>');result.querySelector('[data-schedule-simulation-source]')?.addEventListener('click',async(event)=>{let source={};try{source=JSON.parse(String(section.querySelector('#schedule-sim-record')?.value||''));const simulationId=value('#schedule-sim-id');if(!simulationId||!source?.record_id)throw new Error('schedule_simulation_source_missing');const payload=await fetchJson('/api/parenting-schedule/simulations-v2/'+encodeURIComponent(simulationId)+'/sources/'+encodeURIComponent(String(source.record_id)));const token=String(payload?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('schedule_simulation_source_token_unavailable');openRecordInspector({source_token:token},0,event.currentTarget);}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Exact source record could not be opened'});}});};
+      section.querySelector('#schedule-simulation-v2-create')?.addEventListener('click',()=>window.setTimeout(attach,350));section.querySelector('#schedule-sim-load')?.addEventListener('click',()=>window.setTimeout(attach,250));
+    }());
+    (function installPostFilingReconciliationControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('post-filing-create'))return;const s=document.createElement('section');s.className='document-review-card post-filing-control';s.innerHTML='<div class="document-review-heading"><div><span>User-provided receipt only</span><strong>Post-filing receipt reconciliation</strong></div><span class="badge warn">Review required</span></div><p>Compare one local receipt record and one submitted record against a reviewer-entered docket expectation. This does not confirm submission or court acceptance.</p><div class="document-workspace-fields"><label>Reconciliation ID<input id="post-filing-id" placeholder="post_filing_001"></label><label>Reviewer ID<input id="post-filing-reviewer" placeholder="reviewer_001"></label><label>Receipt record<select id="post-filing-receipt"></select></label><label>Submitted record<select id="post-filing-item"></select></label><label>Submitted filename<input id="post-filing-name" placeholder="fictional-filing.pdf"></label><label>Expected filename<input id="post-filing-expected" placeholder="fictional-filing.pdf"></label></div><button class="secondary" id="post-filing-records" type="button">Load matter records</button><label class="document-review-attestation"><input id="post-filing-confirm" type="checkbox"> I confirm this is a local comparison, not court confirmation.</label><div class="document-workspace-actions"><button class="primary-action" id="post-filing-create" type="button">Reconcile receipt</button><button class="secondary" id="post-filing-load" type="button">Load reconciliation</button></div><div aria-live="polite" class="document-workspace-status" id="post-filing-result">Load local receipt and submitted records.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#post-filing-result'),fill=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');for(const z of ['#post-filing-receipt','#post-filing-item']){q(z).innerHTML='';(p.candidates||[]).forEach(x=>{const o=document.createElement('option');o.value=JSON.stringify(x);o.textContent=x.title||x.record_id;q(z).append(o);});}r.textContent='Choose local receipt and submitted records.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const show=x=>{const a=x?.submitted_items||[];r.innerHTML='<strong>Review required.</strong> '+escapeHtml(String((x?.decisions||[]).map(d=>d.status).join(', ')||'no comparison'))+'.<button class="secondary compact-action" data-post-filing-source="'+escapeHtml(x?.receipt_source?.record_id||'')+'" type="button">Open receipt record</button>'+a.map(i=>'<button class="secondary compact-action" data-post-filing-source="'+escapeHtml(i.record_id)+'" type="button">Open submitted record</button>').join('')+'<p>'+escapeHtml(x?.notice||'')+'</p>';r.querySelectorAll('[data-post-filing-source]').forEach(b=>b.addEventListener('click',async e=>{try{const p=await fetchJson('/api/post-filing-reconciliations/'+encodeURIComponent(x.reconciliation_id)+'/sources/'+encodeURIComponent(b.dataset.postFilingSource));openRecordInspector({source_token:p.source.source_token},0,e.currentTarget);}catch(err){r.innerHTML=renderRecoverableError(err,{title:'Reconciliation source could not be opened'});}}));};q('#post-filing-records').addEventListener('click',fill);q('#post-filing-create').addEventListener('click',async()=>{let receipt,item;try{receipt=JSON.parse(q('#post-filing-receipt').value);item=JSON.parse(q('#post-filing-item').value);}catch(_){r.textContent='Load and choose records first.';return;}if(!q('#post-filing-confirm').checked){r.textContent='Confirm the comparison boundary.';return;}try{const p=await fetchJson('/api/post-filing-reconciliations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reconciliation_id:v('#post-filing-id'),reviewer_safe_id:v('#post-filing-reviewer'),receipt_source:receipt,submitted_items:[{...item,submitted_filename:v('#post-filing-name')}],docket_expectations:[{expectation_id:'expectation_001',expected_filename:v('#post-filing-expected'),expected_hash:item.source_hash}],user_confirmed:true})});show(p.reconciliation);}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Receipt could not be reconciled'});}});q('#post-filing-load').addEventListener('click',async()=>{try{show((await fetchJson('/api/post-filing-reconciliations/'+encodeURIComponent(v('#post-filing-id')))).reconciliation);}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Reconciliation could not be loaded'});}});fill();
+    }());
+    (function installVenueLocationNavigatorControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('venue-location-create'))return;const section=document.createElement('section');section.className='document-review-card venue-location-control';section.innerHTML='<div class="document-review-heading"><div><span>Location information, not a venue decision</span><strong>Venue and court-location navigator</strong></div><span class="badge warn">Review required</span></div><p>Organize a selected official source, reviewer-entered location/contact notes, and unresolved facts. It does not decide where to file or which court has jurisdiction.</p><div class="document-workspace-fields"><label>Workspace safe ID<input id="venue-location-id" maxlength="80" placeholder="venue_location_001"></label><label>Reviewer safe ID<input id="venue-location-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Location label<input id="venue-location-label" maxlength="300" placeholder="Reviewer-entered public location label"></label><label>Contact label<input id="venue-location-contact" maxlength="500" placeholder="Reviewer-entered public contact note"></label><label>Official source ID<input id="venue-location-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><label>Unresolved venue facts (one per line)<textarea id="venue-location-unresolved" rows="3" maxlength="8000"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="venue-location-check" type="button">Check official source</button></div><label class="document-review-attestation"><input id="venue-location-confirm" type="checkbox"> I confirm this is a review-only location workspace, not a venue or jurisdiction determination.</label><div class="document-workspace-actions"><button class="primary-action" id="venue-location-create" type="button">Create location workspace</button><button class="secondary" id="venue-location-load" type="button">Load workspace</button></div><div aria-live="polite" class="document-workspace-status" id="venue-location-result">Check an official source before creating a location review workspace.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#venue-location-result'),value=s=>String(section.querySelector(s)?.value||'').trim(),lines=s=>value(s).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);let authority=null;const render=w=>{result.innerHTML='<strong>Review required.</strong> Venue: not determined.<p>'+escapeHtml(w?.location_label||'')+' · unresolved facts: '+escapeHtml(String((w?.unresolved_facts||[]).length))+'.</p><button class="secondary compact-action" data-venue-location-source type="button">Open official source</button><p>'+escapeHtml(w?.notice||'')+'</p>';result.querySelector('[data-venue-location-source]')?.addEventListener('click',e=>inspectSource(String(w?.authority?.source_id||''),{pin:true,owner:e.currentTarget}));};section.querySelector('#venue-location-check').addEventListener('click',async()=>{const source=value('#venue-location-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('venue_location_authority_unavailable');result.textContent='Official source checked; the server resolves it again when saving.';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}});section.querySelector('#venue-location-create').addEventListener('click',async()=>{const workspace_id=value('#venue-location-id'),reviewer_safe_id=value('#venue-location-reviewer'),location_label=value('#venue-location-label');if(!workspace_id||!reviewer_safe_id||!location_label||!authority){result.textContent='Enter workspace, reviewer, location, and check an official source.';return;}if(!section.querySelector('#venue-location-confirm')?.checked){result.textContent='Confirm the no-venue-decision boundary.';return;}try{const p=await fetchJson('/api/venue-location-workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace_id,reviewer_safe_id,location_label,contact_label:value('#venue-location-contact'),unresolved_facts:lines('#venue-location-unresolved'),authority_source_id:authority.source_id,user_confirmed:true})});render(p?.workspace||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Location workspace could not be created'});}});section.querySelector('#venue-location-load').addEventListener('click',async()=>{try{const p=await fetchJson('/api/venue-location-workspaces/'+encodeURIComponent(value('#venue-location-id')));render(p?.workspace||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Location workspace could not be loaded'});}});
+    }());
+    (function installFeeWaiverWorkspaceControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('fee-waiver-workspace-create'))return;const section=document.createElement('section');section.className='document-review-card fee-waiver-workspace-control';section.innerHTML='<div class="document-review-heading"><div><span>Information organizer only</span><strong>Fee and waiver information</strong></div><span class="badge warn">Review required</span></div><p>Organize one selected official source and user-entered facts for review. This does not calculate fees, decide eligibility, complete a form, or authorize a filing.</p><div class="document-workspace-fields"><label>Workspace safe ID<input id="fee-waiver-workspace-id" maxlength="80" placeholder="fee_waiver_001"></label><label>Reviewer safe ID<input id="fee-waiver-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Purpose label<input id="fee-waiver-purpose" maxlength="300" placeholder="Reviewer-entered fee/waiver question"></label><label>Official source ID<input id="fee-waiver-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><label>User-entered facts (one “label: value” per line)<textarea id="fee-waiver-facts" rows="4" maxlength="8000" placeholder="Household size: reviewer-entered value"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="fee-waiver-authority-check" type="button">Check official source</button></div><label class="document-review-attestation"><input id="fee-waiver-confirm" type="checkbox"> I confirm these are unverified user-entered facts and a review-only information workspace.</label><div class="document-workspace-actions"><button class="primary-action" id="fee-waiver-workspace-create" type="button">Create information workspace</button><button class="secondary" id="fee-waiver-workspace-load" type="button">Load workspace</button></div><div aria-live="polite" class="document-workspace-status" id="fee-waiver-result">Check an official source before organizing user-entered facts.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#fee-waiver-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim();let authority=null;const facts=()=>value('#fee-waiver-facts').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map((line,index)=>{const [label,...rest]=line.split(':');return {fact_id:'fact_'+String(index+1).padStart(3,'0'),label:label.trim()||'User-entered fact',user_entered_value:rest.join(':').trim()||line};});const render=(workspace)=>{result.innerHTML='<strong>Review required.</strong> Eligibility: not determined.<p>'+escapeHtml(String((workspace?.facts||[]).length))+' user-entered fact(s) · '+escapeHtml(workspace?.authority?.citation||workspace?.authority?.source_id||'no source')+'.</p><button class="secondary compact-action" data-fee-waiver-source type="button">Open official source</button><p>'+escapeHtml(workspace?.notice||'')+'</p>';result.querySelector('[data-fee-waiver-source]')?.addEventListener('click',(event)=>inspectSource(String(workspace?.authority?.source_id||''),{pin:true,owner:event.currentTarget}));};section.querySelector('#fee-waiver-authority-check').addEventListener('click',async()=>{const source=value('#fee-waiver-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking official source hash, freshness, and exact span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('fee_waiver_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server resolves it again when saving.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}});section.querySelector('#fee-waiver-workspace-create').addEventListener('click',async()=>{const workspace_id=value('#fee-waiver-workspace-id'),reviewer_safe_id=value('#fee-waiver-reviewer'),purpose_label=value('#fee-waiver-purpose');if(!workspace_id||!reviewer_safe_id||!purpose_label||!authority){result.textContent='Enter workspace, reviewer, purpose, and check an official source.';return;}if(!section.querySelector('#fee-waiver-confirm')?.checked){result.textContent='Confirm the review-only information boundary.';return;}try{result.textContent='Creating encrypted information workspace…';const p=await fetchJson('/api/fee-waiver-workspaces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workspace_id,reviewer_safe_id,purpose_label,authority_source_id:authority.source_id,facts:facts(),user_confirmed:true})});render(p?.workspace||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Fee/waiver workspace could not be created'});}});section.querySelector('#fee-waiver-workspace-load').addEventListener('click',async()=>{const id=value('#fee-waiver-workspace-id');if(!id){result.textContent='Enter a saved workspace ID.';return;}try{const p=await fetchJson('/api/fee-waiver-workspaces/'+encodeURIComponent(id));render(p?.workspace||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Fee/waiver workspace could not be loaded'});}});
+    }());
+    (function installFilingPreflightControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('filing-preflight-create'))return;
+      const section=document.createElement('section');section.className='document-review-card filing-preflight-control';section.innerHTML='<div class="document-review-heading"><div><span>Blockers only; no submission</span><strong>Filing package preflight</strong></div><span class="badge warn">Review required</span></div><p>Organize one proposed attachment, selected official form source, and explicit review confirmations. This does not approve a filing or bypass the reviewed-filing packet gate.</p><div class="document-workspace-fields"><label>Preflight safe ID<input id="filing-preflight-id" maxlength="80" placeholder="preflight_001"></label><label>Reviewer safe ID<input id="filing-preflight-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Caption label (reviewer-entered)<input id="filing-preflight-caption" maxlength="300" placeholder="Fictional caption review label"></label><label>Attachment record<select id="filing-preflight-attachment"><option value="">Load active-matter records</option></select></label><label>Declared format<input id="filing-preflight-format" maxlength="80" value="pdf"></label><label>Official form/source ID<input id="filing-preflight-form" maxlength="240" placeholder="Source ID from an official source card"></label><label>Optional document safe ID for canonical packet check<input id="filing-preflight-document" maxlength="80" placeholder="document_001"></label></div><div class="document-workspace-actions"><button class="secondary" id="filing-preflight-records" type="button">Load attachment records</button><button class="secondary" id="filing-preflight-form-check" type="button">Check form/source freshness</button></div><fieldset class="document-review-attestation"><legend>Reviewer confirmations</legend><label><input data-filing-check="caption_confirmed" type="checkbox"> Caption reviewed</label><label><input data-filing-check="names_confirmed" type="checkbox"> Names reviewed</label><label><input data-filing-check="signatures_confirmed" type="checkbox"> Signatures reviewed</label><label><input data-filing-check="format_confirmed" type="checkbox"> Format reviewed</label><label><input data-filing-check="redactions_confirmed" type="checkbox"> Redactions reviewed</label><label><input data-filing-check="privacy_review_complete" type="checkbox"> Privacy review complete</label><label><input data-filing-check="human_review_complete" type="checkbox"> Human review complete</label></fieldset><label class="document-review-attestation"><input id="filing-preflight-confirm" type="checkbox"> I confirm this is a blocker report only; it cannot submit, approve, or make a filing ready.</label><div class="document-workspace-actions"><button class="primary-action" id="filing-preflight-create" type="button">Create blocker preflight</button><button class="secondary" id="filing-preflight-load" type="button">Load preflight</button></div><div aria-live="polite" class="document-workspace-status" id="filing-preflight-result">Load one attachment and check an official form/source before reviewing blockers.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#filing-preflight-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),attachmentSelect=section.querySelector('#filing-preflight-attachment'),checks=()=>Object.fromEntries([...section.querySelectorAll('[data-filing-check]')].map((x)=>[String(x.dataset.filingCheck||''),Boolean(x.checked)]));let formAuthority=null;
+      const loadRecords=async()=>{try{result.textContent='Loading active-matter attachment records…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];attachmentSelect.innerHTML='<option value="">Choose active-matter attachment record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');attachmentSelect.append(option);});result.textContent=rows.length?'Choose one attachment record and check a form/source.':'No hash-bound active-matter attachment record is available.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Attachment records could not be loaded'});}};
+      const checkForm=async()=>{const source=value('#filing-preflight-form');if(!source){result.textContent='Enter an official form/source ID from a source card.';return;}try{result.textContent='Checking source hash, freshness, and exact span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));formAuthority=p?.candidate||null;if(!formAuthority)throw new Error('filing_preflight_form_unavailable');result.innerHTML='<strong>Form/source selected for review.</strong> '+escapeHtml(formAuthority.citation||formAuthority.source_id)+'<p>Freshness: '+escapeHtml(formAuthority.freshness_status||'unknown')+'. The server resolves it again when saving.</p>';}catch(e){formAuthority=null;result.innerHTML=renderRecoverableError(e,{title:'Form/source could not be used'});}};
+      const inspect=(preflight,lane,source,owner)=>{if(lane==='official_authority')return inspectSource(String(preflight?.forms?.[0]?.source_id||''),{pin:true,owner});return fetchJson('/api/filing-preflights/'+encodeURIComponent(String(preflight?.preflight_id||''))+'/'+encodeURIComponent(lane)+'/'+encodeURIComponent(source)+'/source').then((p)=>{const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('filing_preflight_record_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),owner);});};
+      const render=(preflight)=>{const blockers=preflight?.blockers||[],attachment=preflight?.attachments?.[0]||{},form=preflight?.forms?.[0]||{};result.innerHTML='<strong>Review required.</strong> Blockers: '+escapeHtml(blockers.length?blockers.join(', ').replaceAll('_',' '):'none reported by this limited preflight')+'.<p>Attachment: '+escapeHtml(attachment.title||'not selected')+' · form/source: '+escapeHtml(form.citation||'not checked')+'.</p><div class="document-workspace-actions"><button class="secondary compact-action" data-filing-preflight-attachment type="button">Open attachment record</button>'+(form.authority_id?'<button class="secondary compact-action" data-filing-preflight-form type="button">Open form/source</button>':'')+'</div><p>'+escapeHtml(preflight?.notice||'')+'</p>';result.querySelector('[data-filing-preflight-attachment]')?.addEventListener('click',(event)=>inspect(preflight,'private_matter_record',String(attachment.record_id||''),event.currentTarget).catch((e)=>{result.innerHTML=renderRecoverableError(e,{title:'Attachment record could not be opened'});}));result.querySelector('[data-filing-preflight-form]')?.addEventListener('click',(event)=>Promise.resolve(inspect(preflight,'official_authority',String(form.authority_id||''),event.currentTarget)).catch((e)=>{result.innerHTML=renderRecoverableError(e,{title:'Form/source could not be opened'});}));};
+      section.querySelector('#filing-preflight-records').addEventListener('click',loadRecords);section.querySelector('#filing-preflight-form-check').addEventListener('click',checkForm);section.querySelector('#filing-preflight-create').addEventListener('click',async()=>{let attachment=null;try{attachment=JSON.parse(String(attachmentSelect.value||''));}catch(_){attachment=null;}const preflight_id=value('#filing-preflight-id'),reviewer_safe_id=value('#filing-preflight-reviewer'),caption_label=value('#filing-preflight-caption');if(!preflight_id||!reviewer_safe_id||!caption_label||!attachment){result.textContent='Enter preflight, reviewer, caption, and choose an attachment record.';return;}if(!section.querySelector('#filing-preflight-confirm')?.checked){result.textContent='Confirm the no-submission preflight boundary.';return;}try{result.textContent='Creating encrypted blocker preflight…';const p=await fetchJson('/api/filing-preflights',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preflight_id,reviewer_safe_id,caption_label,attachments:[{...attachment,declared_format:value('#filing-preflight-format')}],form_source_ids:formAuthority?[formAuthority.source_id]:[],checks:checks(),document_id:value('#filing-preflight-document'),user_confirmed:true})});render(p?.preflight||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Filing preflight could not be created'});}});section.querySelector('#filing-preflight-load').addEventListener('click',async()=>{const id=value('#filing-preflight-id');if(!id){result.textContent='Enter a saved preflight ID.';return;}try{result.textContent='Loading encrypted blocker preflight…';const p=await fetchJson('/api/filing-preflights/'+encodeURIComponent(id));render(p?.preflight||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Filing preflight could not be loaded'});}});loadRecords();
+    }());
+    (function installHearingCountdownControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('hearing-countdown-create'))return;
+      const section=document.createElement('section');section.className='document-review-card hearing-countdown-control';section.innerHTML='<div class="document-review-heading"><div><span>Local review prompts only</span><strong>Hearing preparation countdown</strong></div><span class="badge warn">Review required</span></div><p>Create local milestone and missing-proof prompts from one reviewer-confirmed date and exact active-matter notice record. This does not confirm a hearing or create court reminders.</p><div class="document-workspace-fields"><label>Countdown safe ID<input id="hearing-countdown-id" maxlength="80" placeholder="hearing_countdown_001"></label><label>Reviewer safe ID<input id="hearing-countdown-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Hearing label<input id="hearing-countdown-label" maxlength="300" placeholder="Reviewer-labeled hearing"></label><label>Confirmed date<input id="hearing-countdown-date" maxlength="10" placeholder="2026-02-20"></label><label>Notice record<select id="hearing-countdown-notice"><option value="">Load active-matter records</option></select></label><label>Milestone days before hearing (comma separated)<input id="hearing-countdown-offsets" maxlength="100" value="14,7,3,1,0"></label></div><label>Missing-proof prompts (one per line)<textarea id="hearing-countdown-prompts" rows="3" maxlength="8000" placeholder="Confirm missing exhibit source."></textarea></label><div class="document-workspace-actions"><button class="secondary" id="hearing-countdown-records" type="button">Load notice records</button></div><label class="document-review-attestation"><input id="hearing-countdown-confirm" type="checkbox"> I confirm this date and record are review inputs; the countdown does not confirm a hearing or determine a deadline.</label><div class="document-workspace-actions"><button class="primary-action" id="hearing-countdown-create" type="button">Create local review countdown</button><button class="secondary" id="hearing-countdown-load" type="button">Load countdown</button></div><div aria-live="polite" class="document-workspace-status" id="hearing-countdown-result">Load one active-matter notice record before creating a local review countdown.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#hearing-countdown-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),noticeSelect=section.querySelector('#hearing-countdown-notice'),lines=(s)=>value(s).split(/\r?\n/).map(x=>x.trim()).filter(Boolean),offsets=()=>value('#hearing-countdown-offsets').split(',').map(x=>x.trim()).filter(Boolean).map(Number);
+      const loadRecords=async()=>{try{result.textContent='Loading active-matter notice records…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];noticeSelect.innerHTML='<option value="">Choose active-matter notice record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');noticeSelect.append(option);});result.textContent=rows.length?'Choose the record supporting the reviewer-confirmed date.':'No hash-bound active-matter record is available.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Notice records could not be loaded'});}};
+      const render=(countdown)=>{const milestones=countdown?.milestones||[],prompts=countdown?.missing_proof_prompts||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(countdown?.hearing_label||'hearing')+' · '+escapeHtml(countdown?.confirmed_date||'unknown date')+'.<ol>'+milestones.map((m)=>'<li>'+escapeHtml(String(m.days_before))+' day(s) before: '+escapeHtml(m.candidate_date||'unknown')+' · local review prompt only</li>').join('')+'</ol><p>Missing-proof prompts: '+escapeHtml(prompts.length?prompts.join('; '):'none recorded')+'.</p><button class="secondary compact-action" data-hearing-countdown-source type="button">Open exact notice record</button><p>'+escapeHtml(countdown?.notice||'')+'</p>';result.querySelector('[data-hearing-countdown-source]')?.addEventListener('click',async(event)=>{try{const p=await fetchJson('/api/hearing-countdowns/'+encodeURIComponent(String(countdown?.countdown_id||''))+'/notice-source');const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('hearing_countdown_source_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),event.currentTarget);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Hearing notice record could not be opened'});}});};
+      section.querySelector('#hearing-countdown-records').addEventListener('click',loadRecords);section.querySelector('#hearing-countdown-create').addEventListener('click',async()=>{let notice=null;try{notice=JSON.parse(String(noticeSelect.value||''));}catch(_){notice=null;}const countdown_id=value('#hearing-countdown-id'),reviewer_safe_id=value('#hearing-countdown-reviewer'),hearing_label=value('#hearing-countdown-label'),confirmed_date=value('#hearing-countdown-date'),milestone_offsets=offsets();if(!countdown_id||!reviewer_safe_id||!hearing_label||!confirmed_date||!notice||milestone_offsets.some(x=>!Number.isInteger(x))){result.textContent='Enter IDs, label, date, choose a notice record, and use whole-number milestone offsets.';return;}if(!section.querySelector('#hearing-countdown-confirm')?.checked){result.textContent='Confirm the local review countdown boundary.';return;}try{result.textContent='Creating encrypted source-bound local review countdown…';const p=await fetchJson('/api/hearing-countdowns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({countdown_id,reviewer_safe_id,hearing_label,confirmed_date,notice_source:notice,milestone_offsets,missing_proof_prompts:lines('#hearing-countdown-prompts'),user_confirmed:true})});render(p?.countdown||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Hearing review countdown could not be created'});}});section.querySelector('#hearing-countdown-load').addEventListener('click',async()=>{const id=value('#hearing-countdown-id');if(!id){result.textContent='Enter a saved countdown ID.';return;}try{result.textContent='Loading encrypted local review countdown…';const p=await fetchJson('/api/hearing-countdowns/'+encodeURIComponent(id));render(p?.countdown||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Hearing review countdown could not be loaded'});}});loadRecords();
+    }());
+    (function installBusinessDayReviewControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('business-day-input-save'))return;
+      const section=document.createElement('section');section.className='document-review-card business-day-review-control';section.innerHTML='<div class="document-review-heading"><div><span>Versioned local calendar inputs</span><strong>Business-day review</strong></div><span class="badge warn">Review required</span></div><p>Version reviewer-entered calendar dates and calculate a candidate while preserving the exact input hash and official-source reference. This does not establish a court holiday or deadline.</p><div class="document-workspace-fields"><label>Calendar input safe ID<input id="business-day-input-id" maxlength="80" placeholder="calendar_2026a"></label><label>Calendar key<input id="business-day-calendar-key" maxlength="80" placeholder="maine_family_court"></label><label>Version label<input id="business-day-version" maxlength="160" placeholder="Reviewer-entered 2026 calendar"></label><label>Jurisdiction label<input id="business-day-jurisdiction" maxlength="240" placeholder="Maine reviewer-selected jurisdiction"></label><label>Reviewer safe ID<input id="business-day-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Valid from<input id="business-day-valid-from" maxlength="10" placeholder="2026-01-01"></label><label>Valid through<input id="business-day-valid-through" maxlength="10" placeholder="2026-12-31"></label><label>Official authority source ID<input id="business-day-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><label>Holiday dates (one ISO date per line)<textarea id="business-day-holidays" rows="3" maxlength="5000" placeholder="2026-01-01"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="business-day-authority-check" type="button">Check official source</button><button class="secondary" id="business-day-input-save" type="button">Save versioned calendar input</button></div><div class="document-workspace-fields"><label>Calculation safe ID<input id="business-day-calculation-id" maxlength="80" placeholder="business_calc_001"></label><label>Start date<input id="business-day-start" maxlength="10" placeholder="2026-01-02"></label><label>Business days after start<input id="business-day-offset" type="number" min="0" max="1000" value="1"></label></div><label class="document-review-attestation"><input id="business-day-confirm" type="checkbox"> I confirm these are reviewer-entered input and candidate calculations, not a court holiday or deadline determination.</label><div class="document-workspace-actions"><button class="primary-action" id="business-day-calculate" type="button">Calculate review candidate</button><button class="secondary" id="business-day-load" type="button">Load calculation</button></div><div aria-live="polite" class="document-workspace-status" id="business-day-result">Check one official source, save a versioned calendar input, then calculate a review-required candidate.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#business-day-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),lines=(s)=>value(s).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);let authority=null;
+      const showInput=(entry)=>{result.innerHTML='<strong>Review required.</strong> Saved '+escapeHtml(entry?.version_label||'calendar input')+' · '+escapeHtml(entry?.jurisdiction_label||'unknown jurisdiction')+'.<p>Input hash: '+escapeHtml(entry?.input_hash||'unavailable')+' · holidays: '+escapeHtml(String((entry?.holidays||[]).length))+'.</p><button class="secondary compact-action" data-business-day-authority type="button">Open official source</button><p>'+escapeHtml(entry?.notice||'')+'</p>';result.querySelector('[data-business-day-authority]')?.addEventListener('click',(event)=>inspectSource(String(entry?.authority?.source_id||''),{pin:true,owner:event.currentTarget}));};
+      const showCalculation=(entry)=>{result.innerHTML='<strong>Review required.</strong> Candidate business day: '+escapeHtml(entry?.candidate_date||'unknown')+'.<p>Input hash: '+escapeHtml(entry?.input_hash||'unavailable')+' · skipped weekend/holiday dates: '+escapeHtml(String((entry?.skipped_non_business_dates||[]).length))+'.</p><p>'+escapeHtml(entry?.notice||'')+'</p>';};
+      section.querySelector('#business-day-authority-check').addEventListener('click',async()=>{const source=value('#business-day-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking authority hash, freshness, and exact span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('business_day_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server resolves it again when saving.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}});
+      section.querySelector('#business-day-input-save').addEventListener('click',async()=>{const input_id=value('#business-day-input-id'),calendar_key=value('#business-day-calendar-key'),reviewer_safe_id=value('#business-day-reviewer');if(!input_id||!calendar_key||!reviewer_safe_id||!authority){result.textContent='Enter input, calendar, reviewer IDs, and check an official source.';return;}if(!section.querySelector('#business-day-confirm')?.checked){result.textContent='Confirm the reviewer-entered calendar boundary.';return;}try{result.textContent='Saving encrypted versioned calendar input…';const p=await fetchJson('/api/business-day-calendar-inputs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input_id,calendar_key,version_label:value('#business-day-version'),jurisdiction_label:value('#business-day-jurisdiction'),reviewer_safe_id,valid_from:value('#business-day-valid-from'),valid_through:value('#business-day-valid-through'),holidays:lines('#business-day-holidays'),authority_source_id:authority.source_id,user_confirmed:true})});showInput(p?.input||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Calendar input could not be saved'});}});
+      section.querySelector('#business-day-calculate').addEventListener('click',async()=>{const calculation_id=value('#business-day-calculation-id'),input_id=value('#business-day-input-id'),reviewer_safe_id=value('#business-day-reviewer');if(!calculation_id||!input_id||!reviewer_safe_id||!value('#business-day-start')){result.textContent='Enter calculation, input, reviewer IDs, and a start date.';return;}if(!section.querySelector('#business-day-confirm')?.checked){result.textContent='Confirm the candidate-calculation boundary.';return;}try{result.textContent='Calculating candidate from the exact saved calendar input…';const p=await fetchJson('/api/business-day-calculations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({calculation_id,input_id,reviewer_safe_id,start_date:value('#business-day-start'),business_days:Number(value('#business-day-offset')||0),user_confirmed:true})});showCalculation(p?.calculation||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Business-day candidate could not be calculated'});}});
+      section.querySelector('#business-day-load').addEventListener('click',async()=>{const id=value('#business-day-calculation-id');if(!id){result.textContent='Enter a saved calculation ID.';return;}try{result.textContent='Loading encrypted candidate receipt…';const p=await fetchJson('/api/business-day-calculations/'+encodeURIComponent(id));showCalculation(p?.calculation||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Business-day calculation could not be loaded'});}});
+    }());
+    (function installServiceMethodMatrixControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('service-method-matrix-create'))return;
+      const section=document.createElement('section');section.className='document-review-card service-method-matrix-control';section.innerHTML='<div class="document-review-heading"><div><span>Evidence and authority kept separate</span><strong>Service-method rules matrix</strong></div><span class="badge warn">Review required</span></div><p>Compare a reviewer-selected method with one private proof record, one official source, possible exceptions, and unresolved facts. This does not determine whether service or notice was effective.</p><div class="document-workspace-fields"><label>Matrix safe ID<input id="service-method-matrix-id" maxlength="80" placeholder="service_matrix_001"></label><label>Reviewer safe ID<input id="service-method-matrix-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Selected method<select id="service-method-matrix-method"><option value="personal_service">Personal service</option><option value="mail_service">Mail service</option><option value="electronic_service">Electronic service</option><option value="publication">Publication</option><option value="waiver">Waiver</option><option value="other">Other</option><option value="unknown">Unknown</option></select></label><label>Proof record<select id="service-method-matrix-proof"><option value="">Load active-matter records</option></select></label><label>Official authority source ID<input id="service-method-matrix-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><label>Possible exceptions (one per line)<textarea id="service-method-matrix-exceptions" rows="2" maxlength="8000"></textarea></label><label>Unresolved facts (one per line)<textarea id="service-method-matrix-unresolved" rows="2" maxlength="8000"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="service-method-matrix-records" type="button">Load proof records</button><button class="secondary" id="service-method-matrix-authority-check" type="button">Check official source</button></div><label class="document-review-attestation"><input id="service-method-matrix-confirm" type="checkbox"> I confirm this is a review-only comparison; it does not establish service, notice, or legal sufficiency.</label><div class="document-workspace-actions"><button class="primary-action" id="service-method-matrix-create" type="button">Create service review matrix</button><button class="secondary" id="service-method-matrix-load" type="button">Load matrix</button></div><div aria-live="polite" class="document-workspace-status" id="service-method-matrix-result">Load a proof record and check an official source before creating a review-only comparison.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#service-method-matrix-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),proofSelect=section.querySelector('#service-method-matrix-proof'),lines=(s)=>value(s).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);let authority=null;
+      const loadRecords=async()=>{try{result.textContent='Loading active-matter proof records…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];proofSelect.innerHTML='<option value="">Choose active-matter proof record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');proofSelect.append(option);});result.textContent=rows.length?'Choose one proof record, then check an official source.':'No hash-bound proof record is available in the active matter.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Proof records could not be loaded'});}};
+      const checkAuthority=async()=>{const source=value('#service-method-matrix-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking authority hash, freshness, and exact span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('service_method_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server resolves it again when saving.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}};
+      const inspect=async(matrix,lane,owner)=>{try{if(lane==='official_authority'){await inspectSource(String(matrix?.authority?.source_id||''),{pin:true,owner});return;}const p=await fetchJson('/api/service-method-matrices/'+encodeURIComponent(String(matrix?.matrix_id||''))+'/'+encodeURIComponent(lane)+'/source');const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('service_method_proof_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),owner);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Service-matrix source could not be opened'});}};
+      const render=(matrix)=>{const proof=matrix?.proof||{},official=matrix?.authority||{},exceptions=matrix?.exceptions||[],unknowns=matrix?.unresolved_facts||[];result.innerHTML='<strong>Review required.</strong> Selected method: '+escapeHtml(String(matrix?.selected_method||'unknown').replaceAll('_',' '))+'.<p>Proof: '+escapeHtml(proof.title||proof.record_id||'not selected')+' · Authority: '+escapeHtml(official.citation||official.source_id||'not selected')+'.</p><p>Possible exceptions: '+escapeHtml(exceptions.length?exceptions.join('; '):'none recorded')+'.<br>Unresolved facts: '+escapeHtml(unknowns.length?unknowns.join('; '):'none recorded')+'.</p><div class="document-workspace-actions"><button class="secondary compact-action" data-service-method-proof type="button">Open proof record</button><button class="secondary compact-action" data-service-method-authority type="button">Open official source</button></div><p>'+escapeHtml(matrix?.notice||'')+'</p>';result.querySelector('[data-service-method-proof]')?.addEventListener('click',(event)=>inspect(matrix,'private_matter_record',event.currentTarget));result.querySelector('[data-service-method-authority]')?.addEventListener('click',(event)=>inspect(matrix,'official_authority',event.currentTarget));};
+      section.querySelector('#service-method-matrix-records').addEventListener('click',loadRecords);section.querySelector('#service-method-matrix-authority-check').addEventListener('click',checkAuthority);section.querySelector('#service-method-matrix-create').addEventListener('click',async()=>{let proof=null;try{proof=JSON.parse(String(proofSelect.value||''));}catch(_){proof=null;}const matrix_id=value('#service-method-matrix-id'),reviewer_safe_id=value('#service-method-matrix-reviewer');if(!matrix_id||!reviewer_safe_id||!proof||!authority){result.textContent='Enter matrix and reviewer IDs, choose a proof record, and check an official source.';return;}if(!section.querySelector('#service-method-matrix-confirm')?.checked){result.textContent='Confirm the review-only service boundary.';return;}try{result.textContent='Creating encrypted source-bound service review matrix…';const p=await fetchJson('/api/service-method-matrices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matrix_id,reviewer_safe_id,selected_method:value('#service-method-matrix-method'),proof,authority_source_id:authority.source_id,exceptions:lines('#service-method-matrix-exceptions'),unresolved_facts:lines('#service-method-matrix-unresolved'),user_confirmed:true})});render(p?.matrix||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Service review matrix could not be created'});}});section.querySelector('#service-method-matrix-load').addEventListener('click',async()=>{const id=value('#service-method-matrix-id');if(!id){result.textContent='Enter a saved matrix ID.';return;}try{result.textContent='Loading encrypted service review matrix…';const p=await fetchJson('/api/service-method-matrices/'+encodeURIComponent(id));render(p?.matrix||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Service review matrix could not be loaded'});}});loadRecords();
+    }());
+    (function installDeadlineDependencyControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('deadline-dependency-create'))return;const section=document.createElement('section');section.className='document-review-card deadline-dependency-control';section.innerHTML='<div class="document-review-heading"><div><span>Preserved calculation lineage</span><strong>Deadline dependency graph</strong></div><span class="badge warn">Review required</span></div><p>Create a source-bound trigger and rule candidate from one active-matter record. Recalculation with a changed trigger preserves the prior candidate; it does not decide an actual deadline.</p><div class="document-workspace-fields"><label>Dependency safe ID<input id="deadline-dependency-id" maxlength="80" placeholder="deadline_001"></label><label>Trigger event safe ID<input id="deadline-dependency-trigger" maxlength="80" placeholder="service_001"></label><label>Rule safe ID<input id="deadline-dependency-rule" maxlength="80" placeholder="rule_001"></label><label>Trigger date/time<input id="deadline-dependency-date" maxlength="64" placeholder="2026-01-02T12:00:00"></label><label>Active-matter trigger record<select id="deadline-dependency-record"><option value="">Load active-matter records</option></select></label></div><div class="document-workspace-actions"><button class="secondary" id="deadline-dependency-records" type="button">Load records</button><button class="primary-action" id="deadline-dependency-create" type="button">Create / recalculate candidate</button><button class="secondary" id="deadline-dependency-load" type="button">Load lineage</button></div><label class="document-review-attestation"><input id="deadline-dependency-confirm" type="checkbox"> I confirm this is a review-required candidate calculation, not a court deadline.</label><div aria-live="polite" class="document-workspace-status" id="deadline-dependency-result">Load an active-matter record to create a hash-bound trigger.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#deadline-dependency-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),select=section.querySelector('#deadline-dependency-record');const loadRecords=async()=>{try{const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];select.innerHTML='<option value="">Choose active-matter record</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose a record for the trigger source.':'No hash-bound record is available in the active matter.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const render=(payload)=>{const rows=payload?.calculations||[];const active=payload?.active_candidate||payload;const sourceAction=active?.dependency_id?'<button class="secondary compact-action" data-deadline-dependency-source="'+escapeHtml(String(active.dependency_id))+'" type="button">Open exact trigger record</button>':'';result.innerHTML='<strong>Review required.</strong> Candidate '+escapeHtml(String(active?.candidate_result||'unknown'))+' · '+escapeHtml(String(active?.uncertainty||'review required').replaceAll('_',' '))+'.<p>Calculation lineage: '+escapeHtml(String(rows.length||1))+' candidate(s); prior candidates remain preserved when a trigger changes.</p><p>'+escapeHtml(payload?.notice||'No calculation decides a deadline.')+'</p>'+sourceAction;};section.addEventListener('click',async(event)=>{const button=event.target.closest('[data-deadline-dependency-source]');if(!button)return;try{const source=await fetchJson('/api/calendar/deadline-dependencies/'+encodeURIComponent(String(button.dataset.deadlineDependencySource||''))+'/trigger-source');const token=String(source?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('deadline_dependency_source_token_unavailable');openRecordInspector({source_token:token},Number(source?.source?.page||0),button);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Deadline trigger record could not be opened'});}});section.querySelector('#deadline-dependency-records').addEventListener('click',loadRecords);section.querySelector('#deadline-dependency-create').addEventListener('click',async()=>{let record=null;try{record=JSON.parse(String(select.value||''));}catch(_){record=null;}const dependency_id=value('#deadline-dependency-id'),trigger=value('#deadline-dependency-trigger'),rule=value('#deadline-dependency-rule'),when=value('#deadline-dependency-date');if(!dependency_id||!trigger||!rule||!when||!record){result.textContent='Enter IDs and date/time, then choose one active-matter record.';return;}if(!section.querySelector('#deadline-dependency-confirm')?.checked){result.textContent='Confirm the review-required deadline boundary.';return;}try{result.textContent='Creating hash-bound trigger and review rule candidate…';await fetchJson('/api/calendar/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({events:[{event_id:trigger,kind:'completed_service_candidate',date_time:when,time_zone:'America/New_York',document_or_notice:'Reviewer-created trigger candidate',person_or_role:'unknown',method:'unknown',source_ref:{record_id:record.record_id,source_hash:record.source_hash,page:1}}]})});await fetchJson('/api/calendar/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rules:[{rule_id:rule,citation:'Reviewer-selected rule candidate; verify exact authority separately',freshness:'unknown',triggering_event:'completed_service_candidate',unit:'days',count:7,inclusion_rule:'unknown',weekend_holiday_handling:'unknown',source_ref:{record_id:record.record_id,source_hash:record.source_hash,page:1}}]})});const p=await fetchJson('/api/calendar/deadline-dependencies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dependency_id,rule_id:rule,trigger_event_id:trigger,holidays:[],user_confirmed:true})});render(p);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Deadline candidate could not be created'});}});section.querySelector('#deadline-dependency-load').addEventListener('click',async()=>{const id=value('#deadline-dependency-id');if(!id){result.textContent='Enter a dependency ID.';return;}try{render(await fetchJson('/api/calendar/deadline-dependencies/'+encodeURIComponent(id)));}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Deadline lineage could not be loaded'});}});loadRecords();
+    }());
+    (function installProcedurePathwayControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('procedure-pathway-create'))return;
+      const section=document.createElement('section');section.className='document-review-card procedure-pathway-control';section.innerHTML='<div class="document-review-heading"><div><span>Reviewable procedure context</span><strong>Procedure pathway</strong></div><span class="badge warn">Review required</span></div><p>Build a source-bound checklist from reviewer-entered case type, posture, venue label, and known order records. It does not decide venue, jurisdiction, service, deadlines, legal requirements, or an outcome.</p><div class="document-workspace-fields"><label>Pathway safe ID<input id="procedure-pathway-id" maxlength="80" placeholder="procedure_001"></label><label>Reviewer safe ID<input id="procedure-pathway-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Case type<select id="procedure-pathway-case"><option value="family_matter">Family matter</option><option value="divorce_with_children">Divorce with children</option><option value="parental_rights">Parental rights</option><option value="protection">Protection matter</option><option value="post_judgment">Post-judgment</option><option value="unknown">Unknown</option></select></label><label>Posture<select id="procedure-pathway-posture"><option value="initial_complaint">Initial complaint</option><option value="temporary_order">Temporary order</option><option value="final_order">Final order</option><option value="post_judgment">Post-judgment</option><option value="enforcement">Enforcement</option><option value="appeal">Appeal</option><option value="unknown">Unknown</option></select></label><label>Venue label (reviewer-entered)<input id="procedure-pathway-venue" maxlength="300" placeholder="Fictional court-location note"></label><label>Known order record<select id="procedure-pathway-order"><option value="">Load active-matter records (optional)</option></select></label><label>Official authority source ID<input id="procedure-pathway-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><div class="document-workspace-actions"><button class="secondary" id="procedure-pathway-records" type="button">Load records</button><button class="secondary" id="procedure-pathway-authority-check" type="button">Check official source</button></div><label class="document-review-attestation"><input id="procedure-pathway-confirm" type="checkbox"> I confirm these are review inputs, not procedural determinations.</label><div class="document-workspace-actions"><button class="primary-action" id="procedure-pathway-create" type="button">Create review checklist</button><button class="secondary" id="procedure-pathway-load" type="button">Load checklist</button></div><div aria-live="polite" class="document-workspace-status" id="procedure-pathway-result">Load a known order if available and check a current official source before creating a review checklist.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#procedure-pathway-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),orderSelect=section.querySelector('#procedure-pathway-order');let authority=null;const loadRecords=async()=>{try{result.textContent='Loading active-matter records…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];orderSelect.innerHTML='<option value="">No known order record selected</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');orderSelect.append(option);});result.textContent=rows.length?'Choose a known order record if available, then check an official source.':'No hash-bound record is available; continue only after checking a current official source.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};const checkAuthority=async()=>{const source=value('#procedure-pathway-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking official source hash, freshness, and exact span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('procedure_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server resolves it again when saving.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}};const inspect=async(matrix,lane,source,owner)=>{try{if(lane==='official_authority'){await inspectSource(String(matrix?.authority?.source_id||''),{pin:true,owner});return;}const p=await fetchJson('/api/procedure-pathways/'+encodeURIComponent(matrix.pathway_id)+'/'+encodeURIComponent(lane)+'/'+encodeURIComponent(source)+'/source');const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('procedure_record_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),owner);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Procedure source could not be opened'});}};const render=(pathway)=>{const orders=pathway?.existing_orders||[];result.innerHTML='<strong>Review required.</strong> '+escapeHtml(pathway?.case_type||'unknown')+' · '+escapeHtml(pathway?.posture||'unknown')+'<ol>'+(pathway?.steps||[]).map((step)=>'<li><strong>'+escapeHtml(step.label||'')+'</strong><br><small>'+escapeHtml(step.why||'')+'</small></li>').join('')+'</ol><div class="document-workspace-actions"><button class="secondary compact-action" data-procedure-authority type="button">Open official source</button>'+orders.map((order)=>'<button class="secondary compact-action" data-procedure-order="'+escapeHtml(order.record_id||'')+'" type="button">Open known order</button>').join('')+'</div><p>'+escapeHtml(pathway?.notice||'')+'</p>';result.querySelector('[data-procedure-authority]')?.addEventListener('click',(event)=>inspect(pathway,'official_authority',String(pathway?.authority?.authority_id||''),event.currentTarget));result.querySelectorAll('[data-procedure-order]').forEach((button)=>button.addEventListener('click',(event)=>inspect(pathway,'private_matter_record',String(button.dataset.procedureOrder||''),event.currentTarget)));};section.querySelector('#procedure-pathway-records').addEventListener('click',loadRecords);section.querySelector('#procedure-pathway-authority-check').addEventListener('click',checkAuthority);section.querySelector('#procedure-pathway-create').addEventListener('click',async()=>{let order=null;try{order=JSON.parse(String(orderSelect.value||''));}catch(_){order=null;}const pathway_id=value('#procedure-pathway-id'),reviewer_safe_id=value('#procedure-pathway-reviewer'),venue_label=value('#procedure-pathway-venue');if(!pathway_id||!reviewer_safe_id||!venue_label||!authority){result.textContent='Enter pathway, reviewer, venue label, and a checked official source.';return;}if(!section.querySelector('#procedure-pathway-confirm')?.checked){result.textContent='Confirm the review-only procedure boundary.';return;}try{result.textContent='Creating encrypted source-bound procedure checklist…';const p=await fetchJson('/api/procedure-pathways',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pathway_id,reviewer_safe_id,case_type:value('#procedure-pathway-case'),posture:value('#procedure-pathway-posture'),venue_label,existing_orders:order?[order]:[],authority_source_id:authority.source_id,user_confirmed:true})});render(p?.pathway||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Procedure checklist could not be created'});}});section.querySelector('#procedure-pathway-load').addEventListener('click',async()=>{const id=value('#procedure-pathway-id');if(!id){result.textContent='Enter a saved pathway ID.';return;}try{result.textContent='Loading encrypted procedure checklist…';const p=await fetchJson('/api/procedure-pathways/'+encodeURIComponent(id));render(p?.pathway||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Procedure checklist could not be loaded'});}});loadRecords();
+    }());
+    (function installGuidedFormSessionControl() {
+      const host=findingsFormsArtifacts?.parentElement;if(!host||document.getElementById('guided-form-session-start'))return;
+      const section=document.createElement('section');section.className='document-review-card guided-form-session-control';section.innerHTML='<div class="document-review-heading"><div><span>Encrypted local working state</span><strong>Guided form session</strong></div><span class="badge warn">Review required</span></div><p>Save the displayed form working-copy values locally, validate required fields, and keep stale or incomplete forms blocked. This does not complete an official form or create a filing-ready document.</p><div class="document-workspace-fields"><label>Session ID<input id="guided-form-session-id" maxlength="24" placeholder="Start a session or paste a local session ID"></label><label>Reviewer notes<textarea id="guided-form-session-notes" rows="2" maxlength="2000" placeholder="Local notes for the working-copy session"></textarea></label></div><label class="document-review-attestation"><input id="guided-form-session-confirm" type="checkbox"> I confirm these are local review working-copy values and I will review the official form, source freshness, and all blockers.</label><div class="document-workspace-actions"><button class="secondary" id="guided-form-session-start" type="button">Start encrypted session</button><button class="secondary" id="guided-form-session-load" type="button">Load saved session</button><button class="secondary" id="guided-form-session-save" type="button">Save working values</button><button class="primary-action" id="guided-form-session-validate" type="button">Validate working copy</button><button class="secondary" id="guided-form-session-receipt" type="button">Show receipt</button></div><div aria-live="polite" class="document-workspace-status" id="guided-form-session-result">Choose verified current forms, build the exact-revision review, then start a local session.</div>';
+      findingsFormsArtifacts.insertAdjacentElement('afterend',section);const result=section.querySelector('#guided-form-session-result'),id=section.querySelector('#guided-form-session-id'),notes=section.querySelector('#guided-form-session-notes'),confirmed=section.querySelector('#guided-form-session-confirm');let sessionId='';const active=()=>documentWorkspaceState.active||{};const values=()=>typeof collectFindingsFormsValues==='function'?collectFindingsFormsValues():{};const selected=()=>typeof findingsFormsSelectedIds==='function'?findingsFormsSelectedIds():[];const show=(payload,label)=>{const blockers=payload?.validation?.blockers||payload?.completion?.blockers||payload?.blockers||[];result.innerHTML='<strong>'+escapeHtml(label)+'</strong>'+ (blockers.length?'<p>Blockers: '+escapeHtml(blockers.join(', ').replaceAll('_',' '))+'.</p>':'<p>Review required remains visible. No filing-ready status was created.</p>');};
+      section.querySelector('#guided-form-session-start').addEventListener('click',async()=>{const doc=String(active().document_id||''),formIds=selected();if(!doc||!formIds.length){result.textContent='Open a saved draft, load the current-form catalog, select verified current form(s), and build the exact-revision review first.';return;}if(!findingsFormsApproved?.checked||!confirmed?.checked){result.textContent='Confirm both the exact-revision review and local working-copy boundary.';return;}try{result.textContent='Creating encrypted local guided-form session…';const p=await fetchJson('/api/forms/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:doc,proceeding_type:findingsFormsPosture?.value||'family_matter',selected_form_ids:formIds,approved:true})});sessionId=String(p?.session_id||'');id.value=sessionId;show(p,'Encrypted local session started.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided form session could not be started'});}});
+      section.querySelector('#guided-form-session-load').addEventListener('click',async()=>{const requested=String(id?.value||'').trim();if(!requested){result.textContent='Enter a local session ID to reopen it in this active matter.';return;}try{result.textContent='Loading encrypted local session…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(requested));const session=p?.session||{};sessionId=String(session.session_id||requested);id.value=sessionId;if(notes)notes.value=String(session.reviewer_notes||'');const saved=session.form_values||{};findingsFormsFields?.querySelectorAll('[data-findings-form-values]').forEach((fieldset)=>{const formId=String(fieldset.dataset.findingsFormValues||'');const fields=saved?.[formId]||{};fieldset.querySelectorAll('[data-findings-field]').forEach((input)=>{const name=String(input.dataset.findingsField||'');if(Object.prototype.hasOwnProperty.call(fields,name))input.value=String(fields[name]||'');});});show(p,'Encrypted local session loaded.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided-form session could not be loaded'});}});
+      section.querySelector('#guided-form-session-save').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}try{result.textContent='Saving encrypted local working values…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_values:values(),reviewer_notes:String(notes?.value||''),selected_form_ids:selected(),approved:true})});show(p,'Working values saved locally.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Working values could not be saved'});}});
+      section.querySelector('#guided-form-session-validate').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}if(!confirmed?.checked){result.textContent='Confirm the local review boundary before validation.';return;}try{result.textContent='Checking required fields, document revision, and current-form blockers…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_values:values(),confirmed:true})});show(p,'Working-copy validation completed.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Working-copy validation could not be completed'});}});
+      section.querySelector('#guided-form-session-receipt').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}try{result.textContent='Loading local session receipt…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/receipt');show(p,p?.status==='pass'?'Completion receipt loaded.':'No completion receipt is available yet.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided-form receipt could not be loaded'});}});
+    }());
+    (function installArgumentCounterargumentMatrixControl() {
+      const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('argument-matrix-create'))return;
+      const section=document.createElement('section');section.className='document-review-card argument-matrix-control';section.innerHTML='<div class="document-review-heading"><div><span>Competing positions</span><strong>Argument / counterargument matrix</strong></div><span class="badge warn">Review required</span></div><p>Compare reviewer-entered positions, selected sources, weaknesses, and missing proof. This does not decide facts, credibility, law, jurisdiction, or likely outcomes.</p><div class="document-workspace-fields"><label>Matrix safe ID<input id="argument-matrix-id" maxlength="80" placeholder="position_matrix_001"></label><label>Reviewer safe ID<input id="argument-matrix-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Issue label<input id="argument-matrix-issue" maxlength="300" placeholder="Fictional parenting-time issue"></label><label>Private record<select id="argument-matrix-evidence"><option value="">Load active-matter records</option></select></label><label>Official authority source ID<input id="argument-matrix-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><div class="document-workspace-actions"><button class="secondary" id="argument-matrix-records" type="button">Load records</button><button class="secondary" id="argument-matrix-authority-check" type="button">Check official source</button></div><div class="document-workspace-fields"><label>First position label<input id="argument-matrix-a-label" maxlength="300" placeholder="Position A"></label><label>Second position label<input id="argument-matrix-b-label" maxlength="300" placeholder="Position B"></label></div><label>First position statement<textarea id="argument-matrix-a-statement" rows="2" maxlength="4000"></textarea></label><label>First position weaknesses (one per line)<textarea id="argument-matrix-a-weaknesses" rows="2" maxlength="12000"></textarea></label><label>First position missing proof (one per line)<textarea id="argument-matrix-a-missing" rows="2" maxlength="12000"></textarea></label><label>Second position statement<textarea id="argument-matrix-b-statement" rows="2" maxlength="4000"></textarea></label><label>Second position weaknesses (one per line)<textarea id="argument-matrix-b-weaknesses" rows="2" maxlength="12000"></textarea></label><label>Second position missing proof (one per line)<textarea id="argument-matrix-b-missing" rows="2" maxlength="12000"></textarea></label><label class="document-review-attestation"><input id="argument-matrix-confirm" type="checkbox"> I confirm this is a local reviewer comparison, not an outcome prediction or filing determination.</label><div class="document-workspace-actions"><button class="primary-action" id="argument-matrix-create" type="button">Create source-bound matrix</button><button class="secondary" id="argument-matrix-load" type="button">Load matrix</button></div><div aria-live="polite" class="document-workspace-status" id="argument-matrix-result">Load a private record and/or check an official source, then compare two reviewer-entered positions.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#argument-matrix-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),lines=(s)=>value(s).split(/\n/).map((x)=>x.trim()).filter(Boolean),select=section.querySelector('#argument-matrix-evidence');let authority=null;
+      const loadRecords=async()=>{try{result.textContent='Loading hash-bound records from the active matter…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];select.innerHTML='<option value="">Choose one active-matter record (optional if authority selected)</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose a record and/or check an official source; both positions keep their source lanes visible.':'No hash-bound records are available. Import and index a fictional record first, or select an official source.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};
+      const checkAuthority=async()=>{const source=value('#argument-matrix-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking the official source, hash, freshness, and span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('argument_matrix_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server will resolve and hash-check it again when the matrix is saved.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}};
+      const sourceButtons=(matrix)=>{const positions=Array.isArray(matrix?.positions)?matrix.positions:[];return positions.map((position)=>{const recordButtons=(position.supporting_evidence||[]).map((source)=>'<button class="secondary compact-action" data-argument-matrix-position="'+escapeHtml(position.position_id||'')+'" data-argument-matrix-lane="private_matter_record" data-argument-matrix-source="'+escapeHtml(source.record_id||'')+'" type="button">Open private record</button>').join('');const authorityButtons=(position.supporting_authority||[]).map((source)=>'<button class="secondary compact-action" data-argument-matrix-position="'+escapeHtml(position.position_id||'')+'" data-argument-matrix-lane="official_authority" data-argument-matrix-source="'+escapeHtml(source.authority_id||'')+'" data-argument-matrix-official="'+escapeHtml(source.source_id||'')+'" type="button">Open official source</button>').join('');return '<li><strong>'+escapeHtml(position.label||position.position_id||'Position')+'</strong><p>'+escapeHtml(position.statement||'')+'</p><p>Weaknesses: '+escapeHtml((position.weaknesses||[]).join(', ')||'none recorded')+'. Missing proof: '+escapeHtml((position.missing_proof||[]).join(', ')||'none recorded')+'.</p><div class="document-workspace-actions">'+recordButtons+authorityButtons+'</div></li>';}).join('');};
+      const bindSources=(matrix)=>result.querySelectorAll('[data-argument-matrix-source]').forEach((button)=>button.addEventListener('click',async(event)=>{const lane=String(button.dataset.argumentMatrixLane||''),position=String(button.dataset.argumentMatrixPosition||''),source=String(button.dataset.argumentMatrixSource||''),matrixId=String(matrix?.matrix_id||'');try{if(lane==='official_authority'){await inspectSource(String(button.dataset.argumentMatrixOfficial||''),{pin:true,owner:event.currentTarget});return;}const p=await fetchJson('/api/drafting/argument-matrices/'+encodeURIComponent(matrixId)+'/positions/'+encodeURIComponent(position)+'/'+encodeURIComponent(lane)+'/'+encodeURIComponent(source)+'/source');const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('argument_matrix_record_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),event.currentTarget);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matrix source could not be opened'});}}));
+      const render=(matrix)=>{result.innerHTML='<strong>Review required.</strong> '+escapeHtml(matrix?.issue_label||'Matrix')+' compares '+escapeHtml(String((matrix?.positions||[]).length))+' position(s).<p>'+escapeHtml(matrix?.notice||'No position predicts an outcome.')+'</p><ol>'+sourceButtons(matrix)+'</ol>';bindSources(matrix);};
+      section.querySelector('#argument-matrix-records').addEventListener('click',loadRecords);section.querySelector('#argument-matrix-authority-check').addEventListener('click',checkAuthority);section.querySelector('#argument-matrix-create').addEventListener('click',async()=>{let evidence=null;try{evidence=JSON.parse(String(select.value||''));}catch(_){evidence=null;}const matrix_id=value('#argument-matrix-id'),reviewer_safe_id=value('#argument-matrix-reviewer'),issue_label=value('#argument-matrix-issue');const build=(key,id)=>({position_id:id,label:value('#argument-matrix-'+key+'-label'),statement:value('#argument-matrix-'+key+'-statement'),supporting_evidence:evidence?[evidence]:[],supporting_authority:authority?[authority]:[],weaknesses:lines('#argument-matrix-'+key+'-weaknesses'),missing_proof:lines('#argument-matrix-'+key+'-missing')});if(!matrix_id||!reviewer_safe_id||!issue_label||!value('#argument-matrix-a-label')||!value('#argument-matrix-a-statement')||!value('#argument-matrix-b-label')||!value('#argument-matrix-b-statement')){result.textContent='Enter matrix, reviewer, issue, and both position labels and statements.';return;}if(!evidence&&!authority){result.textContent='Choose an active-matter record and/or check an official source before saving.';return;}if(!section.querySelector('#argument-matrix-confirm')?.checked){result.textContent='Confirm the non-predictive review boundary.';return;}try{result.textContent='Creating encrypted, source-bound comparison matrix…';const p=await fetchJson('/api/drafting/argument-matrices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({matrix_id,reviewer_safe_id,issue_label,positions:[build('a','position_a'),build('b','position_b')],user_confirmed:true})});render(p?.matrix||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Comparison matrix could not be created'});}});section.querySelector('#argument-matrix-load').addEventListener('click',async()=>{const id=value('#argument-matrix-id');if(!id){result.textContent='Enter a saved matrix ID.';return;}try{result.textContent='Loading encrypted reviewer matrix…';const p=await fetchJson('/api/drafting/argument-matrices/'+encodeURIComponent(id));render(p?.matrix||{});}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Comparison matrix could not be loaded'});}});loadRecords();
+    }());
+    (function installPlainLanguageDualViewControl() {
+      const host = documentWorkspaceMeta?.parentElement;
+      if (!host || document.getElementById('dual-view-create')) return;
+      const section = document.createElement('section'); section.className='document-review-card dual-view-control';
+      section.innerHTML='<div class="document-review-heading"><div><span>Two linked working copies</span><strong>Plain-language dual view</strong></div><span class="badge warn">Review required</span></div><p>Save a plain-language working copy alongside the exact current legal-review draft. Both copies share the same source revision; a later legal-draft revision marks this view stale.</p><div class="document-workspace-fields"><label>View safe ID<input id="dual-view-id" maxlength="80" placeholder="plain_view_001"></label><label>Reviewer safe ID<input id="dual-view-reviewer" maxlength="80" placeholder="reviewer_001"></label></div><label>Plain-language working copy<textarea id="dual-view-plain" rows="5" maxlength="1500000" placeholder="Explain the saved draft in clear language without removing review boundaries or claiming legal effect."></textarea></label><label class="document-review-attestation"><input id="dual-view-confirm" type="checkbox"> I confirm this is a review-required working copy, not a certified translation or filing-ready document.</label><div class="document-workspace-actions"><button class="secondary" id="dual-view-create" type="button">Create linked view</button><button class="secondary" id="dual-view-load" type="button">Load linked view</button></div><div aria-live="polite" class="document-workspace-status" id="dual-view-result">Open a saved legal-review draft to create its linked plain-language view.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#dual-view-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim();const linkedSources=(x)=>{const refs=Array.isArray(x?.source_refs)?x.source_refs:[];const buttons=refs.map((ref)=>{const id=String(ref?.source_id||'').trim();return id?'<button class="secondary compact-action" type="button" data-dual-view-source="'+escapeHtml(id)+'">Open linked source</button>':'';}).join('');return buttons?'<p>Immutable source references: '+escapeHtml(String(x.source_ref_count||refs.length))+'. '+buttons+'</p>':'<p>No source references were attached to this saved draft revision.</p>';};const bindSources=()=>result.querySelectorAll('[data-dual-view-source]').forEach((button)=>button.addEventListener('click',()=>inspectSource(String(button.getAttribute('data-dual-view-source')||''),{pin:true})));const load=async()=>{const doc=String(documentWorkspaceState.active?.document_id||''),view=value('#dual-view-id');if(!doc||!view){result.textContent='Open a saved draft and enter the linked view ID.';return;}try{const p=await fetchJson('/api/drafting/documents/'+encodeURIComponent(doc)+'/dual-views/'+encodeURIComponent(view));const x=p.view||{};if(section.querySelector('#dual-view-plain'))section.querySelector('#dual-view-plain').value=String(x.plain_language_text||'');result.innerHTML='<strong>Review required.</strong> Linked source revision '+escapeHtml(String(x.revision_id||'unavailable').slice(0,12))+' · '+escapeHtml(x.current_revision_match?'current':'stale for current legal draft')+'.<p>'+escapeHtml(x.notice||'')+'</p>'+linkedSources(x);bindSources();}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Linked view could not be loaded'});}};section.querySelector('#dual-view-create').addEventListener('click',async()=>{const doc=String(documentWorkspaceState.active?.document_id||''),view_id=value('#dual-view-id'),reviewer_safe_id=value('#dual-view-reviewer'),plain_language_text=value('#dual-view-plain');if(!doc||!view_id||!reviewer_safe_id||!plain_language_text){result.textContent='Open a saved draft and enter IDs plus a plain-language working copy.';return;}if(!section.querySelector('#dual-view-confirm')?.checked){result.textContent='Confirm the review-required boundary.';return;}try{const p=await fetchJson('/api/drafting/documents/'+encodeURIComponent(doc)+'/dual-views',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({view_id,reviewer_safe_id,plain_language_text,user_confirmed:true})});const x=p.view||{};result.innerHTML='<strong>Linked view created.</strong> Legal and plain-language copies share revision '+escapeHtml(String(x.revision_id||'').slice(0,12))+'.<p>Review status remains required; this did not alter the legal draft or create a filing-ready document.</p>'+linkedSources(x);bindSources();}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Linked view could not be created'});}});section.querySelector('#dual-view-load').addEventListener('click',load);
+    }());
+    (function installUserLabelsControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('user-label-create'))return;const s=document.createElement('section');s.className='document-review-card user-labels-control';s.innerHTML='<div class="document-review-heading"><div><span>Encrypted matter taxonomy</span><strong>User-defined labels</strong></div><span class="badge warn">Review required</span></div><p>Create collision-safe local labels, apply one to a hash-bound record, and export or migrate them only with explicit confirmation. Labels organize work; they do not classify facts or law.</p><div class="document-workspace-fields"><label>Label ID<input id="user-label-id" maxlength="120" placeholder="priority_review"></label><label>Name<input id="user-label-name" maxlength="80" placeholder="Priority review"></label><label>Color<input id="user-label-color" value="#1f7a8c" pattern="#[0-9a-fA-F]{6}"></label></div><div class="document-workspace-actions"><button class="secondary" id="user-label-use-record" type="button">Use first active record</button><button class="secondary" id="user-label-refresh" type="button">Refresh labels</button></div><label class="document-review-attestation"><input id="user-label-confirm" type="checkbox"> I confirm this is an encrypted local organization label and not a legal, factual, or filing conclusion.</label><div class="document-workspace-actions"><button class="primary-action" id="user-label-create" type="button">Create label</button><button class="secondary" id="user-label-assign" type="button">Apply to selected record</button><button class="secondary" id="user-label-export" type="button">Create export</button><button class="secondary" id="user-label-import" type="button">Import export</button></div><label>Export / import JSON<textarea id="user-label-transfer" rows="4" maxlength="300000" placeholder="Export appears here. Paste a prior label export to migrate it."></textarea></label><div aria-live="polite" class="document-workspace-status" id="user-label-result">Create a label and choose an active-matter record before applying it.</div><div id="user-label-list" class="document-workspace-status"></div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#user-label-result'),list=q('#user-label-list');let record=null;const refresh=async()=>{try{const p=await fetchJson('/api/user-labels');list.innerHTML='<strong>Labels</strong><ul>'+(p.labels||[]).map(x=>'<li><button class="text-link" data-user-label-select="'+escapeHtml(x.label_id||'')+'" type="button">'+escapeHtml(x.name||x.label_id||'label')+'</button> · '+escapeHtml(x.color||'')+' · review required</li>').join('')+'</ul><p>'+escapeHtml(String((p.assignments||[]).length))+' hash-bound assignment(s).</p>';list.querySelectorAll('[data-user-label-select]').forEach(b=>b.addEventListener('click',()=>{const row=(p.labels||[]).find(x=>x.label_id===b.dataset.userLabelSelect);if(row){q('#user-label-id').value=row.label_id||'';q('#user-label-name').value=row.name||'';q('#user-label-color').value=row.color||'#1f7a8c';}}));}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Labels could not be loaded'});}};q('#user-label-use-record').addEventListener('click',async()=>{try{record=(await fetchJson('/api/drafting/outline-evidence-candidates')).candidates?.[0]||null;if(!record)throw new Error('no_active_matter_record');r.textContent='First active-matter record selected. Its current hash will be checked before assignment.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Record could not be selected'});}});q('#user-label-create').addEventListener('click',async()=>{if(!v('#user-label-id')||!v('#user-label-name')||!q('#user-label-confirm').checked){r.textContent='Enter an ID and name, then confirm the label boundary.';return;}try{await fetchJson('/api/user-labels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label_id:v('#user-label-id'),name:v('#user-label-name'),color:v('#user-label-color'),user_confirmed:true})});r.textContent='Encrypted label created. A name collision is rejected rather than merged silently.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Label could not be created'});}});q('#user-label-assign').addEventListener('click',async()=>{if(!record||!v('#user-label-id')||!q('#user-label-confirm').checked){r.textContent='Select an active-matter record, label, and confirmation first.';return;}try{await fetchJson('/api/user-labels/'+encodeURIComponent(v('#user-label-id'))+'/assignments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_id:record.record_id,source_hash:record.source_hash,user_confirmed:true})});r.textContent='Label applied to the current hash-bound record; review status remains required.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Label could not be applied'});}});q('#user-label-export').addEventListener('click',async()=>{if(!q('#user-label-confirm').checked){r.textContent='Confirm before creating a portable local label export.';return;}try{const p=await fetchJson('/api/user-labels/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_confirmed:true})});q('#user-label-transfer').value=JSON.stringify(p.export||{},null,2);r.textContent='Local label export created. Review the JSON and its hash before moving it.';}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Label export could not be created'});}});q('#user-label-import').addEventListener('click',async()=>{if(!q('#user-label-confirm').checked){r.textContent='Confirm before importing a local label export.';return;}let exp;try{exp=JSON.parse(v('#user-label-transfer'));}catch(_){r.textContent='Paste a valid local label export JSON object.';return;}try{const p=await fetchJson('/api/user-labels/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({export:exp,collision_strategy:'rename',user_confirmed:true})});r.textContent='Imported '+String((p.imported_label_ids||[]).length)+' label(s); collisions were renamed and retained for review.';await refresh();}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Label import could not be completed'});}});q('#user-label-refresh').addEventListener('click',refresh);refresh();}());
+    (function installDailyMatterBriefControl(){const h=documentWorkspaceMeta?.parentElement;if(!h||document.getElementById('daily-brief-build'))return;const s=document.createElement('section');s.className='document-review-card daily-matter-brief-control';s.innerHTML='<div class="document-review-heading"><div><span>Explicit local digest</span><strong>Daily matter brief</strong></div><span class="badge warn">Review required</span></div><p>Generate a current local grouping of changed-record signals, review items, deadline candidates, and blockers. It does not decide any of those states.</p><div class="document-workspace-fields"><label>Brief ID<input id="daily-brief-id" maxlength="120" placeholder="daily_001"></label></div><label class="document-review-attestation"><input id="daily-brief-confirm" type="checkbox"> I confirm I want an explicit local review digest for this active matter.</label><div class="document-workspace-actions"><button class="primary-action" id="daily-brief-build" type="button">Build daily brief</button><button class="secondary" id="daily-brief-load" type="button">Load brief</button></div><div aria-live="polite" class="document-workspace-status" id="daily-brief-result">Create a new brief only when you choose to review current local metadata.</div>';documentWorkspaceMeta.insertAdjacentElement('afterend',s);const q=x=>s.querySelector(x),v=x=>String(q(x)?.value||'').trim(),r=q('#daily-brief-result'),render=b=>{const groups=[['Changed-record signals',b.changed_records],['Due review signals',b.due_reviews],['Deadline candidates',b.deadline_candidates],['Potential blockers',b.blockers]];r.innerHTML='<strong>Review required.</strong> '+groups.map(([label,rows])=>escapeHtml(label)+': '+escapeHtml(String((rows||[]).length))).join(' · ')+'.<p>'+escapeHtml(b.notice||'')+'</p>';};q('#daily-brief-build').addEventListener('click',async()=>{if(!v('#daily-brief-id')||!q('#daily-brief-confirm').checked){r.textContent='Enter a brief ID and confirm the explicit local review action.';return;}try{const p=await fetchJson('/api/daily-matter-briefs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brief_id:v('#daily-brief-id'),user_confirmed:true})});render(p.brief||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Daily matter brief could not be built'});}});q('#daily-brief-load').addEventListener('click',async()=>{if(!v('#daily-brief-id'))return;try{render((await fetchJson('/api/daily-matter-briefs/'+encodeURIComponent(v('#daily-brief-id')))).brief||{});}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Daily matter brief could not be loaded'});}});}());
+    (function installOrganizationReadiness(){
+      const load=document.getElementById('organization-readiness-load'),refresh=document.getElementById('organization-readiness-refresh'),ack=document.getElementById('organization-readiness-ack'),status=document.getElementById('organization-readiness-status'),badge=document.getElementById('organization-readiness-badge'),results=document.getElementById('organization-readiness-results');
+      if(!load||!refresh||!ack||!status||!badge||!results)return;
+      const render=(payload)=>{const dashboard=payload.dashboard||payload||{},lanes=dashboard.lanes||[],receipt=payload.receipt;badge.textContent='Review required';badge.className='status-badge review';status.textContent='Readiness lanes remain separate. Overall decision: '+String(dashboard.overall_decision||'not evaluated').replaceAll('_',' ')+'.';results.innerHTML='<strong>Review required.</strong><ul>'+lanes.map((lane)=>'<li><strong>'+escapeHtml(lane.lane||'lane')+': '+escapeHtml(String(lane.decision||'unknown').replaceAll('_',' '))+'</strong> · '+escapeHtml((lane.blockers||[]).join(', ').replaceAll('_',' ')||lane.basis||'review evidence')+'</li>').join('')+'</ul>'+(receipt?'<p>Encrypted refresh receipt '+escapeHtml(receipt.receipt_id||'created')+' recorded locally.</p>':'<p>Local evidence does not create legal review, pilot, Store, or Enterprise GA approval.</p>');};
+      const call=async(record)=>{if(!ack.checked){status.textContent='Confirm authorization before loading tenant-scoped readiness evidence.';return;}load.disabled=true;refresh.disabled=true;try{render(await fetchJson(record?'/api/admin/organization-readiness/refresh':'/api/admin/organization-readiness',{method:record?'POST':'GET',headers:{'X-User-Role':'admin'}}));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Organization readiness could not be loaded'});}finally{load.disabled=false;refresh.disabled=false;}};
+      load.addEventListener('click',()=>call(false));refresh.addEventListener('click',()=>call(true));
+    }());
+    (function installOfflineEntitlement(){
+      const refresh=document.getElementById('offline-entitlement-refresh'),verify=document.getElementById('offline-entitlement-verify'),ack=document.getElementById('offline-entitlement-ack'),input=document.getElementById('offline-entitlement-json'),status=document.getElementById('offline-entitlement-status'),badge=document.getElementById('offline-entitlement-badge'),results=document.getElementById('offline-entitlement-results');
+      if(!refresh||!verify||!ack||!input||!status||!badge||!results)return;
+      const render=(payload)=>{const item=payload.entitlement||{},boundary=payload.boundaries||{},blocked=payload.status==='blocked';badge.textContent=payload.status==='foss_no_entitlement_required'?'FOSS — no entitlement required':blocked?'Blocked':'Review required';badge.className='status-badge '+(blocked?'blocked':'review');status.textContent=payload.status==='foss_no_entitlement_required'?'FOSS mode is active. No entitlement is required or used.':blocked?'The supplied entitlement did not verify. No product capability or matter access was changed.':'Offline entitlement status loaded; independent review remains required.';results.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(payload.status||'unknown').replaceAll('_',' '))+'.<p>Signature: '+escapeHtml(item.signature_status||'not checked')+' · expires '+escapeHtml(item.expires_at||'not supplied')+' · tiers '+escapeHtml((item.feature_tiers||[]).join(', ')||'none')+'.</p><p>Offline only: '+escapeHtml(String(boundary.offline_only===true))+' · telemetry: '+escapeHtml(String(boundary.telemetry_used===true))+' · matter access decision: '+escapeHtml(boundary.matter_access_decision||'never')+'.</p>';};
+      refresh.addEventListener('click',async()=>{refresh.disabled=true;try{render(await fetchJson('/api/admin/offline-entitlement',{headers:{'X-User-Role':'admin'}}));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Offline entitlement status could not be loaded'});}finally{refresh.disabled=false;}});
+      verify.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm authorization before checking an offline entitlement.';return;}let entitlement;try{entitlement=JSON.parse(String(input.value||''));}catch(_){status.textContent='Paste a valid offline entitlement JSON object.';return;}verify.disabled=true;try{render(await fetchJson('/api/admin/offline-entitlement/verify',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({entitlement})}));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Offline entitlement could not be verified'});}finally{verify.disabled=false;}});
+    }());
+    (function installConfigurationExport(){
+      const build=document.getElementById('configuration-export-build'),verify=document.getElementById('configuration-export-verify'),ack=document.getElementById('configuration-export-ack'),signature=document.getElementById('configuration-export-signature'),status=document.getElementById('configuration-export-status'),badge=document.getElementById('configuration-export-badge'),results=document.getElementById('configuration-export-results');
+      if(!build||!verify||!ack||!signature||!status||!badge||!results)return;let manifest=null;
+      const render=(payload)=>{const value=payload?.manifest||payload||{},configs=value.configuration||[],evidence=value.compliance_evidence||[],signatureStatus=value.signature||{};manifest=payload?.manifest?manifest:value;const blocked=signatureStatus.status==='blocked';badge.textContent=blocked?'Blocked':'Review required';badge.className='status-badge '+(blocked?'blocked':'review');status.textContent=blocked?'The external signature did not verify against the configured trust keys. No configuration claim is approved.':'Configuration manifest is ready for external review; no private matter data is included.';results.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(configs.length))+' configuration hash(es) · '+escapeHtml(String(evidence.length))+' evidence hash(es).<p>Signature: '+escapeHtml(signatureStatus.status||'external signature required')+(signatureStatus.key_id?' · key '+escapeHtml(signatureStatus.key_id):'')+'.</p><p>No matter database, credentials, raw path, log, upload, or network transmission is included.</p>';};
+      build.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm that you are authorized to inspect this configuration manifest first.';badge.textContent='Confirmation required';return;}build.disabled=true;try{const payload=await fetchJson('/api/admin/configuration-export',{headers:{'X-User-Role':'admin'}});manifest=payload;render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Configuration manifest could not be built'});}finally{build.disabled=false;}});
+      verify.addEventListener('click',async()=>{if(!ack.checked||!manifest){status.textContent='Build the current manifest and confirm authorization before verifying an external signature.';return;}let parsed;try{parsed=JSON.parse(String(signature.value||''));}catch(_){status.textContent='Paste a valid external signature JSON object.';return;}verify.disabled=true;try{render(await fetchJson('/api/admin/configuration-export/verify',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({manifest,signature:parsed})}));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Configuration signature could not be verified'});status.textContent='No configuration approval was created.';}finally{verify.disabled=false;}});
+    }());
+    (function installAuditVerificationConsole(){
+      const run=document.getElementById('audit-verification-run'),exportReport=document.getElementById('audit-verification-export'),ack=document.getElementById('audit-verification-ack'),status=document.getElementById('audit-verification-status'),badge=document.getElementById('audit-verification-badge'),results=document.getElementById('audit-verification-results');
+      if(!run||!exportReport||!ack||!status||!badge||!results)return;
+      const render=(payload)=>{const report=payload?.scoped_report||payload||{},chains=report.chains||{},blockers=report.blockers||[],receipt=payload?.export_receipt;const rows=Object.entries(chains);const blocked=report.status==='blocked';badge.textContent=blocked?'Blocked':'Review required';badge.className='status-badge '+(blocked?'blocked':'review');status.textContent=blocked?'Audit verification found a chain, clock, or signature issue. Use the exact blocker to investigate before relying on this evidence.':'Local governance audit metadata verified structurally; human review remains required.';results.innerHTML='<strong>'+escapeHtml(blocked?'Blocked.':'Review required.')+'</strong> '+rows.map(([name,row])=>escapeHtml(name.replaceAll('_',' '))+': '+escapeHtml(row.status||'unknown')+' · '+escapeHtml(String(row.event_count||0))+' events').join(' · ')+'.<p>Policy-pack signature states: '+escapeHtml((report.signature_verification||[]).map((row)=>String(row.pack_id||'pack')+' '+String(row.signature_status||'unverified')).join(', ')||'no packs recorded')+'.</p>'+(blockers.length?'<p><strong>Corrective action:</strong> '+escapeHtml(blockers.join(', ').replaceAll('_',' '))+'.</p>':'<p>No private record content, raw paths, external audit claim, or network request is included.</p>')+(receipt?'<p>Scoped report receipt '+escapeHtml(String(receipt.receipt_id||'created'))+' was encrypted and audit chained locally.</p>':'');};
+      const call=async(exporting)=>{if(!ack.checked){status.textContent='Confirm that you are authorized to inspect tenant-scoped audit metadata first.';badge.textContent='Confirmation required';return;}run.disabled=true;exportReport.disabled=true;status.textContent=exporting?'Creating a local scoped report receipt…':'Verifying encrypted local governance audit chains…';try{render(await fetchJson(exporting?'/api/admin/audit-verification/export':'/api/admin/audit-verification',{method:exporting?'POST':'GET',headers:{'X-User-Role':'admin'}}));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Audit verification could not complete'});status.textContent='No audit report was exported or transmitted.';badge.textContent='Verification unavailable';}finally{run.disabled=false;exportReport.disabled=false;}};
+      run.addEventListener('click',()=>call(false));exportReport.addEventListener('click',()=>call(true));
+    }());
+    (function installRetentionPlanControl(){
+      const q=(id)=>document.getElementById(id),ack=q('retention-plan-ack'),status=q('retention-plan-status'),badge=q('retention-plan-badge'),results=q('retention-plan-results'),plan=q('retention-plan-id'),artifacts=q('retention-plan-artifacts'),policy=q('retention-plan-policy'),days=q('retention-plan-days'),preview=q('retention-plan-preview'),refresh=q('retention-plan-refresh'),apply=q('retention-plan-apply'),cancel=q('retention-plan-cancel');
+      if(!ack||!status||!badge||!results||!plan||!artifacts||!policy||!days||!preview||!refresh||!apply||!cancel)return;
+      const list=()=>String(artifacts.value||'').split(',').map((item)=>item.trim()).filter(Boolean),planId=()=>String(plan.value||'').trim();
+      const render=(payload)=>{const rows=Array.isArray(payload?.plans)?payload.plans:(payload?.plan?[payload.plan]:[]),active=Number(payload?.active_recovery_count??rows.filter((row)=>row.status==='recovery_window_active').length),blocked=payload?.status==='blocked'||rows.some((row)=>row.status==='blocked');badge.textContent=blocked?'Blocked':active?'Recovery window active':'Review required';badge.className='status-badge '+(blocked?'blocked':'review');status.textContent=blocked?'The retention plan is blocked. Resolve an active hold or provide a separately organization-approved policy reference.':'Retention planning did not delete any artifact.';results.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(active))+' active recovery window(s).<ul>'+rows.map((row)=>'<li><strong>'+escapeHtml(row.plan_id||'plan')+': '+escapeHtml(String(row.status||'unknown').replaceAll('_',' '))+'</strong> · '+escapeHtml(String(row.artifact_count||0))+' artifact(s) · policy '+escapeHtml(row.policy_ref||'unavailable')+(row.recovery_expires_at?' · recovery ends '+escapeHtml(row.recovery_expires_at):'')+'</li>').join('')+'</ul><p>No deletion, external request, or export was performed. Holds and approval status stay visible for review.</p>';};
+      const call=async(action)=>{if(action!=='refresh'&&!ack.checked){status.textContent='Confirm the review-required retention action first.';badge.textContent='Confirmation required';return;}if(action!=='refresh'&&!planId()){status.textContent='Enter a safe plan ID first.';return;}if(action==='preview'&&(!list().length||!String(policy.value||'').trim())){status.textContent='Enter artifact IDs and the organization-approved policy reference.';return;}[preview,refresh,apply,cancel].forEach((button)=>button.disabled=true);status.textContent='Checking encrypted, hold-aware retention planning…';try{let url='/api/admin/retention-plans',options={headers:{'X-User-Role':'admin'}};if(action==='preview'){url+='/preview';options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({plan_id:planId(),artifact_ids:list(),policy_ref:String(policy.value||'').trim(),recovery_window_days:Number(days.value||0)})};}if(action==='apply'){url+='/'+encodeURIComponent(planId())+'/apply';options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({user_confirmed:true})};}if(action==='cancel'){url+='/'+encodeURIComponent(planId())+'/cancel';options={method:'POST',headers:{'X-User-Role':'admin'}};}render(await fetchJson(url,options));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Retention-plan action could not complete'});status.textContent='No record was deleted or exported.';badge.textContent='Action unavailable';}finally{[preview,refresh,apply,cancel].forEach((button)=>button.disabled=false);}};
+      preview.addEventListener('click',()=>call('preview'));refresh.addEventListener('click',()=>call('refresh'));apply.addEventListener('click',()=>call('apply'));cancel.addEventListener('click',()=>call('cancel'));
+    }());
+    (function installLegalHoldControl(){
+      const q=(id)=>document.getElementById(id),ack=q('legal-hold-ack'),status=q('legal-hold-status'),badge=q('legal-hold-badge'),results=q('legal-hold-results'),hold=q('legal-hold-id'),artifacts=q('legal-hold-artifacts'),authority=q('legal-hold-authority'),releaseAuthority=q('legal-hold-release-authority'),place=q('legal-hold-place'),refresh=q('legal-hold-refresh'),release=q('legal-hold-release');
+      if(!ack||!status||!badge||!results||!hold||!artifacts||!authority||!releaseAuthority||!place||!refresh||!release)return;
+      const artifactIds=()=>String(artifacts.value||'').split(',').map((item)=>item.trim()).filter(Boolean);
+      const render=(payload)=>{const rows=Array.isArray(payload?.holds)?payload.holds:(payload?.hold?[payload.hold]:[]),active=Number(payload?.active_hold_count??rows.filter((row)=>row.status==='active').length);badge.textContent=active?'Active hold(s)':'Review required';badge.className='status-badge '+(active?'blocked':'review');status.textContent=active?'Active holds preserve the selected artifacts. Document-workspace deletion is blocked for held IDs.':'No active hold is listed for this active matter.';results.innerHTML='<strong>Review required.</strong> '+escapeHtml(String(active))+' active hold(s).<ul>'+rows.map((row)=>'<li><strong>'+escapeHtml(row.hold_id||'hold')+': '+escapeHtml(row.status||'unknown')+'</strong> · artifacts '+escapeHtml((row.artifact_ids||[]).join(', ')||'none')+' · authority '+escapeHtml(row.authority_ref||'unavailable')+'</li>').join('')+'</ul><p>Holds preserve opaque artifact identifiers only. A release records a separate authority reference and never deletes the artifact.</p>';};
+      const call=async(action)=>{if(action!=='refresh'&&!ack.checked){status.textContent='Confirm the review-required preservation action first.';badge.textContent='Confirmation required';return;}if(action!=='refresh'&&!String(hold.value||'').trim()){status.textContent='Enter a safe hold ID first.';return;}if(action==='place'&&(!artifactIds().length||!String(authority.value||'').trim())){status.textContent='Enter at least one artifact ID and an explicit authority reference.';return;}if(action==='release'&&!String(releaseAuthority.value||'').trim()){status.textContent='Enter the release authority reference before requesting release.';return;}[place,refresh,release].forEach((button)=>button.disabled=true);status.textContent='Checking encrypted active-matter preservation controls…';try{let url='/api/admin/legal-holds',options={headers:{'X-User-Role':'admin'}};if(action==='place')options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({hold_id:String(hold.value||'').trim(),artifact_ids:artifactIds(),authority_ref:String(authority.value||'').trim()})};if(action==='release'){url+='/'+encodeURIComponent(String(hold.value||'').trim())+'/release';options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({release_authority_ref:String(releaseAuthority.value||'').trim()})};}render(await fetchJson(url,options));}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Legal-hold action could not complete'});status.textContent='No deletion or hold release was performed.';badge.textContent='Action unavailable';}finally{[place,refresh,release].forEach((button)=>button.disabled=false);}};
+      place.addEventListener('click',()=>call('place'));refresh.addEventListener('click',()=>call('refresh'));release.addEventListener('click',()=>call('release'));
+    }());
+    (function installSignedPolicyPackLifecycle(){
+      const q=(id)=>document.getElementById(id),ack=q('signed-policy-pack-ack'),status=q('signed-policy-pack-status'),badge=q('signed-policy-pack-badge'),results=q('signed-policy-pack-results'),packId=q('signed-policy-pack-id'),version=q('signed-policy-pack-version'),signature=q('signed-policy-pack-signature');
+      const buttons={draft:q('signed-policy-pack-draft'),validate:q('signed-policy-pack-validate'),diff:q('signed-policy-pack-diff'),approve:q('signed-policy-pack-approve'),activate:q('signed-policy-pack-activate'),expire:q('signed-policy-pack-expire'),rollback:q('signed-policy-pack-rollback')};
+      if(!ack||!status||!badge||!results||!packId||!version||!signature||Object.values(buttons).some((item)=>!item))return;
+      const id=()=>String(packId.value||'').trim(),setBusy=(busy)=>Object.values(buttons).forEach((button)=>{button.disabled=busy;});
+      const render=(payload)=>{const pack=payload?.policy_pack||{},signatureState=pack.signature||{},validation=pack.validation||{},blockers=[...(validation.blockers||[]),...(signatureState.blockers||[])];const blocked=payload?.status==='blocked';badge.textContent=blocked?'Blocked':'Review required';badge.className='status-badge '+(blocked?'blocked':'review');status.textContent=blocked?'Policy pack is not eligible for activation. Correct the displayed blocker and rerun the relevant check.':'Policy-pack lifecycle action completed. Human governance review remains required.';results.innerHTML='<strong>'+escapeHtml(String(pack.status||payload?.status||'review required').replaceAll('_',' '))+'.</strong> '+escapeHtml(String(pack.pack_id||id()||'policy pack'))+' · content hash '+escapeHtml(String(pack.content_sha256||'').slice(0,16)||'unavailable')+'.<p>Validation: '+escapeHtml(validation.status||'unavailable')+' · external signature: '+escapeHtml(signatureState.status||'unverified')+(signatureState.key_id?' · key '+escapeHtml(signatureState.key_id):'')+'.</p>'+(payload?.diff?'<p><strong>Hash-bound diff:</strong> '+escapeHtml(Object.keys(payload.diff||{}).join(', ')||'no control changes')+'.</p>':'')+(blockers.length?'<p><strong>Corrective action:</strong> '+escapeHtml([...new Set(blockers)].join(', ').replaceAll('_',' '))+'.</p>':'<p>Activation remains a local policy-registry action only; it cannot replace external accountable approval or release evidence.</p>');};
+      const call=async(action)=>{if(!ack.checked){status.textContent='Confirm that you are authorized to use this tenant-scoped policy-pack workflow first.';badge.textContent='Confirmation required';return;}if(!id()){status.textContent='Enter a safe policy-pack ID first.';return;}setBusy(true);status.textContent='Running the local, encrypted policy-pack '+action+' check…';try{let path='/api/admin/policy-packs/'+encodeURIComponent(id())+'/'+action,options={method:action==='diff'?'GET':'POST',headers:{'X-User-Role':'admin'}};if(action==='draft'){path='/api/admin/policy-packs/draft';options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({pack_id:id(),version:String(version.value||'').trim(),controls:{local_only:true,review_required:true,filing_gate_required:true,no_unapproved_external_provider:true,no_cross_matter_access:true}})};}else if(action==='approve'){let parsed={};try{parsed=JSON.parse(String(signature.value||''));}catch(_){status.textContent='Paste a valid externally supplied signature JSON object.';return;}options={method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({signature:parsed})};}const payload=await fetchJson(path,options);render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Policy-pack lifecycle action could not complete'});status.textContent='No signing key, authority, release, account, or network action was created.';badge.textContent='Action unavailable';}finally{setBusy(false);}};
+      Object.entries(buttons).forEach(([action,button])=>button.addEventListener('click',()=>call(action)));
+    }());
+    (function installSeparationOfDutiesReview(){
+      const run=document.getElementById('separation-of-duties-run'),ack=document.getElementById('separation-of-duties-ack'),status=document.getElementById('separation-of-duties-status'),badge=document.getElementById('separation-of-duties-badge'),results=document.getElementById('separation-of-duties-results'),id=document.getElementById('separation-of-duties-id');
+      if(!run||!ack||!status||!badge||!results||!id)return;
+      const value=(suffix)=>String(document.getElementById('separation-of-duties-'+suffix)?.value||'').trim();
+      const rows=()=>[['authority_activation','authority_activator','authority'],['security_approval','security_approver','security'],['legal_sign_off','legal_signer','legal'],['release_approval','release_approver','release']].map(([stage,role,prefix])=>({stage,role,actor_ref:value(prefix+'-actor'),artifact_ref:value(prefix+'-artifact'),approved:true}));
+      const render=(payload)=>{const blocked=Array.isArray(payload?.blockers)?payload.blockers:[],detail=Array.isArray(payload?.approval_results)?payload.approval_results:[];const passing=payload?.independence_satisfied===true;badge.textContent=passing?'Review required — independent':'Blocked';badge.className='status-badge '+(passing?'review':'blocked');status.textContent=passing?'All four required roles use distinct opaque actor references. External accountable approval is still required.':'Independence check blocked. Correct the exact role or actor reference and rerun.';results.innerHTML='<strong>'+escapeHtml(passing?'Review required.':'Blocked.')+'</strong> '+escapeHtml(String(payload?.independent_actor_count||0))+' independent actor reference(s).<ul>'+detail.map((row)=>'<li><strong>'+escapeHtml(String(row.stage||'stage').replaceAll('_',' '))+': '+escapeHtml(row.independent_actor?'independent':'reused actor')+'</strong> · '+escapeHtml(row.required_role||'required role')+' · artifact '+escapeHtml(row.artifact_ref||'unavailable')+'</li>').join('')+'</ul>'+(blocked.length?'<p><strong>Corrective action:</strong> '+escapeHtml(blocked.join(', ').replaceAll('_',' '))+'.</p>':'<p>No approval, authority activation, release action, account change, or network action was performed.</p>');};
+      run.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm that you are authorized to use opaque tenant-scoped review references first.';badge.textContent='Confirmation required';return;}if(!String(id.value||'').trim()||rows().some((row)=>!row.actor_ref||!row.artifact_ref)){status.textContent='Enter a review ID plus one opaque actor and artifact reference for each of the four responsibilities.';return;}run.disabled=true;status.textContent='Checking the required approval roles for independent actors…';try{const payload=await fetchJson('/api/admin/separation-of-duties',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({review_id:String(id.value||'').trim(),approvals:rows()})});render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Independent approval review could not run'});status.textContent='No authority, release, account, or policy action was performed.';badge.textContent='Review unavailable';}finally{run.disabled=false;}});
+    }());
+    (function installRolePolicySimulator(){
+      const run=document.getElementById('role-policy-simulator-run'),ack=document.getElementById('role-policy-simulator-ack'),status=document.getElementById('role-policy-simulator-status'),badge=document.getElementById('role-policy-simulator-badge'),results=document.getElementById('role-policy-simulator-results'),id=document.getElementById('role-policy-simulator-id'),roles=document.getElementById('role-policy-simulator-roles'),permissions=document.getElementById('role-policy-simulator-permissions');
+      if(!run||!ack||!status||!badge||!results||!id||!roles||!permissions)return;
+      const list=(field)=>String(field.value||'').split(',').map(item=>item.trim()).filter(Boolean);
+      const render=(payload)=>{const rows=Array.isArray(payload?.permission_results)?payload.permission_results:[];badge.textContent='Review required';badge.className='status-badge review';status.textContent='Fictional policy preview completed. No user, role, policy, or export was changed.';results.innerHTML='<strong>Review required.</strong> Roles: '+escapeHtml((payload?.selected_roles||[]).join(', ')||'none')+' · allowed '+escapeHtml(String(payload?.allowed_count||0))+' · denied '+escapeHtml(String(payload?.denied_count||0))+'.<ul>'+rows.map((row)=>'<li><strong>'+escapeHtml(row.permission||'permission')+': '+escapeHtml(row.decision||'deny')+'</strong> · basis '+escapeHtml((row.basis_roles||[]).join(', ')||'none')+(row.denial_reason?' · '+escapeHtml(String(row.denial_reason).replaceAll('_',' ')):'')+'</li>').join('')+'</ul><p>Each result is traced to the fixed role-permission policy. A separate approved policy-pack workflow is required for any real change.</p>';};
+      run.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm that you are authorized to run a fictional tenant-scoped preview first.';badge.textContent='Confirmation required';return;}if(!String(id.value||'').trim()||!list(roles).length){status.textContent='Enter a safe simulation ID and at least one known role.';return;}run.disabled=true;status.textContent='Simulating only the fixed role-permission policy…';try{const payload=await fetchJson('/api/admin/role-policy-simulations',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'},body:JSON.stringify({simulation_id:String(id.value||'').trim(),fictional_roles:list(roles),permissions:list(permissions)})});render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Fictional policy preview could not run'});status.textContent='No authorization state was changed.';badge.textContent='Preview unavailable';}finally{run.disabled=false;}});
+    }());
+    (function installAdministrationReviewConsole(){
+      const refresh=document.getElementById('admin-console-refresh'),ack=document.getElementById('admin-console-ack'),status=document.getElementById('admin-console-status'),badge=document.getElementById('admin-console-badge'),results=document.getElementById('admin-console-results');
+      if(!refresh||!ack||!status||!badge||!results)return;
+      const render=(payload)=>{const authority=payload?.authority||{},policy=payload?.policy||{},release=payload?.release_evidence||{},blocked=payload?.blocked_exports||{},tenant=payload?.tenant_scope||{};const rows=Array.isArray(release.artifacts)?release.artifacts:[];badge.textContent='Review required';badge.className='status-badge review';status.textContent='Tenant-scoped administration review loaded. Account management remains an external identity-provider control.';results.innerHTML='<strong>Review required.</strong> Tenant '+escapeHtml(tenant.tenant_id||'local tenant')+' · roles: '+escapeHtml((payload?.users_and_roles?.supported_roles||[]).join(', ')||'none')+'.<p>Policies available: '+escapeHtml(String(policy.policy_count||0))+' · official authority: '+escapeHtml(authority.status||'unknown')+' · sources: '+escapeHtml(String(authority.source_count||0))+'.</p><p>Release evidence: '+escapeHtml(rows.map((row)=>String(row.artifact_id||'evidence').replaceAll('_',' ')+' '+String(row.status||'unknown')).join(' · ')||'none')+'.</p><p><strong>Blocked exports:</strong> '+escapeHtml((blocked.blockers||[]).join(', ').replaceAll('_',' ')||'human review required')+'. No filing-ready or account-management action is available from this panel.</p>';};
+      refresh.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm that you are authorized for this tenant-scoped admin review first.';badge.textContent='Confirmation required';return;}refresh.disabled=true;status.textContent='Loading privacy-safe administration status and recording an encrypted local receipt…';try{const payload=await fetchJson('/api/admin/console/refresh',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'}});render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Administration review could not be refreshed'});status.textContent='The existing matter and local work were preserved.';badge.textContent='Review unavailable';}finally{refresh.disabled=false;}});
+    }());
     installSpecializedSourceInspectors();
     setV8View(activeV8View, {userInitiated: false});
     selectDrawerTab('evidence');

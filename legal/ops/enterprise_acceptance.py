@@ -112,14 +112,24 @@ class EnterpriseAcceptanceAuditor:
             ".proofs",
         }
         files: list[Path] = []
-        for path in sorted(self.project_root.rglob("*")):
-            if not path.is_file():
-                continue
-            rel = path.relative_to(self.project_root)
-            if any(part in skipped or part.endswith(".egg-info") for part in rel.parts):
-                continue
-            files.append(path)
-        return files
+        for directory, dirnames, filenames in os.walk(self.project_root):
+            current = Path(directory)
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in skipped and not name.endswith(".egg-info")
+            ]
+            for name in filenames:
+                files.append(current / name)
+        return sorted(files)
+
+    @staticmethod
+    def _is_public_fixture(rel: str) -> bool:
+        return Path(rel).parts[:2] in {("data", "fixtures"), ("tests", "fixtures")}
+
+    @staticmethod
+    def _is_public_runtime_source(rel: str) -> bool:
+        return Path(rel).parts[:2] == ("legal", "runtime")
 
     def audit(self) -> EnterpriseAcceptanceReport:
         findings: list[EnterpriseAcceptanceFinding] = []
@@ -137,7 +147,7 @@ class EnterpriseAcceptanceAuditor:
         txt_files = sorted(
             rel
             for rel in rel_files
-            if rel.lower().endswith(".txt") and not rel.startswith("store/")
+            if rel.lower().endswith(".txt") and not rel.startswith("store/") and not self._is_public_fixture(rel)
         )
         allowed_txt = self.policy.get("single_text_file_allowed", "PASS_CHANGES.txt")
         only_one_txt = txt_files == [allowed_txt]
@@ -153,6 +163,8 @@ class EnterpriseAcceptanceAuditor:
 
         blocked_source_paths = set(self.policy.get("blocked_source_paths", []))
         for rel in rel_files:
+            if self._is_public_fixture(rel) or self._is_public_runtime_source(rel):
+                continue
             if any(part in blocked_source_paths for part in Path(rel).parts):
                 findings.append(
                     EnterpriseAcceptanceFinding("source-boundary", "fail", "blocked runtime/external path is inside source tree", rel)

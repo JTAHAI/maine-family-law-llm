@@ -282,14 +282,28 @@ class AuthorityBuildAuditor:
                 )
             )
 
+        metadata = record.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        quarantined = metadata.get("retrieval_admission") == "quarantined"
         acceptable = set(self.policy.get("acceptable_parser_statuses", []))
-        if parser_status not in acceptable:
+        if parser_status not in acceptable and not quarantined:
             blockers.append("parser_status_not_acceptable")
             findings.append(
                 AuthorityManifestFinding(
                     source_id=source_id,
                     code="parser_status_not_acceptable",
                     message=f"Parser status {parser_status!r} is not acceptable.",
+                )
+            )
+        elif parser_status not in acceptable:
+            findings.append(
+                AuthorityManifestFinding(
+                    source_id=source_id,
+                    code="source_quarantined_from_retrieval",
+                    message=(
+                        "Non-admitted parser output is retained only as an "
+                        "official raw snapshot and excluded from retrieval."
+                    ),
                 )
             )
 

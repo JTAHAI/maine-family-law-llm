@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 mfl = "maine_family_law_llm.cli:main"
+mfl-fast-interchange-worker = "legal.fast_interchange.worker:main"
 
 [project.optional-dependencies]
 api = [
@@ -38,6 +39,14 @@ document-intelligence = [
   "pikepdf>=10.0.0,<11",
   "fpdf2>=2.8.0,<3",
   "uharfbuzz>=0.41.0,<1",
+]
+fast-interchange = [
+  "fastapi==0.139.2",
+  "uvicorn==0.51.0",
+  "torch>=2.5,<3",
+  "transformers>=4.46,<6",
+  "peft>=0.14,<1",
+  "safetensors>=0.4,<1",
 ]
 retrieval-evaluation = ["sqlite-vec>=0.1.9,<0.2", "qdrant-client>=1.18.0,<2", "deepeval>=4.0.5,<5"]
 release-hardening = [

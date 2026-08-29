@@ -37,6 +37,7 @@ BLOCKING_VERIFICATION_PREFIXES = (
     "citation_not_found",
     "quote_span_not_found",
     "claim_unsupported",
+    "claim_partially_supported",
     "claim_contradicted",
     "claim_stale",
     "claim_jurisdiction_mismatch",
@@ -60,7 +61,7 @@ VERIFIED_AUTHORITY_STATUSES = {
 }
 
 QUOTE_PASS_STATUSES = {"exact", "fuzzy", "quote_exact_match", "quote_fuzzy_match", "found"}
-CLAIM_PASS_STATUSES = {"supported", "partially_supported"}
+CLAIM_PASS_STATUSES = {"supported"}
 
 
 class FilingReadyGate:
@@ -236,7 +237,10 @@ class FilingReadyGate:
         if "legal_claims_supported" in payload or "claims_supported" in payload:
             declared = bool(payload.get("legal_claims_supported", payload.get("claims_supported")))
         report = payload.get("claim_support_report") or payload.get("claim_report") or {}
-        claims = report.get("claims", report if isinstance(report, list) else [])
+        claims = report.get("claims", []) if isinstance(report, dict) else report
+        if not isinstance(claims, list):
+            blockers.append("claim_support_report_invalid")
+            return False
         if not claims:
             if declared is not None:
                 return declared
@@ -244,8 +248,12 @@ class FilingReadyGate:
             return False
         ok = True
         for row in claims:
+            if not isinstance(row, dict):
+                blockers.append("claim_support_report_invalid")
+                ok = False
+                continue
             status = str(row.get("support_status", row.get("status", ""))).lower()
-            if status not in CLAIM_PASS_STATUSES:
+            if status not in CLAIM_PASS_STATUSES or row.get("supported") is False:
                 blockers.append(f"claim_not_supported:{row.get('claim_id') or row.get('claim') or 'unknown'}")
                 ok = False
         return ok and declared is not False
@@ -272,7 +280,7 @@ class FilingReadyGate:
                 blockers.append(f"fact_not_mapped:{row.get('fact_id') or row.get('fact') or 'unknown'}")
                 ok = False
             support_status = str(row.get("support_status") or "supported").strip().lower()
-            if support_status not in {"supported", "partially_supported"}:
+            if support_status != "supported" or row.get("supported") is False:
                 blockers.append(
                     f"fact_not_supported:{row.get('fact_id') or row.get('fact') or 'unknown'}:{support_status or 'unknown'}"
                 )

@@ -66,7 +66,8 @@ ENGINE_DEFINITIONS: tuple[EngineDefinition, ...] = (
         package_name="ocrmypdf",
         module_name="ocrmypdf",
         smoke_group="ocr_stack",
-        required_paths=("store/tesseract",),
+        required_paths=("store/tesseract", "_internal/ocrmypdf/data/Occulta.ttf",
+                        "_internal/ocrmypdf/data/NotoSans-Regular.ttf", "_internal/ocrmypdf/data/sRGB.icc"),
         path_markers=("ocrmypdf", "tesseract", "pypdfium2", "pikepdf", "fpdf2", "uharfbuzz"),
     ),
     EngineDefinition(
@@ -171,7 +172,9 @@ def _collect_runtime_files(runtime_root: Path, markers: tuple[str, ...]) -> list
 def _ensure_required_paths(runtime_root: Path, paths: tuple[str, ...]) -> None:
     for relative in paths:
         candidate = runtime_root / relative
-        if not candidate.exists():
+        if (not candidate.exists() or candidate.is_symlink()
+                or not candidate.resolve().is_relative_to(runtime_root.resolve())
+                or (candidate.is_file() and candidate.stat().st_size == 0)):
             raise RuntimeError(f"Required bundled path is missing: {relative}")
 
 
@@ -237,6 +240,11 @@ def _run_frozen_document_worker(
             "HF_HUB_OFFLINE": "1",
             "TRANSFORMERS_OFFLINE": "1",
             "DOCLING_ALLOW_EXTERNAL_PLUGINS": "false",
+            # The full Store tier ships the admitted Docling artifacts beside
+            # the frozen executable. The worker must receive that exact path;
+            # otherwise Docling falls back to the Hugging Face cache and, in
+            # offline mode, fails closed despite the bundled model payload.
+            "DOCLING_ARTIFACTS_PATH": str(runtime_root / "store" / "docling" / "models"),
             "NO_PROXY": "*",
             "no_proxy": "*",
             "HTTP_PROXY": "",
@@ -499,8 +507,13 @@ def build_inventory(runtime_root: Path, *, feature_tier: str | None = None) -> l
                     "status": "pass" if runtime_import_ok else "fail",
                     "duration_ms": import_cost_ms,
                     "detail": import_detail,
+                    "execution_level": "build_python_environment_not_frozen_executable",
                 },
-                "offline_functional_smoke_result": smoke,
+                "offline_functional_smoke_result": {
+                    **smoke,
+                    "execution_level": "build_python_environment_with_staged_assets_not_frozen_executable",
+                    "frozen_inference_certified": False,
+                },
                 "startup_cost_ms": import_cost_ms,
                 "package_size_contribution_bytes": package_size_contribution,
             }

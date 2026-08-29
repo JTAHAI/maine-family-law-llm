@@ -5,6 +5,7 @@ from pathlib import Path
 from legal.agent_runtime import LocalModelResponse, LoopbackEndpointPolicy
 from maine_family_law_llm import api
 from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
+from test_fast_interchange_host_source_binding import bound_host, approved_body, preview  # noqa: F401
 
 
 class FakeClient:
@@ -49,50 +50,44 @@ def test_normal_chat_response_carries_visible_context_and_host_receipt():
     assert result["local_agent_policy"]["remote_providers_enabled"] is False
 
 
-def test_local_agent_preview_is_non_networking_and_requires_loopback():
-    preview = api.local_agent_preview(
-        api.LocalAgentPreviewRequest(
-            question="What does this establish?",
-            source_cards=_cards(),
-            endpoint="http://127.0.0.1:11434",
-            provider="ollama",
-            model="qwen2.5:7b",
-            run_id="preview-run",
-        )
+def test_local_agent_preview_is_non_networking_and_requires_loopback(bound_host, monkeypatch):
+    from legal.agent_runtime.providers import build_local_client
+
+    monkeypatch.setattr(api, "build_local_client", build_local_client)
+    result = preview(bound_host)
+    assert result["status"] == "approval_required"
+    assert result["context_manifest"]["entry_count"] == 1
+    assert result["model"]["loopback_only"] is True
+    assert result["context_manifest"]["manifest_sha256"]
+    response = bound_host["client"].post(
+        "/api/local-agent/preview", headers=bound_host["headers"],
+        json={**bound_host["body"], "endpoint": "https://example.invalid"},
     )
-    assert preview["status"] == "approval_required"
-    assert preview["context_manifest"]["entry_count"] == 1
-    assert preview["model"]["loopback_only"] is True
-    assert preview["context_manifest"]["manifest_sha256"]
+    assert response.status_code == 400
 
 
-def test_local_agent_run_uses_exact_preview_hash(monkeypatch):
-    monkeypatch.setattr(api, "build_local_client", lambda **kwargs: FakeClient())
-    preview = api.local_agent_preview(
-        api.LocalAgentPreviewRequest(
-            question="What does this establish?",
-            source_cards=_cards(),
-            endpoint="http://127.0.0.1:11434",
-            provider="ollama",
-            model="fake-model",
-            run_id="run-1",
-        )
+def test_local_agent_status_discloses_fast_interchange_as_external_and_unbundled():
+    status = api.local_agent_status()
+    fast_interchange = next(
+        item for item in status["supported_providers"] if item["provider_id"] == "fast_interchange_local"
     )
-    result = api.local_agent_run(
-        api.LocalAgentExecuteRequest(
-            question="What does this establish?",
-            source_cards=_cards(),
-            endpoint="http://127.0.0.1:11434",
-            provider="ollama",
-            model="fake-model",
-            run_id="run-1",
-            approved_manifest_sha256=preview["context_manifest"]["manifest_sha256"],
-        )
+    assert fast_interchange["default_endpoint"] == "http://127.0.0.1:8105"
+    assert fast_interchange["requires_host_worker_token"] is True
+    assert fast_interchange["bundled_model_artifacts"] is False
+    assert fast_interchange["external_admission_required"] is True
+
+
+def test_local_agent_run_uses_exact_preview_hash(bound_host):
+    prepared = preview(bound_host)
+    response = bound_host["client"].post(
+        "/api/local-agent/run", json=approved_body(bound_host, prepared), headers=bound_host["headers"],
     )
+    assert response.status_code == 200
+    result = response.json()
     assert result["status"] == "completed_review_required"
     assert result["local_agent_result"] is True
     assert result["provenance_receipt"]["citation_refs"] == [1]
-    assert result["provenance_receipt"]["context_manifest_sha256"] == preview["context_manifest"]["manifest_sha256"]
+    assert result["provenance_receipt"]["context_manifest_sha256"] == prepared["context_manifest"]["manifest_sha256"]
 
 
 def test_workbench_surfaces_local_agent_manifest_review_and_actions():
@@ -106,5 +101,9 @@ def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     assert "/api/local-agent/preview" in js
     assert "/api/local-agent/run" in js
     assert "renderContextManifest" in js
+    assert "fast_interchange_local" in html
+    assert "FAST INTERCHANGE admitted local worker" in html
+    assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in html
+    assert "http://127.0.0.1:8105" in js
     assert ".local-agent-modal" in css
     assert ".chat-context-manifest" in css

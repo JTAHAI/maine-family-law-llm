@@ -263,6 +263,16 @@ class ParsedAuthorityStoreBuilder:
         source_id = str(record.get("source_id") or "")
         source_class = str(record.get("source_class") or "")
         parser_name = str(record.get("parser_audit", {}).get("parser_name") or "")
+        metadata = record.get("metadata")
+        if isinstance(metadata, dict) and metadata.get("retrieval_admission") == "quarantined":
+            self.findings.append(
+                ParsedAuthorityFinding(
+                    "source_quarantined_from_retrieval",
+                    "Source is retained as an official raw snapshot but excluded from parsed authority retrieval.",
+                    source_id,
+                )
+            )
+            return None, []
         path = _snapshot_path(record, self.official_store)
         if not path.exists():
             self.findings.append(
@@ -274,17 +284,20 @@ class ParsedAuthorityStoreBuilder:
         if parser_name == "maine_rules_pdf":
             try:
                 pdf_text = extract_pdf_text(content)
+                text_span = {"start_offset": 0, "end_offset": len(pdf_text)}
                 rules, _audit = parse_rules_text(
                     pdf_text, source_id=source_id, url=str(record.get("source_url_or_path") or "")
                 )
                 return "rules/rules_index.jsonl", [
                     {
-                        **_base_record(record, authority_kind="court_rule_reference", source_span=span),
+                        **_base_record(record, authority_kind="court_rule", source_span=text_span),
                         "record_id": rule.document_id,
                         "title": rule.title,
                         "citation": rule.citation,
                         "rule_set": rule.rule_set,
                         "rule_number": rule.rule_number,
+                        "effective_date": rule.effective_date,
+                        "amendment_history": list(rule.amendment_history or []),
                         "href": rule.source_location.url_or_path,
                         "text": pdf_text,
                     }
@@ -299,6 +312,7 @@ class ParsedAuthorityStoreBuilder:
         if parser_name == "maine_form_pdf" or source_class == "court_form_pdf":
             try:
                 form_text = extract_pdf_text(content)
+                text_span = {"start_offset": 0, "end_offset": len(form_text)}
                 form, _audit = parse_form_text(
                     form_text, source_id=source_id, url=str(record.get("source_url_or_path") or "")
                 )
@@ -329,7 +343,7 @@ class ParsedAuthorityStoreBuilder:
                     return None, []
                 return "forms/forms.jsonl", [
                     {
-                        **_base_record(record, authority_kind="court_form", source_span=span),
+                        **_base_record(record, authority_kind="court_form", source_span=text_span),
                         "record_id": form.document_id,
                         "title": form.title,
                         "citation": form.citation or form_id,
@@ -351,6 +365,7 @@ class ParsedAuthorityStoreBuilder:
             try:
                 opinion_text = extract_pdf_text(content)
                 clean_text = str(opinion_text or "").strip()
+                text_span = {"start_offset": 0, "end_offset": len(clean_text)}
                 if not clean_text:
                     self.findings.append(
                         ParsedAuthorityFinding(
@@ -379,7 +394,7 @@ class ParsedAuthorityStoreBuilder:
                     return None, []
                 return "opinions/opinions.jsonl", [
                     {
-                        **_base_record(record, authority_kind="law_court_opinion", source_span=span),
+                        **_base_record(record, authority_kind="law_court_opinion", source_span=text_span),
                         "record_id": opinion.opinion_id,
                         "title": opinion.title,
                         "citation": citation,

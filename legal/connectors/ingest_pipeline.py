@@ -213,6 +213,30 @@ class OfficialAuthorityIngestor:
         snapshot = self.snapshotter.write(retrieved, source_id=source_id)
         audit, canonical_count, examples, freshness_status = self._parse(retrieved, source_id=source_id)
         parser_status = audit.status
+        metadata: dict[str, Any] = {
+            "target_id": target.target_id,
+            "content_type": retrieved.content_type,
+            "status_code": retrieved.status_code,
+            "final_url": retrieved.final_url,
+            "byte_count": len(retrieved.content),
+            "previous_sha256": snapshot.previous_sha256 or None,
+            "fetch_metadata": retrieved.fetch_metadata,
+            "snapshot_relative_path": str(Path(snapshot.raw_path).relative_to(self.snapshotter.base_dir).as_posix()),
+            "expected_content_type": target.expected_content_type,
+            "freshness_strategy": target.freshness_strategy,
+        }
+        # A raw official snapshot with no stable, parser-derived identity may be
+        # useful for a future repair, but it is never an admissible retrieval
+        # source. Preserve it outside the repo and make that exclusion explicit
+        # for every downstream builder and release audit.
+        if parser_status not in {"parsed", "snapshot_only"}:
+            metadata.update(
+                {
+                    "retrieval_admission": "quarantined",
+                    "retrieval_quarantine_reason": f"parser_status:{parser_status}",
+                    "retrieval_quarantine_review_required": True,
+                }
+            )
         record = SourceRecord(
             source_id=source_id,
             source_class=target.source_class,
@@ -224,18 +248,7 @@ class OfficialAuthorityIngestor:
             data_class=DataClass.OFFICIAL_PUBLIC_AUTHORITY,
             source_url_or_path=target.url,
             parser_version=audit.parser_version,
-            metadata={
-                "target_id": target.target_id,
-                "content_type": retrieved.content_type,
-                "status_code": retrieved.status_code,
-                "final_url": retrieved.final_url,
-                "byte_count": len(retrieved.content),
-                "previous_sha256": snapshot.previous_sha256 or None,
-                "fetch_metadata": retrieved.fetch_metadata,
-                "snapshot_relative_path": str(Path(snapshot.raw_path).relative_to(self.snapshotter.base_dir).as_posix()),
-                "expected_content_type": target.expected_content_type,
-                "freshness_strategy": target.freshness_strategy,
-            },
+            metadata=metadata,
         )
         return IngestedAuthority(
             source_record=record,

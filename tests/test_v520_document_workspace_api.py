@@ -52,12 +52,16 @@ def test_document_api_create_propose_commit_and_export(monkeypatch, tmp_path: Pa
     assert row["original_revision_id"] == original_revision
     assert row["original_preserved"] is True
 
-    txt = client.get(f"/api/document-workspace/documents/{document_id}/export?format=txt")
+    txt_session = client.post(f"/api/document-workspace/documents/{document_id}/export-sessions?format=txt")
+    assert txt_session.status_code == 200
+    txt = client.get(txt_session.json()["download_url"])
     assert txt.status_code == 200
     assert b"Revised line" in txt.content
     assert txt.headers["x-mfll-filing-gate-status"] == "review_required"
     assert txt.headers["x-mfll-filing-gate-blockers"] == "review_packet_missing"
-    word = client.get(f"/api/document-workspace/documents/{document_id}/export?format=docx")
+    word_session = client.post(f"/api/document-workspace/documents/{document_id}/export-sessions?format=docx")
+    assert word_session.status_code == 200
+    word = client.get(word_session.json()["download_url"])
     assert word.status_code == 200
     assert word.content.startswith(b"PK")
     assert word.headers["x-content-type-options"] == "nosniff"

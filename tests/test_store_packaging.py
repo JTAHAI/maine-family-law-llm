@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import importlib.util
+import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -205,6 +207,7 @@ def test_no_private_signing_materials_are_committed() -> None:
 def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None:
     script = (REPO_ROOT / "scripts" / "build-msix.ps1").read_text(encoding="utf-8")
     assert "IdentityConfigPath" in script
+    assert "PackagingRoot" in script
     assert "IdentityName" in script
     assert "PublisherDisplayName" in script
     assert "PackageDisplayName" in script
@@ -221,6 +224,8 @@ def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None
     assert "final-runtime-cleanup.json" in script
     assert "final-staging-cleanup.json" in script
     assert "verify-archive" in script
+    assert "Resolve-SafeMutableDirectory" in script
+    assert "must name a dedicated directory, not a drive root" in script
 
 
 def test_msix_staging_map_uses_staged_payload_paths() -> None:
@@ -259,6 +264,62 @@ def test_store_pyinstaller_spec_collects_corpus_package_modules() -> None:
     assert "legal.pilot.real_matter_operations" in spec
     assert "legal.pilot.sandbox_operations" in spec
     assert "legal.release.release_candidate_operations" in spec
+
+
+def test_store_pyinstaller_spec_includes_the_tracked_docx_runtime() -> None:
+    spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
+    requirements = (REPO_ROOT / "store" / "pyinstaller" / "requirements-store-build.txt").read_text(encoding="utf-8")
+    assert '"docx-editor"' in spec and '"docx_editor"' in spec
+    assert "docx-editor>=0.7.1,<0.8" in requirements
+    assert "python-docx>=1.2.0,<2" in requirements
+
+
+def test_full_store_tier_bundles_fast_interchange_adapter_runtime() -> None:
+    """An admitted external LoRA pack must not trigger a runtime installer."""
+
+    spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
+    requirements = (REPO_ROOT / "store" / "pyinstaller" / "requirements-store-build.txt").read_text(encoding="utf-8")
+    for package_name in ("peft", "accelerate", "safetensors"):
+        assert f"{package_name}>=" in requirements
+        assert f'"{package_name}"' in spec
+    assert (
+        'for package_name in ("peft", "accelerate", "safetensors"):\n'
+        '        datas += collect_installed_package_files(package_name, destination=package_name)'
+    ) in spec
+    assert "legal weights, adapters, registries, and secrets remain external" in spec
+
+
+def test_fast_interchange_package_runtime_audit_requires_importable_modules(tmp_path: Path) -> None:
+    script_path = REPO_ROOT / "scripts" / "verify_fast_interchange_package_runtime.py"
+    spec = importlib.util.spec_from_file_location("fast_interchange_package_runtime_audit", script_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    package = tmp_path / "fixture.msix"
+    with zipfile.ZipFile(package, "w") as archive:
+        for path in (
+            "_internal/peft/__init__.py",
+            "_internal/peft-0.20.0.dist-info/METADATA",
+            "_internal/accelerate/__init__.py",
+            "_internal/accelerate-1.14.0.dist-info/METADATA",
+            "_internal/safetensors/__init__.py",
+            "_internal/safetensors/_safetensors_rust.pyd",
+            "_internal/safetensors-0.8.0.dist-info/METADATA",
+        ):
+            archive.writestr(path, "fixture")
+    result = module.audit_package(package)
+    assert result["status"] == "pass_runtime_dependencies_present"
+    assert result["packages"]["peft"]["importable"] is True
+
+
+def test_store_runtime_includes_multipart_support_for_record_upload_routes() -> None:
+    requirements = (REPO_ROOT / "store" / "pyinstaller" / "requirements-store-build.txt").read_text(encoding="utf-8")
+    spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
+
+    assert "python-multipart" in requirements
+    assert '"python-multipart"' in spec
+    assert '"multipart"' in spec
+    assert '"multipart.multipart"' in spec
 
 
 def test_build_store_runtime_script_stops_existing_packaged_runtime_processes() -> None:
@@ -308,6 +369,7 @@ def test_bundled_engine_inventory_script_covers_required_offline_stack() -> None
     assert "enable_load_extension(True)" in script
     assert "_run_frozen_document_worker" in script
     assert '"--document-intelligence-worker"' in script
+    assert '"DOCLING_ARTIFACTS_PATH"' in script
     assert "use_threads=True" in script
 
 
@@ -340,11 +402,15 @@ def test_store_package_audit_returns_nonzero_when_audit_fails() -> None:
 def test_store_pyinstaller_spec_filters_package_test_submodules() -> None:
     spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
     assert "collect_runtime_submodules" in spec
+    assert "runtime shim" in spec
+    assert 'collect_runtime_submodules("maine_family_law_llm")' not in spec
+    assert '"app", "legal", "maine_family_law_llm", "fastapi"' not in spec
     assert "module_name.startswith(\"torch.testing._internal\")" in spec
     assert "part == \"tests\"" in spec
     assert '"presidio_analyzer", "tldextract", "docling"' in spec
     assert "presidio_anonymizer" not in spec
     assert "collect_data_files(package_name)" in spec
+    assert '"python-docx"' in spec
     assert '"docling-slim", "docling-core", "docling-ibm-models"' in spec
 
 
@@ -354,6 +420,12 @@ def test_store_runtime_prefetches_real_docling_artifacts() -> None:
     assert "docling-project--docling-layout-heron" in script
     assert "docling-project--docling-models" in script
     assert "with_code_formula=False" in script
+
+
+def test_whisper_provisioning_uses_host_independent_hash_verification() -> None:
+    script = (REPO_ROOT / "scripts" / "provision-whisper-engine.ps1").read_text(encoding="utf-8")
+    assert "System.Security.Cryptography.SHA256" in script
+    assert "(Get-FileHash" not in script
 
 
 def test_build_msix_script_normalizes_package_versions_without_leading_zero_segments() -> None:

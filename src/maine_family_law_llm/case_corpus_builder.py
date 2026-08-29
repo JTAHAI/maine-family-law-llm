@@ -22,6 +22,7 @@ from .privacy_classifier import classify_privacy
 from .question_bank import write_question_bank
 from .role_package_builder import ROLE_PACKAGE_DEFS, build_role_packages
 from .case_workspace import write_case_source_roots
+from legal.matter.import_policy import ImportPolicyStore, active_import_policy
 from .version import VERSION
 
 
@@ -1099,17 +1100,39 @@ def build_case_corpus(
     for relative in CASE_LAYOUT:
         (case_root / relative).mkdir(parents=True, exist_ok=True)
 
-    source_files = discover_source_files(source_roots)
+    discovered_source_files = discover_source_files(source_roots)
+    import_policy = active_import_policy(case_root)
+    source_files: list[Path] = []
+    import_policy_quarantine: list[dict[str, Any]] = []
+    for candidate in discovered_source_files:
+        decision = ImportPolicyStore.evaluate_path(candidate, import_policy)
+        if decision.get("status") == "accept":
+            source_files.append(candidate)
+        else:
+            policy_reason = str(decision.get("reason") or "import_policy_blocked")
+            # Preserve the stable corpus-facing classification while retaining
+            # the stricter import-policy detail for a reviewer.  Consumers use
+            # ``unsupported`` to surface a safe quarantine action; exposing
+            # only the policy implementation code broke that contract.
+            quarantine_reason = "unsupported" if policy_reason == "profile_extension_not_allowed" else policy_reason
+            import_policy_quarantine.append(
+                {
+                    "source_path": str(candidate),
+                    "reason": quarantine_reason,
+                    "policy_reason": policy_reason,
+                    "review_required": True,
+                }
+            )
     private_root = case_root / "01_PRIVATE_FORENSIC_MASTER_INTERNAL_ONLY"
     external_root = case_root / "02_EXTERNAL_LEGAL_MATTER_RELEASE"
     private_files_root = private_root / "files"
     external_files_root = external_root / "files"
     records: list[dict[str, Any]] = []
     timeline_rows: list[dict[str, Any]] = []
-    problem_files: list[dict[str, Any]] = []
+    problem_files: list[dict[str, Any]] = list(import_policy_quarantine)
     private_rows: list[dict[str, Any]] = []
     external_rows: list[dict[str, Any]] = []
-    kind_counts = {"emails": 0, "attachments": 0, "pdfs": 0, "images": 0, "native_docs": 0, "archives": 0, "problem_files": 0}
+    kind_counts = {"emails": 0, "attachments": 0, "pdfs": 0, "images": 0, "native_docs": 0, "archives": 0, "problem_files": len(import_policy_quarantine)}
     total_pdf_pages = 0
 
     for idx, path in enumerate(source_files, start=1):
@@ -1282,7 +1305,7 @@ def build_case_corpus(
         "created_at": utc_now(),
         "source_roots": [str(path) for path in source_roots],
         "output_root": str(output_root),
-        "source_files_discovered": len(source_files),
+        "source_files_discovered": len(discovered_source_files),
         "source_files_hashed": len(source_files),
         "source_files_modified": 0,
         "total_files_indexed": len(records),
@@ -1295,6 +1318,13 @@ def build_case_corpus(
         "total_native_docs": kind_counts["native_docs"],
         "total_archives": kind_counts["archives"],
         "total_problem_files": len(problem_files),
+        "import_policy": {
+            "max_file_bytes": int(import_policy["max_file_bytes"]),
+            "allowed_extension_count": len(import_policy["allowed_extensions"]),
+            "quarantined_candidate_count": len(import_policy_quarantine),
+            "privacy_scan_required": bool(import_policy["privacy_scan_required"]),
+            "local_ocr_review_for_images": bool(import_policy["local_ocr_review_for_images"]),
+        },
         "private_forensic_master_built": True,
         "external_legal_matter_release_built": True,
         "role_packages_built": [],

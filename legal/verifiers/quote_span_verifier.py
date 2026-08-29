@@ -13,6 +13,40 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).lower()
 
 
+def _normalize_with_offsets(text: str) -> tuple[str, list[int]]:
+    """Normalize while retaining a best-effort source offset for review.
+
+    Normalized quote verification is never an exact quote, but a reviewer still
+    needs to open the candidate span.  The old normalized branch returned no
+    offsets, forcing downstream metrics to either discard it or treat it like an
+    exact match.  This preserves the original-byte-adjacent character range
+    without upgrading the decision's review status.
+    """
+
+    replacements = {"\u201c": '"', "\u201d": '"', "\u2019": "'"}
+    normalized: list[str] = []
+    offsets: list[int] = []
+    in_space = False
+    for index, character in enumerate(text):
+        value = replacements.get(character, character).lower()
+        if value.isspace():
+            if normalized and not in_space:
+                normalized.append(" ")
+                offsets.append(index)
+            in_space = True
+            continue
+        normalized.append(value)
+        offsets.append(index)
+        in_space = False
+    while normalized and normalized[-1] == " ":
+        normalized.pop()
+        offsets.pop()
+    while normalized and normalized[0] == " ":
+        normalized.pop(0)
+        offsets.pop(0)
+    return "".join(normalized), offsets
+
+
 def _token_set(text: str) -> set[str]:
     return {token for token in re.findall(r"[a-z0-9][a-z0-9-]*", _normalize_text(text)) if len(token) > 2}
 
@@ -85,15 +119,24 @@ class QuoteSpanVerifier:
                 message="quote found exactly in source",
             )
 
-        normalized_source = _normalize_text(source)
+        normalized_source, normalized_offsets = _normalize_with_offsets(source)
         normalized_quote = _normalize_text(quote)
         normalized_start = normalized_source.find(normalized_quote)
         if normalized_start >= 0:
+            normalized_end = normalized_start + len(normalized_quote)
+            start_offset = normalized_offsets[normalized_start] if normalized_start < len(normalized_offsets) else None
+            end_offset = (
+                normalized_offsets[normalized_end - 1] + 1
+                if normalized_end and normalized_end - 1 < len(normalized_offsets)
+                else None
+            )
             return QuoteVerification(
                 quoted_text=quoted_text,
                 status="fuzzy_match",
                 verified=True,
                 quote_span_found=True,
+                start_offset=start_offset,
+                end_offset=end_offset,
                 confidence=0.95,
                 method="normalized_whitespace",
                 message="quote found after whitespace and punctuation normalization",

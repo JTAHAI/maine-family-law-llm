@@ -27,6 +27,7 @@ class LocalAgentRunRequest:
     permitted_tools: frozenset[str] = frozenset()
     retrieval_diagnostics: dict[str, Any] = field(default_factory=dict)
     run_id: str | None = None
+    manifest_created_at: str | None = None
 
 
 @dataclass(frozen=True)
@@ -78,12 +79,14 @@ class LocalAgentRuntime:
         question: str,
         sources: Iterable[ContextSource],
         run_id: str | None = None,
+        created_at: str | None = None,
     ) -> tuple[ContextManifest, tuple[ContextSource, ...], dict[str, Any]]:
         actual_run_id = run_id or uuid.uuid4().hex
         manifest, selected = self.manifest_builder.build(
             question=question,
             sources=sources,
             run_id=actual_run_id,
+            created_at=created_at,
         )
         direct = self.scanner.scan_user_prompt(question)
         document = []
@@ -99,12 +102,42 @@ class LocalAgentRuntime:
         }
         return manifest, selected, report
 
+    @property
+    def supports_explicit_release(self) -> bool:
+        return bool(getattr(self.client, "supports_explicit_release", False))
+
+    def warm(self) -> dict[str, Any]:
+        """Warm a loopback worker with synthetic text only.
+
+        This deliberately bypasses matter context, retrieval, and tools.  A
+        pool caller records only status and provider identity, never generated
+        warm-up text.
+        """
+
+        response = self.client.warm()
+        return {
+            "provider_id": response.provider_id,
+            "model_id": response.model_id,
+            "endpoint_class": response.endpoint_class,
+            "supports_explicit_release": self.supports_explicit_release,
+        }
+
+    def release(self) -> dict[str, Any]:
+        self.client.release()
+        return {
+            "provider_id": self.client.provider_id,
+            "model_id": self.client.model_name,
+            "endpoint_class": self.client.endpoint.endpoint_class,
+            "released": True,
+        }
+
     def run(self, request: LocalAgentRunRequest) -> LocalAgentRunResult:
         run_id = request.run_id or uuid.uuid4().hex
         manifest, selected, injection_report = self.preview(
             question=request.question,
             sources=request.sources,
             run_id=run_id,
+            created_at=request.manifest_created_at,
         )
         blockers: list[str] = []
         warnings: list[str] = []
@@ -220,6 +253,7 @@ class LocalAgentRuntime:
             "finish_reason": response.finish_reason if response else None,
             "loopback_only": True,
             "remote_providers_enabled": False,
+            "admission": dict(getattr(self.client, "model_binding", {})),
         }
 
     def _build_prompt(

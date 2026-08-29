@@ -1,0 +1,5 @@
+{
+  "schema_version": "policy_pack_trust_v1",
+  "trusted_keys": {},
+  "notes": "Approved policy-pack signing public keys are provisioned through an external governance ceremony. Private keys, signer identities, and approval artifacts do not belong in this repository."
+}

@@ -236,7 +236,13 @@ class RetrievalWorkbenchService:
             results, _ = index.search(query, top_k=limit)
             return [row.source_id for row in results]
         try:
-            report = run_attorney_retrieval_eval(dataset, search=search, min_attorney_rows=min_rows, top_k=top_k)
+            report = run_attorney_retrieval_eval(
+                dataset,
+                search=search,
+                min_attorney_rows=min_rows,
+                top_k=top_k,
+                strict_provenance=True,
+            )
         except AttorneyRetrievalEvalError as exc:
             raise RetrievalWorkbenchError("attorney_gold_invalid", str(exc), status_code=409) from exc
         payload = report.to_dict()

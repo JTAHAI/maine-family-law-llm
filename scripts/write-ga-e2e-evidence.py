@@ -97,6 +97,20 @@ def journey(
 
 
 def main() -> int:
+    # This writer preserves the historical v6 failure matrix below so old
+    # evidence can be inspected, but it must never regenerate that matrix as
+    # though it described a current release.  In particular, its fixture,
+    # MSIX, executable, version-alignment result, and manually observed UI
+    # outcomes are all pinned to the retired 6.0.4 candidate.  A v8 run must
+    # originate in a current, hash-bound runner that exercises its exact
+    # frozen executable; Wave 27 uses run-installed-offline-qualification.py
+    # for that current core proof.
+    print(
+        "Refusing to write retired v6 GA E2E evidence. "
+        "Use a current hash-bound frozen-runtime runner; do not replay this historical matrix."
+    )
+    return 2
+
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     fixture = json.loads(FIXTURE_MANIFEST.read_text(encoding="utf-8"))
     probe = json.loads(API_PROBE.read_text(encoding="utf-8"))

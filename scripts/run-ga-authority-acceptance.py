@@ -1,478 +1,670 @@
-"""Generate the GA legal-authority and verifier acceptance evidence.
+"""Read-only authority audit: observed results, never invented release proof.
 
-The runner is read-only with respect to authority content.  It audits an
-external build, exercises deterministic verifiers, and writes release evidence
-inside ``dist/ga_today/evidence``.  It never publishes or activates a build.
+No downloads, activation, pytest runs, or external-store writes occur. A fresh
+output directory and exact candidate package are required. Historical ingestion
+or evaluation reports cannot establish actions performed by this invocation.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 from collections import Counter
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-from zipfile import ZipFile
+import hashlib
+import json
+from pathlib import Path, PurePosixPath
+import re
+import stat
+import subprocess
+import sys
+import time
+from urllib.parse import urlsplit
+from zipfile import BadZipFile, ZipFile
 
-from app.services.authority_product_service import AuthorityProductService
-from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner
-from legal.law_court.intelligence import LawCourtIntelligenceExtractor
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from legal.data_boundaries import ensure_external_authority_root
+from legal.evals.retrieval_metrics import summarize_ranked_retrieval
+from legal.evals.retrieval_smoke import RetrievalSmokeEvalRunner
+from legal.production import AuthorityProductVerifier
+from legal.production.authority_build import AuthorityBuildAuditor
+from legal.production.source_update_engine import SourceUpdateEngine
+from legal.retrieval.models import RetrievalDocument
+from legal.retrieval.retrieval_pipeline import RetrievalPipeline
+from legal.verifiers.authority_status_verifier import OFFICIAL_MAINE_DOMAINS
 from legal.verifiers.citation_resolver import SourceAuthorityIndex
 from legal.verifiers.claim_support_verifier import ClaimSupportVerifier
 from legal.verifiers.quote_span_verifier import QuoteSpanVerifier
 
-
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MSIX = ROOT / "dist" / "release" / "v7.0.0" / "msix" / "MaineFamilyLawLLM_7.0.0.0_x64.msix"
-
-
-def read_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+MAX_JSON_BYTES = 64 * 1024 * 1024
+MAX_ROWS = 250_000
+MAX_DOCUMENTS = 12_000
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    with path.open(encoding="utf-8") as stream:
-        for line in stream:
-            if line.strip():
-                value = json.loads(line)
-                if isinstance(value, dict):
-                    rows.append(value)
-    return rows
+class EvidenceError(ValueError):
+    """Fixed safe code, never a raw external exception message."""
+
+
+def digest(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
     with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def citation_probe(index: SourceAuthorityIndex, text: str) -> dict[str, Any]:
-    resolutions = [row.to_dict() for row in index.resolve_text(text)]
-    return {
-        "input": text,
-        "parsed_count": len(resolutions),
-        "status": resolutions[0]["status"] if resolutions else "not_found",
-        "source_id": resolutions[0].get("source_id") if resolutions else None,
-        "authority_status": resolutions[0].get("authority_status") if resolutions else "not_found",
-        "metadata": resolutions[0].get("metadata", {}) if resolutions else {},
-    }
+def strict_json(raw: bytes):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise EvidenceError("duplicate_json_key")
+            result[key] = value
+        return result
+
+    def invalid_constant(_value):
+        raise EvidenceError("non_finite_json_value")
+
+    try:
+        return json.loads(raw, object_pairs_hook=pairs, parse_constant=invalid_constant)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise EvidenceError("invalid_json") from exc
 
 
-def find_document(path: Path, source_id: str) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as stream:
-        for line in stream:
+def reject_links(path: Path):
+    for current in (path, *path.parents):
+        if not current.exists() and not current.is_symlink():
+            continue
+        info = current.lstat()
+        if current.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+            raise EvidenceError("symlink_or_reparse_path")
+
+
+def read_regular(path: Path, limit: int = MAX_JSON_BYTES) -> bytes:
+    reject_links(path)
+    if not stat.S_ISREG(path.stat().st_mode) or path.stat().st_size > limit:
+        raise EvidenceError("input_size_or_type_invalid")
+    with path.open("rb") as stream:
+        data = stream.read(limit + 1)
+    if len(data) > limit:
+        raise EvidenceError("input_size_or_type_invalid")
+    return data
+
+
+class PinnedBuild:
+    """Read only declared, hash-checked bytes beneath one active build."""
+
+    def __init__(self, root: Path):
+        reject_links(root)
+        self.root = ensure_external_authority_root(root, project_root=ROOT)
+        self.pointer_path = self.root / "authority_product/ACTIVE_BUILD.json"
+        self.pointer_bytes = read_regular(self.pointer_path, 1024 * 1024)
+        pointer = strict_json(self.pointer_bytes)
+        if not isinstance(pointer, dict) or not re.fullmatch(
+            r"[0-9a-f]{24}", str(pointer.get("build_id", ""))
+        ):
+            raise EvidenceError("active_build_id_invalid")
+        self.build_id = pointer["build_id"]
+        self.prefix = f"authority_product/builds/{self.build_id}/"
+        relative = self.prefix + "authority_product_manifest.json"
+        if pointer.get("manifest_relative_path") != relative:
+            raise EvidenceError("active_manifest_location_invalid")
+        self.manifest_path = self.root / relative
+        self.manifest_bytes = read_regular(self.manifest_path)
+        if digest(self.manifest_bytes) != pointer.get("manifest_sha256"):
+            raise EvidenceError("active_manifest_hash_mismatch")
+        self.manifest = strict_json(self.manifest_bytes)
+        if not isinstance(self.manifest, dict) or self.manifest.get("build_id") != self.build_id:
+            raise EvidenceError("active_manifest_identity_invalid")
+        verified = AuthorityProductVerifier(data_root=self.root).verify()
+        if verified.status != "pass" or verified.build_id != self.build_id:
+            raise EvidenceError("immutable_product_verification_failed")
+        self.inputs = [{"path": relative, "sha256": digest(self.manifest_bytes)}]
+        self.rows = self.manifest.get("artifacts") or []
+        self.snapshots = self.manifest.get("source_snapshots") or []
+        if not self.rows or not self.snapshots:
+            raise EvidenceError("empty_immutable_product")
+        paths = []
+        for row in [*self.rows, *self.snapshots]:
+            self.checked_path(row)
+            paths.append(row["relative_path"].casefold())
+        if len(paths) != len(set(paths)):
+            raise EvidenceError("duplicate_immutable_path")
+        self.check_unchanged()
+
+    def checked_path(self, row: dict) -> Path:
+        if not isinstance(row, dict):
+            raise EvidenceError("immutable_row_invalid")
+        relative = str(row.get("relative_path") or "")
+        if (
+            not relative.startswith(self.prefix)
+            or "\\" in relative
+            or ":" in relative
+            or any(part in {".", ".."} for part in PurePosixPath(relative).parts)
+            or str(PurePosixPath(relative)) != relative
+        ):
+            raise EvidenceError("artifact_outside_pinned_build")
+        return self.root / relative
+
+    def read_row(self, row: dict) -> bytes:
+        raw = read_regular(self.checked_path(row))
+        if len(raw) != row.get("size") or digest(raw) != row.get("sha256"):
+            raise EvidenceError("immutable_artifact_changed")
+        self.inputs.append({"path": row["relative_path"], "sha256": digest(raw)})
+        return raw
+
+    def role_row(self, role: str) -> dict:
+        matches = [row for row in self.rows if role in str(row.get("role", "")).split("|")]
+        if len(matches) != 1:
+            raise EvidenceError("artifact_role_missing_or_ambiguous")
+        return matches[0]
+
+    def artifact(self, role: str):
+        return strict_json(self.read_row(self.role_row(role)))
+
+    def jsonl(self, role: str) -> list[dict]:
+        rows = []
+        for line in self.read_row(self.role_row(role)).splitlines():
             if not line.strip():
                 continue
-            row = json.loads(line)
-            if str(row.get("source_id")) == source_id:
-                return row
-    raise RuntimeError(f"retrieval document unavailable: {source_id}")
+            if len(line) > 2 * 1024 * 1024 or len(rows) >= MAX_ROWS:
+                raise EvidenceError("jsonl_budget_exceeded")
+            row = strict_json(line)
+            if not isinstance(row, dict):
+                raise EvidenceError("jsonl_row_invalid")
+            rows.append(row)
+        return rows
+
+    def check_unchanged(self):
+        if read_regular(self.pointer_path, 1024 * 1024) != self.pointer_bytes:
+            raise EvidenceError("active_build_changed_during_audit")
+        if read_regular(self.manifest_path) != self.manifest_bytes:
+            raise EvidenceError("active_manifest_changed_during_audit")
+        verified = AuthorityProductVerifier(data_root=self.root).verify(build_id=self.build_id)
+        if verified.status != "pass":
+            raise EvidenceError("immutable_product_changed_during_audit")
 
 
-def probe_claims(document: dict[str, Any]) -> list[dict[str, Any]]:
-    verifier = ClaimSupportVerifier()
-    evidence = [str(document["text"])]
-    common = {
-        "source_ids": [str(document["source_id"])],
-        "source_classes": [str(document["source_class"])],
-    }
-    cases = [
-        ("supported", "Rule 1 is titled Scope of Rules.", ["verified_official_maine"], ["maine"], evidence),
-        ("partially_supported", "Rule 1 is titled Scope of Rules and governs actions.", ["verified_official_maine"], ["maine"], evidence),
-        ("unsupported", "Rule 1 requires mediation within ninety-nine days.", ["verified_official_maine"], ["maine"], evidence),
-        ("contradicted", "Rule 1 is not titled Scope of Rules.", ["verified_official_maine"], ["maine"], evidence),
-        ("stale", "Rule 1 is titled Scope of Rules.", ["stale"], ["maine"], evidence),
-        ("jurisdiction_mismatch", "Rule 1 is titled Scope of Rules.", ["verified_official_maine"], ["new_hampshire"], evidence),
-        ("unknown", "Rule 1 is titled Scope of Rules.", ["unknown"], ["maine"], []),
+def source_audit(build: PinnedBuild, now: datetime) -> tuple[dict, list[str]]:
+    rows = build.artifact("source_manifest")
+    if (
+        not isinstance(rows, list)
+        or not rows
+        or len(rows) > MAX_ROWS
+        or not all(isinstance(row, dict) for row in rows)
+    ):
+        raise EvidenceError("source_manifest_invalid")
+    policy = strict_json(read_regular(ROOT / "configs/maine_authority_build_policy.json"))
+    # Reuse canonical field/parser checks, without following mutable snapshot
+    # paths. Pinned snapshots were independently verified above.
+    auditor = AuthorityBuildAuditor(
+        project_root=ROOT,
+        data_root=build.root,
+        policy={**policy, "require_snapshot_files_exist": False},
+    )
+    blockers, findings, details = [], [], []
+    snapshots = {row["source_id"]: row for row in build.snapshots}
+    ids = [row.get("source_id") for row in rows]
+    if (
+        len(ids) != len(set(ids))
+        or len(snapshots) != len(build.snapshots)
+        or set(ids) != set(snapshots)
+    ):
+        blockers.append("source_snapshot_identity_mismatch")
+    max_age_days = SourceUpdateEngine(data_root=build.root).max_age_days
+    for row in rows:
+        auditor._validate_record(row, findings, blockers)
+        source_id = row.get("source_id")
+        url = urlsplit(str(row.get("source_url_or_path") or ""))
+        official = (
+            url.scheme == "https"
+            and url.hostname in OFFICIAL_MAINE_DOMAINS
+            and not url.username
+            and not url.password
+            and url.port in (None, 443)
+        )
+        if not official:
+            blockers.append("official_maine_url_unverified")
+        if str(row.get("jurisdiction") or "").lower() not in {"maine", "us-me"}:
+            blockers.append("source_jurisdiction_mismatch")
+        snapshot = snapshots.get(source_id, {})
+        if row.get("hash") != snapshot.get("sha256"):
+            blockers.append("source_snapshot_hash_mismatch")
+        age = None
+        try:
+            retrieved = datetime.fromisoformat(
+                str(row.get("retrieved_at", "")).replace("Z", "+00:00")
+            )
+            if retrieved.tzinfo is None:
+                raise ValueError("timezone missing")
+            age = (now - retrieved).total_seconds() / 86400
+            if age < 0 or age > max_age_days:
+                blockers.append("source_age_outside_policy")
+        except (ValueError, TypeError):
+            blockers.append("source_timestamp_unverifiable")
+        if row.get("freshness_status") not in {
+            "fresh",
+            "current",
+            "known",
+            "retrieved_timestamp_known",
+        }:
+            blockers.append("source_not_current")
+        details.append(
+            {
+                "source_id": source_id,
+                "source_class": row.get("source_class"),
+                "official_url_verified": bool(official),
+                "age_days": round(age, 3) if age is not None else None,
+                "reported_freshness": row.get("freshness_status"),
+                "source_hash": row.get("hash"),
+                "snapshot_lineage": snapshot.get("relative_path"),
+            }
+        )
+    counts = Counter(str(row.get("source_class")) for row in rows)
+    coverage = [
+        {
+            "source_class": name,
+            "actual": counts[name],
+            "minimum": minimum,
+            "pass": counts[name] >= minimum,
+        }
+        for name, minimum in policy["required_source_class_minimums"].items()
     ]
-    results: list[dict[str, Any]] = []
-    for expected, claim, statuses, jurisdictions, chunks in cases:
-        result = verifier.verify(
+    if len(rows) < policy["minimum_ingested_targets"] or not all(row["pass"] for row in coverage):
+        blockers.append("source_policy_minimums_not_met")
+    return {
+        "total": len(rows),
+        "class_counts": dict(counts),
+        "coverage": coverage,
+        "rows": details,
+        "age_limit_days": max_age_days,
+        "age_policy_basis": "canonical SourceUpdateEngine default",
+        "metadata_findings": [item.as_dict() for item in findings],
+        "live_source_authenticity_revalidated": False,
+    }, sorted(set(blockers))
+
+
+def verifier_contracts() -> dict:
+    """Explicit fictional policy fixtures, never real legal-quality evidence."""
+    text = "Rule 1 is titled Scope of Rules."
+    quote_cases = [
+        ("exact", text, "exact_match", "exact"),
+        ("normalized", "RULE 1  IS TITLED SCOPE OF RULES.", "fuzzy_match", "normalized_whitespace"),
+        ("fuzzy", "Rule 1 is titled Scope of Ruless.", "fuzzy_match", "sequence_similarity"),
+        ("not_found", "Zebras juggle luminous spacecraft.", "quote_span_not_found", "none"),
+    ]
+    quotes, claims = [], []
+    for name, value, status, method in quote_cases:
+        result = QuoteSpanVerifier().verify(text, value)
+        quotes.append(
+            {
+                "name": name,
+                "actual": result,
+                "review_required": True,
+                "pass": result["status"] == status
+                and (name == "not_found" or result["method"] == method),
+            }
+        )
+    for expected, claim, statuses, jurisdictions, chunks in [
+        ("supported", text, ["verified_official_maine"], ["maine"], [text]),
+        (
+            "partially_supported",
+            "Rule 1 is titled Scope of Rules and governs actions.",
+            ["verified_official_maine"],
+            ["maine"],
+            [text],
+        ),
+        (
+            "unsupported",
+            "Rule 1 requires mediation within ninety-nine days.",
+            ["verified_official_maine"],
+            ["maine"],
+            [text],
+        ),
+        (
+            "contradicted",
+            "Rule 1 is not titled Scope of Rules.",
+            ["verified_official_maine"],
+            ["maine"],
+            [text],
+        ),
+        ("stale", text, ["stale"], ["maine"], [text]),
+        ("jurisdiction_mismatch", text, ["verified_official_maine"], ["new_hampshire"], [text]),
+        ("not_verifiable", text, ["unknown"], ["maine"], []),
+    ]:
+        result = ClaimSupportVerifier().verify(
             claim,
             chunks,
             authority_statuses=statuses,
             source_jurisdictions=jurisdictions,
-            **common,
+            source_ids=["fictional-policy-fixture"],
+            source_classes=["court_rule"],
         )
-        accepted_actual = "not_verifiable" if expected == "unknown" else expected
-        results.append(
+        claims.append(
             {
-                "expected_status": expected,
+                "expected": expected,
                 "actual_status": result["status"],
-                "status_contract_match": result["status"] == expected,
-                "fail_closed_equivalent": expected == "unknown" and result["status"] == "not_verifiable",
-                "pass": result["status"] == accepted_actual,
                 "supported": result["supported"],
-                "best_span": result.get("best_span") or {},
-                "message": result["message"],
+                "pass": result["status"] == expected
+                and (expected in {"supported", "partially_supported"} or not result["supported"]),
             }
         )
-    return results
+    return {
+        "basis": "fictional verifier-contract fixtures; not real authority or attorney-reviewed gold",
+        "quotes": quotes,
+        "claims": claims,
+        "pass": all(row["pass"] for row in quotes + claims),
+    }
 
 
-def package_boundary(msix: Path) -> dict[str, Any]:
-    forbidden = (
-        "official_authority_store/",
-        "parsed_authority_store/",
-        "embedding_store/",
-        "authority_product/",
-        "eval_store/",
+def probe_build(build: PinnedBuild) -> tuple[dict, list[str]]:
+    citation_rows = build.artifact("authority_layer:citation_index")
+    if not isinstance(citation_rows, list):
+        raise EvidenceError("citation_index_invalid")
+    index = SourceAuthorityIndex.from_rows(citation_rows)
+    raw_documents = build.jsonl("retrieval_index:hybrid_documents")
+    if not raw_documents or len(raw_documents) > MAX_DOCUMENTS:
+        raise EvidenceError("retrieval_document_budget_or_empty")
+    documents = [RetrievalDocument(**row) for row in raw_documents]
+    by_id = {row.source_id: row for row in documents}
+    blockers, citations = [], []
+    for label, kind in {
+        "statute": "maine_statute",
+        "rule": "maine_rule",
+        "case": "maine_case",
+        "form": "maine_form",
+    }.items():
+        query = next(
+            (row["normalized_citation"] for row in citation_rows if row.get("kind") == kind), None
+        )
+        resolutions = index.resolve_text(query) if query else []
+        found = (
+            bool(resolutions)
+            and resolutions[0].status == "found"
+            and resolutions[0].source_id in by_id
+        )
+        citations.append(
+            {
+                "kind": label,
+                "query": query,
+                "pass": found,
+                "resolutions": [row.to_dict() for row in resolutions],
+            }
+        )
+        if not found:
+            blockers.append("citation_missing_or_without_source:" + label)
+    fake = index.resolve_text("2099 ME 999999")
+    fake_pass = len(fake) == 1 and fake[0].status == "not_found"
+    citations.append(
+        {
+            "kind": "fake",
+            "query": "2099 ME 999999",
+            "pass": fake_pass,
+            "resolutions": [row.to_dict() for row in fake],
+        }
+    )
+    if not fake_pass:
+        blockers.append("fake_citation_did_not_fail_closed")
+    # Recompute with the existing retrieval algorithm, not a cached eval file.
+    cases = RetrievalSmokeEvalRunner._build_cases(documents, max_case_count=25)
+    pipeline = RetrievalPipeline(documents, authority_index=index)
+    metric_rows = []
+    for case in cases:
+        response = pipeline.retrieve(case.query, top_k=20, include_text=False)
+        retrieved = [row["source_id"] for row in response["retrieved_sources"]]
+        relevant = case.relevant_source_ids
+        if case.case_type == "exact_citation_lookup" and len(relevant) > 1:
+            relevant = {next((item for item in retrieved if item in relevant), sorted(relevant)[0])}
+        metric_rows.append(
+            {
+                "case": case.as_dict(),
+                "retrieved_source_ids": retrieved,
+                "metrics": summarize_ranked_retrieval(retrieved, relevant, ks=(5, 10, 20)),
+            }
+        )
+    measured = RetrievalSmokeEvalRunner._aggregate(metric_rows)
+    if not cases or measured["recall_at_20"] < 0.9:
+        blockers.append("current_retrieval_smoke_failed")
+    source = next((doc for doc in documents if doc.text.strip()), None)
+    span = None
+    if source:
+        excerpt = source.text[:160].strip()
+        observed = QuoteSpanVerifier().verify(source.text[:2000], excerpt)
+        start, end = observed.get("start_offset"), observed.get("end_offset")
+        passed = (
+            observed["status"] == "exact_match"
+            and isinstance(start, int)
+            and isinstance(end, int)
+            and source.text[start:end] == excerpt
+        )
+        span = {
+            "source_id": source.source_id,
+            "start_offset": start,
+            "end_offset": end,
+            "excerpt_sha256": digest(excerpt.encode()),
+            "pass": passed,
+        }
+    if not span or not span["pass"]:
+        blockers.append("exact_source_span_not_proven")
+    return {
+        "citations": citations,
+        "exact_source_span": span,
+        "retrieval": {
+            "executed": True,
+            "dataset_type": "current pinned-build source-derived smoke; not attorney-reviewed gold",
+            "sample_count": len(cases),
+            "metrics": measured,
+            "cases": metric_rows,
+        },
+        "pinpoint_forms_law_court": {
+            "executed": False,
+            "reason": "Dedicated pinpoint, form freshness, and Law Court treatment acceptance remains required; no inferred pass.",
+        },
+    }, blockers
+
+
+def package_boundary(package: Path) -> dict:
+    if not package.is_file():
+        return {"status": "blocked", "code": "candidate_package_missing"}
+    reject_links(package)
+    initial_hash = sha256(package)
+    forbidden = {
+        "official_authority_store",
+        "parsed_authority_store",
+        "embedding_store",
+        "authority_product",
+        "eval_store",
+    }
+    reports = {
         "source_update_report.json",
         "retrieval_smoke_report.json",
-    )
-    with ZipFile(msix) as archive:
+        "retrieval_smoke_eval.json",
+    }
+    with ZipFile(package) as archive:
         names = [name.replace("\\", "/").lower() for name in archive.namelist()]
-    hits = {
-        token: [name for name in names if token in name][:20]
-        for token in forbidden
-        if any(token in name for name in names)
-    }
-    repo_store_dirs = [
-        str(path.relative_to(ROOT)).replace("\\", "/")
-        for path in ROOT.rglob("*")
-        if path.is_dir() and path.name in {
-            "official_authority_store",
-            "parsed_authority_store",
-            "embedding_store",
-            "authority_product",
-            "eval_store",
-        }
-    ]
+        hits = [
+            name
+            for name in names
+            if forbidden.intersection(PurePosixPath(name).parts)
+            or PurePosixPath(name).name in reports
+        ]
+    if sha256(package) != initial_hash:
+        raise EvidenceError("candidate_package_changed_during_audit")
     return {
-        "status": "pass" if not hits and not repo_store_dirs else "blocked",
-        "msix": str(msix),
-        "msix_sha256": sha256(msix),
-        "msix_entry_count": len(names),
-        "forbidden_msix_hits": hits,
-        "external_store_directories_inside_repository": repo_store_dirs,
-        "authority_code_assets_are_allowed": True,
+        "status": "blocked" if hits else "pass",
+        "msix": str(package),
+        "msix_sha256": initial_hash,
+        "forbidden_entry_count": len(hits),
+        "forbidden_entries": hits[:50],
+        "scope": "authority data/index/eval boundary only; not full privacy or installation qualification",
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Run GA authority/verifier acceptance without publishing authority.")
-    parser.add_argument("--data-root", type=Path, required=True)
-    parser.add_argument("--output-root", type=Path, default=ROOT / "dist" / "ga_today" / "evidence")
-    parser.add_argument("--msix", type=Path, default=DEFAULT_MSIX)
-    args = parser.parse_args()
+def git_identity() -> dict:
+    values = {}
+    try:
+        for name, command in {
+            "root": ["rev-parse", "--show-toplevel"],
+            "branch": ["branch", "--show-current"],
+            "head": ["rev-parse", "HEAD"],
+            "status": ["status", "--short"],
+        }.items():
+            values[name] = (
+                subprocess.check_output(
+                    ["git", *command], cwd=ROOT, stderr=subprocess.DEVNULL, timeout=15
+                )
+                .decode()
+                .strip()
+            )
+        return {"available": True, **values}
+    except (OSError, subprocess.SubprocessError):
+        return {"available": False, "error_code": "git_identity_unavailable"}
 
-    data_root = args.data_root.resolve()
-    output_root = args.output_root.resolve()
-    output_root.mkdir(parents=True, exist_ok=True)
 
-    manifest_path = data_root / "official_authority_store" / "source_manifest.json"
-    ingest_report_path = data_root / "official_authority_store" / "ingest_run_report.json"
-    parsed_manifest_path = data_root / "parsed_authority_store" / "parsed_authority_manifest.json"
-    authority_report_path = data_root / "authority_layer" / "authority_layer_report.json"
-    citation_index_path = data_root / "authority_layer" / "citation_index.json"
-    source_cards_path = data_root / "authority_layer" / "source_cards.jsonl"
-    retrieval_cards_path = data_root / "embedding_store" / "hybrid" / "source_cards.jsonl"
-    retrieval_docs_path = data_root / "embedding_store" / "hybrid" / "retrieval_documents.jsonl"
-    retrieval_manifest_path = data_root / "embedding_store" / "retrieval_index_manifest.json"
-    freshness_path = data_root / "source_update_report.json"
-    smoke_path = data_root / "eval_store" / "retrieval_smoke_eval.json"
-
-    manifest = read_json(manifest_path)
-    ingest = read_json(ingest_report_path)
-    parsed = read_json(parsed_manifest_path)
-    authority_report = read_json(authority_report_path)
-    retrieval_manifest = read_json(retrieval_manifest_path)
-    freshness = read_json(freshness_path)
-    retrieval_smoke = read_json(smoke_path)
-    citation_rows = read_json(citation_index_path)
-    citation_index = SourceAuthorityIndex.from_rows(citation_rows)
-
-    required_source_fields = {
-        "source_id": lambda row: bool(row.get("source_id")),
-        "class": lambda row: bool(row.get("source_class")),
-        "jurisdiction": lambda row: bool(row.get("jurisdiction")),
-        "official_url": lambda row: str(row.get("source_url_or_path") or "").startswith("https://"),
-        "hash": lambda row: len(str(row.get("hash") or "")) == 64,
-        "retrieval_date": lambda row: bool(row.get("retrieved_at")),
-        "parser_status": lambda row: bool(row.get("parser_status")),
-        "freshness": lambda row: bool(row.get("freshness_status")),
-        "snapshot_lineage": lambda row: bool((row.get("metadata") or {}).get("snapshot_relative_path")),
-    }
-    completeness = {
-        field: {
-            "present": sum(1 for row in manifest if check(row)),
-            "missing": sum(1 for row in manifest if not check(row)),
-        }
-        for field, check in required_source_fields.items()
-    }
-
-    source_classes = Counter(str(row.get("source_class") or "unknown") for row in manifest)
-    parser_counts = Counter(str(row.get("parser_status") or "unknown") for row in manifest)
-    freshness_status_counts = Counter(str(row.get("freshness_status") or "unknown") for row in manifest)
-    authority_kinds = parsed.get("counts_by_collection") or {}
-
-    active_status = AuthorityProductService(data_root=data_root).status()
-    active_build_id = active_status.get("build_id") if active_status.get("status") == "pass" else None
-
-    direct_statutes = read_jsonl(data_root / "parsed_authority_store" / "statutes" / "statute_sections.jsonl")
-    direct_forms = read_jsonl(data_root / "parsed_authority_store" / "forms" / "forms.jsonl")
-    direct_opinions = read_jsonl(data_root / "parsed_authority_store" / "opinions" / "opinions.jsonl")
-    direct_case_citation = next((str(row.get("citation")) for row in direct_opinions if row.get("citation")), "2024 ME 1")
-
-    citations = {
-        "statute": citation_probe(citation_index, "19-A M.R.S. § 1653"),
-        "rule": citation_probe(citation_index, "M.R. Civ. P. 1"),
-        "law_court_case": citation_probe(citation_index, direct_case_citation),
-        "form": citation_probe(citation_index, "FM-171"),
-        "fake": citation_probe(citation_index, "2024 ME 999"),
-        "pinpoint": citation_probe(citation_index, "19-A M.R.S. § 1653(3)"),
-    }
-    expected_found = {"statute": True, "rule": True, "law_court_case": True, "form": True, "fake": False}
-    citation_cases: list[dict[str, Any]] = []
-    for name, expected in expected_found.items():
-        actual = citations[name]["status"] == "found"
-        citation_cases.append({"name": name, "expected_found": expected, "actual_found": actual, "pass": expected == actual})
-    exact_citation_accuracy = round(sum(1 for row in citation_cases if row["pass"]) / len(citation_cases), 6)
-
-    rule_document = find_document(retrieval_docs_path, "me-court-rule-57d74f9e9970")
-    quote_verifier = QuoteSpanVerifier()
-    quote_inputs = {
-        "exact": "Rule 1 - Scope of Rules",
-        "normalized": "  RULE 1   -   Scope of Rules  ",
-        "fuzzy_review_required": "Rule 1 - Scope of Ruless",
-        "not_found": "Rule 1 creates a family-law deadline of ninety-nine days",
-    }
-    quote_results = {}
-    for name, quote in quote_inputs.items():
-        result = quote_verifier.verify(str(rule_document["text"]), quote)
-        result["review_required"] = result["status"] != "exact_match"
-        quote_results[name] = result
-
-    claim_results = probe_claims(rule_document)
-    stale_result = next(row for row in claim_results if row["expected_status"] == "stale")
-    unknown_result = next(row for row in claim_results if row["expected_status"] == "unknown")
-    current_law_gate = {
-        "pass": not stale_result["supported"] and not unknown_result["supported"],
-        "stale_supports_unqualified_current_law": stale_result["supported"],
-        "unknown_supports_unqualified_current_law": unknown_result["supported"],
-    }
-
-    ranking_index = SourceAuthorityIndex.from_rows(citation_rows)
-    ranking_index.add(
-        kind="maine_rule",
-        normalized_citation="M.R. Civ. P. 1",
-        source_id="mirror-summary-fixture",
-        authority_status="verified_public_api",
-        metadata={"source_class": "summary", "freshness_status": "unknown"},
-    )
-    ranking_index.add(
-        kind="maine_rule",
-        normalized_citation="M.R. Civ. P. 1",
-        source_id="model-memory-fixture",
-        authority_status="user_provided_only",
-        metadata={"source_class": "model_memory", "freshness_status": "unknown"},
-    )
-    ranking = citation_probe(ranking_index, "M.R. Civ. P. 1")
-    ranking_result = {
-        "pass": ranking["source_id"] == "me-court-rule-57d74f9e9970",
-        "selected_source_id": ranking["source_id"],
-        "candidate_source_ids": [row.get("source_id") for row in ranking["metadata"].get("alternate_source_ids", [])]
-        if ranking["metadata"].get("alternate_source_ids") and isinstance(ranking["metadata"]["alternate_source_ids"][0], dict)
-        else [ranking["source_id"], *ranking["metadata"].get("alternate_source_ids", [])],
-        "basis": "deterministic ranking-policy probe; mirror/model rows are explicit fixtures",
-    }
-
-    forms_rows = read_jsonl(data_root / "parsed_authority_store" / "forms" / "forms_index.jsonl")
-    direct_forms_unknown = [row for row in direct_forms if not row.get("version_date")]
-    fm_171 = next((row for row in direct_forms if row.get("form_id") == "FM-171"), None)
-    form_result = {
-        "total_reference_rows": len(forms_rows),
-        "direct_form_rows": len(direct_forms),
-        "version_date_known": sum(1 for row in direct_forms if row.get("version_date")),
-        "stale_or_unknown_direct_rows": len(direct_forms_unknown),
+def audit(data_root: Path, package: Path, *, now: datetime | None = None) -> dict:
+    started = time.monotonic()
+    now = now or datetime.now(timezone.utc)
+    report = {
+        "schema_version": "authority_acceptance_v2",
+        "generated_at": now.isoformat(),
+        "decision": "BLOCKED",
         "review_required": True,
-        "final_like_completion_blocked": bool(direct_forms_unknown) or not active_build_id,
-        "fm_171_href": fm_171.get("source_url_or_path") if fm_171 else None,
-        "fm_171_revision": fm_171.get("version_date") if fm_171 else None,
-        "fm_171_reference_only": False if fm_171 else True,
-        "freshness_basis": "official current form endpoint retrieval plus visible revision; human review remains required",
-    }
-
-    opinion_rows = read_jsonl(data_root / "parsed_authority_store" / "opinions" / "opinion_index.jsonl")
-    direct_opinion = direct_opinions[0] if direct_opinions else None
-    case_brief = (
-        LawCourtIntelligenceExtractor().extract_case_brief(
-            str(direct_opinion.get("text") or ""),
-            source_id=str(direct_opinion.get("record_id") or direct_opinion.get("source_id")),
-            citation=direct_opinion.get("citation"),
-        )
-        if direct_opinion
-        else None
-    )
-    law_court_result = {
-        "reference_rows": len(opinion_rows),
-        "direct_opinion_rows": len(direct_opinions),
-        "rows_with_citation": sum(1 for row in opinion_rows if row.get("citation")),
-        "rows_with_exact_opinion_text": sum(1 for row in direct_opinions if row.get("text")),
-        "case_brief_executed_on_real_direct_opinion": bool(case_brief),
-        "case_brief": case_brief,
-        "exact_source_spans_proven": bool(direct_opinion and direct_opinion.get("source_span")),
-        "negative_treatment_framework": authority_report.get("negative_treatment_framework"),
-        "negative_treatment_invented": False,
-        "status": "pass" if case_brief and direct_opinion.get("source_span") else "blocked",
-    }
-
-    verifier_gold = CitationQuoteVerifierMetricRunner(require_attorney_review=True).run(
-        eval_root=ROOT / "eval_data",
-        authority_index_path=citation_index_path,
-        parsed_authority_root=data_root / "parsed_authority_store",
-    ).as_dict()
-    metrics = {
-        "schema_version": "authority_retrieval_verifier_metrics_v1",
-        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "status": "pass_with_enterprise_limitations",
-        "retrieval": {
-            "dataset_type": "source-derived smoke; not attorney-reviewed gold",
-            "sample_count": retrieval_smoke["case_count"],
-            "recall_at_5": retrieval_smoke["metrics"]["recall_at_5"],
-            "recall_at_10": retrieval_smoke["metrics"]["recall_at_10"],
-            "recall_at_20": retrieval_smoke["metrics"]["recall_at_20"],
-            "mrr": retrieval_smoke["metrics"]["mrr"],
-            "ndcg_at_20": retrieval_smoke["metrics"]["ndcg_at_20"],
-            "threshold": retrieval_smoke["thresholds"]["min_recall_at_20"],
-            "blockers": retrieval_smoke["blockers"],
-            "failures": retrieval_smoke["failures"],
-            "execution_status": "completed",
-        },
-        "exact_citation_accuracy": {
-            "value": exact_citation_accuracy,
-            "sample_count": len(citation_cases),
-            "basis": "acceptance probes over refreshed real external citation index",
-            "cases": citation_cases,
-        },
-        "citation_existence": {
-            "value": verifier_gold["citation_existence"],
-            "sample_count": verifier_gold["citation_total"],
-            "dataset_type": "committed synthetic seed; not attorney reviewed",
-        },
-        "quote_span_accuracy": {
-            "value": verifier_gold["quote_span_verification"],
-            "sample_count": verifier_gold["quote_total"],
-            "dataset_type": "committed synthetic seed; not attorney reviewed",
-        },
-        "verifier_gold_report": verifier_gold,
-    }
-    metrics_path = output_root / "04_retrieval_verifier_metrics.json"
-    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-    authority_cards = read_jsonl(source_cards_path)
-    retrieval_cards = read_jsonl(retrieval_cards_path)
-    boundary = package_boundary(args.msix.resolve())
-    missing_hashes = sum(1 for row in retrieval_cards if not row.get("hash_value"))
-    missing_offsets = sum(
-        1 for row in retrieval_cards if row.get("start_offset") is None or row.get("end_offset") is None
-    )
-    store_blockers: list[str] = []
-    if not active_build_id:
-        store_blockers.append("active_build_pointer_invalid")
-    if not direct_statutes:
-        store_blockers.append("direct_statute_sections_missing")
-    if not direct_opinions:
-        store_blockers.append("direct_law_court_opinions_missing")
-    if not direct_forms:
-        store_blockers.append("direct_court_forms_missing")
-    if any(citations[name]["status"] != "found" for name in ("statute", "rule", "law_court_case", "form")):
-        store_blockers.append("real_authority_citation_not_resolved")
-    if citations["fake"]["status"] != "not_found":
-        store_blockers.append("fake_citation_false_positive")
-    if citations["pinpoint"]["status"] != "found" or not citations["pinpoint"]["metadata"].get("source_span"):
-        store_blockers.append("pinpoint_section_span_not_resolved")
-    if direct_forms_unknown:
-        store_blockers.append("direct_form_revision_unknown")
-    if retrieval_smoke["metrics"]["recall_at_20"] < 0.9:
-        store_blockers.append("retrieval_recall_at_20_below_0.9")
-    if missing_hashes or missing_offsets:
-        store_blockers.append("retrieval_source_cards_missing_hashes_and_exact_offsets")
-    if boundary["status"] != "pass":
-        store_blockers.append("package_boundary_failed")
-    enterprise_blockers = [*store_blockers, "attorney_reviewed_citation_and_quote_gold_absent"]
-    decision = "PASS" if not store_blockers else "BLOCKED"
-    acceptance = {
-        "schema_version": "authority_acceptance_v1",
-        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "decision": decision,
-        "git": {"available": False, "verification": "not a git repository; no .git metadata in ancestors", "user_changes_preserved": True},
+        "git": git_identity(),
         "authority_root": str(data_root),
-        "configured_application_root": "%LOCALAPPDATA%/MaineFamilyLawLLM/authority-data",
-        "configured_root_has_active_build": bool(active_build_id),
-        "active_build_id": active_build_id,
-        "available_snapshot_manifest_sha256": sha256(manifest_path),
-        "live_update": {"executed": True, "fixture_mode": False, "status": "pass", "ingested": ingest["ingested_count"], "failed": ingest["failed_count"]},
-        "authority_build_audit": {"status": "pass", "total_records": len(manifest), "parsed": parser_counts.get("parsed", 0), "snapshot_only": parser_counts.get("snapshot_only", 0)},
-        "immutable_product_verification": active_status,
-        "sources": {
-            "total": len(manifest),
-            "class_counts": dict(sorted(source_classes.items())),
-            "parser_counts": dict(sorted(parser_counts.items())),
-            "freshness_status_counts": dict(sorted(freshness_status_counts.items())),
-            "freshness_report": freshness,
-            "metadata_completeness": completeness,
-            "all_required_metadata_present": all(value["missing"] == 0 for value in completeness.values()),
+        "live_update": {
+            "executed": False,
+            "status": "not_executed",
+            "reason": "Read-only audit; no network update was run.",
         },
-        "parsed_store": {"generated_at": parsed.get("generated_at"), "collections": authority_kinds, "direct_authority_counts": {"statute_section": len(direct_statutes), "court_form": len(direct_forms), "law_court_opinion": len(direct_opinions)}, "readiness": "direct_authority_ready" if direct_statutes and direct_forms and direct_opinions else "direct_authority_partial"},
-        "retrieval_indexes": {"generated_at": retrieval_manifest.get("generated_at"), "document_count": retrieval_manifest.get("document_count"), "exact_citation_count": retrieval_manifest.get("exact_citation_count"), "statute_lookup_count": retrieval_manifest.get("statute_lookup_count"), "form_lookup_count": retrieval_manifest.get("form_lookup_count")},
-        "source_cards": {"authority_layer_count": len(authority_cards), "retrieval_count": len(retrieval_cards), "retrieval_cards_missing_hash": missing_hashes, "retrieval_cards_missing_offsets": missing_offsets},
-        "citations": citations,
-        "quote_results": quote_results,
-        "claim_results": claim_results,
-        "current_law_fail_closed": current_law_gate,
-        "authority_ranking": ranking_result,
-        "forms": form_result,
-        "law_court": law_court_result,
-        "package_boundary": boundary,
         "tests": {
-            "full_collection": {"status": "pass", "test_files": 303, "collected": 1205},
-            "focused_authority_verifier": {"status": "pass", "collected": 107, "passed": 106, "skipped": 1, "failed": 0, "skip_reason": "symlinks unavailable"},
-            "acceptance_contract": {"status": "pass", "passed": 3, "failed": 0},
+            "executed": False,
+            "status": "not_executed",
+            "reason": "No pytest execution or historical test-count reuse.",
         },
-        "metrics_path": str(metrics_path),
-        "store_ga_blockers": store_blockers,
-        "enterprise_ga_blockers": enterprise_blockers,
-        "artifact_hashes": [
-            {"path": str(path), "sha256": sha256(path), "bytes": path.stat().st_size}
-            for path in (manifest_path, ingest_report_path, parsed_manifest_path, authority_report_path, citation_index_path, retrieval_manifest_path, freshness_path, smoke_path, args.msix.resolve(), Path(__file__).resolve(), ROOT / "tests" / "test_ga_authority_acceptance_slice.py")
-        ],
+        "active_build_id": None,
+        "sources": None,
+        "probes": None,
+        "artifact_hashes": [],
+        "verifier_contracts": None,
+        "blockers": [],
+        "store_ga": "STORE_GA_NOT_EVALUATED",
+        "enterprise_ga": "ENTERPRISE_GA_NOT_EVALUATED",
+        "external_authority_modified": False,
+        "network_used": False,
     }
-    acceptance_path = output_root / "04_authority_acceptance.json"
-    acceptance_path.write_text(json.dumps(acceptance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if not report["git"]["available"]:
+        report["blockers"].append("git_identity_unavailable")
+    try:
+        report["verifier_contracts"] = verifier_contracts()
+    except Exception as exc:  # A verifier exception is explicit failed evidence, never approval.
+        report["verifier_contracts"] = {"pass": False, "error_class": type(exc).__name__}
+    if not report["verifier_contracts"]["pass"]:
+        report["blockers"].append("verifier_contract_failure")
+    try:
+        build = PinnedBuild(data_root)
+        report["active_build_id"] = build.build_id
+        report["sources"], blockers = source_audit(build, now)
+        report["blockers"].extend(blockers)
+        report["probes"], blockers = probe_build(build)
+        report["blockers"].extend(blockers)
+        build.check_unchanged()
+        report["artifact_hashes"] = build.inputs
+        report["immutable_product_status"] = "pass"
+    except (
+        Exception
+    ) as exc:  # Record the failure without leaking source text or raw exception detail.
+        report["immutable_product_status"] = "blocked"
+        code = (
+            str(exc) if isinstance(exc, EvidenceError) else "authority_input_unavailable_or_invalid"
+        )
+        report["blockers"].append(code)
+        report["input_error_class"] = type(exc).__name__
+        if report["probes"]:
+            report["probes"]["retrieval"]["evidence_valid"] = False
+    try:
+        report["package_boundary"] = package_boundary(package)
+    except (OSError, ValueError, BadZipFile):
+        report["package_boundary"] = {"status": "blocked", "code": "candidate_package_unverifiable"}
+    if report["package_boundary"]["status"] != "pass":
+        report["blockers"].append("authority_package_boundary_unproven")
+    report["blockers"].append("pinpoint_form_and_law_court_acceptance_not_executed")
+    report["blockers"] = sorted(set(report["blockers"]))
+    report["scope_status"] = (
+        "pass_with_limits"
+        if report.get("immutable_product_status") == "pass" and len(report["blockers"]) == 1
+        else "blocked"
+    )
+    report["duration_seconds"] = round(time.monotonic() - started, 3)
+    return report
 
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data-root", type=Path, required=True)
+    parser.add_argument(
+        "--output-root", type=Path, required=True, help="Fresh evidence directory; no overwrites."
+    )
+    parser.add_argument(
+        "--msix", type=Path, required=True, help="Exact candidate; no implicit historical version."
+    )
+    args = parser.parse_args(argv)
+    output = args.output_root.absolute()
+    data_root = args.data_root.absolute()
+    try:
+        reject_links(output)
+        if (
+            output.resolve() == data_root.resolve()
+            or data_root.resolve() in output.resolve().parents
+        ):
+            raise EvidenceError("evidence_output_inside_authority_root")
+        if output.exists():
+            raise EvidenceError("evidence_directory_already_exists")
+    except EvidenceError as exc:
+        parser.error(str(exc))
+    report = audit(data_root, args.msix.absolute())
+    output.mkdir(parents=True, exist_ok=False)
+    metrics = (
+        report["probes"]["retrieval"]
+        if report["probes"]
+        else {
+            "executed": False,
+            "status": "not_executed",
+            "sample_count": 0,
+            "metrics": None,
+            "reason": "Verified pinned inputs unavailable; no historical metrics reused.",
+        }
+    )
+    (output / "04_authority_acceptance.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
+    (output / "04_retrieval_verifier_metrics.json").write_text(
+        json.dumps(metrics, indent=2) + "\n", encoding="utf-8"
+    )
     lines = [
-        "LEGAL AUTHORITY AND VERIFIER ACCEPTANCE",
-        "=======================================",
-        "",
-        f"Decision: {decision}",
-        f"External authority root: {data_root}",
-        f"Active admitted build ID: {active_build_id or 'none'}",
-        f"Available snapshot manifest SHA-256: {acceptance['available_snapshot_manifest_sha256']}",
-        f"Live update: PASS ({ingest['ingested_count']} ingested, {ingest['failed_count']} failed; fixture_mode=false)",
-        f"Sources: {len(manifest)}; parsed={parser_counts.get('parsed', 0)}; snapshot_only={parser_counts.get('snapshot_only', 0)}",
-        f"Freshness: {freshness.get('freshness_counts')}",
-        f"Direct authority: statute_section={len(direct_statutes)}; court_form={len(direct_forms)}; law_court_opinion={len(direct_opinions)}",
-        f"Citation probes: statute={citations['statute']['status']}; rule={citations['rule']['status']}; form={citations['form']['status']}; Law Court={citations['law_court_case']['status']}; pinpoint={citations['pinpoint']['status']}; fake={citations['fake']['status']}",
-        "Quotes: exact, normalized, fuzzy-review-required, and not-found states exercised over a real official rule-index record",
-        "Claims: supported, partially_supported, unsupported, contradicted, stale, jurisdiction_mismatch, and fail-closed not_verifiable exercised",
-        f"Retrieval smoke (source-derived, n={metrics['retrieval']['sample_count']}): R@5={metrics['retrieval']['recall_at_5']}; R@10={metrics['retrieval']['recall_at_10']}; R@20={metrics['retrieval']['recall_at_20']}; MRR={metrics['retrieval']['mrr']}; nDCG@20={metrics['retrieval']['ndcg_at_20']}",
-        "Attorney-reviewed gold: absent; committed verifier rows are synthetic seeds and do not qualify",
-        f"Package boundary: {boundary['status'].upper()} ({boundary['msix_entry_count']} MSIX entries; no forbidden authority products)",
-        "Tests: 1,205 collected; focused authority/verifier 106 passed, 1 expected symlink skip, 0 failed",
-        "",
-        "Blockers",
-        "--------",
-        *([f"- {blocker}" for blocker in enterprise_blockers] or ["- none"]),
+        "Authority acceptance: " + report["decision"],
+        "Scope: " + report["scope_status"],
+        "Active build: " + str(report["active_build_id"]),
+        "Live update: NOT EXECUTED",
+        "Pytest: NOT EXECUTED by this runner",
+        "Store/Enterprise GA: NOT EVALUATED by this audit",
+        "Blockers:",
+        *["- " + item for item in report["blockers"]],
     ]
-    (output_root / "04_authority_acceptance.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({"status": decision.lower(), "acceptance": str(acceptance_path), "metrics": str(metrics_path), "source_count": len(manifest)}, indent=2))
-    return 0 if decision == "PASS" else 2
+    (output / "04_authority_acceptance.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            {
+                "decision": report["decision"],
+                "scope_status": report["scope_status"],
+                "blockers": report["blockers"],
+                "evidence": str(output),
+            }
+        )
+    )
+    return 2 if report["decision"] == "BLOCKED" else 0
 
 
 if __name__ == "__main__":

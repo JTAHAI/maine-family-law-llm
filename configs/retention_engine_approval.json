@@ -1,0 +1,6 @@
+{
+  "schema_version": "retention_engine_approval_v1",
+  "approved_policy_refs": [],
+  "maximum_recovery_window_days": 365,
+  "notes": "An organization must provision approved opaque policy references outside the source repository. This empty default intentionally blocks application of a retention plan."
+}

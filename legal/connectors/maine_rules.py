@@ -9,6 +9,9 @@ from legal.documents.models import CourtRule, SourceLocation
 
 PARSER_VERSION = "maine_rules_parser_v2"
 _RULE_RE = re.compile(r"\b(?:Rule|RULE|M\.R\.\s*Civ\.\s*P\.)\s*(\d+(?:\.\d+)?[A-Z]?)\b", re.I)
+_RULE_DATE = r"(?:\d{1,2}/\d{1,2}/\d{2,4}|[A-Z][a-z]+\s+\d{1,2},\s+\d{4})"
+_EFFECTIVE_RE = re.compile(rf"\b(?:effective|eff\.)\s*(?:date)?\s*[:,-]?\s*({_RULE_DATE})", re.I)
+_AMENDMENT_RE = re.compile(rf"\b(amended|adopted|restyled|revised)\s*(?:effective\s*)?[:,-]?\s*({_RULE_DATE})", re.I)
 
 
 def _infer_rule_set(text: str, url: str) -> str:
@@ -26,9 +29,20 @@ def _infer_rule_set(text: str, url: str) -> str:
     return "Maine Court Rules"
 
 
+def _rule_history_metadata(text: str) -> tuple[str | None, list[dict[str, str]]]:
+    """Extract only explicitly printed rule-document dates; never infer them."""
+    effective = _EFFECTIVE_RE.search(text)
+    history = [
+        {"event": match.group(1).casefold(), "date": match.group(2)}
+        for match in _AMENDMENT_RE.finditer(text)
+    ]
+    return (effective.group(1) if effective else None), history[:100]
+
+
 def parse_rules_text(text: str, *, source_id: str, url: str) -> tuple[list[CourtRule], ParserAuditEvent]:
     visible_text = normalize_whitespace(text)
     rule_set = _infer_rule_set(text, url)
+    effective_date, amendment_history = _rule_history_metadata(text)
     seen: set[str] = set()
     rules: list[CourtRule] = []
     for match in _RULE_RE.finditer(text):
@@ -51,6 +65,8 @@ def parse_rules_text(text: str, *, source_id: str, url: str) -> tuple[list[Court
                 retrieved_freshness_status="retrieved_timestamp_known",
                 rule_set=rule_set,
                 rule_number=rule_number,
+                effective_date=effective_date,
+                amendment_history=list(amendment_history),
             )
         )
     event = ParserAuditEvent(
@@ -60,7 +76,12 @@ def parse_rules_text(text: str, *, source_id: str, url: str) -> tuple[list[Court
         status="parsed" if rules else "parsed_empty",
         message="parsed Maine court rules text extracted from official snapshot",
         extracted_count=len(rules),
-        metadata={"text_length": len(visible_text), "rule_set": rule_set},
+        metadata={
+            "text_length": len(visible_text),
+            "rule_set": rule_set,
+            "effective_date": effective_date,
+            "amendment_event_count": len(amendment_history),
+        },
     )
     return rules, event
 

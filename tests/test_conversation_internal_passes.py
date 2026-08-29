@@ -1,9 +1,22 @@
 from pathlib import Path
 
+import pytest
+
+import legal.conversation.internal_passes as internal
+
 from legal.conversation.internal_passes import (
     ConversationPilotReadinessAuditor,
-    EVAL_OUTPUT_PATH,
 )
+
+
+@pytest.fixture(autouse=True)
+def isolated_evidence(tmp_path, monkeypatch):
+    paths = [internal.SUMMARY_PATH, internal.EVAL_OUTPUT_PATH]
+    before = {path: path.read_bytes() if path.exists() else None for path in paths}
+    monkeypatch.setattr(internal, "ROOT", tmp_path)
+    monkeypatch.setattr(internal, "EVAL_OUTPUT_PATH", tmp_path / "eval.json")
+    yield
+    assert {path: path.read_bytes() if path.exists() else None for path in paths} == before
 
 
 def test_conversation_internal_pass_auditor_reports_all_internal_passes_complete() -> None:
@@ -16,7 +29,9 @@ def test_conversation_internal_pass_auditor_reports_all_internal_passes_complete
     assert report["ga_shipped"] is False
 
 
-def test_conversation_internal_pass_auditor_writes_eval_artifact() -> None:
-    report = ConversationPilotReadinessAuditor().write(run_tests=False).as_dict()
-    assert Path(EVAL_OUTPUT_PATH).is_file()
+def test_conversation_internal_pass_auditor_writes_eval_artifact(tmp_path: Path) -> None:
+    summary = tmp_path / "summary.json"
+    report = ConversationPilotReadinessAuditor().write(summary, run_tests=False).as_dict()
+    assert summary.is_file()
+    assert internal.EVAL_OUTPUT_PATH.is_file()
     assert report["conversation_eval_report"]["status"] == "pass"

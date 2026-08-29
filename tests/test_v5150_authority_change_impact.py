@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from legal.documents.workspace import commit_revision, create_document, propose_revision
+from legal.matter.calendar_review import CalendarReviewStore
 from legal.production import AuthorityProductPublisher
 from legal.review import (
     AuthorityChangeImpactStore,
@@ -259,6 +260,13 @@ def test_authority_impact_api_and_ui(monkeypatch, tmp_path: Path):
     )
     assert analyzed.status_code == 200
     assert analyzed.json()["prior_approval_valid_for_target_generation"] is False
+    matter_analyzed = client.post(
+        "/api/authority-change-impact/matter/analyze",
+        json={"base_build_id": first, "target_build_id": second},
+    )
+    assert matter_analyzed.status_code == 200
+    assert matter_analyzed.json()["counts"]["documents_requiring_recheck"] == 1
+    assert matter_analyzed.json()["access_receipt"]["encrypted"] is True
     built = client.post(
         "/api/authority-change-impact/build",
         json={"document_id": document["document_id"], "base_build_id": first, "target_build_id": second, "approved": True},
@@ -270,7 +278,9 @@ def test_authority_impact_api_and_ui(monkeypatch, tmp_path: Path):
     js = Path("maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")
     css = Path("maine_family_law_llm/ui/workbench.css").read_text(encoding="utf-8")
     assert 'id="authority-impact-build"' in html
+    assert 'id="authority-impact-matter"' in html
     assert "/api/authority-change-impact" in js
+    assert "analyzeAuthorityImpactMatter" in js
     assert "prior approval valid" in js.lower()
     assert ".authority-impact-source" in css
 
@@ -285,3 +295,103 @@ def test_authority_data_root_inside_repo_is_refused(tmp_path: Path):
             AuthorityChangeImpactStore(case, data_root=inside, repo_root=Path.cwd())
     finally:
         inside.rmdir()
+
+
+def test_matter_impact_maps_available_work_and_keeps_access_audit_encrypted(tmp_path: Path):
+    data_root, first, second = _publish_two_generations(tmp_path)
+    case = tmp_path / "case"
+    case.mkdir()
+    document = _reviewed_document(case, first)
+    first_manifest = json.loads(
+        (data_root / "authority_product" / "builds" / first / "authority_product_manifest.json").read_text(encoding="utf-8")
+    )
+    CalendarReviewStore(case).add_rules(
+        {
+            "rules": [
+                {
+                    "rule_id": "rule-001",
+                    "citation": "19-A M.R.S. § 1653",
+                    "source_ref": {"record_id": "rec-001", "source_hash": first_manifest["source_snapshots"][0]["sha256"]},
+                    "freshness": "fresh",
+                    "triggering_event": "filing",
+                    "unit": "days",
+                    "count": 7,
+                    "jurisdiction": "Maine",
+                }
+            ]
+        }
+    )
+    store = AuthorityChangeImpactStore(case, data_root=data_root, repo_root=Path.cwd())
+    result = store.analyze_matter(first, second)
+    assert result["status"] == "revalidation_required"
+    assert result["counts"]["documents_requiring_recheck"] == 1
+    assert result["deadlines"]["affected_rule_count"] == 1
+    assert result["saved_research"]["status"] == "not_persisted_by_design"
+    receipt = store.record_access(
+        action="matter_impact_analyze",
+        actor_role="attorney",
+        tenant_id="fictional-tenant",
+        audit_event_id="fictional-audit-id",
+        document_id=document["document_id"],
+    )
+    assert receipt["encrypted"] is True
+    raw = (case / "21_AUTHORITY_CHANGE_IMPACT" / "access_audit.json.enc").read_text(encoding="utf-8")
+    assert "Best-interest findings" not in raw
+    assert '"ciphertext"' in raw
+
+
+def test_canonical_matter_impact_route_enforces_role_tenant_and_active_matter(monkeypatch, tmp_path: Path):
+    from app.api.main import app as canonical_app
+
+    data_root, first, second = _publish_two_generations(tmp_path)
+    case = tmp_path / "case"
+    case.mkdir()
+    document = _reviewed_document(case, first)
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(data_root))
+    monkeypatch.setattr(api_module, "active_case_root", lambda: case)
+    client = TestClient(canonical_app)
+    matter_id = hashlib.sha256(str(case.resolve()).encode("utf-8")).hexdigest()[:16]
+    path = f"/api/matters/{matter_id}/authority-change-impact/analyze"
+
+    missing_scope = client.post(path, json={"base_build_id": first, "target_build_id": second})
+    assert missing_scope.status_code == 403
+
+    headers = {"X-User-Role": "attorney", "X-Tenant-Id": "fictional-tenant"}
+    response = client.post(path, json={"base_build_id": first, "target_build_id": second}, headers=headers)
+    assert response.status_code == 200
+    assert response.headers["X-MFLL-RBAC"] == "enforced"
+    assert response.headers["X-MFLL-Audit-Event-Id"]
+    payload = response.json()
+    assert payload["review_required"] is True
+    assert payload["access_receipt"]["encrypted"] is True
+
+    document_path = f"/api/matters/{matter_id}/authority-change-impact/documents/{document['document_id']}"
+    document_response = client.post(
+        document_path + "/analyze",
+        json={"base_build_id": first, "target_build_id": second},
+        headers=headers,
+    )
+    assert document_response.status_code == 200
+    assert document_response.json()["impacted_source_ids"] == ["maine-title-19a"]
+    packet_response = client.post(
+        document_path + "/packet",
+        json={"base_build_id": first, "target_build_id": second, "approved": True},
+        headers=headers,
+    )
+    assert packet_response.status_code == 200
+    packet_id = packet_response.json()["build_id"]
+    exact_packet = client.get(
+        f"/api/matters/{matter_id}/authority-change-impact/packets/{packet_id}",
+        headers=headers,
+    )
+    assert exact_packet.status_code == 200
+    assert exact_packet.json()["packet"]["document_id"] == document["document_id"]
+
+    other_id = hashlib.sha256(b"other-fictional-matter").hexdigest()[:16]
+    denied = client.post(
+        f"/api/matters/{other_id}/authority-change-impact/analyze",
+        json={"base_build_id": first, "target_build_id": second},
+        headers=headers,
+    )
+    assert denied.status_code == 404
+    assert "case" not in json.dumps(denied.json()).lower()

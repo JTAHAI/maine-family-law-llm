@@ -1,0 +1,10 @@
+from pathlib import Path
+from fastapi.testclient import TestClient
+from legal.matter.implementation_feasibility import ImplementationFeasibilityStore
+from maine_family_law_llm import api as api_module
+def rows():return [{"evidence_id":"PROPOSAL-001","source_hash":"a"*64,"title":"Fictional proposal"}]
+def payload():return {"review_id":"implementation_001","reviewer_safe_id":"reviewer_001","user_confirmed":True,"clauses":[{"clause_id":"clause_001","topic":"schedule","text":"Exchange at a reasonable time TBD.","source_ref":{"record_id":"PROPOSAL-001","source_hash":"a"*64}},{"clause_id":"clause_002","topic":"schedule","text":"Exchange on 2026-07-04.","source_ref":{"record_id":"PROPOSAL-001","source_hash":"a"*64}}]}
+def test_pass98_encrypted_flags_not_validity(tmp_path:Path):
+ root=tmp_path/'m';root.mkdir();s=ImplementationFeasibilityStore(root,encryption_key='fictional-test-key');r=s.create(payload(),records=rows());assert r['validity']=='not_determined' and len(r['flags'])>=2;assert s.source('implementation_001','clause_001')['source']['source_hash']=='a'*64;assert 'reasonable time' not in s.path.read_text()
+def test_pass98_api_scope_source_and_ui(monkeypatch,tmp_path:Path):
+ a,b=tmp_path/'a',tmp_path/'b';a.mkdir();b.mkdir();active={'root':a};monkeypatch.setattr(api_module,'active_case_root',lambda:active['root']);monkeypatch.setattr(api_module,'load_case_search_records',lambda _:rows());monkeypatch.setenv('MAINE_MATTER_STORE_KEY','fictional-test-key');c=TestClient(api_module.app);assert c.post('/api/implementation-feasibility-reviews',json=payload()).status_code==200;assert len(c.get('/api/implementation-feasibility-reviews/implementation_001/clauses/clause_001/source').json()['source']['source_token'])==64;active['root']=b;assert c.get('/api/implementation-feasibility-reviews/implementation_001').status_code==404;assert Path('src/maine_family_law_llm/api.py').read_bytes()==Path('maine_family_law_llm/api.py').read_bytes();assert 'Implementation feasibility review' in Path('src/maine_family_law_llm/ui/workbench.js').read_text(encoding='utf-8')

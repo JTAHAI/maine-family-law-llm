@@ -24,6 +24,7 @@ TEXT_FIELDS_FOR_CITATION_DISCOVERY = (
 
 
 _PINPOINT_LABEL = re.compile(r"^\s*(?:\(?)(?P<label>\d+[A-Z]?|[A-Z])(?:\)?|\.)\s+")
+_PDF_PARAGRAPH_MARKER = re.compile(r"(?:\[\s*)?(?:¶|\uFFFD)\s*(\d+)\s*(?:\])?")
 
 
 def _exact_span(text: str, value: object) -> dict[str, int] | None:
@@ -100,7 +101,19 @@ def _record_pinpoints(record: "ParsedAuthorityRecord") -> list[tuple[str, str, d
                 }))
 
     if citation.kind == "maine_case":
-        for labels, value in _iter_labeled_values(record.row.get("paragraphs")):
+        paragraphs = list(_iter_labeled_values(record.row.get("paragraphs")))
+        # Court PDFs sometimes preserve a paragraph marker as "[�1]" rather
+        # than "¶ 1".  The glyph and number are still present in the admitted
+        # extract, so derive a bounded exact paragraph only from those markers.
+        # Do not synthesize a marker when the source text has none.
+        if not paragraphs:
+            markers = list(_PDF_PARAGRAPH_MARKER.finditer(text))
+            for index, marker in enumerate(markers):
+                end = markers[index + 1].start() if index + 1 < len(markers) else len(text)
+                value = text[marker.start():end].strip()
+                if value:
+                    paragraphs.append(((marker.group(1),), value))
+        for labels, value in paragraphs:
             if not labels:
                 continue
             span = _exact_span(text, value)

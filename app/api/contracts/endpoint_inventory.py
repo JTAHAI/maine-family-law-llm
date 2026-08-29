@@ -10,6 +10,7 @@ class EndpointSpec:
     path: str
     purpose: str
     review_required: bool = True
+    surface: str = "enterprise"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -17,6 +18,7 @@ class EndpointSpec:
             "path": self.path,
             "purpose": self.purpose,
             "review_required": self.review_required,
+            "surface": self.surface,
         }
 
 
@@ -89,7 +91,24 @@ REQUIRED_API_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec("POST", "/api/hearing-media/import", "import local hearing media records"),
     EndpointSpec("GET", "/api/hearing-media/media/{media_id}", "fetch a hearing media record"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/transcribe", "create a hearing transcript"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/transcript-corrections", "record an immutable transcript correction proposal"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/speaker-review", "review speaker labels in a transcript"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/keyframe-reviews", "generate encrypted local video keyframes for review"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/annotations", "record a source-bound keyframe annotation"),
+    EndpointSpec("GET", "/api/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/frames/{frame_id}", "open one encrypted local video keyframe"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/redaction-derivatives", "create an encrypted local media redaction derivative"),
+    EndpointSpec("GET", "/api/hearing-media/media/{media_id}/redaction-derivatives/{derivative_id}", "open one encrypted local media redaction derivative"),
+    EndpointSpec("POST", "/api/hearing-media/screenshot-conversations", "reconstruct a source-bound screenshot conversation for review"),
+    EndpointSpec("GET", "/api/hearing-media/screenshot-conversations", "list source-bound screenshot conversation reconstructions"),
+    EndpointSpec("GET", "/api/hearing-media/screenshot-conversations/{conversation_id}/screenshots/{screenshot_id}", "inspect one source-bound screenshot observation"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/metadata-inspections", "inspect local media and image metadata without authentication claims"),
+    EndpointSpec("GET", "/api/hearing-media/media/{media_id}/metadata-inspections/{inspection_id}", "inspect one source-bound media metadata receipt"),
+    EndpointSpec("POST", "/api/hearing-media/media/{media_id}/courtroom-sessions", "create an offline courtroom-media review session"),
+    EndpointSpec("GET", "/api/hearing-media/courtroom-sessions/{session_id}/source", "inspect a courtroom-media session source binding"),
+    EndpointSpec("GET", "/api/hearing-media/courtroom-sessions/{session_id}/playback", "open bounded offline courtroom-media playback"),
+    EndpointSpec("POST", "/api/hearing-media/courtroom-sessions/{session_id}/sync", "synchronize a courtroom-media session to transcript segments"),
+    EndpointSpec("POST", "/api/hearing-media/courtroom-sessions/{session_id}/private-notes", "record a separately encrypted private courtroom-review note"),
+    EndpointSpec("GET", "/api/hearing-media/courtroom-sessions/{session_id}/private-notes", "open separately encrypted private courtroom-review notes"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/timeline/build", "build a hearing timeline"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/compare", "compare an official transcript to the derived transcript"),
     EndpointSpec("GET", "/api/hearing-media/media/{media_id}/exhibits", "build exhibit references from the transcript"),
@@ -97,6 +116,89 @@ REQUIRED_API_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/citations", "record transcript citations"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/privacy-scan", "run a local privacy scan on the transcript"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/redacted-copy", "create a separate redacted transcript derivative"),
+    EndpointSpec("POST", "/api/records/{record_id}/safe-review-copy", "create an inert private safe review derivative", surface="local"),
+    EndpointSpec("GET", "/api/runtime/health-dashboard", "inspect encrypted active-matter dependency readiness", surface="local"),
+    EndpointSpec("GET", "/api/runtime/job-journal", "inspect content-free active-matter durable job state", surface="local"),
+    EndpointSpec("GET", "/api/runtime/idempotency-status", "inspect encrypted duplicate-suppression boundary status", surface="local"),
+    EndpointSpec("GET", "/api/runtime/database-integrity", "run bounded read-only runtime database integrity review", surface="local"),
+    EndpointSpec("POST", "/api/runtime/power-loss-drill", "run admin-approved synthetic atomic-write interruption drill", surface="local"),
+    EndpointSpec("GET", "/api/runtime/storage-pressure", "forecast safe local write capacity and reviewed cleanup candidates", surface="local"),
+    EndpointSpec("GET", "/api/runtime/clock-skew", "detect material local clock changes for review", surface="local"),
+    EndpointSpec("GET", "/api/runtime/performance-gates", "inspect bounded local performance review budgets", surface="local"),
+    EndpointSpec("POST", "/api/runtime/performance-gates", "record encrypted review-required local performance observations", surface="local"),
+    EndpointSpec("GET", "/api/runtime/failure-replay", "inspect allow-listed sanitized failure replay scenarios", surface="local"),
+    EndpointSpec("POST", "/api/runtime/failure-replay", "record encrypted review-required sanitized failure replay", surface="local"),
+    EndpointSpec("GET", "/api/runtime/cross-device-transfer", "inspect local encrypted user-carried transfer bundles", surface="local"),
+    EndpointSpec("POST", "/api/runtime/cross-device-transfer/export", "create encrypted user-carried matter transfer bundle", surface="local"),
+    EndpointSpec("POST", "/api/runtime/cross-device-transfer/import", "verify and import transfer into isolated recovery copy", surface="local"),
+    EndpointSpec("GET", "/api/runtime/schema-migration-lab", "inspect encrypted synthetic migration-contract laboratory results", surface="local"),
+    EndpointSpec("POST", "/api/runtime/schema-migration-lab/run", "run a reviewed synthetic migration and recovery contract suite", surface="local"),
+    EndpointSpec("POST", "/api/reviewer-handoff/{handoff_id}/export", "export a local encrypted reviewer bundle without transmission", surface="local"),
+    EndpointSpec("POST", "/api/reviewer-handoff/{handoff_id}/comments", "add an encrypted source-bound reviewer comment", surface="local"),
+    EndpointSpec("POST", "/api/reviewer-handoff/{handoff_id}/attest", "record a non-cryptographic local reviewer attestation", surface="local"),
+    EndpointSpec("POST", "/api/reviewer-handoff/{handoff_id}/reimport", "append a hash-verified local reviewer bundle reimport", surface="local"),
+    EndpointSpec("GET", "/api/reviewer-handoff/{handoff_id}/reconcile", "reconcile immutable reviewer-bundle lineage without merging", surface="local"),
+    EndpointSpec("GET", "/api/reviewer-handoff/{handoff_id}/records/{record_id}/source", "open a scoped reviewer-bundle exact-record locator", surface="local"),
+    EndpointSpec("GET", "/api/review-comments/inventory", "inspect encrypted active-matter structured comment metadata", surface="local"),
+    EndpointSpec("POST", "/api/review-comments/threads", "create an encrypted hash-bound structured comment thread", surface="local"),
+    EndpointSpec("GET", "/api/review-comments/threads/{thread_id}", "open an encrypted structured comment thread", surface="local"),
+    EndpointSpec("POST", "/api/review-comments/threads/{thread_id}/comments", "append a structured review comment without editing its target", surface="local"),
+    EndpointSpec("POST", "/api/review-comments/threads/{thread_id}/resolve", "record a review-required thread resolution without a determination", surface="local"),
+    EndpointSpec("GET", "/api/review-assignments", "inspect encrypted local evidence-bound review assignments", surface="local"),
+    EndpointSpec("POST", "/api/review-assignments", "assign a local evidence-bound review task without messaging", surface="local"),
+    EndpointSpec("GET", "/api/review-assignments/{assignment_id}", "open a local review assignment", surface="local"),
+    EndpointSpec("POST", "/api/review-assignments/{assignment_id}/claim", "claim an assigned local review task", surface="local"),
+    EndpointSpec("POST", "/api/review-assignments/{assignment_id}/complete", "complete a claimed task only after evidence acknowledgement", surface="local"),
+    EndpointSpec("GET", "/api/bundle-merges", "inspect local conflict-aware reviewer-bundle merge plans", surface="local"),
+    EndpointSpec("POST", "/api/bundle-merges", "compare independent reviewer-bundle manifests without applying changes", surface="local"),
+    EndpointSpec("GET", "/api/bundle-merges/{merge_id}", "open a local conflict-aware merge plan", surface="local"),
+    EndpointSpec("POST", "/api/bundle-merges/{merge_id}/resolve", "record an explicit reviewer-bundle conflict decision", surface="local"),
+    EndpointSpec("POST", "/api/bundle-merges/{merge_id}/finalize", "create a new review-required merged bundle without applying it", surface="local"),
+    EndpointSpec("POST", "/api/calendar/ics-export", "build a local review-required ICS v2 export without an account write", surface="local"),
+    EndpointSpec("POST", "/api/email-integrity/handoff-package", "build a local EML/ZIP review handoff package without sending mail", surface="local"),
+    EndpointSpec("GET", "/api/archival-pdf/exports", "inspect local review-only archival PDF derivative receipts", surface="local"),
+    EndpointSpec("POST", "/api/archival-pdf/exports", "build a source-bound local archival PDF review derivative without a PDF/A claim", surface="local"),
+    EndpointSpec("GET", "/api/evidence-exports/structured", "inspect local CSV/JSON evidence-export receipts", surface="local"),
+    EndpointSpec("POST", "/api/evidence-exports/structured", "build a scoped CSV/JSON evidence export with hashes and review state", surface="local"),
+    EndpointSpec("GET", "/api/print-review/previews", "inspect local accessible print-preview receipts", surface="local"),
+    EndpointSpec("POST", "/api/print-review/previews", "create an accessible local confidential review preview", surface="local"),
+    EndpointSpec("GET", "/api/print-review/previews/{preview_id}", "open a source-bound local print preview", surface="local"),
+    EndpointSpec("POST", "/api/print-review/previews/{preview_id}/request-print", "record an explicit local print request without silently printing", surface="local"),
+    EndpointSpec("GET", "/api/external-tool-boundaries", "inspect encrypted local external-tool boundary receipts", surface="local"),
+    EndpointSpec("POST", "/api/external-tool-boundaries", "record a declared external-tool export boundary without transmitting", surface="local"),
+    EndpointSpec("GET", "/api/external-tool-boundaries/{receipt_id}", "open a declared external-tool boundary receipt", surface="local"),
+    EndpointSpec("GET", "/api/evals/human-grounded/readiness", "inspect hash-only attorney-gold readiness without claiming external review", surface="local"),
+    EndpointSpec("POST", "/api/evals/human-grounded/cases", "create a blinded hash-only attorney-gold review task", surface="local"),
+    EndpointSpec("POST", "/api/evals/human-grounded/cases/{case_id}/reviews", "record externally supplied attorney-review evidence under the canonical human-eval ledger", surface="local"),
+    EndpointSpec("POST", "/api/evals/human-grounded/cases/{case_id}/adjudicate", "record an externally supplied attorney-gold adjudication", surface="local"),
+    EndpointSpec("POST", "/api/retrieval-workbench/evaluate", "run a strict-provenance attorney-gold retrieval benchmark against an external authority index", surface="local"),
+    EndpointSpec("GET", "/api/evals/claim-support/benchmark", "inspect external strict claim-verifier benchmark readiness without exposing evaluation paths", surface="local"),
+    EndpointSpec("POST", "/api/evals/claim-support/benchmark", "run a strict-provenance seven-state claim-verifier benchmark against external evidence", surface="local"),
+    EndpointSpec("GET", "/api/evals/quote-verifier/benchmark", "inspect external strict quote-verifier benchmark readiness without exposing evaluation paths", surface="local"),
+    EndpointSpec("POST", "/api/evals/quote-verifier/benchmark", "run a strict-provenance parser-variant quote-verifier benchmark against external evidence", surface="local"),
+    EndpointSpec("GET", "/api/evals/procedural-safety/benchmark", "inspect external procedural-safety benchmark readiness without exposing scenario data", surface="local"),
+    EndpointSpec("POST", "/api/evals/procedural-safety/benchmark", "run a strict-provenance deadline, service, posture, form, venue, and filing safety benchmark", surface="local"),
+    EndpointSpec("GET", "/api/evals/accessibility-bias/benchmark", "inspect external automated accessibility/bias benchmark readiness without exposing case text", surface="local"),
+    EndpointSpec("POST", "/api/evals/accessibility-bias/benchmark", "run a strict-provenance accessibility/bias response-safety benchmark while retaining human-review boundary", surface="local"),
+    EndpointSpec("GET", "/api/evals/longitudinal-matter/benchmark", "inspect a configured disposable fictional longitudinal-matter contract benchmark", surface="local"),
+    EndpointSpec("POST", "/api/evals/longitudinal-matter/benchmark", "run a source-safe fictional multi-session, correction, stale-work, restart, and migration contract benchmark", surface="local"),
+    EndpointSpec("GET", "/api/evals/release-metric-eligibility", "inspect whether external release metrics have the required license, reproducibility, and signed-evidence contract", surface="local"),
+    EndpointSpec("POST", "/api/evals/release-metric-eligibility", "verify external release-metric evidence without treating it as an enterprise release decision", surface="local"),
+    EndpointSpec("GET", "/api/jurisdiction-packs", "inspect externally provisioned signed jurisdiction-pack metadata without packaging authority", surface="local"),
+    EndpointSpec("GET", "/api/jurisdiction-packs/matters/{matter_id}", "inspect a tenant-scoped matter jurisdiction-pack selection", surface="local"),
+    EndpointSpec("POST", "/api/jurisdiction-packs/{pack_id}/activate", "select a verified jurisdiction pack for one matter without deciding jurisdiction", surface="local"),
+    EndpointSpec("GET", "/api/api-stability/status", "inspect the declared versioned public API contract without exposing external baseline paths", surface="local"),
+    EndpointSpec("POST", "/api/api-stability/compare", "compare the current public API contract with an external frozen baseline and report compatibility actions", surface="local"),
+    EndpointSpec("GET", "/api/release-provenance/status", "inspect exact-package SBOM and external vulnerability-evidence readiness without exposing paths", surface="local"),
+    EndpointSpec("POST", "/api/release-provenance/audit", "build an exact source and MSIX provenance report bound to a configured package", surface="local"),
+    EndpointSpec("GET", "/api/release-reproducibility/status", "inspect signed independent-build reproducibility evidence readiness", surface="local"),
+    EndpointSpec("POST", "/api/release-reproducibility/verify", "verify signed independent build, payload, source, and toolchain hashes", surface="local"),
+    EndpointSpec("GET", "/api/incident-response/status", "inspect content-free incident severity and recovery template readiness", surface="local"),
+    EndpointSpec("POST", "/api/incident-response/tabletop", "run one explicitly fictional incident response tabletop contract", surface="local"),
+    EndpointSpec("GET", "/api/organizational-signoffs/status", "inspect external organizational signoff evidence readiness without claiming approval", surface="local"),
+    EndpointSpec("POST", "/api/organizational-signoffs/verify", "verify hash-bound external organizational signoff evidence without establishing authority", surface="local"),
+    EndpointSpec("GET", "/api/enterprise-ga-decision/status", "inspect two-axis Store and Enterprise GA decision-evidence readiness", surface="local"),
+    EndpointSpec("POST", "/api/enterprise-ga-decision/assemble", "assemble a blocked-until-authorized Enterprise GA evidence decision packet", surface="local"),
     EndpointSpec("POST", "/api/hearing-media/media/{media_id}/cancel", "cancel a hearing transcription workflow"),
     EndpointSpec("GET", "/api/hearing-media/review-history", "fetch hearing media review history"),
     EndpointSpec("POST", "/api/hearing-media/exports", "export a hearing media review bundle"),
@@ -114,6 +216,7 @@ REQUIRED_API_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec("POST", "/api/productivity/courtroom/sessions", "create a source-bound presentation session"),
     EndpointSpec("POST", "/api/productivity/backups/schedules", "configure encrypted matter backups"),
     EndpointSpec("POST", "/api/productivity/backups/run", "run and verify an encrypted matter backup"),
+    EndpointSpec("GET", "/api/productivity/backups", "browse safe encrypted matter snapshot metadata"),
     EndpointSpec("GET", "/api/productivity/backups/{backup_id}/verify", "verify an encrypted matter backup"),
     EndpointSpec("POST", "/api/productivity/backups/{backup_id}/restore", "restore into an isolated recovery directory"),
     EndpointSpec("GET", "/api/productivity/sources/{item_id}", "inspect an exact Productivity Studio source item"),
@@ -126,15 +229,51 @@ REQUIRED_API_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec("POST", "/api/privacy/disconnect-all", "disconnect all connected providers"),
     EndpointSpec("POST", "/api/privacy/revoke-all", "revoke all provider credentials"),
     EndpointSpec("GET", "/api/security/privacy/dashboard", "fetch the security and privacy dashboard"),
+    EndpointSpec("GET", "/api/security/privacy/clipboard-policy", "fetch the no-read local clipboard safety policy"),
+    EndpointSpec("GET", "/api/security/privacy/matter-key", "inspect non-secret per-matter key hierarchy status"),
+    EndpointSpec("POST", "/api/security/privacy/matter-key/{operation}", "run a confirmed admin-only per-matter key operation"),
+    EndpointSpec("GET", "/api/security/privacy/matter-unlock", "inspect optional local matter-unlock policy"),
+    EndpointSpec("POST", "/api/security/privacy/matter-unlock/configure", "configure optional Windows Hello matter unlock"),
+    EndpointSpec("POST", "/api/security/privacy/matter-unlock/verify", "request local Windows Hello presence for an enabled matter"),
+    EndpointSpec("POST", "/api/security/privacy/matter-unlock/lock", "end the current local matter-unlock session"),
     EndpointSpec("POST", "/api/security/privacy/backup", "create a hashed matter backup"),
     EndpointSpec("POST", "/api/security/privacy/restore", "verify and rehearse a matter restore"),
     EndpointSpec("POST", "/api/security/privacy/injection-scan", "run prompt-injection defense"),
+    EndpointSpec("POST", "/api/security/privacy/adversarial-corpus/run", "run the synthetic local adversarial safety corpus"),
+    EndpointSpec("GET", "/api/security/privacy/telemetry", "inspect the local telemetry preference"),
+    EndpointSpec("POST", "/api/security/privacy/telemetry", "set an explicit local telemetry preference"),
     EndpointSpec("POST", "/api/security/privacy/diagnostics/redact", "redact diagnostic payloads"),
     EndpointSpec("POST", "/api/security/privacy/retention", "resolve a data-class retention policy"),
     EndpointSpec("GET", "/api/security/privacy/audit", "verify the security audit chain"),
     EndpointSpec("POST", "/api/security/privacy/incidents/open", "open a security incident"),
     EndpointSpec("POST", "/api/security/privacy/incidents/close", "close a security incident"),
     EndpointSpec("GET", "/api/release-control-center/status", "fetch the release control center status"),
+    EndpointSpec("GET", "/api/admin/console", "fetch a tenant-scoped administration review console"),
+    EndpointSpec("POST", "/api/admin/console/refresh", "record an encrypted tenant-scoped administration review receipt"),
+    EndpointSpec("POST", "/api/admin/role-policy-simulations", "simulate fictional role-policy decisions without changing authorization"),
+    EndpointSpec("POST", "/api/admin/separation-of-duties", "evaluate independent approval references without performing approval actions"),
+    EndpointSpec("POST", "/api/admin/policy-packs/draft", "create an encrypted tenant-scoped policy-pack draft"),
+    EndpointSpec("POST", "/api/admin/policy-packs/{pack_id}/validate", "validate a signed policy-pack draft without activation"),
+    EndpointSpec("POST", "/api/admin/policy-packs/{pack_id}/approve", "verify an externally signed policy-pack approval"),
+    EndpointSpec("POST", "/api/admin/policy-packs/{pack_id}/activate", "activate only a validated externally signed policy pack"),
+    EndpointSpec("POST", "/api/admin/policy-packs/{pack_id}/expire", "expire a tenant-scoped policy pack"),
+    EndpointSpec("POST", "/api/admin/policy-packs/{pack_id}/rollback", "roll back a tenant-scoped policy pack state"),
+    EndpointSpec("GET", "/api/admin/policy-packs/{pack_id}/diff", "inspect a hash-bound policy-pack diff"),
+    EndpointSpec("GET", "/api/admin/legal-holds", "list active-matter legal-hold records"),
+    EndpointSpec("POST", "/api/admin/legal-holds", "place an audited legal hold on selected active-matter artifacts"),
+    EndpointSpec("POST", "/api/admin/legal-holds/{hold_id}/release", "release an active-matter legal hold with explicit authority reference"),
+    EndpointSpec("GET", "/api/admin/retention-plans", "list active-matter recoverable retention plans"),
+    EndpointSpec("POST", "/api/admin/retention-plans/preview", "preview a hold-aware retention plan without deleting artifacts"),
+    EndpointSpec("POST", "/api/admin/retention-plans/{plan_id}/apply", "start a recoverable organization-approved retention window"),
+    EndpointSpec("POST", "/api/admin/retention-plans/{plan_id}/cancel", "cancel a recoverable retention plan"),
+    EndpointSpec("GET", "/api/admin/audit-verification", "verify tenant-scoped local governance audit chains"),
+    EndpointSpec("POST", "/api/admin/audit-verification/export", "create an encrypted receipt for a scoped local audit report"),
+    EndpointSpec("GET", "/api/admin/configuration-export", "build a privacy-safe tenant-scoped configuration manifest"),
+    EndpointSpec("POST", "/api/admin/configuration-export/verify", "verify an external signature for the current configuration manifest"),
+    EndpointSpec("GET", "/api/admin/offline-entitlement", "inspect offline entitlement status without network or matter access"),
+    EndpointSpec("POST", "/api/admin/offline-entitlement/verify", "verify a separately supplied offline entitlement"),
+    EndpointSpec("GET", "/api/admin/organization-readiness", "inspect separated organization readiness decisions"),
+    EndpointSpec("POST", "/api/admin/organization-readiness/refresh", "record an encrypted organization readiness refresh receipt"),
     EndpointSpec("GET", "/api/matters/{matter_id}/command-center", "fetch the matter command center"),
     EndpointSpec("POST", "/api/matters/{matter_id}/review-snapshot", "freeze a whole-matter review snapshot"),
     EndpointSpec("POST", "/api/matters/{matter_id}/evidence-packet", "export a whole-matter evidence packet"),
@@ -172,6 +311,19 @@ REQUIRED_API_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec("GET", "/api/authority/update-report/{build_id}", "fetch an official authority update report"),
     EndpointSpec("POST", "/api/authority/update", "update official Maine sources"),
     EndpointSpec("POST", "/api/authority/update/cancel", "cancel an in-progress official source update"),
+    EndpointSpec("GET", "/api/authority/freshness", "review authority-source freshness and parser metadata"),
+    EndpointSpec("GET", "/api/authority/availability", "review stored official-source availability evidence"),
+    EndpointSpec("GET", "/api/authority/parser-regression", "run bundled synthetic parser-regression fixtures"),
+    EndpointSpec("GET", "/api/authority/parser-regression/{fixture_id}", "inspect one synthetic parser-regression fixture receipt"),
+    EndpointSpec("GET", "/api/authority/lineage/{source_id}", "inspect one admitted source's immutable provenance lineage"),
+    EndpointSpec("POST", "/api/authority/forms/synchronize", "compare installed form metadata against the active admitted catalog"),
+    EndpointSpec("GET", "/api/authority/opinions/{source_id}/enrichment", "inspect deterministic source-bound Law Court opinion metadata"),
+    EndpointSpec("GET", "/api/authority/rules/history", "inspect admitted procedural or evidentiary rule history metadata"),
+    EndpointSpec("GET", "/api/matters/{matter_id}/authority-change-impact/status", "list verified authority generations for one matter revalidation review"),
+    EndpointSpec("POST", "/api/matters/{matter_id}/authority-change-impact/analyze", "map changed authority sources to saved matter work"),
+    EndpointSpec("POST", "/api/matters/{matter_id}/authority-change-impact/documents/{document_id}/analyze", "map changed authority sources to one exact saved document"),
+    EndpointSpec("POST", "/api/matters/{matter_id}/authority-change-impact/documents/{document_id}/packet", "build an immutable authority revalidation packet"),
+    EndpointSpec("GET", "/api/matters/{matter_id}/authority-change-impact/packets/{build_id}", "inspect one exact authority revalidation packet"),
     EndpointSpec("POST", "/api/authority/citations/resolve", "resolve citation variants against the active authority generation"),
     EndpointSpec("POST", "/api/authority/verify-output", "verify an answer against the active immutable authority generation"),
     EndpointSpec("GET", "/api/sources", "browse admitted sources and source cards"),
@@ -276,14 +428,38 @@ class EndpointInventory:
             "endpoints": [endpoint.as_dict() for endpoint in self.endpoints],
         }
 
-    def compare_to_registered(self, registered: set[tuple[str, str]]) -> dict[str, Any]:
+    def compare_to_registered(
+        self, registered: set[tuple[str, str]], *, surface: str = "enterprise"
+    ) -> dict[str, Any]:
+        """Compare an inventory against the app that actually serves its routes.
+
+        The installed desktop dispatches a local-workbench app and an enterprise
+        app through one loopback gateway.  A local-only route must be audited
+        against that production gateway, not forced into the enterprise sub-app
+        as a duplicate alias with different request validation.
+        """
+
+        if surface not in {"enterprise", "local", "production"}:
+            raise ValueError("endpoint_inventory_surface_invalid")
+        scoped = tuple(
+            endpoint
+            for endpoint in self.endpoints
+            if surface == "production"
+            or endpoint.surface == surface
+            or endpoint.surface == "shared"
+        )
         registered_methods = {method for method, _ in registered}
-        required = {(method, path) for method, path in self.required_paths() if method in registered_methods}
+        required = {
+            (endpoint.method, endpoint.path)
+            for endpoint in scoped
+            if endpoint.method in registered_methods
+        }
         missing = sorted(required - registered)
         return {
             "status": "pass" if not missing else "fail",
             "missing": [{"method": method, "path": path} for method, path in missing],
             "extra": [],
-            "required_count": len(self.endpoints),
+            "surface": surface,
+            "required_count": len(scoped),
             "registered_count": len(registered),
         }

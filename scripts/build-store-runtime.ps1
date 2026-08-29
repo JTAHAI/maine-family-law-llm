@@ -3,6 +3,7 @@ param(
   [string]$OutputRoot = "",
   [string]$PythonExe = "",
   [switch]$SkipDependencyInstall,
+  [switch]$Offline,
   [switch]$SkipRuntimeSmoke,
   [switch]$DebugConsole,
   [ValidateSet("essential", "full")]
@@ -31,7 +32,7 @@ function Stop-StoreRuntimeProcesses([string]$RuntimeRootPath) {
   if (-not (Test-Path -LiteralPath $RuntimeRootPath)) {
     return
   }
-  $normalizedRoot = [System.IO.Path]::GetFullPath($RuntimeRootPath).TrimEnd("\")
+  $normalizedRoot = [System.IO.Path]::GetFullPath($RuntimeRootPath).TrimEnd("\") + [System.IO.Path]::DirectorySeparatorChar
   $running = Get-Process -ErrorAction SilentlyContinue | Where-Object {
     try {
       $_.Path -and ([System.IO.Path]::GetFullPath($_.Path)).StartsWith($normalizedRoot, [System.StringComparison]::OrdinalIgnoreCase)
@@ -107,6 +108,7 @@ $runtimeRoot = Join-Path $OutputRoot "runtime"
 Stop-StoreRuntimeProcesses $runtimeRoot
 
 if (-not (Test-Path -LiteralPath $venvPython)) {
+  if ($Offline) { throw "Offline build requires an existing provisioned Store build environment." }
   if ($basePython -eq "py") {
     & py -3.11 -m venv $venvRoot
   } else {
@@ -114,11 +116,20 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
   }
 }
 
-if (-not $SkipDependencyInstall) {
+if (-not $SkipDependencyInstall -and -not $Offline) {
   & $venvPython -m pip install --upgrade pip
   & $venvPython -m pip install -r $requirementsPath
   if ($FeatureTier -eq "full") {
     Ensure-SpacyModel $venvPython
+  }
+}
+
+if ($Offline) {
+  & $venvPython -B -m pip check
+  if ($LASTEXITCODE -ne 0) { throw "Offline build dependencies are inconsistent; provision them separately before building." }
+  if ($FeatureTier -eq "full") {
+    & $venvPython -B -c "import importlib.util as u, sys; sys.exit(0 if u.find_spec('en_core_web_lg') else 1)"
+    if ($LASTEXITCODE -ne 0) { throw "Offline full build requires the cached spaCy model; no download was attempted." }
   }
 }
 
@@ -137,6 +148,7 @@ foreach ($pair in $pyInstallerEnv.GetEnumerator()) {
   [System.Environment]::SetEnvironmentVariable($pair.Key, $pair.Value, "Process")
 }
 & $venvPython -B -m PyInstaller --noconfirm --clean --distpath $pyiDistRoot --workpath $pyiWorkRoot $specPath
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed; this runtime must not be packaged." }
 
 $collectedRoot = Join-Path $pyiDistRoot "MaineFamilyLawLLM"
 if (-not (Test-Path -LiteralPath $collectedRoot)) {
@@ -154,7 +166,7 @@ Copy-Item -Path (Join-Path $tesseractSourceRoot "*") -Destination $tesseractRunt
 # and copies the admitted CPU runtime/model into the frozen payload. The app
 # itself never downloads an engine or model.
 $whisperRuntimeRoot = Join-Path $runtimeRoot "store\whisper"
-& (Join-Path $PSScriptRoot "provision-whisper-engine.ps1") -Destination $whisperRuntimeRoot
+& (Join-Path $PSScriptRoot "provision-whisper-engine.ps1") -Destination $whisperRuntimeRoot -Offline:$Offline
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $whisperRuntimeRoot "whisper-cli.exe"))) {
   throw "Pinned whisper.cpp runtime provisioning failed."
 }
@@ -168,6 +180,7 @@ if ($FeatureTier -eq "full") {
   )
   $missingDoclingModels = @($requiredDoclingModels | Where-Object { -not (Test-Path -LiteralPath $_) })
   if ($missingDoclingModels.Count -gt 0) {
+    if ($Offline) { throw "Offline full build requires cached Docling models; no download was attempted." }
     New-Item -ItemType Directory -Force -Path $doclingModelsSourceRoot | Out-Null
     & $venvPython -B -c "from pathlib import Path; import sys; from docling.utils.model_downloader import download_models; download_models(output_dir=Path(sys.argv[1]), progress=False, with_layout=True, with_tableformer=True, with_code_formula=False, with_picture_classifier=False, with_rapidocr=True)" $doclingModelsSourceRoot
     if ($LASTEXITCODE -ne 0) { throw "Docling offline model download failed." }

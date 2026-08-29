@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.api.contracts import APICompletionPolicy, EndpointInventory, OpenAPICompletionAuditor
-from app.api.main import app
+from app.api.production import app
 from app.web.ui_contracts import UICompletionAuditor
 
 
@@ -23,7 +23,7 @@ def build_evidence() -> dict:
         for method in methods:
             if method in {"GET", "POST"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
-    endpoint_report = EndpointInventory().compare_to_registered(registered)
+    endpoint_report = EndpointInventory().compare_to_registered(registered, surface="production")
     openapi_report = OpenAPICompletionAuditor().audit(app.openapi()).as_dict()
     ui_report = UICompletionAuditor(ROOT / "app/web/pages").audit().as_dict()
     policy = APICompletionPolicy().evidence().as_dict()

@@ -6,6 +6,8 @@ import hmac
 import json
 import os
 import re
+import threading
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -20,6 +22,8 @@ ALLOWED_ROLES = {"attorney", "reviewer", "admin", "paralegal"}
 ADMIN_ONLY_PREFIXES = ("/api/admin",)
 _TENANT_ID_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?")
 _SESSION_PURPOSE = "security_privacy_session_capability"
+_CAPABILITY_REPLAY_LOCK = threading.RLock()
+_CONSUMED_CAPABILITIES: dict[str, float] = {}
 
 
 @dataclass(frozen=True)
@@ -49,6 +53,10 @@ class SessionCapability:
     matter_id: str
     action: str
     csrf_token: str
+    capability_id: str
+    resource_type: str
+    resource_id: str
+    single_use: bool
 
     def as_dict(self) -> dict[str, str]:
         return {
@@ -61,6 +69,10 @@ class SessionCapability:
             "matter_id": self.matter_id,
             "action": self.action,
             "csrf_token": self.csrf_token,
+            "capability_id": self.capability_id,
+            "resource_type": self.resource_type,
+            "resource_id": self.resource_id,
+            "single_use": self.single_use,
         }
 
 
@@ -100,6 +112,9 @@ def mint_session_capability(
     matter_id: str,
     action: str,
     ttl_seconds: int = 15 * 60,
+    resource_type: str = "matter",
+    resource_id: str | None = None,
+    single_use: bool = True,
 ) -> SessionCapability:
     issued = datetime.now(UTC)
     expires = issued + timedelta(seconds=max(60, ttl_seconds))
@@ -113,6 +128,10 @@ def mint_session_capability(
         "matter_id": matter_id,
         "action": action,
         "csrf_token": csrf_token,
+        "capability_id": str(uuid.uuid4()),
+        "resource_type": str(resource_type or "matter")[:80],
+        "resource_id": str(resource_id if resource_id is not None else matter_id)[:256],
+        "single_use": bool(single_use),
         "issued_at": issued.isoformat(),
         "expires_at": expires.isoformat(),
     }
@@ -128,7 +147,19 @@ def mint_session_capability(
         matter_id=matter_id,
         action=action,
         csrf_token=csrf_token,
+        capability_id=payload["capability_id"],
+        resource_type=payload["resource_type"],
+        resource_id=payload["resource_id"],
+        single_use=payload["single_use"],
     )
+
+
+def _prune_consumed_capabilities(now: float | None = None) -> None:
+    current = float(now if now is not None else time.time())
+    with _CAPABILITY_REPLAY_LOCK:
+        for capability_id, expires_at in list(_CONSUMED_CAPABILITIES.items()):
+            if expires_at <= current:
+                _CONSUMED_CAPABILITIES.pop(capability_id, None)
 
 
 def validate_session_capability(
@@ -139,6 +170,9 @@ def validate_session_capability(
     expected_matter_id: str,
     expected_action: str,
     csrf_token: str | None = None,
+    expected_resource_type: str | None = None,
+    expected_resource_id: str | None = None,
+    consume: bool = True,
 ) -> dict[str, Any]:
     if not token:
         raise HTTPException(status_code=403, detail={"error": "session_capability_required"})
@@ -161,6 +195,10 @@ def validate_session_capability(
         raise HTTPException(status_code=403, detail={"error": "session_matter_mismatch"})
     if payload.get("action") != expected_action:
         raise HTTPException(status_code=403, detail={"error": "session_action_mismatch"})
+    if expected_resource_type is not None and payload.get("resource_type") != expected_resource_type:
+        raise HTTPException(status_code=403, detail={"error": "session_resource_type_mismatch"})
+    if expected_resource_id is not None and payload.get("resource_id") != expected_resource_id:
+        raise HTTPException(status_code=403, detail={"error": "session_resource_mismatch"})
     if csrf_token is not None and payload.get("csrf_token") != csrf_token:
         raise HTTPException(status_code=403, detail={"error": "csrf_token_mismatch"})
     try:
@@ -169,6 +207,15 @@ def validate_session_capability(
         raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"}) from exc
     if expires_at <= datetime.now(UTC):
         raise HTTPException(status_code=403, detail={"error": "session_capability_expired"})
+    if bool(payload.get("single_use")) and consume:
+        capability_id = str(payload.get("capability_id") or "")
+        if not capability_id:
+            raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"})
+        _prune_consumed_capabilities()
+        with _CAPABILITY_REPLAY_LOCK:
+            if capability_id in _CONSUMED_CAPABILITIES:
+                raise HTTPException(status_code=403, detail={"error": "session_capability_replayed"})
+            _CONSUMED_CAPABILITIES[capability_id] = expires_at.timestamp()
     return payload
 
 

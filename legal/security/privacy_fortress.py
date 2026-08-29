@@ -10,7 +10,7 @@ from typing import Any
 
 from legal.data_boundaries.redaction import redact_private_identifiers
 from legal.data_boundaries.retention import retention_policy_for
-from legal.matter.matter_store import MatterStore
+from legal.matter.matter_store import MatterStore, MatterStoreError
 from legal.security.tenant_isolation import MatterAccessPolicy, MatterReference
 from legal.ops.release_pilot_hardening import MatterBackupRestoreDrill
 from legal.security.authz import RBACPolicy, UserContext
@@ -197,11 +197,285 @@ class MatterSecurityFortress:
     def _matter_exists(self, matter_id: str, tenant_id: str) -> bool:
         return self._matter_dir(matter_id, tenant_id).is_dir()
 
+    def _known_matter_tenant(self, matter_id: str) -> str | None:
+        """Resolve a direct-open matter's tenant without decrypting its contents.
+
+        A security dashboard may be initialized with ``<store>/<tenant>/<matter>``
+        as its root.  In that form, accepting a caller-supplied tenant before the
+        access decision would let an isolation check attempt decryption with the
+        wrong hierarchy.  The key-hierarchy state is intentionally non-content
+        metadata, so it is safe to use it to fail a mismatched tenant closed.
+        """
+
+        direct = self.matter_root.resolve()
+        if not ((direct / "matter.json.enc").is_file() or (direct / "matter.json").is_file()):
+            return None
+        for candidate in [direct, *direct.parents]:
+            hierarchy_root = candidate / ".mfl-key-hierarchy"
+            if not hierarchy_root.is_dir():
+                continue
+            matches = sorted(hierarchy_root.glob(f"*/{matter_id}.json"))
+            if len(matches) == 1:
+                return matches[0].parent.name
+            if len(matches) > 1:
+                # An ambiguous scope must never be guessed.
+                return None
+        return None
+
     def _load_matter(self, matter_id: str, tenant_id: str) -> dict[str, Any]:
         matter_dir = self._matter_dir(matter_id, tenant_id)
         if not matter_dir.is_dir():
             raise MatterSecurityFortressError("matter_unavailable")
-        return self.matter_store.load_matter(matter_dir)
+        return self.matter_store.load_matter(
+            matter_dir,
+            tenant_id=tenant_id,
+            matter_id=matter_id,
+        )
+
+    def matter_key_status(self, *, matter_id: str, tenant_id: str, user_role: str) -> dict[str, Any]:
+        """Inspect non-secret per-matter encryption state after tenant isolation."""
+
+        access = self.matter_access(user_role, tenant_id, matter_id, "matter:read")
+        if not access["allowed"]:
+            self.audit_log.append(
+                "matter_key_hierarchy_access_denied",
+                matter_id=matter_id,
+                tenant_id=tenant_id,
+                reason="matter_access_denied",
+            )
+            return {
+                "status": "blocked",
+                "matter_id": matter_id,
+                "tenant_id": tenant_id,
+                "blockers": ["matter_access_denied"],
+                "review_required": True,
+            }
+        known_tenant = self._known_matter_tenant(matter_id)
+        if known_tenant is not None and known_tenant != tenant_id:
+            self.audit_log.append(
+                "matter_key_hierarchy_access_denied",
+                matter_id=matter_id,
+                tenant_id=tenant_id,
+                reason="matter_tenant_mismatch",
+            )
+            return {
+                "status": "blocked",
+                "matter_id": matter_id,
+                "tenant_id": tenant_id,
+                "blockers": ["matter_tenant_mismatch"],
+                "review_required": True,
+            }
+        matter_dir = self._matter_dir(matter_id, tenant_id)
+        if not matter_dir.is_dir():
+            raise MatterSecurityFortressError("matter_unavailable")
+        try:
+            report = self.matter_store.matter_key_status(
+                path=matter_dir, tenant_id=tenant_id, matter_id=matter_id
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        report["review_required"] = True
+        report["rotation_requires_admin_session"] = True
+        report["recovery_secret_exported"] = False
+        self.audit_log.append(
+            "matter_key_hierarchy_inspected",
+            matter_id=matter_id,
+            tenant_id=tenant_id,
+            hierarchy_status=report.get("status"),
+        )
+        return report
+
+    def manage_matter_key(
+        self,
+        *,
+        matter_id: str,
+        tenant_id: str,
+        user_role: str,
+        operation: str,
+        recovery_secret: str | None = None,
+        approved: bool = False,
+        confirmation: str = "",
+    ) -> dict[str, Any]:
+        """Run a confirmed per-matter key operation without exposing secrets."""
+
+        allowed = {
+            "enroll_recovery",
+            "rotate",
+            "recover_root_wrapping",
+            "revoke",
+            "cryptographic_delete",
+        }
+        if operation not in allowed:
+            raise MatterSecurityFortressError("matter_key_operation_unavailable")
+        if user_role != "admin":
+            raise MatterSecurityFortressError("matter_key_admin_role_required")
+        status = self.matter_key_status(
+            matter_id=matter_id, tenant_id=tenant_id, user_role=user_role
+        )
+        if status.get("status") == "blocked":
+            raise MatterSecurityFortressError("matter_tenant_mismatch")
+        matter_dir = self._matter_dir(matter_id, tenant_id)
+        try:
+            report = self.matter_store.manage_matter_key(
+                path=matter_dir,
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+                operation=operation,
+                recovery_secret=recovery_secret,
+                approved=approved,
+                confirmation=confirmation,
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        self.audit_log.append(
+            "matter_key_hierarchy_operation",
+            matter_id=matter_id,
+            tenant_id=tenant_id,
+            operation=operation,
+            status=report.get("status"),
+        )
+        return {
+            **report,
+            "operation": operation,
+            "review_required": True,
+            "recovery_secret_exported": False,
+            "destruction_notice": (
+                "Cryptographic deletion destroys hierarchy wrapping material; it cannot erase "
+                "independent exports, backups, or copies outside this matter store."
+                if operation == "cryptographic_delete"
+                else None
+            ),
+        }
+
+    def matter_unlock_status(self, *, matter_id: str, tenant_id: str, user_role: str) -> dict[str, Any]:
+        """Return encrypted-policy state without reading matter content."""
+
+        user = UserContext(
+            user_id=f"{user_role}-session",
+            tenant_id=tenant_id,
+            roles=[user_role],
+            matter_ids=[matter_id],
+        )
+        reference = MatterReference(matter_id=matter_id, tenant_id=tenant_id)
+        known_tenant = self._known_matter_tenant(matter_id)
+        scope_matches = known_tenant is None or known_tenant == tenant_id
+        allowed = (
+            self._matter_exists(matter_id, tenant_id)
+            and scope_matches
+            and self.access_policy.can_access(user, reference, "matter:read")
+        )
+        if not allowed:
+            self.audit_log.append(
+                "matter_unlock_status_denied",
+                matter_id=matter_id,
+                tenant_id=tenant_id,
+                reason="matter_access_denied",
+            )
+            return {
+                "status": "blocked",
+                "matter_id": matter_id,
+                "tenant_id": tenant_id,
+                "blockers": ["matter_access_denied"],
+                "review_required": True,
+            }
+        matter_dir = self._matter_dir(matter_id, tenant_id)
+        try:
+            report = self.matter_store.matter_unlock_status(
+                path=matter_dir, tenant_id=tenant_id, matter_id=matter_id
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        self.audit_log.append(
+            "matter_unlock_status_inspected",
+            matter_id=matter_id,
+            tenant_id=tenant_id,
+            status=report.get("status"),
+        )
+        return report
+
+    def configure_matter_unlock(
+        self,
+        *,
+        matter_id: str,
+        tenant_id: str,
+        user_role: str,
+        enabled: bool,
+        fallback_policy: str,
+        approved: bool,
+    ) -> dict[str, Any]:
+        if user_role != "admin":
+            raise MatterSecurityFortressError("matter_unlock_admin_role_required")
+        status = self.matter_unlock_status(
+            matter_id=matter_id, tenant_id=tenant_id, user_role=user_role
+        )
+        if status.get("status") == "blocked":
+            raise MatterSecurityFortressError("matter_access_denied")
+        try:
+            report = self.matter_store.configure_matter_unlock(
+                path=self._matter_dir(matter_id, tenant_id),
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+                enabled=enabled,
+                fallback_policy=fallback_policy,
+                approved=approved,
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        self.audit_log.append(
+            "matter_unlock_policy_configured",
+            matter_id=matter_id,
+            tenant_id=tenant_id,
+            enabled=enabled,
+            fallback_policy=fallback_policy,
+        )
+        return report
+
+    def verify_matter_unlock(
+        self,
+        *,
+        matter_id: str,
+        tenant_id: str,
+        user_role: str,
+        approved: bool,
+    ) -> dict[str, Any]:
+        status = self.matter_unlock_status(
+            matter_id=matter_id, tenant_id=tenant_id, user_role=user_role
+        )
+        if status.get("status") == "blocked":
+            raise MatterSecurityFortressError("matter_access_denied")
+        try:
+            report = self.matter_store.verify_matter_unlock(
+                path=self._matter_dir(matter_id, tenant_id),
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+                approved=approved,
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        self.audit_log.append(
+            "matter_unlock_verification_requested",
+            matter_id=matter_id,
+            tenant_id=tenant_id,
+            status=report.get("status"),
+        )
+        return report
+
+    def lock_matter_unlock(self, *, matter_id: str, tenant_id: str, user_role: str) -> dict[str, Any]:
+        status = self.matter_unlock_status(
+            matter_id=matter_id, tenant_id=tenant_id, user_role=user_role
+        )
+        if status.get("status") == "blocked":
+            raise MatterSecurityFortressError("matter_access_denied")
+        try:
+            report = self.matter_store.lock_matter_unlock(
+                path=self._matter_dir(matter_id, tenant_id),
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+            )
+        except MatterStoreError as exc:
+            raise MatterSecurityFortressError(str(exc)) from exc
+        self.audit_log.append("matter_unlock_locked", matter_id=matter_id, tenant_id=tenant_id)
+        return report
 
     def _matter_file_summary(self, matter_dir: Path) -> dict[str, Any]:
         encrypted_files = sorted(path.name for path in matter_dir.glob("*.enc"))
@@ -224,12 +498,23 @@ class MatterSecurityFortress:
         user = UserContext(user_id=f"{user_role}-session", tenant_id=tenant_id, roles=[user_role], matter_ids=[matter_id])
         reference = MatterReference(matter_id=matter_id, tenant_id=tenant_id)
         matter_visible = self._matter_exists(matter_id, tenant_id)
-        loaded = self._load_matter(matter_id, tenant_id) if matter_visible else {}
+        known_tenant = self._known_matter_tenant(matter_id)
+        scope_matches = known_tenant is None or known_tenant == tenant_id
+        access_blocker = None
+        try:
+            loaded = self._load_matter(matter_id, tenant_id) if matter_visible and scope_matches else {}
+        except MatterStoreError as exc:
+            # A configured user-presence policy must fail closed without
+            # turning a denied access check into a decryption error or leak.
+            loaded = {}
+            access_blocker = str(exc)
         loaded_tenant = str(loaded.get("tenant_id") or tenant_id)
         loaded_matter_id = str(loaded.get("matter_id") or matter_id)
         allowed = (
             self.access_policy.can_access(user, reference, permission)
             and matter_visible
+            and scope_matches
+            and access_blocker is None
             and loaded_tenant == tenant_id
             and loaded_matter_id == matter_id
         )
@@ -240,7 +525,8 @@ class MatterSecurityFortress:
             "tenant_id": tenant_id,
             "matter_id": matter_id,
             "matter_visible": matter_visible,
-            "tenant_isolation": loaded_tenant == tenant_id,
+            "tenant_isolation": scope_matches and loaded_tenant == tenant_id,
+            "access_blocker": access_blocker,
         }
 
     def lock_matter(
@@ -551,9 +837,21 @@ class MatterSecurityFortress:
         user_role: str,
         diagnostics_payload: Any | None = None,
     ) -> dict[str, Any]:
-        matter_dir = self._matter_dir(matter_id, tenant_id)
-        matter_metadata = self._load_matter(matter_id, tenant_id) if matter_dir.is_dir() else {}
         access = self.matter_access(user_role, tenant_id, matter_id, "matter:read")
+        matter_dir = self._matter_dir(matter_id, tenant_id)
+        # Never decrypt metadata, acquire a lock, or render a file inventory
+        # before this tenant-and-role check.  A denied direct-open matter must
+        # be indistinguishable from an inaccessible one.
+        if not access["allowed"]:
+            return {
+                "status": "blocked",
+                "review_required": True,
+                "blockers": ["matter_access_denied"],
+                "matter": {"matter_id": matter_id, "tenant_id": tenant_id},
+                "access": access,
+                "audit_integrity": self.audit_status(),
+            }
+        matter_metadata = self._load_matter(matter_id, tenant_id) if matter_dir.is_dir() else {}
         file_summary = self._matter_file_summary(matter_dir) if matter_dir.is_dir() else {
             "encrypted_file_count": 0,
             "encrypted_files": [],

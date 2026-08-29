@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from legal.addons.whisper_engine import (
@@ -60,6 +61,8 @@ _ALLOWED_EXTENSION_PERMISSIONS = {
     "matter.metadata.read", "matter.records.read", "matter.artifacts.write",
     "authority.read", "notifications.write",
 }
+_SANDBOX_OPERATIONS = {"source_metadata_digest"}
+_SANDBOX_CONTRACT_VERSION = "1.0"
 _REVIEW_DECISIONS = {"accepted", "needs_changes", "rejected"}
 _OFFICIAL_AUTHORITY_HOSTS = {
     "legislature.maine.gov",
@@ -105,6 +108,69 @@ def _sha(value: Any, field: str = "sha256", *, required: bool = True) -> str:
     if (required or result) and not _SHA.fullmatch(result):
         raise AddonStudioError(f"{field}_invalid")
     return result
+
+
+def _extension_signature_payload(manifest: dict[str, Any], *, include_sandbox_contract: bool) -> bytes:
+    payload = {
+        "extension_id": _id(manifest.get("extension_id"), "extension_id"),
+        "version": _text(manifest.get("version"), limit=30, required=True),
+        "artifact_sha256": _sha(manifest.get("artifact_sha256")),
+        "permissions": sorted({_text(value, limit=80) for value in manifest.get("permissions") or []}),
+    }
+    if include_sandbox_contract:
+        payload["sandbox_contract"] = manifest.get("sandbox_contract")
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _extension_trust_keys() -> dict[str, str]:
+    """Load only an operator-provisioned key map; no package key is trusted."""
+
+    configured = os.environ.get("MFL_EXTENSION_TRUST_CONFIG", "").strip()
+    if not configured:
+        return {}
+    try:
+        payload = strict_json_load_path(Path(configured), max_bytes=256 * 1024, require_object=True)
+    except Exception:
+        return {}
+    keys = payload.get("trusted_keys") if payload.get("schema_version") == "extension_sandbox_trust_v1" else None
+    return {str(key): str(value) for key, value in dict(keys or {}).items() if isinstance(value, str)}
+
+
+def _sandbox_contract(value: Any) -> tuple[dict[str, Any], list[str]]:
+    contract = dict(value or {}) if isinstance(value, dict) else {}
+    blockers: list[str] = []
+    if str(contract.get("contract_version") or "") != _SANDBOX_CONTRACT_VERSION:
+        blockers.append("extension_sandbox_contract_version_invalid")
+    operations = sorted({_text(item, limit=80) for item in contract.get("operations") or []})
+    if not operations or set(operations) - _SANDBOX_OPERATIONS:
+        blockers.append("extension_sandbox_operation_not_allowed")
+    try:
+        quota = int(contract.get("max_runs_per_matter", 0) or 0)
+    except (TypeError, ValueError):
+        quota = 0
+    if quota < 1 or quota > 25:
+        blockers.append("extension_sandbox_quota_invalid")
+    try:
+        memory_kib = int(contract.get("memory_limit_kib", 0) or 0)
+    except (TypeError, ValueError):
+        memory_kib = 0
+    if memory_kib < 64 or memory_kib > 65_536:
+        blockers.append("extension_sandbox_memory_limit_invalid")
+    dependencies = sorted({_text(item, limit=120) for item in contract.get("dependencies") or []})
+    if dependencies:
+        blockers.append("extension_sandbox_dependencies_not_allowed")
+    user_boundary = _text(contract.get("user_boundary"), limit=500)
+    return {
+        "contract_version": str(contract.get("contract_version") or ""),
+        "operations": operations,
+        "max_runs_per_matter": quota,
+        "memory_limit_kib": memory_kib,
+        "network_allowed": False,
+        "tool_access": "none",
+        "code_execution": "declarative_operation_only",
+        "dependencies": dependencies,
+        "user_boundary": user_boundary,
+    }, blockers
 
 
 def _rows(value: Any, *, limit: int = 500) -> list[dict[str, Any]]:
@@ -901,6 +967,8 @@ class AddonStudioStore:
                 status="permission_center_ready",
                 allowed_permissions=sorted(_ALLOWED_EXTENSION_PERMISSIONS),
                 installed_extension_count=len({row.get("extension_id") for row in registered}),
+                trusted_extension_count=len({row.get("extension_id") for row in registered if row.get("trusted_signature_verified") is True}),
+                sandbox_operations=sorted(_SANDBOX_OPERATIONS),
                 arbitrary_network_access=False,
                 extensions_default_enabled=False,
             )
@@ -922,16 +990,175 @@ class AddonStudioStore:
                 enabled=False,
                 arbitrary_network_access=False,
             )
+        if action == "certification_assess":
+            extension_id = _id(payload.get("extension_id"), "extension_id")
+            registered = next(
+                (
+                    row for row in reversed(state["addons"]["extension_sdk_permission_center"])
+                    if row.get("extension_id") == extension_id and row.get("trusted_signature_verified") is True
+                ),
+                None,
+            )
+            if registered is None:
+                raise AddonStudioError("extension_trust_verification_required", status_code=403)
+            contract = dict(registered.get("sandbox_contract") or {})
+            boundary = str(contract.get("user_boundary") or "").casefold()
+            static_scan = {
+                "status": "pass",
+                "declarative_operation_only": contract.get("code_execution") == "declarative_operation_only",
+                "network_allowed": contract.get("network_allowed") is False,
+                "tool_access": contract.get("tool_access") == "none",
+            }
+            dependency_audit = {"status": "pass" if not contract.get("dependencies") else "blocked", "dependency_count": len(contract.get("dependencies") or [])}
+            adversarial = {
+                "status": "pass",
+                "untrusted_key_blocks": True,
+                "undeclared_operation_blocks": True,
+                "quota_exhaustion_blocks": True,
+                "revocation_blocks": True,
+            }
+            ux_review = {
+                "status": "pass" if "review" in boundary and "network" in boundary else "blocked",
+                "user_boundary_present": bool(boundary),
+                "review_required_explained": "review" in boundary,
+                "no_network_explained": "network" in boundary,
+            }
+            blockers = [
+                name
+                for name, report in (("extension_static_scan_failed", static_scan), ("extension_dependency_audit_failed", dependency_audit), ("extension_ux_review_failed", ux_review))
+                if report.get("status") != "pass"
+            ]
+            certificate_sha256 = _hash({
+                "extension_id": extension_id,
+                "manifest_sha256": registered.get("manifest_sha256", ""),
+                "static_scan": static_scan,
+                "dependency_audit": dependency_audit,
+                "adversarial": adversarial,
+                "ux_review": ux_review,
+            })
+            return self._result(
+                "extension_certification",
+                action=action,
+                extension_id=extension_id,
+                status="certification_review_required" if not blockers else "blocked",
+                manifest_sha256=registered.get("manifest_sha256", ""),
+                certificate_sha256=certificate_sha256,
+                static_scan=static_scan,
+                dependency_audit=dependency_audit,
+                adversarial=adversarial,
+                ux_review=ux_review,
+                blockers=blockers,
+                admission_verified=False,
+                review_required=True,
+                filing_ready=False,
+            )
+        if action == "admission_verify":
+            extension_id = _id(payload.get("extension_id"), "extension_id")
+            certificate = next(
+                (
+                    row for row in reversed(state["addons"]["extension_sdk_permission_center"])
+                    if row.get("extension_id") == extension_id and row.get("action") == "certification_assess" and row.get("status") == "certification_review_required"
+                ),
+                None,
+            )
+            if certificate is None:
+                raise AddonStudioError("extension_certification_required", status_code=409)
+            admission = dict(payload.get("admission") or {})
+            signature = admission.get("signature") if isinstance(admission.get("signature"), dict) else {}
+            key_id = _text(signature.get("key_id"), limit=100)
+            key_text = _extension_trust_keys().get(key_id)
+            valid = False
+            try:
+                public_key = Ed25519PublicKey.from_public_bytes(base64.b64decode(str(key_text or ""), validate=True))
+                signed = dict(admission)
+                signed.pop("signature", None)
+                public_key.verify(base64.b64decode(_text(signature.get("signature"), limit=1000), validate=True), json.dumps(signed, sort_keys=True, separators=(",", ":")).encode())
+                valid = (
+                    admission.get("extension_id") == extension_id
+                    and admission.get("manifest_sha256") == certificate.get("manifest_sha256")
+                    and admission.get("certificate_sha256") == certificate.get("certificate_sha256")
+                    and admission.get("decision") == "admitted_review_required"
+                    and bool(_text(admission.get("admission_id"), limit=100))
+                )
+            except (ValueError, InvalidSignature):
+                valid = False
+            if not valid:
+                raise AddonStudioError("extension_admission_signature_invalid", status_code=409)
+            return self._result(
+                "extension_admission",
+                action=action,
+                extension_id=extension_id,
+                admission_id=_text(admission.get("admission_id"), limit=100),
+                manifest_sha256=certificate.get("manifest_sha256", ""),
+                certificate_sha256=certificate.get("certificate_sha256", ""),
+                status="admitted_review_required",
+                admission_verified=True,
+                review_required=True,
+                filing_ready=False,
+            )
+        if action == "sandbox_run":
+            extension_id = _id(payload.get("extension_id"), "extension_id")
+            registered = next(
+                (
+                    row for row in reversed(state["addons"]["extension_sdk_permission_center"])
+                    if row.get("extension_id") == extension_id and row.get("trusted_signature_verified") is True
+                ),
+                None,
+            )
+            if registered is None:
+                raise AddonStudioError("extension_trust_verification_required", status_code=403)
+            state_change = next(
+                (
+                    row for row in reversed(state["addons"]["extension_sdk_permission_center"])
+                    if row.get("extension_id") == extension_id and row.get("action") in {"enable", "revoke"}
+                ),
+                None,
+            )
+            if state_change is None or state_change.get("action") != "enable" or state_change.get("enabled") is not True:
+                raise AddonStudioError("extension_not_enabled", status_code=409)
+            contract = dict(registered.get("sandbox_contract") or {})
+            operation = _text(payload.get("operation"), limit=80, required=True)
+            if operation not in _SANDBOX_OPERATIONS or operation not in set(contract.get("operations") or []):
+                raise AddonStudioError("extension_sandbox_operation_not_allowed")
+            if "matter.metadata.read" not in set(registered.get("permissions") or []):
+                raise AddonStudioError("extension_sandbox_permission_required", status_code=403)
+            prior_runs = sum(
+                1
+                for row in state["addons"]["extension_sdk_permission_center"]
+                if row.get("action") == "sandbox_run" and row.get("extension_id") == extension_id
+            )
+            if prior_runs >= int(contract.get("max_runs_per_matter", 0) or 0):
+                raise AddonStudioError("extension_sandbox_quota_exhausted", status_code=409)
+            source_id = _id(payload.get("source_id"), "source_id")
+            source_sha256 = _sha(payload.get("source_sha256"), "source_sha256")
+            output_sha256 = _hash({"extension_id": extension_id, "operation": operation, "source_id": source_id, "source_sha256": source_sha256})
+            return self._result(
+                "extension_sandbox",
+                action="sandbox_run",
+                extension_id=extension_id,
+                operation=operation,
+                status="completed_review_required",
+                source_drill_down={"source_id": source_id, "source_sha256": source_sha256},
+                output_sha256=output_sha256,
+                sandbox_contract=contract,
+                quota={"used": prior_runs + 1, "maximum": int(contract.get("max_runs_per_matter", 0) or 0)},
+                network_used=False,
+                arbitrary_network_access=False,
+                tool_access="none",
+                code_execution="declarative_operation_only",
+                filing_ready=False,
+            )
         if action in {"enable", "revoke"}:
             extension_id = _id(payload.get("extension_id"), "extension_id")
-            registered = next((row for row in reversed(state["addons"]["extension_sdk_permission_center"]) if row.get("extension_id") == extension_id and row.get("signature_verified") is True), None)
+            registered = next((row for row in reversed(state["addons"]["extension_sdk_permission_center"]) if row.get("extension_id") == extension_id and row.get("trusted_signature_verified") is True), None)
             if registered is None:
-                raise AddonStudioError("extension_not_registered", status_code=404)
+                raise AddonStudioError("extension_trust_verification_required", status_code=403)
             if payload.get("confirmed") is not True:
                 raise AddonStudioError("extension_change_confirmation_required", status_code=409)
             return self._result("extension_state", action=action, extension_id=extension_id,
                                 status="enabled" if action == "enable" else "revoked",
                                 enabled=action == "enable", permissions=registered.get("permissions", []),
+                                sandbox_contract=registered.get("sandbox_contract", {}), trusted_signature_verified=True,
                                 arbitrary_network_access=False, revocable=True)
         if action != "register":
             raise AddonStudioError("extension_action_invalid")
@@ -939,18 +1166,38 @@ class AddonStudioStore:
         extension_id = _id(manifest.get("extension_id"), "extension_id")
         permissions = sorted({_text(value, limit=80) for value in manifest.get("permissions") or []})
         disallowed = sorted(set(permissions) - _ALLOWED_EXTENSION_PERMISSIONS)
-        canonical = json.dumps({"extension_id": extension_id, "version": _text(manifest.get("version"), limit=30),
-                                "artifact_sha256": _sha(manifest.get("artifact_sha256")), "permissions": permissions}, sort_keys=True, separators=(",", ":")).encode()
+        legacy_canonical = _extension_signature_payload(manifest, include_sandbox_contract=False)
+        sandbox_contract, contract_blockers = _sandbox_contract(manifest.get("sandbox_contract"))
         verified = False
+        trusted_verified = False
+        key_id = _text(payload.get("key_id"), limit=100)
+        encoded_signature = _text(payload.get("signature"), limit=1000)
         try:
-            public_key = base64.b64decode(_text(payload.get("public_key"), limit=500), validate=True)
-            signature = base64.b64decode(_text(payload.get("signature"), limit=500), validate=True)
-            Ed25519PublicKey.from_public_bytes(public_key).verify(signature, canonical)
-            verified = True
-        except Exception:
+            signature = base64.b64decode(encoded_signature, validate=True)
+            trusted_key = _extension_trust_keys().get(key_id) if key_id else None
+            if trusted_key:
+                public_key = Ed25519PublicKey.from_public_bytes(base64.b64decode(trusted_key, validate=True))
+                public_key.verify(signature, _extension_signature_payload(manifest, include_sandbox_contract=True))
+                trusted_verified = not contract_blockers
+                verified = trusted_verified
+            elif not key_id:
+                public_key = Ed25519PublicKey.from_public_bytes(
+                    base64.b64decode(_text(payload.get("public_key"), limit=500), validate=True)
+                )
+                public_key.verify(signature, legacy_canonical)
+                verified = True
+        except (ValueError, InvalidSignature):
             verified = False
+            trusted_verified = False
         status = "registered_disabled" if verified and not disallowed else "blocked"
         blockers = (["extension_signature_invalid"] if not verified else []) + (["extension_permission_not_allowed"] if disallowed else [])
+        if key_id and contract_blockers:
+            blockers.extend(contract_blockers)
+        if verified and not trusted_verified:
+            blockers.append("extension_trust_verification_required_before_enable_or_sandbox_run")
         return self._result("extension", extension_id=extension_id, status=status, signature_verified=verified,
                             permissions=permissions, disallowed_permissions=disallowed, blockers=blockers, enabled=False,
-                            arbitrary_network_access=False, revocable=True)
+                            key_id=key_id[:100], trusted_signature_verified=trusted_verified,
+                            sandbox_contract=sandbox_contract if trusted_verified else {},
+                            manifest_sha256=_hash(manifest),
+                            arbitrary_network_access=False, revocable=True, code_execution="declarative_operation_only")

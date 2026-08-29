@@ -99,6 +99,7 @@ class CalendarReviewStore:
                 "scope": self.scope,
                 "events": [],
                 "rules": [],
+                "calculations": [],
                 "history": [],
                 "revision": 0,
             }
@@ -110,6 +111,11 @@ class CalendarReviewStore:
             raise IntakeWorkbenchError("calendar_store_unavailable", 409) from exc
         if value.get("schema") != self.schema or value.get("scope") != self.scope:
             raise IntakeWorkbenchError("cross_matter_access_denied", 404)
+        value.setdefault("events", [])
+        value.setdefault("rules", [])
+        value.setdefault("calculations", [])
+        value.setdefault("history", [])
+        value.setdefault("revision", 0)
         return value
 
     def _save(self, value: dict[str, Any]) -> None:
@@ -139,7 +145,7 @@ class CalendarReviewStore:
             return result
 
     def public(self, value: dict[str, Any]) -> dict[str, Any]:
-        return {key: value[key] for key in ("schema", "events", "rules", "history", "revision")} | {
+        return {key: value[key] for key in ("schema", "events", "rules", "calculations", "history", "revision")} | {
             "status": "review_required",
             "review_required": True,
             "local_only": True,
@@ -275,6 +281,55 @@ class CalendarReviewStore:
         receipt["hash"] = _hash(receipt)
         return receipt
 
+    def calculate_dependency(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Record a new candidate without erasing the prior trigger calculation."""
+        if payload.get("user_confirmed") is not True:
+            raise IntakeWorkbenchError("deadline_dependency_confirmation_required", 409)
+        dependency_id = _id(payload.get("dependency_id"), "dependency_id")
+        receipt = self.calculate(payload)
+        trigger_ref = dict(next(
+            (row.get("source_ref") or {} for row in self._load()["events"] if row.get("event_id") == receipt["trigger_event"]),
+            {},
+        ))
+        trigger_hash = str(trigger_ref.get("source_hash") or "").casefold()
+        if not re.fullmatch(r"[a-f0-9]{64}", trigger_hash):
+            raise IntakeWorkbenchError("deadline_dependency_trigger_hash_required", 409)
+
+        def callback(value):
+            prior_rows = [row for row in value["calculations"] if row.get("dependency_id") == dependency_id and row.get("active")]
+            prior = prior_rows[-1] if prior_rows else None
+            if prior and str(prior.get("trigger_event") or "") == receipt["trigger_event"] and str(prior.get("trigger_source_hash") or "") == trigger_hash:
+                raise IntakeWorkbenchError("deadline_dependency_trigger_unchanged", 409)
+            candidate_id = f"deadline_{uuid.uuid4().hex}"
+            row = {
+                **receipt,
+                "candidate_id": candidate_id,
+                "dependency_id": dependency_id,
+                "trigger_source_hash": trigger_hash,
+                "source_rule_hash": _hash(next((rule for rule in value["rules"] if rule.get("rule_id") == receipt["rule_id"]), {})),
+                "supersedes_candidate_id": str(prior.get("candidate_id") or "") if prior else "",
+                "active": True,
+                "created_at": _now(),
+                "review_required": True,
+                "filing_ready": False,
+            }
+            if prior:
+                prior["active"] = False
+                prior["superseded_at"] = _now()
+                prior["superseded_by_candidate_id"] = candidate_id
+            value["calculations"].append(row)
+            return row
+
+        result = self._mutate("deadline_dependency_recalculated", [dependency_id, receipt["rule_id"], receipt["trigger_event"]], callback)
+        return {**result, "status": "review_required", "notice": "A changed trigger created a new review-required candidate. Prior calculations remain preserved and are not silently replaced."}
+
+    def dependency(self, dependency_id: str) -> dict[str, Any]:
+        needle = _id(dependency_id, "dependency_id")
+        rows = [dict(row) for row in self._load()["calculations"] if row.get("dependency_id") == needle]
+        if not rows:
+            raise IntakeWorkbenchError("deadline_dependency_not_found", 404)
+        return {"dependency_id": needle, "calculations": rows, "active_candidate": next((row for row in reversed(rows) if row.get("active")), None), "review_required": True, "filing_ready": False, "local_only": True}
+
     def receipt(self) -> dict[str, Any]:
         value = self._load()
         result = {
@@ -287,3 +342,62 @@ class CalendarReviewStore:
         }
         result["receipt_hash"] = _hash(result)
         return result
+
+    def ics_export(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Build an explicit, review-required RFC5545-style local export preview.
+
+        The returned text is never written to a calendar account or downloaded
+        automatically. UID, sequence, cancellation, recurrence, alarm, and
+        timezone fields are preserved in an encrypted export receipt.
+        """
+        export_id = _id(payload.get("export_id"), "calendar_export_id")
+        timezone = _text(payload.get("time_zone") or "America/New_York", 80)
+        if not re.fullmatch(r"[A-Za-z_]+/[A-Za-z_]+", timezone):
+            raise IntakeWorkbenchError("calendar_export_timezone_invalid")
+        sequence = payload.get("sequence", 0)
+        if type(sequence) is not int or sequence < 0 or sequence > 9999:
+            raise IntakeWorkbenchError("calendar_export_sequence_invalid")
+        alarm_minutes = payload.get("alarm_minutes", 0)
+        if type(alarm_minutes) is not int or alarm_minutes < 0 or alarm_minutes > 10080:
+            raise IntakeWorkbenchError("calendar_export_alarm_invalid")
+        recurrence = _text(payload.get("recurrence_rule"), 400)
+        if recurrence and not re.fullmatch(r"(?:FREQ=(?:DAILY|WEEKLY|MONTHLY|YEARLY)(?:;[A-Z]+=[A-Z0-9,+-]+)*)", recurrence):
+            raise IntakeWorkbenchError("calendar_export_recurrence_invalid")
+        status = str(payload.get("status") or "CONFIRMED").strip().upper()
+        if status not in {"CONFIRMED", "CANCELLED"}:
+            raise IntakeWorkbenchError("calendar_export_status_invalid")
+        requested_ids = payload.get("event_ids")
+        if not isinstance(requested_ids, list) or not requested_ids:
+            raise IntakeWorkbenchError("calendar_export_event_ids_invalid")
+        event_ids = [_id(item, "calendar_export_event_id") for item in requested_ids]
+        if len(set(event_ids)) != len(event_ids):
+            raise IntakeWorkbenchError("calendar_export_event_ids_duplicate")
+
+        def escape(value: Any) -> str:
+            return str(value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r", "").replace("\n", "\\n")
+
+        def callback(value):
+            rows = {row["event_id"]: row for row in value["events"]}
+            if any(item not in rows for item in event_ids):
+                raise IntakeWorkbenchError("calendar_export_event_not_found", 404)
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+            lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Maine Family Law LLM//Local Review//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", f"X-WR-TIMEZONE:{timezone}"]
+            manifest_events = []
+            for event_id in event_ids:
+                event = rows[event_id]; raw = str(event.get("date_time") or "")
+                try: dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                except ValueError: raise IntakeWorkbenchError("calendar_export_event_datetime_invalid") from None
+                uid = f"{event_id}@maine-family-law-llm.local"
+                local = dt.strftime("%Y%m%dT%H%M%S")
+                lines += ["BEGIN:VEVENT", f"UID:{uid}", f"SEQUENCE:{sequence}", f"DTSTAMP:{stamp}", f"DTSTART;TZID={timezone}:{local}", f"SUMMARY:{escape(event.get('document_or_notice') or event_id)}", f"DESCRIPTION:{escape('Review required. Source record: ' + str((event.get('source_ref') or {}).get('record_id') or 'unknown'))}", f"STATUS:{status}"]
+                if recurrence: lines.append(f"RRULE:{recurrence}")
+                if alarm_minutes and status != "CANCELLED": lines += ["BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Review-required local calendar reminder", f"TRIGGER:-PT{alarm_minutes}M", "END:VALARM"]
+                lines.append("END:VEVENT")
+                manifest_events.append({"event_id": event_id, "uid": uid, "source_hash": str((event.get("source_ref") or {}).get("source_hash") or ""), "review_required": True})
+            lines.append("END:VCALENDAR")
+            content = "\r\n".join(lines) + "\r\n"
+            receipt = {"export_id": export_id, "content_hash": hashlib.sha256(content.encode()).hexdigest(), "event_ids": event_ids, "events": manifest_events, "time_zone": timezone, "sequence": sequence, "status": status, "recurrence_rule": recurrence, "alarm_minutes": alarm_minutes, "created_at": _now(), "review_required": True, "calendar_account_write": False, "automatic_download": False}
+            receipt["receipt_hash"] = _hash(receipt)
+            value.setdefault("exports", []).append(receipt)
+            return {"content": content, "receipt": receipt, "status": "review_required", "local_only": True, "calendar_account_write": False, "automatic_download": False}
+        return self._mutate("calendar_ics_v2_export_created", [export_id, *event_ids], callback)

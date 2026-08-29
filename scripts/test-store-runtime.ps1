@@ -22,10 +22,7 @@ if (-not $EvidenceRoot) {
 
 $runtimeExe = Join-Path $RuntimeRoot "MaineFamilyLawLLM.exe"
 if (-not (Test-Path -LiteralPath $runtimeExe)) {
-  & (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot
-}
-if (-not (Test-Path -LiteralPath $runtimeExe)) {
-  throw "Store runtime executable missing at $runtimeExe"
+  throw "Store runtime executable missing at $runtimeExe. Build explicitly; qualification never downloads or rebuilds a missing candidate."
 }
 if ($SmokeTimeoutMs -lt 120000) {
   $SmokeTimeoutMs = 120000
@@ -39,11 +36,21 @@ $smokeArguments = @(
     $smokeJson
 )
 
-$smokeProcess = Start-Process `
-    -FilePath $runtimeExe `
-    -ArgumentList $smokeArguments `
-    -WindowStyle Hidden `
-    -PassThru
+# Never attach qualification to the user's real Store profile or API state.
+# Only this newly created child receives the fictional QA profile.
+$qaLocalAppData = Join-Path ([System.IO.Path]::GetTempPath()) ("mfl-frozen-smoke-" + [Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $qaLocalAppData | Out-Null
+$priorLocalAppData = $env:LOCALAPPDATA
+try {
+  $env:LOCALAPPDATA = $qaLocalAppData
+  $smokeProcess = Start-Process `
+      -FilePath $runtimeExe `
+      -ArgumentList $smokeArguments `
+      -WindowStyle Hidden `
+      -PassThru
+} finally {
+  $env:LOCALAPPDATA = $priorLocalAppData
+}
 
 if (-not $smokeProcess.WaitForExit($SmokeTimeoutMs)) {
     Stop-Process `
@@ -68,6 +75,9 @@ $answerGrounded = $payload.answer_grounded -and $payload.answer_failure_class -e
 $answerFailedClosed = (-not $payload.answer_grounded) -and $payload.answer_failure_class -eq "official_authority_product_unavailable"
 if ($payload.launch_result -ne "pass" -or -not $payload.api_health_result -or -not $payload.fictional_sample_workflow_result -or (-not $answerGrounded -and -not $answerFailedClosed)) {
   throw "Store runtime smoke test did not produce a passing payload."
+}
+if ($payload.bundled_ocr_available -ne $true) {
+  throw "Store runtime cannot resolve its bundled OCR engine. Do not package this runtime."
 }
 
 # v3.1.2 release blocker: verify every FOCAF inventory row resolves to actual

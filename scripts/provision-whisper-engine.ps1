@@ -19,7 +19,20 @@ $expanded = Join-Path $cacheRoot "bin"
 
 function Assert-Hash([string]$Path, [string]$Expected, [string]$Label) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "$Label is missing: $Path" }
-  $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  # Get-FileHash is unavailable in a few minimal Windows PowerShell hosts.
+  # Use the BCL directly so the pinned-engine admission check works in the
+  # same non-interactive host used by the packaging pipeline.
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $actual = ([System.BitConverter]::ToString($sha.ComputeHash($stream))).Replace("-", "").ToLowerInvariant()
+    } finally {
+      $sha.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
+  }
   if ($actual -ne $Expected) { throw "$Label SHA-256 mismatch: $actual" }
 }
 

@@ -1,0 +1,5 @@
+{
+  "schema_version": "enterprise_configuration_export_trust_v1",
+  "trusted_keys": {},
+  "notes": "An approved enterprise public key may be provisioned outside the source repository. Private keys, user data, credentials, and signed deployment manifests are never committed here."
+}

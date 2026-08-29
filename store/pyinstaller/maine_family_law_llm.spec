@@ -84,6 +84,11 @@ datas = [
 ]
 datas += collect_source_package_files(ROOT / "configs", destination="configs")
 datas += collect_flat_files(ROOT / "docs", destination="docs", names=STORE_DOCS)
+datas += collect_flat_files(ROOT / "licenses", destination="licenses", names=(
+    "A-market-ecm-lawyer-plugin-MIT.md", "Google-knowledge-catalog-Apache-2.0.md",
+    "Paparusi-legal-ai-agent-MIT.md", "pablospe-docx-editor-MIT.md", "whisper.cpp-MIT.md",
+    "NotoSans-OFL-1.1.md", "OCRmyPDF-sRGB-Zlib.md",
+))
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm", destination="src/maine_family_law_llm")
 # Keep the legal runtime tree available as source so PyInstaller's frozen app
 # can import the same modules the desktop runtime imports at startup.
@@ -92,16 +97,38 @@ datas += collect_source_package_files(ROOT / "legal", destination="src/legal")
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm" / "ui", destination="maine_family_law_llm/ui")
 if FULL_DOCUMENT_INTELLIGENCE:
     datas += collect_installed_package_files("en_core_web_lg", destination="en_core_web_lg")
+    # PEFT and Accelerate are lazily imported by the optional FAST INTERCHANGE
+    # worker.  Hidden imports alone place pure modules in PyInstaller's PYZ
+    # archive, but the worker also uses package-resource discovery at runtime.
+    # Copy the importable package trees as data so an admitted external LoRA
+    # release can run with no installer or network lookup.  This intentionally
+    # excludes all legal weights, adapters, registries, and credentials.
+    for package_name in ("peft", "accelerate", "safetensors"):
+        datas += collect_installed_package_files(package_name, destination=package_name)
     datas += copy_metadata("en-core-web-lg")
-    for package_name in ("presidio_analyzer", "tldextract", "docling", "docling_core", "docling_ibm_models", "rapidocr", "docling_parse"):
+    # OCRmyPDF loads fallback fonts and its ICC profile as package resources.
+    # Module/metadata collection alone omits them and breaks searchable PDFs.
+    for package_name in ("presidio_analyzer", "tldextract", "docling", "docling_core", "docling_ibm_models", "rapidocr", "docling_parse", "ocrmypdf"):
         datas += collect_data_files(package_name)
-for package_name in ("fastapi", "uvicorn", "httpx", "pypdf", "pypdfium2", "cryptography"):
+# ``docx`` is the import package; the installed distribution whose metadata
+# must accompany the frozen runtime is named ``python-docx``.
+for package_name in ("fastapi", "uvicorn", "httpx", "python-multipart", "pypdf", "pypdfium2", "cryptography", "python-docx", "docx-editor"):
     datas += copy_metadata(package_name)
 if FULL_DOCUMENT_INTELLIGENCE:
     for package_name in ("docling", "docling-slim", "docling-core", "docling-ibm-models", "docling-parse", "rapidocr", "presidio-analyzer", "tldextract", "ocrmypdf", "spacy", "sqlite-vec", "qdrant-client", "pikepdf", "fpdf2", "uharfbuzz"):
         datas += copy_metadata(package_name)
+    # FAST INTERCHANGE is an optional, external-artifact lane.  Its full-tier
+    # worker must be able to load an independently admitted LoRA adapter with
+    # no installer/download at run time.  These packages contain runtime code
+    # only; legal weights, adapters, registries, and secrets remain external.
+    for package_name in ("peft", "accelerate", "safetensors"):
+        datas += copy_metadata(package_name)
 
-hiddenimports = ["sqlite3", "_sqlite3", "mailbox"]
+# python-multipart is discovered by FastAPI at route-registration time rather
+# than through a conventional top-level application import. Include both
+# modules explicitly so frozen record-upload routes start without attempting an
+# installer or failing at first API launch.
+hiddenimports = ["sqlite3", "_sqlite3", "mailbox", "multipart", "multipart.multipart"]
 hiddenimports += [
     "legal.security.privacy_fortress",
     "legal.ops.release_pilot_hardening",
@@ -113,11 +140,18 @@ hiddenimports += [
 ]
 if FULL_DOCUMENT_INTELLIGENCE:
     hiddenimports.append("en_core_web_lg")
-for package_name in ("app", "legal", "maine_family_law_llm", "fastapi", "starlette", "uvicorn", "httpx", "pydantic", "pypdfium2", "cryptography"):
+# The canonical ``src/maine_family_law_llm`` tree is deliberately bundled as
+# source data above. The repository-root package is only a runtime shim that
+# points at that tree; asking PyInstaller to collect submodules from the shim
+# produces false missing-hidden-import errors and contributes no frozen code.
+# Keep dynamic source modules as shipped runtime assets and let normal imports
+# resolve them through the shim's explicit ``__path__`` at runtime.
+for package_name in ("app", "legal", "fastapi", "starlette", "uvicorn", "httpx", "pydantic", "pypdfium2", "cryptography", "docx", "docx_editor"):
     hiddenimports += collect_runtime_submodules(package_name)
 if FULL_DOCUMENT_INTELLIGENCE:
-    for package_name in ("docling", "docling_ibm_models", "rapidocr", "presidio_analyzer", "ocrmypdf", "spacy", "sqlite_vec", "qdrant_client"):
+    for package_name in ("docling", "docling_ibm_models", "rapidocr", "presidio_analyzer", "ocrmypdf", "spacy", "sqlite_vec", "qdrant_client", "peft", "accelerate", "safetensors"):
         hiddenimports += collect_runtime_submodules(package_name)
+hiddenimports = sorted(set(hiddenimports))
 
 excluded_packages = ["pytest", "tests", "tkinter.test", "unittest.test"]
 if not FULL_DOCUMENT_INTELLIGENCE:

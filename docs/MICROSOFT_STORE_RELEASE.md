@@ -37,3 +37,12 @@ For a real Store submission, provide:
 - four-part package version
 
 Use `store/msix/identity.example.json` as the template for the reserved store identity in this repository. If you are preparing a different store account, copy it to `store/msix/identity.local.json` and keep that file untracked.
+
+## Signed update metadata
+
+`scripts/verify-store-update-metadata.py` verifies a release-ceremony-signed,
+hash-bound metadata document against one exact MSIX and its frozen release
+scope. It does not download, install, configure, or publish an update. Windows
+and Partner Center remain the delivery authorities. Production public keys are
+added to the trusted-key configuration only during the release ceremony;
+private keys and update credentials must remain outside the repository.

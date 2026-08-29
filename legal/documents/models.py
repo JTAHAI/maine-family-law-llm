@@ -130,6 +130,8 @@ class CourtRule(CanonicalDocument):
     rule_set: str | None = None
     rule_number: str | None = None
     subdivision: str | None = None
+    effective_date: str | None = None
+    amendment_history: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

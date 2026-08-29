@@ -831,7 +831,13 @@ def save_imported_source(
         return {"source_sha256": actual_hash, "extension": safe_suffix, "size_bytes": len(data), "original_preserved": True}
 
 
-def export_text_artifact(case_root: Path, document_id: str, *, format_name: str = "txt") -> Path:
+def export_text_artifact(
+    case_root: Path,
+    document_id: str,
+    *,
+    format_name: str = "txt",
+    provenance_footer: str = "",
+) -> Path:
     with _LOCK:
         paths = workspace_paths(case_root)
         document = get_document(case_root, document_id)
@@ -844,6 +850,8 @@ def export_text_artifact(case_root: Path, document_id: str, *, format_name: str 
         content = str(document.get("content") or "")
         if format_name == "md":
             content = f"# {title}\n\n> Review required. Not filing-ready.\n\n{content}\n"
+        if provenance_footer:
+            content = f"{content.rstrip()}\n\n{provenance_footer.strip()}\n"
         filename = f"{safe_slug}-{document['current_revision_id'][:8]}{suffix}"
         target = _safe_child(paths.exports, filename)
         _atomic_write(target, content.encode("utf-8"))
@@ -901,6 +909,7 @@ def record_artifact_event(
     artifact_sha256: str,
     size_bytes: int,
     tracked_changes: bool = False,
+    provenance_receipt_id: str = "",
 ) -> dict[str, Any]:
     with _LOCK:
         paths = workspace_paths(case_root)
@@ -914,6 +923,7 @@ def record_artifact_event(
                 "artifact_sha256": str(artifact_sha256)[:64],
                 "size_bytes": max(0, int(size_bytes)),
                 "tracked_changes": bool(tracked_changes),
+                "provenance_receipt_id": str(provenance_receipt_id)[:96],
                 "original_preserved": True,
             },
         )

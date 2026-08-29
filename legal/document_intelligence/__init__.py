@@ -3,6 +3,7 @@
 from .service import (
     DocumentIntelligenceError,
     analyze_document,
+    create_content_disarm_copy,
     create_ocr_preservation_copy,
     create_redacted_copy,
     document_intelligence_status,
@@ -11,6 +12,7 @@ from .service import (
 __all__ = [
     "DocumentIntelligenceError",
     "analyze_document",
+    "create_content_disarm_copy",
     "create_ocr_preservation_copy",
     "create_redacted_copy",
     "document_intelligence_status",

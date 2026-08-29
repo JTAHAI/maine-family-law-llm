@@ -1,0 +1,62 @@
+{
+  "schema_version": "parser_regression_corpus_v1",
+  "corpus_id": "maine-official-page-shape-regression",
+  "corpus_version": "2026.08.26.1",
+  "fixture_only_not_legal_authority": true,
+  "fixtures": [
+    {
+      "fixture_id": "revisor-layout-table-v1",
+      "fixture_version": "1",
+      "scenario": "layout_change",
+      "parser_name": "maine_revisor_title_index",
+      "content_file": "revisor_layout_table_v1.html",
+      "content_sha256": "084281a1766f5e6f51f4a5303e39b25e9ce3e22843bd39e7e824caf71c6ecfcf",
+      "expected": {"status": "parsed", "minimum_extracted_count": 1, "required_metadata": {"chapter_count": 0}}
+    },
+    {
+      "fixture_id": "forms-table-v1",
+      "fixture_version": "1",
+      "scenario": "table_layout",
+      "parser_name": "maine_forms_index",
+      "content_file": "forms_table_v1.html",
+      "content_sha256": "24526939c746dd97f84409c8f6d5b9939575240d00447f7dea355e3e303bc27f",
+      "expected": {"status": "parsed", "minimum_extracted_count": 1}
+    },
+    {
+      "fixture_id": "rules-footnote-v1",
+      "fixture_version": "1",
+      "scenario": "footnote_text",
+      "parser_name": "maine_rules_pdf",
+      "content_file": "rules_footnote_v1.txt",
+      "content_sha256": "914e1f9060ab325d5a665764b1f801d58c74bfbf61cf7fce8e4fd4f6ef0d1e51",
+      "expected": {"status": "parsed", "minimum_extracted_count": 2}
+    },
+    {
+      "fixture_id": "opinions-table-v1",
+      "fixture_version": "1",
+      "scenario": "table_layout",
+      "parser_name": "maine_law_court_opinion_index",
+      "content_file": "opinions_table_v1.html",
+      "content_sha256": "78d247f35e48e840edc11952e7c97964a4331ac30724efed8c44caa6fa298c73",
+      "expected": {"status": "parsed", "minimum_extracted_count": 1}
+    },
+    {
+      "fixture_id": "revisor-missing-heading-v1",
+      "fixture_version": "1",
+      "scenario": "layout_change_missing_required_heading",
+      "parser_name": "maine_revisor_section",
+      "content_file": "revisor_missing_heading_v1.html",
+      "content_sha256": "2ef5db0f845aa30fe370bed369de14dea763b42e1b550aab62483341832e86d5",
+      "expected": {"status": "partial", "minimum_extracted_count": 0, "required_metadata": {"section_number": "unknown"}}
+    },
+    {
+      "fixture_id": "malformed-download-v1",
+      "fixture_version": "1",
+      "scenario": "malformed_download",
+      "parser_name": "maine_revisor_title_index",
+      "content_file": "malformed_download_v1.bin",
+      "content_sha256": "a19154a63842ec7679ab58d8da06f1f564a57ea5061f0b6e2c013a35acaeb2c7",
+      "expected": {"status": "quarantined", "minimum_extracted_count": 0}
+    }
+  ]
+}

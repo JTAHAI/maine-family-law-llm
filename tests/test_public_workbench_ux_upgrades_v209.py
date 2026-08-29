@@ -28,7 +28,10 @@ def test_public_workbench_has_welcome_focus_help_and_context_controls() -> None:
     assert 'id="search-mode"' in html
     assert 'value="maine_law"' in html
     assert 'value="my_records"' in html
-    assert 'value="both"' in html
+    assert '<option selected value="both">Both</option>' in html
+    assert 'data-search-mode="both"' in html
+    assert 'data-search-mode="both" role="radio" type="button">Both</button>' in html
+    assert '<input checked id="child-impact-lens" type="checkbox"/>' in html
     assert 'Copy query link' in html
     assert 'Focus mode' in html
     assert 'Help &amp; tips' in html

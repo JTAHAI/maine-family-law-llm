@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,9 @@ from legal.evals.review_modes import (
 
 CITATION_TARGET = 0.99
 QUOTE_TARGET = 0.97
+_SHA256 = re.compile(r"^[a-f0-9]{64}$")
+_FRESHNESS = {"current", "fresh"}
+REQUIRED_QUOTE_DECISIONS = {"exact", "normalized", "fuzzy_review_required", "mismatch", "not_found"}
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,13 @@ class VerifierMetricReport:
     quote_operator_source_backed_rows: int = 0
     citation_seed_or_synthetic_rows: int = 0
     quote_seed_or_synthetic_rows: int = 0
+    quote_expected_decision_counts: dict[str, int] = field(default_factory=dict)
+    quote_actual_decision_counts: dict[str, int] = field(default_factory=dict)
+    quote_decision_metrics: dict[str, dict[str, int | float]] = field(default_factory=dict)
+    quote_provenance_rows: int = 0
+    quote_parser_variant_counts: dict[str, int] = field(default_factory=dict)
+    quote_issue_counts: dict[str, int] = field(default_factory=dict)
+    quote_freshness_counts: dict[str, int] = field(default_factory=dict)
     blockers: list[str] = field(default_factory=list)
     findings: list[VerifierMetricFinding] = field(default_factory=list)
     release_metric_measurements: list[dict[str, Any]] = field(default_factory=list)
@@ -90,6 +101,13 @@ class VerifierMetricReport:
             "quote_operator_source_backed_rows": self.quote_operator_source_backed_rows,
             "citation_seed_or_synthetic_rows": self.citation_seed_or_synthetic_rows,
             "quote_seed_or_synthetic_rows": self.quote_seed_or_synthetic_rows,
+            "quote_expected_decision_counts": self.quote_expected_decision_counts,
+            "quote_actual_decision_counts": self.quote_actual_decision_counts,
+            "quote_decision_metrics": self.quote_decision_metrics,
+            "quote_provenance_rows": self.quote_provenance_rows,
+            "quote_parser_variant_counts": self.quote_parser_variant_counts,
+            "quote_issue_counts": self.quote_issue_counts,
+            "quote_freshness_counts": self.quote_freshness_counts,
             "blockers": sorted(set(self.blockers)),
             "findings": [finding.as_dict() for finding in self.findings],
             "release_metric_measurements": self.release_metric_measurements,
@@ -127,6 +145,7 @@ class CitationQuoteVerifierMetricRunner:
         parsed_authority_root: str | Path | None = None,
         output_path: str | Path | None = None,
         measurement_output_path: str | Path | None = None,
+        strict_provenance: bool = False,
     ) -> VerifierMetricReport:
         eval_path = Path(eval_root)
         citation_path = eval_path / "maine_citation_validity_gold.jsonl"
@@ -163,8 +182,8 @@ class CitationQuoteVerifierMetricRunner:
                 )
             )
 
-        citation_result = self._measure_citations(citation_rows, authority_index, findings, blockers)
-        quote_result = self._measure_quotes(quote_rows, source_texts, findings, blockers)
+        citation_result = self._measure_citations(citation_rows, authority_index, findings, blockers, strict_provenance=strict_provenance)
+        quote_result = self._measure_quotes(quote_rows, source_texts, findings, blockers, strict_provenance=strict_provenance)
 
         citation_rate = _ratio(citation_result["correct"], citation_result["total"])
         quote_rate = _ratio(quote_result["correct"], quote_result["total"])
@@ -193,6 +212,10 @@ class CitationQuoteVerifierMetricRunner:
                 blockers.append("citation_gold_contains_seed_or_synthetic_rows")
             if quote_result["seed_or_synthetic"]:
                 blockers.append("quote_gold_contains_seed_or_synthetic_rows")
+        if strict_provenance:
+            for decision in sorted(REQUIRED_QUOTE_DECISIONS):
+                if not quote_result["expected_decision_counts"].get(decision, 0):
+                    blockers.append(f"quote_decision_coverage_missing:{decision}")
 
         release_metrics = [
             {
@@ -243,6 +266,13 @@ class CitationQuoteVerifierMetricRunner:
             quote_operator_source_backed_rows=quote_result["operator_source_backed"],
             citation_seed_or_synthetic_rows=citation_result["seed_or_synthetic"],
             quote_seed_or_synthetic_rows=quote_result["seed_or_synthetic"],
+            quote_expected_decision_counts=quote_result["expected_decision_counts"],
+            quote_actual_decision_counts=quote_result["actual_decision_counts"],
+            quote_decision_metrics=quote_result["decision_metrics"],
+            quote_provenance_rows=quote_result["provenance_rows"],
+            quote_parser_variant_counts=quote_result["parser_variant_counts"],
+            quote_issue_counts=quote_result["issue_counts"],
+            quote_freshness_counts=quote_result["freshness_counts"],
             blockers=blockers,
             findings=findings,
             release_metric_measurements=release_metrics,
@@ -267,9 +297,18 @@ class CitationQuoteVerifierMetricRunner:
         authority_index: SourceAuthorityIndex,
         findings: list[VerifierMetricFinding],
         blockers: list[str],
+        *,
+        strict_provenance: bool,
     ) -> dict[str, int]:
         total = correct = attorney_reviewed = operator_source_backed = seed_or_synthetic = 0
         for idx, row in enumerate(rows, start=1):
+            if strict_provenance:
+                errors = _strict_provenance_errors(row, require_parser_variant=False)
+                if errors:
+                    for code in errors:
+                        findings.append(VerifierMetricFinding(idx, "maine_citation_validity_gold.jsonl", code, "strict verifier benchmark row provenance is incomplete or invalid"))
+                    blockers.extend(errors)
+                    continue
             citation_text = _first_text(row, "citation", "text_span", "raw_citation", "normalized_citation")
             expected_found = _expected_found(row)
             review_status = str(row.get("review_status") or row.get("reviewer_status") or "")
@@ -329,9 +368,18 @@ class CitationQuoteVerifierMetricRunner:
         source_texts: dict[str, str],
         findings: list[VerifierMetricFinding],
         blockers: list[str],
-    ) -> dict[str, int]:
+        *,
+        strict_provenance: bool,
+    ) -> dict[str, Any]:
         verifier = QuoteSpanVerifier()
         total = correct = attorney_reviewed = operator_source_backed = seed_or_synthetic = 0
+        provenance_rows = 0
+        expected_decision_counts: dict[str, int] = {}
+        actual_decision_counts: dict[str, int] = {}
+        decision_correct: dict[str, int] = {}
+        parser_variant_counts: dict[str, int] = {}
+        issue_counts: dict[str, int] = {}
+        freshness_counts: dict[str, int] = {}
         for idx, row in enumerate(rows, start=1):
             source_id = str(row.get("source_id") or row.get("record_id") or "")
             quote = _first_text(row, "quote", "quoted_text", "text_span")
@@ -344,6 +392,21 @@ class CitationQuoteVerifierMetricRunner:
                 operator_source_backed += 1
             if _is_seed_or_synthetic(review_status, method):
                 seed_or_synthetic += 1
+            expected_decision = _expected_quote_decision(row)
+            if strict_provenance:
+                errors = _strict_provenance_errors(row, require_parser_variant=True)
+                if errors:
+                    for code in errors:
+                        findings.append(VerifierMetricFinding(idx, "maine_quote_span_gold.jsonl", code, "strict quote benchmark row provenance is incomplete or invalid", source_id=source_id or None))
+                    blockers.extend(errors)
+                    continue
+                provenance_rows += 1
+                parser_variant = str(row.get("parser_variant") or "").strip().casefold()
+                parser_variant_counts[parser_variant] = parser_variant_counts.get(parser_variant, 0) + 1
+                for label in _labels(row):
+                    issue_counts[label] = issue_counts.get(label, 0) + 1
+                freshness = str(row.get("source_freshness") or "").strip().casefold()
+                freshness_counts[freshness] = freshness_counts.get(freshness, 0) + 1
             if not source_id or not quote:
                 findings.append(
                     VerifierMetricFinding(
@@ -357,6 +420,7 @@ class CitationQuoteVerifierMetricRunner:
                 blockers.append("quote_row_missing_source_or_text")
                 continue
             total += 1
+            expected_decision_counts[expected_decision] = expected_decision_counts.get(expected_decision, 0) + 1
             source_text = source_texts.get(source_id, "")
             if not source_text:
                 findings.append(
@@ -371,7 +435,8 @@ class CitationQuoteVerifierMetricRunner:
                 found = False
             else:
                 result = verifier.verify(source_text, quote)
-                found = result["status"] in {"exact_match", "fuzzy_match"} and bool(result["quote_span_found"])
+                found = result["status"] in {"exact_match", "fuzzy_match", "semantic_match"} and bool(result["quote_span_found"])
+                actual_decision = _actual_quote_decision(result)
                 if found and (result.get("start_offset") is None or result.get("end_offset") is None):
                     findings.append(
                         VerifierMetricFinding(
@@ -382,25 +447,50 @@ class CitationQuoteVerifierMetricRunner:
                             source_id=source_id,
                         )
                     )
-                    blockers.append("quote_offsets_missing")
-            if found == expected_found:
+                    # A fuzzy/semantic result is deliberately a review queue,
+                    # not a silently accepted exact span.  Strict benchmark
+                    # coverage must be able to measure that state without
+                    # treating lack of an exact offset as a false exact pass.
+                    if not (strict_provenance and actual_decision == "fuzzy_review_required"):
+                        blockers.append("quote_offsets_missing")
+            if not source_text:
+                actual_decision = "not_found"
+            actual_decision_counts[actual_decision] = actual_decision_counts.get(actual_decision, 0) + 1
+            decision_match = (not strict_provenance) or _quote_decision_matches(expected_decision, actual_decision)
+            if found == expected_found and decision_match:
                 correct += 1
+                decision_correct[expected_decision] = decision_correct.get(expected_decision, 0) + 1
             else:
                 findings.append(
                     VerifierMetricFinding(
                         idx,
                         "maine_quote_span_gold.jsonl",
                         "quote_span_mismatch",
-                        f"expected_found={expected_found}; actual_found={found}",
+                        f"expected_decision={expected_decision}; actual_decision={actual_decision}; expected_found={expected_found}; actual_found={found}",
                         source_id=source_id,
                     )
                 )
+        decision_metrics = {
+            decision: {
+                "sample_size": expected_decision_counts.get(decision, 0),
+                "correct": decision_correct.get(decision, 0),
+                "accuracy": _ratio(decision_correct.get(decision, 0), expected_decision_counts.get(decision, 0)),
+            }
+            for decision in sorted(REQUIRED_QUOTE_DECISIONS)
+        }
         return {
             "total": total,
             "correct": correct,
             "attorney_reviewed": attorney_reviewed,
             "operator_source_backed": operator_source_backed,
             "seed_or_synthetic": seed_or_synthetic,
+            "expected_decision_counts": expected_decision_counts,
+            "actual_decision_counts": actual_decision_counts,
+            "decision_metrics": decision_metrics,
+            "provenance_rows": provenance_rows,
+            "parser_variant_counts": parser_variant_counts,
+            "issue_counts": issue_counts,
+            "freshness_counts": freshness_counts,
         }
 
 
@@ -501,8 +591,65 @@ def _first_text(row: dict[str, Any], *keys: str) -> str:
 
 
 def _expected_found(row: dict[str, Any]) -> bool:
-    expected = str(row.get("expected_status") or row.get("expected") or row.get("label") or "found").lower()
-    return expected in {"found", "valid", "valid_citation", "quote_span_exact", "quote_span_found", "supported", "true"}
+    expected = str(row.get("expected_decision") or row.get("expected_status") or row.get("expected") or row.get("label") or "found").lower()
+    return expected in {"found", "valid", "valid_citation", "quote_span_exact", "quote_span_found", "supported", "true", "exact", "normalized", "fuzzy_review_required"}
+
+
+def _expected_quote_decision(row: dict[str, Any]) -> str:
+    raw = str(row.get("expected_decision") or row.get("expected_status") or row.get("expected") or row.get("label") or "exact").strip().casefold()
+    aliases = {
+        "exact_match": "exact",
+        "quote_span_exact": "exact",
+        "fuzzy_match": "fuzzy_review_required",
+        "semantic_match": "fuzzy_review_required",
+        "quote_span_not_found": "not_found",
+        "not_verifiable": "not_found",
+    }
+    return aliases.get(raw, raw)
+
+
+def _actual_quote_decision(result: dict[str, Any]) -> str:
+    if result.get("status") == "exact_match":
+        return "exact"
+    if result.get("method") == "normalized_whitespace":
+        return "normalized"
+    if result.get("status") in {"fuzzy_match", "semantic_match"}:
+        return "fuzzy_review_required"
+    return "not_found"
+
+
+def _quote_decision_matches(expected: str, actual: str) -> bool:
+    # A source-mismatch test case is successful only when its purported quote
+    # is not found in the source.  It remains separately counted so a broad
+    # not-found result cannot obscure cross-source failures.
+    if expected == "mismatch":
+        return actual == "not_found"
+    return expected == actual
+
+
+def _labels(row: dict[str, Any]) -> list[str]:
+    raw = row.get("issue_labels") or row.get("issue_label") or []
+    values = raw if isinstance(raw, list) else str(raw).split(",")
+    return sorted({str(value).strip().casefold() for value in values if str(value).strip()})
+
+
+def _strict_provenance_errors(row: dict[str, Any], *, require_parser_variant: bool) -> list[str]:
+    errors: list[str] = []
+    if not _labels(row):
+        errors.append("verifier_issue_labels_missing")
+    if not str(row.get("authority_build_id") or "").strip():
+        errors.append("verifier_authority_build_id_missing")
+    if not _SHA256.fullmatch(str(row.get("source_snapshot_sha256") or "").strip().casefold()):
+        errors.append("verifier_source_snapshot_sha256_invalid")
+    if not _SHA256.fullmatch(str(row.get("reviewer_evidence_sha256") or "").strip().casefold()):
+        errors.append("verifier_reviewer_evidence_sha256_invalid")
+    if str(row.get("license_status") or "").strip().casefold() not in {"licensed_or_authorized", "license_verified_external"}:
+        errors.append("verifier_license_status_unverified")
+    if str(row.get("source_freshness") or "").strip().casefold() not in _FRESHNESS:
+        errors.append("verifier_source_freshness_not_current")
+    if require_parser_variant and not str(row.get("parser_variant") or "").strip():
+        errors.append("quote_parser_variant_missing")
+    return errors
 
 
 def _is_attorney_reviewed(review_status: str, method: str) -> bool:

@@ -338,6 +338,15 @@ class LocalWorkbenchService:
             "min_ram_bytes": max(0, int(payload.get("min_ram_bytes") or 0)),
             "min_vram_bytes": max(0, int(payload.get("min_vram_bytes") or 0)),
             "context_limit_tokens": max(0, int(payload.get("context_limit_tokens") or 0)),
+            "runtime_provider": _text(
+                payload.get("runtime_provider"), "runtime_provider", limit=64
+            ).casefold(),
+            "runtime_endpoint": _text(
+                payload.get("runtime_endpoint"), "runtime_endpoint", limit=256
+            ),
+            "runtime_model_name": _text(
+                payload.get("runtime_model_name"), "runtime_model_name", limit=200
+            ),
             "privacy_status": "local_only",
             "installation_status": "registered_review_required",
             "network_access": "not_granted",
@@ -518,7 +527,8 @@ class LocalWorkbenchService:
         compatible = [
             record
             for record in state["models"].values()
-            if int(record.get("min_ram_bytes") or 0) <= available_memory
+            if record.get("installation_status") == "admitted_for_task_review_required"
+            and int(record.get("min_ram_bytes") or 0) <= available_memory
             and int(record.get("min_vram_bytes") or 0) <= vram
         ]
         preferred = _text(
@@ -544,7 +554,22 @@ class LocalWorkbenchService:
             "readiness_tier": readiness["tier"],
             "network_used": False,
             "review_required": True,
+            "admission_boundary": "Only a separately admitted, review-required local model can be routed; registered or artifact-verified models are excluded.",
         }
+
+    def admitted_model_for_warm_pool(self, model_id: str) -> dict[str, Any] | None:
+        """Return an in-process config only for a task-admitted model.
+
+        This is deliberately not a public API endpoint. The runtime pool binds
+        a release request to the already admitted model record rather than to
+        a caller-supplied endpoint.
+        """
+
+        safe_model_id = _safe_id(model_id, "model_id")
+        record = self._read()["models"].get(safe_model_id)
+        if not record or record.get("installation_status") != "admitted_for_task_review_required":
+            return None
+        return deepcopy(record)
 
     def propose_plan(self, payload: dict[str, Any]) -> dict[str, Any]:
         plan_id = _safe_id(payload.get("plan_id") or f"plan_{uuid.uuid4().hex[:16]}", "plan_id")

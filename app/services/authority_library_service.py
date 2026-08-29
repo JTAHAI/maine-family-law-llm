@@ -2,20 +2,25 @@ from __future__ import annotations
 
 import json
 import os
+import hashlib
 import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import urlsplit, urlunsplit
 
 from legal.connectors import OfficialAuthorityIngestor, OfficialSourceFetcher, load_official_source_targets
 from legal.connectors.base import SourceTarget
+from legal.connectors.parser_regression import ParserRegressionCorpus
 from legal.data_boundaries import default_external_data_root, ensure_external_authority_root, is_inside_project_repo
 from legal.authority_store import ParsedAuthorityStoreBuilder
 from legal.production.authority_product import AuthorityProductPublisher, AuthorityProductVerifier
 from legal.production.source_update_engine import SourceUpdateEngine
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
+from legal.retrieval.index_builder import RetrievalIndexBuilder
+from app.services.authority_product_service import AuthorityProductService
 
 
 _DEFAULT_FIXTURE_BY_TARGET_ID = {
@@ -24,6 +29,18 @@ _DEFAULT_FIXTURE_BY_TARGET_ID = {
     "me-courts-rules-index": "maine-rules-civil-family-division.html",
     "me-courts-forms-index": "maine-court-forms-family.html",
     "me-judicial-branch-appeals": "maine-judicial-branch-appeals.html",
+}
+
+# These are operational review intervals, not legal conclusions about whether a
+# source is current.  A source can be within its operational check interval and
+# still require legal/freshness review; a source outside it is surfaced for an
+# explicit operator decision rather than silently refreshed.
+_FRESHNESS_THRESHOLDS_DAYS = {
+    "statutes": 45,
+    "rules": 45,
+    "forms": 30,
+    "opinions": 90,
+    "federal": 90,
 }
 
 
@@ -61,6 +78,12 @@ def _fetch_metadata_value(row: dict[str, Any], key: str) -> Any:
     metadata = row.get("fetch_metadata")
     if isinstance(metadata, dict):
         value = metadata.get(key)
+        if value not in (None, ""):
+            return value
+    record_metadata = row.get("metadata")
+    nested_fetch_metadata = record_metadata.get("fetch_metadata") if isinstance(record_metadata, dict) else None
+    if isinstance(nested_fetch_metadata, dict):
+        value = nested_fetch_metadata.get(key)
         if value not in (None, ""):
             return value
     return row.get(key)
@@ -117,6 +140,26 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
         if isinstance(row, dict):
             rows.append(row)
     return rows
+
+
+def _atomic_write_json(path: Path, payload: Any) -> None:
+    """Write an authority control record without exposing a partial pointer."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_symlink():
+        raise ValueError("authority control record may not be a symlink")
+    temporary = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    try:
+        with temporary.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=False)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _source_class_group(source_class: str) -> str:
@@ -284,6 +327,321 @@ class AuthorityLibraryService:
             "current_law_claims_supported": bool(counts.get("fresh")),
         }
 
+    @staticmethod
+    def _parse_retrieved_at(value: Any) -> datetime | None:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            # The timestamp lacks an admitted timezone.  It may still be
+            # displayed, but it cannot establish a reliable age calculation.
+            return None
+        return parsed.astimezone(timezone.utc)
+
+    def freshness_dashboard(self, *, now: datetime | None = None) -> dict[str, Any]:
+        """Return a source-metadata operations dashboard for human review.
+
+        This inspects only the active external authority metadata.  It does
+        not fetch, modify, activate, or substitute sources, and it never
+        treats a check interval as a determination that law is current.
+        """
+        root = self.ensure_layout()
+        observed_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        active = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        update_report = self._latest_update_report(root)
+        rows = self._source_rows(root)
+        source_class_counts = self._source_class_counts(rows)
+        freshness_counts = self._freshness_counts(rows)
+        classes: dict[str, dict[str, Any]] = {
+            name: {
+                "source_class": name,
+                "threshold_days": threshold,
+                "source_count": 0,
+                "within_threshold": 0,
+                "overdue": 0,
+                "retrieval_date_unknown": 0,
+                "parser_failures": 0,
+                "freshness_status_counts": {},
+            }
+            for name, threshold in _FRESHNESS_THRESHOLDS_DAYS.items()
+        }
+        overdue_sources: list[dict[str, Any]] = []
+        parser_failures: list[dict[str, Any]] = []
+        date_unknown_sources: list[dict[str, Any]] = []
+        for row in rows:
+            source_id = str(row.get("source_id") or row.get("record_id") or "").strip()
+            source_class = _source_class_group(str(row.get("source_class") or row.get("source_type") or ""))
+            summary = classes.setdefault(
+                source_class,
+                {
+                    "source_class": source_class,
+                    "threshold_days": _FRESHNESS_THRESHOLDS_DAYS.get(source_class, 90),
+                    "source_count": 0,
+                    "within_threshold": 0,
+                    "overdue": 0,
+                    "retrieval_date_unknown": 0,
+                    "parser_failures": 0,
+                    "freshness_status_counts": {},
+                },
+            )
+            freshness_bucket = _freshness_bucket(str(row.get("freshness_status") or "unknown"))
+            parser_audit = row.get("parser_audit") if isinstance(row.get("parser_audit"), dict) else {}
+            parser_status = str(row.get("parser_status") or parser_audit.get("status") or "unknown").casefold()
+            retrieved_at = self._parse_retrieved_at(row.get("retrieved_at"))
+            summary["source_count"] += 1
+            status_counts = summary["freshness_status_counts"]
+            status_counts[freshness_bucket] = int(status_counts.get(freshness_bucket, 0)) + 1
+            public_row = {
+                "source_id": source_id,
+                "source_class": source_class,
+                "freshness_status": freshness_bucket,
+                "retrieved_at": str(row.get("retrieved_at") or "") or None,
+                "parser_status": parser_status or "unknown",
+                "review_required": True,
+            }
+            parser_failed = freshness_bucket == "parser_failed" or parser_status in {
+                "failed",
+                "error",
+                "parser_failed",
+                "unparsed",
+            }
+            if parser_failed:
+                summary["parser_failures"] += 1
+                parser_failures.append({**public_row, "reason": "parser_failure"})
+            if retrieved_at is None:
+                summary["retrieval_date_unknown"] += 1
+                date_unknown_sources.append({**public_row, "reason": "retrieval_date_missing_or_invalid"})
+                continue
+            age_days = max(0, int((observed_at - retrieved_at).total_seconds() // 86_400))
+            public_row["age_days"] = age_days
+            public_row["threshold_days"] = summary["threshold_days"]
+            if age_days > int(summary["threshold_days"]):
+                summary["overdue"] += 1
+                overdue_sources.append({**public_row, "reason": "operational_check_interval_elapsed"})
+            else:
+                summary["within_threshold"] += 1
+
+        # Stable sort helps a human compare two refreshes without conflating
+        # result order with a priority or legal-materiality ranking.
+        overdue_sources.sort(key=lambda item: (str(item.get("source_class") or ""), str(item.get("source_id") or "")))
+        parser_failures.sort(key=lambda item: (str(item.get("source_class") or ""), str(item.get("source_id") or "")))
+        date_unknown_sources.sort(key=lambda item: (str(item.get("source_class") or ""), str(item.get("source_id") or "")))
+        blockers: list[str] = []
+        if active.status != "pass":
+            blockers.append("active_authority_build_unverified")
+        if overdue_sources:
+            blockers.append("operational_source_freshness_review_required")
+        if parser_failures:
+            blockers.append("authority_parser_failures_require_review")
+        if date_unknown_sources:
+            blockers.append("authority_retrieval_dates_missing_or_invalid")
+        if int(freshness_counts.get("stale") or 0) > 0:
+            blockers.append("authority_metadata_marks_sources_stale")
+        if int(freshness_counts.get("unknown") or 0) > 0:
+            blockers.append("authority_metadata_freshness_unknown")
+        last_accepted_build = {
+            "build_id": active.build_id or str(self._active_pointer(root).get("build_id") or ""),
+            "verified": active.status == "pass",
+            "verification_status": active.status,
+            "verification_blockers": list(active.blockers or []),
+            "last_successful_update": update_report.get("generated_at")
+            if update_report.get("status") == "pass"
+            else None,
+        }
+        return {
+            "schema_version": "authority_freshness_dashboard_v1",
+            "status": "needs_review" if blockers else "metadata_observed",
+            "observed_at": observed_at.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "last_accepted_build": last_accepted_build,
+            "source_class_thresholds": classes,
+            "source_class_counts": source_class_counts,
+            "freshness_counts": freshness_counts,
+            "overdue_sources": overdue_sources,
+            "parser_failures": parser_failures,
+            "retrieval_date_unknown_sources": date_unknown_sources,
+            "blockers": sorted(set(blockers)),
+            "review_required": True,
+            "current_law_determined": False,
+            "network_used": False,
+            "notice": (
+                "Operational check intervals and parser metadata are review signals only. "
+                "They do not determine legal currentness, completeness, or legal effect."
+            ),
+        }
+
+    @staticmethod
+    def _normalized_official_url(value: Any) -> str:
+        """Normalize an observed public URL without following or requesting it."""
+        raw = str(value or "").strip()
+        if not raw:
+            return ""
+        try:
+            parsed = urlsplit(raw)
+        except ValueError:
+            return ""
+        if parsed.scheme.lower() not in {"http", "https"} or not parsed.netloc:
+            return ""
+        path = parsed.path.rstrip("/") or "/"
+        return urlunsplit((parsed.scheme.lower(), parsed.netloc.lower(), path, parsed.query, ""))
+
+    @staticmethod
+    def _availability_report_findings(update_report: dict[str, Any]) -> list[dict[str, Any]]:
+        findings = update_report.get("findings") if isinstance(update_report, dict) else []
+        return [item for item in findings if isinstance(item, dict)] if isinstance(findings, list) else []
+
+    def availability_monitor(self) -> dict[str, Any]:
+        """Expose stored official-source availability evidence for review.
+
+        The monitor is intentionally offline.  It does not probe URLs, accept a
+        redirect, replace an official source with a mirror, or determine that
+        an authority remains available/current.  It makes the last admitted
+        fetch and update metadata inspectable so an operator can decide whether
+        an explicit, controlled update is needed.
+        """
+        root = self.ensure_layout()
+        active = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        update_report = self._latest_update_report(root)
+        rows = self._source_rows(root)
+        issues: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+
+        def add_issue(source_id: str, code: str, *, source_class: str = "", expected_url: str = "", observed_url: str = "", status_code: Any = None) -> None:
+            key = (source_id, code)
+            if key in seen:
+                return
+            seen.add(key)
+            issues.append(
+                {
+                    "source_id": source_id or "__unidentified_source__",
+                    "source_class": _source_class_group(source_class),
+                    "code": code,
+                    "expected_official_url": expected_url or None,
+                    "observed_url": observed_url or None,
+                    "http_status": int(status_code) if isinstance(status_code, int) else None,
+                    "review_required": True,
+                    "mirror_substitution": False,
+                }
+            )
+
+        for row in rows:
+            source_id = str(row.get("source_id") or row.get("record_id") or "").strip()
+            source_class = str(row.get("source_class") or row.get("source_type") or "")
+            expected_url = self._normalized_official_url(row.get("source_url_or_path") or row.get("url"))
+            final_url = self._normalized_official_url(
+                _metadata_value(row, "final_url") or _fetch_metadata_value(row, "final_url")
+            )
+            status_code = _metadata_value(row, "status_code") or _fetch_metadata_value(row, "status_code")
+            if not expected_url:
+                add_issue(source_id, "official_url_missing_or_unusable", source_class=source_class)
+            if final_url and expected_url and final_url != expected_url:
+                add_issue(
+                    source_id,
+                    "official_url_moved_or_redirected_review_required",
+                    source_class=source_class,
+                    expected_url=expected_url,
+                    observed_url=final_url,
+                    status_code=status_code,
+                )
+            previous_hash = str(_metadata_value(row, "previous_sha256") or row.get("previous_snapshot_hash") or "").strip()
+            current_hash = str(row.get("source_hash") or row.get("hash") or "").strip()
+            if previous_hash and current_hash and previous_hash != current_hash:
+                add_issue(source_id, "source_hash_changed_review_required", source_class=source_class, expected_url=expected_url)
+            robots = str(_fetch_metadata_value(row, "robots_policy_result") or "").casefold()
+            error_markers = " ".join(
+                str(_fetch_metadata_value(row, key) or "")
+                for key in ("failure_code", "error_code", "error_type", "fetch_status", "status")
+            ).casefold()
+            if any(marker in error_markers for marker in ("tls", "ssl", "certificate")):
+                add_issue(source_id, "tls_or_certificate_failure_review_required", source_class=source_class, expected_url=expected_url)
+            try:
+                numeric_status = int(status_code) if status_code not in (None, "") else None
+            except (TypeError, ValueError):
+                numeric_status = None
+            if numeric_status in {401, 403, 429, 451} or "disallow" in robots or "restricted" in error_markers:
+                add_issue(
+                    source_id,
+                    "official_source_access_restricted_review_required",
+                    source_class=source_class,
+                    expected_url=expected_url,
+                    observed_url=final_url,
+                    status_code=numeric_status,
+                )
+
+        for source_id in update_report.get("changed_since_last_build", {}).get("hash_changed", []) if isinstance(update_report.get("changed_since_last_build"), dict) else []:
+            add_issue(str(source_id), "source_hash_changed_review_required")
+        for finding in self._availability_report_findings(update_report):
+            source_id = str(finding.get("source_id") or "")
+            code = str(finding.get("code") or "").casefold()
+            if any(marker in code for marker in ("tls", "ssl", "certificate")):
+                add_issue(source_id, "tls_or_certificate_failure_review_required")
+            if any(marker in code for marker in ("robots", "access", "forbidden", "restricted", "http_401", "http_403", "http_429", "http_451")):
+                add_issue(source_id, "official_source_access_restricted_review_required")
+            if any(marker in code for marker in ("redirect", "moved", "url_changed")):
+                add_issue(source_id, "official_url_moved_or_redirected_review_required")
+
+        issues.sort(key=lambda item: (str(item["code"]), str(item["source_id"])))
+        categories = {
+            "moved_urls": [item for item in issues if item["code"] == "official_url_moved_or_redirected_review_required"],
+            "changed_hashes": [item for item in issues if item["code"] == "source_hash_changed_review_required"],
+            "tls_failures": [item for item in issues if item["code"] == "tls_or_certificate_failure_review_required"],
+            "access_restrictions": [item for item in issues if item["code"] == "official_source_access_restricted_review_required"],
+            "url_metadata_gaps": [item for item in issues if item["code"] == "official_url_missing_or_unusable"],
+        }
+        blockers = [item["code"] for item in issues]
+        if active.status != "pass":
+            blockers.append("active_authority_build_unverified")
+        return {
+            "schema_version": "official_source_availability_monitor_v1",
+            "status": "needs_review" if blockers else "metadata_observed",
+            "observed_at": _utc_now(),
+            "last_update_report_at": update_report.get("generated_at") or None,
+            "last_accepted_build": {
+                "build_id": active.build_id or str(self._active_pointer(root).get("build_id") or ""),
+                "verified": active.status == "pass",
+                "verification_status": active.status,
+            },
+            "source_count": len(rows),
+            "issues": issues,
+            "categories": categories,
+            "blockers": sorted(set(blockers)),
+            "review_required": True,
+            "availability_determined": False,
+            "current_law_determined": False,
+            "network_used": False,
+            "mirror_substitution": False,
+            "notice": (
+                "This reviews stored fetch and update metadata only. It does not request any URL, "
+                "accept redirects, substitute mirrors, determine source availability, or determine current law."
+            ),
+        }
+
+    def parser_regression_corpus(self) -> dict[str, Any]:
+        """Run only the bundled synthetic parser-shape corpus.
+
+        This is a local engineering control, not an authority update.  The
+        fixtures cannot be retrieved, searched as legal authority, or used to
+        establish a source's legal content or currentness.
+        """
+        result = ParserRegressionCorpus(self.fixture_dir / "parser_regression").run()
+        result["fixture_root_label"] = "parser_regression"
+        return result
+
+    def parser_regression_fixture(self, fixture_id: str) -> dict[str, Any]:
+        safe_id = str(fixture_id or "").strip()
+        if not safe_id or len(safe_id) > 160 or any(character not in "abcdefghijklmnopqrstuvwxyz0123456789-_." for character in safe_id.casefold()):
+            return {
+                "status": "blocked",
+                "fixture_id": safe_id[:160],
+                "blockers": ["parser_regression_fixture_id_invalid"],
+                "review_required": True,
+                "can_support_legal_claim": False,
+            }
+        return ParserRegressionCorpus(self.fixture_dir / "parser_regression").run_fixture(safe_id)
+
     def list_builds(self, *, limit: int = 20) -> dict[str, Any]:
         root = self._require_data_root()
         builds_root = root / "authority_product" / "builds"
@@ -323,6 +681,21 @@ class AuthorityLibraryService:
         offset: int = 0,
     ) -> dict[str, Any]:
         root = self._require_data_root()
+        admission = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        if admission.status != "pass":
+            return {
+                "status": "blocked",
+                "count": 0,
+                "offset": max(0, int(offset or 0)),
+                "limit": max(1, min(int(limit or 100), 250)),
+                "build_id": admission.build_id,
+                "sources": [],
+                "counts": {},
+                "source_class_counts": {},
+                "blockers": sorted(set(["active_authority_build_unverified", *list(admission.blockers or [])])),
+                "source_boundary": "verified_active_immutable_authority_build_required",
+                "review_required": True,
+            }
         rows = self._source_rows(root)
         q = query.casefold().strip()
         class_filter = source_class.casefold().strip()
@@ -371,6 +744,15 @@ class AuthorityLibraryService:
         source_id = str(source_id or "").strip()
         if not source_id:
             return {"status": "blocked", "blockers": ["source_id_required"], "review_required": True}
+        admission = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        if admission.status != "pass":
+            return {
+                "status": "blocked",
+                "source_id": source_id,
+                "build_id": admission.build_id,
+                "blockers": sorted(set(["active_authority_build_unverified", *list(admission.blockers or [])])),
+                "review_required": True,
+            }
         row = self._find_source_row(root, source_id)
         if row is None:
             return {"status": "not_found", "source_id": source_id, "review_required": True}
@@ -390,7 +772,17 @@ class AuthorityLibraryService:
 
     def get_source_span(self, source_id: str, *, start_offset: int | None = None, end_offset: int | None = None) -> dict[str, Any]:
         root = self._require_data_root()
-        row = self._find_source_row(root, str(source_id or "").strip())
+        source_id = str(source_id or "").strip()
+        admission = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        if admission.status != "pass":
+            return {
+                "status": "blocked",
+                "source_id": source_id,
+                "build_id": admission.build_id,
+                "blockers": sorted(set(["active_authority_build_unverified", *list(admission.blockers or [])])),
+                "review_required": True,
+            }
+        row = self._find_source_row(root, source_id)
         if row is None:
             return {"status": "not_found", "review_required": True}
         text = str(row.get("text") or row.get("body") or row.get("instructions") or "")
@@ -422,6 +814,135 @@ class AuthorityLibraryService:
             if str(payload.get("build_id") or "") == str(build_id or ""):
                 return {"status": "pass", "build_id": build_id, "update_report": payload, "review_required": True}
         return {"status": "not_found", "build_id": build_id, "review_required": True}
+
+    def compare_builds(self, candidate_build_id: str) -> dict[str, Any]:
+        """Compare a verified staged build to the active immutable build.
+
+        The result deliberately compares admitted source identities and hashes
+        only.  It is a review aid, never a legal-effect or completeness result.
+        """
+        root = self._require_data_root()
+        candidate, candidate_blockers = self._verified_build_manifest(root, candidate_build_id)
+        if candidate is None:
+            return {
+                "status": "blocked",
+                "candidate_build_id": str(candidate_build_id or ""),
+                "blockers": candidate_blockers,
+                "review_required": True,
+            }
+        active_build_id = self._active_build_id(root)
+        active: dict[str, Any] | None = None
+        active_blockers: list[str] = []
+        if active_build_id:
+            active, active_blockers = self._verified_build_manifest(root, active_build_id)
+        candidate_sources = self._sources_by_id(candidate)
+        active_sources = self._sources_by_id(active or {})
+        added = sorted(set(candidate_sources) - set(active_sources))
+        removed = sorted(set(active_sources) - set(candidate_sources))
+        hash_changed = sorted(
+            source_id
+            for source_id in set(candidate_sources) & set(active_sources)
+            if candidate_sources[source_id] != active_sources[source_id]
+        )
+        unchanged = sorted(
+            source_id
+            for source_id in set(candidate_sources) & set(active_sources)
+            if candidate_sources[source_id] == active_sources[source_id]
+        )
+        return {
+            "status": "needs_review",
+            "candidate_build_id": str(candidate.get("build_id") or candidate_build_id),
+            "active_build_id": active_build_id or None,
+            "candidate_verified": True,
+            "active_build_verified": active is not None if active_build_id else None,
+            "active_build_blockers": active_blockers,
+            "source_diff": {
+                "added": added,
+                "removed": removed,
+                "hash_changed": hash_changed,
+                "unchanged_count": len(unchanged),
+            },
+            "review_required": True,
+            "boundary": "This compares admitted source IDs and hashes only. It does not determine legal effect, currentness, or completeness.",
+        }
+
+    def activate_build(self, build_id: str, *, operation: str = "activate") -> dict[str, Any]:
+        """Atomically activate an already staged and verified authority build."""
+        root = self._require_data_root()
+        manifest, blockers = self._verified_build_manifest(root, build_id)
+        if manifest is None:
+            return {"status": "blocked", "build_id": str(build_id or ""), "blockers": blockers, "review_required": True}
+        active_before = self._active_build_id(root)
+        target_build_id = str(manifest.get("build_id") or build_id)
+        if operation == "rollback" and target_build_id == active_before:
+            return {
+                "status": "blocked",
+                "build_id": target_build_id,
+                "blockers": ["rollback_target_is_already_active"],
+                "review_required": True,
+            }
+        product_root = root / "authority_product"
+        if product_root.is_symlink():
+            return {"status": "blocked", "build_id": target_build_id, "blockers": ["authority_product_root_symlinked"], "review_required": True}
+        manifest_path = product_root / "builds" / target_build_id / "authority_product_manifest.json"
+        pointer = {
+            "schema_version": str(manifest.get("schema_version") or "1.1"),
+            "build_id": target_build_id,
+            "manifest_relative_path": manifest_path.relative_to(root).as_posix(),
+            "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "activated_at": _utc_now(),
+            "activation_operation": operation,
+            "review_required": True,
+        }
+        history = product_root / "activation_receipts.jsonl"
+        if history.is_symlink():
+            return {"status": "blocked", "build_id": target_build_id, "blockers": ["authority_activation_history_symlinked"], "review_required": True}
+        with self._lock:
+            _atomic_write_json(product_root / "ACTIVE_BUILD.json", pointer)
+            receipt = {
+                "receipt_id": uuid.uuid4().hex,
+                "recorded_at": _utc_now(),
+                "operation": operation,
+                "build_id": target_build_id,
+                "previous_build_id": active_before or None,
+                "review_required": True,
+            }
+            with history.open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write(json.dumps(receipt, sort_keys=True, ensure_ascii=False) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+        return {
+            "status": "pass",
+            "operation": operation,
+            "build_id": target_build_id,
+            "previous_build_id": active_before or None,
+            "activation_receipt": receipt,
+            "review_required": True,
+            "boundary": "Activation changes the selected verified local authority build. It does not determine legal effect or make a legal conclusion.",
+        }
+
+    @staticmethod
+    def _sources_by_id(manifest: dict[str, Any]) -> dict[str, str]:
+        rows = manifest.get("source_snapshots") if isinstance(manifest.get("source_snapshots"), list) else []
+        return {
+            str(row.get("source_id")): str(row.get("sha256") or "")
+            for row in rows
+            if isinstance(row, dict) and str(row.get("source_id") or "")
+        }
+
+    def _verified_build_manifest(self, root: Path, build_id: str) -> tuple[dict[str, Any] | None, list[str]]:
+        candidate = str(build_id or "").strip().lower()
+        verification = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify(build_id=candidate)
+        if verification.status != "pass":
+            return None, sorted(set(verification.blockers or ["authority_build_verification_failed"]))
+        path = root / "authority_product" / "builds" / candidate / "authority_product_manifest.json"
+        try:
+            manifest = _load_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None, ["authority_product_manifest_invalid"]
+        if not isinstance(manifest, dict) or str(manifest.get("build_id") or "") != candidate:
+            return None, ["authority_product_manifest_identity_invalid"]
+        return manifest, []
 
     def update(
         self,
@@ -473,15 +994,24 @@ class AuthorityLibraryService:
                     job.status = "canceled"
                     job.message = "Update canceled before publication."
                     return
-                manifest_path = ingestor.write_manifest([item.to_dict() for item in ingested])
+                snapshot_manifest_path = ingestor.write_manifest([item.to_dict() for item in ingested])
+                # The ingestor keeps its working manifest beside snapshots, but
+                # every downstream authority gate reads the canonical external
+                # store location.  Promote the completed manifest atomically so
+                # an interrupted update cannot leave mixed generations behind.
+                manifest_path = root / "official_authority_store" / "source_manifest.json"
+                _atomic_write_json(manifest_path, _load_json(snapshot_manifest_path))
                 failed_path = ingestor.write_failure_report()
                 update_report = SourceUpdateEngine(data_root=root).run(write_report=True)
                 parsed_report = ParsedAuthorityStoreBuilder(data_root=root).build()
                 ParsedAuthorityIndexBuilder(data_root=root).build(write=True)
-                publication = AuthorityProductPublisher(data_root=root, repo_root=self.repo_root).publish(product_version="authority-library", activate=True)
+                retrieval_report = RetrievalIndexBuilder(data_root=root, repo_root=self.repo_root).build()
+                publication = AuthorityProductPublisher(data_root=root, repo_root=self.repo_root).publish(product_version="authority-library", activate=False)
                 verification = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify(build_id=publication.build_id)
+                staged = publication.status == "pass" and verification.status == "pass" and not ingestor.failed
+                build_diff = self.compare_builds(str(publication.build_id or "")) if staged else {}
                 job.result = {
-                    "status": "pass" if publication.status == "pass" and verification.status == "pass" and not ingestor.failed else "partial",
+                    "status": "staged" if staged else "partial",
                     "build_id": publication.build_id,
                     "target_count": len(targets),
                     "ingested_count": len(ingested),
@@ -490,12 +1020,16 @@ class AuthorityLibraryService:
                     "failed_sources_path": _mask_path(failed_path),
                     "source_update_report": _sanitize_paths(update_report.as_dict()),
                     "parsed_authority_report": _sanitize_paths(parsed_report.as_dict()),
+                    "retrieval_index_report": _sanitize_paths(retrieval_report.as_dict()),
                     "publication": _sanitize_paths(publication.as_dict()),
                     "verification": _sanitize_paths(verification.as_dict()),
+                    "build_diff": _sanitize_paths(build_diff),
+                    "activation_performed": False,
+                    "next_action": "review_staged_build_then_activate_explicitly" if staged else None,
                     "review_required": True,
                 }
-                job.status = "completed" if publication.status == "pass" and verification.status == "pass" and not ingestor.failed else "failed"
-                job.message = "Authority update finished."
+                job.status = "completed" if staged else "failed"
+                job.message = "Authority update staged for explicit review and activation." if staged else "Authority update did not produce an activatable build."
             except Exception as exc:
                 job.status = "failed"
                 job.message = f"{type(exc).__name__}: {exc}"
@@ -553,15 +1087,20 @@ class AuthorityLibraryService:
             raise ValueError("authority data root may not be inside a packaging or build workspace")
 
     def _source_rows(self, root: Path) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
-        parsed_root = root / "parsed_authority_store"
-        for path in sorted(parsed_root.rglob("*.jsonl")):
-            rows.extend(_load_jsonl(path))
-        if rows:
-            return rows
-        if self._active_pointer(root).get("build_id"):
-            return self._source_cards_from_active_build(root)
-        return []
+        """Return only parsed rows admitted by the active immutable build.
+
+        ``parsed_authority_store`` is a mutable ingestion workspace.  It must
+        not become a public authority inventory merely because an operator has
+        begun an update.  When no verified active generation exists, callers
+        receive an empty inventory and their existing status/blocker paths
+        remain review-required rather than silently falling back to staging.
+        """
+        try:
+            product = AuthorityProductService(data_root=root)
+            active = product._active_product(verify_all=True)
+            return list(product._iter_active_parsed_rows(active))
+        except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError):
+            return []
 
     def _source_cards_from_active_build(self, root: Path) -> list[dict[str, Any]]:
         build_id = self._active_build_id(root)
@@ -579,7 +1118,10 @@ class AuthorityLibraryService:
 
     def _find_source_row(self, root: Path, source_id: str) -> dict[str, Any] | None:
         for row in self._source_rows(root):
-            if str(row.get("source_id") or row.get("record_id") or "") == source_id:
+            if source_id in {
+                str(row.get("source_id") or ""),
+                str(row.get("record_id") or ""),
+            }:
                 return row
         return None
 

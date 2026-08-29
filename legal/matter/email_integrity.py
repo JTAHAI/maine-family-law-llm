@@ -7,6 +7,10 @@ import json
 import os
 import re
 import uuid
+import base64
+import io
+import zipfile
+from email.message import EmailMessage
 from collections.abc import Callable
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -169,3 +173,30 @@ class EmailIntegrityStore:
         }
         receipt["receipt_hash"] = _hash(receipt)
         return receipt
+
+    def build_handoff_package(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Create an explicit EML/ZIP review package; it never sends mail."""
+        package_id = _identifier(payload.get("package_id"), "email_package_id")
+        if payload.get("privacy_acknowledged") is not True:
+            raise IntakeWorkbenchError("email_package_privacy_acknowledgement_required", 409)
+        selected = payload.get("export_ids")
+        if not isinstance(selected, list) or not selected:
+            raise IntakeWorkbenchError("email_package_exports_invalid")
+        export_ids = [_identifier(item, "email_package_export_id") for item in selected]
+        subject = _text(payload.get("subject"), maximum=240)
+        recipient = _text(payload.get("recipient_label"), maximum=160)
+        if not subject or not recipient:
+            raise IntakeWorkbenchError("email_package_recipient_and_subject_required")
+        def update(value: dict[str, Any]) -> dict[str, Any]:
+            rows = {row["export_id"]: row for row in value["exports"]}
+            if any(item not in rows for item in export_ids):
+                raise IntakeWorkbenchError("email_package_export_not_found", 404)
+            manifest = {"schema":"maine_family_law_llm.email_handoff_package.v1","package_id":package_id,"recipient_label":recipient,"subject":subject,"exports":[{"export_id":item,"source_hash":rows[item]["source_hash"],"header_hash":rows[item]["header_hash"],"attachment_hashes":rows[item]["attachment_hashes"],"source_ref":rows[item]["source_ref"]} for item in export_ids],"review_required":True,"mail_send":False,"privacy_warning":"Review recipient, scope, and attachments before any external action.","created_at":_now()}
+            manifest["manifest_hash"] = _hash(manifest)
+            message=EmailMessage();message["Subject"]=subject;message["To"]=recipient;message["X-MFL-Review-Required"]="true";message.set_content("Local review handoff package. No email was sent. See attached manifest and verify every source before external use.");message.add_attachment(json.dumps(manifest,indent=2).encode(),maintype="application",subtype="json",filename="review-manifest.json")
+            eml=message.as_bytes()
+            archive=io.BytesIO()
+            with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z: z.writestr("review-handoff.eml",eml);z.writestr("review-manifest.json",json.dumps(manifest,indent=2))
+            receipt={"package_id":package_id,"manifest_hash":manifest["manifest_hash"],"eml_sha256":hashlib.sha256(eml).hexdigest(),"zip_sha256":hashlib.sha256(archive.getvalue()).hexdigest(),"review_required":True,"mail_send":False,"external_delivery":"not_performed","created_at":_now()};receipt["receipt_hash"]=_hash(receipt);value.setdefault("packages",[]).append(receipt)
+            return {"package": {"eml_base64":base64.b64encode(eml).decode(),"zip_base64":base64.b64encode(archive.getvalue()).decode(),"manifest":manifest},"receipt":receipt,"status":"review_required","local_only":True,"mail_send":False,"automatic_download":False}
+        return self._mutate("email_handoff_package_created", [package_id,*export_ids], update)

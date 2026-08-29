@@ -1,6 +1,7 @@
 param(
   [string]$RepoRoot = "",
   [string]$OutputRoot = "",
+  [string]$PackagingRoot = "",
   [string]$IdentityConfigPath = "",
   [string]$IdentityName = "",
   [string]$Publisher = "",
@@ -11,6 +12,7 @@ param(
   [string]$CertificatePassword = "",
   [switch]$UseDevIdentity,
   [switch]$Unsigned,
+  [switch]$Offline,
   [ValidateSet("essential", "full")]
   [string]$FeatureTier = "essential"
 )
@@ -64,6 +66,20 @@ function New-EphemeralCertificatePassword {
   return [Convert]::ToBase64String($bytes)
 }
 
+function Resolve-SafeMutableDirectory([string]$PathText, [string]$Label, [string]$RepoRootPath) {
+  if (-not $PathText) { throw "$Label is required." }
+  $fullPath = [System.IO.Path]::GetFullPath($PathText).TrimEnd("\\")
+  $volumeRoot = [System.IO.Path]::GetPathRoot($fullPath).TrimEnd("\\")
+  if (-not $fullPath -or $fullPath -eq $volumeRoot) {
+    throw "$Label must name a dedicated directory, not a drive root."
+  }
+  $repoPath = [System.IO.Path]::GetFullPath($RepoRootPath).TrimEnd("\\")
+  if ($fullPath.Equals($repoPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "$Label must not be the source repository."
+  }
+  return $fullPath
+}
+
 function Ensure-DevCertificate([string]$PublisherName, [string]$TargetRoot, [string]$PasswordText) {
   $certDir = Join-Path $TargetRoot "dev-signing"
   New-Item -ItemType Directory -Force -Path $certDir | Out-Null
@@ -80,6 +96,9 @@ function Ensure-DevCertificate([string]$PublisherName, [string]$TargetRoot, [str
 
 if (-not $RepoRoot) { $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..")) }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $RepoRoot "dist\store" }
+if (-not $PackagingRoot) { $PackagingRoot = "C:\mfl6" }
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+$PackagingRoot = Resolve-SafeMutableDirectory $PackagingRoot "PackagingRoot" $RepoRoot
 if (-not $IdentityConfigPath) { $IdentityConfigPath = Join-Path $RepoRoot "store\msix\identity.example.json" }
 $identityConfig = Get-Content -LiteralPath $IdentityConfigPath -Raw | ConvertFrom-Json
 if (-not $IdentityName) { $IdentityName = $identityConfig.identity_name }
@@ -101,7 +120,6 @@ $evidenceRoot = Join-Path $OutputRoot "evidence"
 $storeBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
 $storePython = if (Test-Path -LiteralPath $storeBuildPython) { $storeBuildPython } else { "python" }
 $hygiene = Join-Path $RepoRoot "scripts\store_payload_hygiene.py"
-$packagingRoot = "C:\mfl6"
 $stageRoot = Join-Path $packagingRoot "stage"
 $packageRoot = Join-Path $stageRoot "package"
 $shortOutRoot = Join-Path $packagingRoot "out"
@@ -121,6 +139,7 @@ $stageCleanup = Join-Path $evidenceRoot "final-staging-cleanup.json"
 $sealPath = Join-Path $evidenceRoot "sealed-msix-payload.json"
 $sealAudit = Join-Path $evidenceRoot "sealed-msix-payload-audit.json"
 $archiveAudit = Join-Path $evidenceRoot "sealed-msix-archive-audit.json"
+$sizeBudgetReport = Join-Path $evidenceRoot "package-size-budget.json"
 
 foreach ($path in @($packagingRoot, $msixRoot, $evidenceRoot)) {
   if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
@@ -129,7 +148,7 @@ New-Item -ItemType Directory -Force -Path $evidenceRoot, $shortOutRoot | Out-Nul
 
 # All qualification occurs while runtime is mutable. The snapshots prove the exact
 # command that first introduced any bytecode residue.
-& (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot -OutputRoot $OutputRoot -FeatureTier $FeatureTier
+& (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot -OutputRoot $OutputRoot -FeatureTier $FeatureTier -Offline:$Offline
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_pyinstaller --command "PyInstaller frozen runtime build" --parent-command "build-store-runtime.ps1"
 & (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_frozen_runtime_smoke --command "test-store-runtime.ps1 frozen runtime smoke" --parent-command "build-msix.ps1"
@@ -218,6 +237,8 @@ if (-not $Unsigned) {
 }
 Copy-Item -LiteralPath $shortMsixPath -Destination $msixPath -Force
 & $storePython -B $hygiene verify-archive --msix-path $msixPath --seal $sealPath --output $archiveAudit
+& $storePython -B (Join-Path $RepoRoot "scripts\analyze-msix-package-size.py") --package $msixPath --tier $FeatureTier --tier-config (Join-Path $RepoRoot "configs\store_feature_tiers.json") --output $sizeBudgetReport
+if ($LASTEXITCODE -ne 0) { throw "MSIX package-size tier budget validation failed." }
 
 $privateAudit = Get-Content -LiteralPath (Join-Path $evidenceRoot "private-data-audit.json") -Raw | ConvertFrom-Json
 $inventory = Get-Content -LiteralPath $inventoryPath -Raw | ConvertFrom-Json

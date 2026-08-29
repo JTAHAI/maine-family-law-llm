@@ -1,0 +1,6 @@
+{
+  "schema_version": "store_update_trust_v1",
+  "trusted_keys": {},
+  "delivery_authority": "windows_store_partner_center",
+  "notes": "Production update-signing public keys are provisioned during the release ceremony. Private keys, download URLs, and update credentials never belong in this repository."
+}

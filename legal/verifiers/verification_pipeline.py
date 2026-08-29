@@ -14,6 +14,7 @@ from legal.verifiers.staleness_jurisdiction import FreshnessJurisdictionTreatmen
 BLOCKING_CITATION_STATUSES = {"not_found"}
 BLOCKING_QUOTE_STATUSES = {"quote_span_not_found", "semantic_match"}
 BLOCKING_CLAIM_STATUSES = {
+    "partially_supported",
     "unsupported",
     "contradicted",
     "stale",
@@ -136,8 +137,11 @@ class LegalOutputVerifier:
                 report.blockers.append(f"quote_span_not_found:{request.source_id}")
 
         claim_inputs = list(claims or [])
-        if auto_extract_claims and not claim_inputs:
-            claim_inputs = [ClaimRequest(claim=claim) for claim in extract_legal_claims(text)]
+        if auto_extract_claims:
+            # Explicit requests may add coverage, never hide unlisted assertions.
+            seen_claims = {_coerce_claim_request(row).claim for row in claim_inputs}
+            claim_inputs.extend(ClaimRequest(claim=claim) for claim in extract_legal_claims(text)
+                                if claim not in seen_claims)
         for claim_request in claim_inputs:
             request = _coerce_claim_request(claim_request)
             selected_ids = request.source_ids or tuple(source_texts)
@@ -169,7 +173,7 @@ class LegalOutputVerifier:
             verification["source_ids"] = list(selected_ids)
             verification["source_cards"] = [card_store.get(source_id) for source_id in selected_ids]
             report.claims.append(verification)
-            if verification["status"] in BLOCKING_CLAIM_STATUSES:
+            if verification["status"] != "supported" or verification.get("supported") is not True:
                 report.blockers.append(f"claim_{verification['status']}")
 
         report.blockers = sorted(set(report.blockers))

@@ -9,7 +9,7 @@ from maine_family_law_llm.production_ui import production_ui_manifest
 def test_shipped_ui_is_the_single_validated_production_surface():
     manifest = production_ui_manifest()
     assert manifest["status"] == "pass", manifest
-    assert manifest["asset_count"] == 3
+    assert manifest["asset_count"] == 4
     assert manifest["shadow_tsx_is_production"] is False
     assert manifest["offline_capable"] is True
     assert manifest["external_runtime_dependencies"] == []

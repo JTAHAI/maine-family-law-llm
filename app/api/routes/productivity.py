@@ -146,6 +146,12 @@ def run_backup(payload: dict[str, Any], request: Request, x_user_role: str | Non
     return _invoke(_store().run_backup, payload, action="productivity_backup_run", endpoint="POST /api/productivity/backups/run")
 
 
+@router.get("/productivity/backups", summary="Browse safe metadata for encrypted matter snapshots")
+def list_backups(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _guard(request, x_user_role)
+    return _invoke(_store().list_backups, action="productivity_backup_list", endpoint="GET /api/productivity/backups")
+
+
 @router.get("/productivity/backups/{backup_id}/verify", summary="Verify an encrypted matter backup")
 def verify_backup(backup_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
     _guard(request, x_user_role)

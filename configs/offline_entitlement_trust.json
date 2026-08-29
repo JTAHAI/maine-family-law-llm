@@ -1,0 +1,6 @@
+{
+  "schema_version": "offline_entitlement_trust_v1",
+  "commercial_mode": false,
+  "trusted_keys": {},
+  "notes": "The FOSS build does not require an entitlement. If a commercial deployment is separately authorized, trusted public keys are provisioned outside this repository. Entitlements never contain matter data and never enable telemetry."
+}

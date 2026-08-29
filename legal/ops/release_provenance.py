@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from legal.release.source_tree import pruned_source_paths
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -79,7 +81,7 @@ class ReleaseProvenanceBuilder:
     def build(self) -> ReleaseProvenanceReport:
         artifacts: list[dict[str, Any]] = []
         total = 0
-        for path in sorted(self.project_root.rglob("*")):
+        for path in sorted(pruned_source_paths(self.project_root, self.excluded_parts, exclude_egg_info=False)):
             if not path.is_file():
                 continue
             rel = path.relative_to(self.project_root)

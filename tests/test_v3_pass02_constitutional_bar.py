@@ -107,7 +107,10 @@ def test_pass02_command_palette_is_grouped_complete_and_keyboard_accessible() ->
         assert f"id: '{command_id}'" in js
 
     assert "class=\"command-group\"" in js
-    assert "command.aliases" in js
+    # Alias filtering lives in the shared production component so the
+    # workbench and any future shell apply the same search semantics.
+    component_js = read_workbench_asset("workbench_components.js")
+    assert "candidate.aliases" in component_js
     assert "aria-activedescendant" in js
     assert "aria-posinset" in js
     assert "aria-setsize" in js

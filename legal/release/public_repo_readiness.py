@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -104,14 +105,31 @@ class PublicRepoReadinessAuditor:
             ".proofs",
         }
         files: list[Path] = []
-        for path in self.project_root.rglob("*"):
-            if not path.is_file():
+        # Prune massive generated release/runtime trees before walking into
+        # them.  Filtering after ``rglob`` still descends into every bundled
+        # dependency and made a local source-readiness check needlessly slow.
+        for directory, dirnames, filenames in os.walk(self.project_root):
+            current = Path(directory)
+            rel_dir = current.relative_to(self.project_root)
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in skipped_parts and not name.endswith(".egg-info")
+            ]
+            if any(part in skipped_parts or part.endswith(".egg-info") for part in rel_dir.parts):
                 continue
-            rel = path.relative_to(self.project_root)
-            if any(part in skipped_parts or part.endswith(".egg-info") for part in rel.parts):
-                continue
-            files.append(path)
+            for name in filenames:
+                files.append(current / name)
         return files
+
+    @staticmethod
+    def _is_public_fixture(rel: str) -> bool:
+        path = Path(rel)
+        return path.parts[:2] in {("data", "fixtures"), ("tests", "fixtures")}
+
+    @staticmethod
+    def _is_public_runtime_source(rel: str) -> bool:
+        return Path(rel).parts[:2] == ("legal", "runtime")
 
     def _public_binary_inventory(self, root_rel: str) -> dict[str, str]:
         inventory_path = self.project_root / root_rel / "focaf_inventory.json"
@@ -157,7 +175,9 @@ class PublicRepoReadinessAuditor:
         rel_files = [p.relative_to(self.project_root).as_posix() for p in files]
         rel_set = set(rel_files)
 
-        txt_files = sorted(path for path in rel_files if path.lower().endswith(".txt"))
+        txt_files = sorted(
+            path for path in rel_files if path.lower().endswith(".txt") and not self._is_public_fixture(path)
+        )
         allowed_txt = self.policy.get("single_text_file_allowed", "PASS_CHANGES.txt")
         allowed_text_files = sorted(self.policy.get("allowed_text_files", [allowed_txt]))
         only_one_txt_file = txt_files == allowed_text_files
@@ -183,7 +203,9 @@ class PublicRepoReadinessAuditor:
         blocked_suffixes = {str(s).lower() for s in self.policy.get("blocked_suffixes", [])}
         for rel in rel_files:
             path = Path(rel)
-            if any(part in blocked_paths for part in path.parts):
+            if self._is_public_fixture(rel):
+                continue
+            if not self._is_public_runtime_source(rel) and any(part in blocked_paths for part in path.parts):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private path present"))
             if path.suffix.lower() in blocked_suffixes and not self._allowed_public_binary(rel, self.project_root / rel):
                 findings.append(PublicReleaseFinding(path=rel, reason="blocked runtime/private/binary suffix present"))

@@ -1,0 +1,9 @@
+{
+  "schema_version": "fast_interchange_admission_trust_v1",
+  "revision": 1,
+  "minimum_catalog_sequence": 1,
+  "trusted_keys": {},
+  "revoked_key_ids": [],
+  "revoked_release_ids": [],
+  "approved_download_origins": []
+}

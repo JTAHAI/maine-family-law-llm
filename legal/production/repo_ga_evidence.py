@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.api.contracts import APICompletionPolicy, EndpointInventory, OpenAPICompletionAuditor
-from app.api.main import app
+from app.api.production import app
 from app.web.ui_contracts import UICompletionAuditor
 
 
@@ -63,7 +63,9 @@ class RepoGAEvidenceBuilder:
     def build(self, *, write: bool = True) -> RepoGAEvidenceResult:
         generated_at = datetime.now(timezone.utc).isoformat()
         openapi_schema = app.openapi()
-        inventory_report = EndpointInventory().compare_to_registered(self._registered_routes())
+        inventory_report = EndpointInventory().compare_to_registered(
+            self._registered_routes(), surface="production"
+        )
         openapi_report = OpenAPICompletionAuditor().audit(openapi_schema).as_dict()
         policy_report = APICompletionPolicy().evidence().as_dict()
         ui_report = UICompletionAuditor(self.project_root / "app" / "web" / "pages").audit().as_dict()

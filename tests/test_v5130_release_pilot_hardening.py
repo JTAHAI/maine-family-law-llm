@@ -126,6 +126,7 @@ def test_privacy_safe_observability_is_hash_chained_and_refuses_paths_and_privat
     case = tmp_path / "case"
     case.mkdir()
     store = PrivacySafeObservabilityStore(case)
+    store.configure(mode="local_metrics", approved=True)
     first = store.record("retrieval", metrics={"duration_ms": 12, "result_count": 4}, labels={"component": "hybrid_retrieval", "status": "pass"})
     second = store.record("verifier", metrics={"duration_ms": 3}, labels={"component": "citation_verifier", "status": "pass"})
     assert second["previous_sha256"] == first["record_sha256"]
@@ -142,11 +143,12 @@ def test_observability_concurrent_writes_preserve_one_chain(tmp_path: Path):
     case = tmp_path / "case"
     case.mkdir()
     store = PrivacySafeObservabilityStore(case)
+    store.configure(mode="local_metrics", approved=True)
     with ThreadPoolExecutor(max_workers=8) as pool:
         list(pool.map(lambda value: store.record("api_request", metrics={"count": 1}, labels={"component": "api", "operation": f"op{value}", "status": "pass"}), range(32)))
     verification = store.verify()
     assert verification["status"] == "pass"
-    assert verification["row_count"] == 32
+    assert verification["row_count"] == 33  # explicit opt-in receipt plus 32 metrics
     assert verification["opentelemetry"]["remote_exporters_enabled"] is False
     assert verification["opentelemetry"]["private_attributes_allowed"] is False
 
@@ -155,6 +157,7 @@ def test_observability_tampering_is_detected(tmp_path: Path):
     case = tmp_path / "case"
     case.mkdir()
     store = PrivacySafeObservabilityStore(case)
+    store.configure(mode="local_metrics", approved=True)
     store.record("self_test", metrics={"count": 1}, labels={"status": "pass"})
     text = store.path.read_text(encoding="utf-8").replace('"count":1', '"count":2')
     store.path.write_text(text, encoding="utf-8")

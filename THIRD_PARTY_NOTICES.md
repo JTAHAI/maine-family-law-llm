@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Maine Family Law LLM v5.2.0 includes adapted concepts and small utilities from the following open-source projects. The adaptations were rewritten and security-hardened for a local, review-required Maine family-law workbench. No AGPL or unlicensed source code was incorporated.
+Maine Family Law LLM includes adapted concepts, utilities, and bundled resources from the following open-source projects. The adaptations were rewritten and security-hardened for a local, review-required Maine family-law workbench. No AGPL or unlicensed source code was incorporated.
 
 ## A-market ECM lawyer plugin
 
@@ -72,6 +72,16 @@ Maine Family Law LLM wraps this dependency with source-root containment, size an
   - offline runtime operation with no model or engine download.
 
 The Store build pins and verifies the release archive, executable, and model by SHA-256. Transcripts remain derived, review-required work product and are not treated as official court transcripts.
+
+## OCRmyPDF searchable-PDF resources (full document tier)
+
+- OCRmyPDF 17.8.1: Mozilla Public License 2.0; its distribution license is bundled with its package metadata.
+- Unmodified `NotoSans-Regular.ttf`: Copyright 2015-2021 Google LLC. All Rights Reserved.; SIL Open Font License 1.1. See `licenses/NotoSans-OFL-1.1.md`.
+- Unmodified `Occulta.ttf`: Copyright 2026 James R. Barlow; Apache License 2.0. The complete Apache 2.0 text is in `licenses/Google-knowledge-catalog-Apache-2.0.md` and applies independently to this font; the filename does not identify its author.
+- Unmodified `sRGB.icc`: Kai-Uwe Behrmann, Marti Maria, Photogamut, Graeme Gill, ColorSolutions; zlib license, reproduced in `licenses/OCRmyPDF-sRGB-Zlib.md`.
+
+These are PDF text-rendering/color resources, not generative legal models.
+Attribution follows the [pinned upstream resource declarations](https://github.com/ocrmypdf/OCRmyPDF/blob/v17.8.1/REUSE.toml) and the Noto font's embedded copyright/license metadata; the [Noto OFL text](https://github.com/notofonts/latin-greek-cyrillic/blob/main/OFL.txt) is reproduced with the bundled font's copyright notice.
 
 ## Excluded after review
 

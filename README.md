@@ -168,7 +168,9 @@ The canonical build produces:
 MaineFamilyLawLLM_8.0.0.0_x64.msix
 ```
 
-The v8 frozen-runtime candidate passed its canonical smoke test and bundled-engine inventory. A v8 MSIX has not been built or Store-qualified yet, so the published v7 package remains the Microsoft Store download until a separate package qualification succeeds.
+The full-tier v8.0.0.0 MSIX candidate passed its canonical frozen-runtime smoke, bundled-engine inventory, private-data audit, sealed-payload audit, and archive audit. Its SHA-256 is `a4afe2372d737c6cbcc598b99be8dea6c1f0a7e0baaf497145201b8468abfa86`; it is an unsigned candidate for the Microsoft Store signing and distribution process. WACK and installed-package qualification remain separate evidence steps, and the published v7 package remains the current Store download until Microsoft distributes v8.
+
+The package includes Fast Interchange runtime support but no legal model weights or adapters. Any future model pack must be user-initiated, versioned, rights-cleared, hash-verified, admitted, and explicitly activated; development-only adapters never establish current law or bypass review.
 
 ## Repository map
 

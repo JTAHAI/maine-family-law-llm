@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import uuid
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -20,6 +21,10 @@ from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock
 
 _SAFE_ID = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\Z")
 _MANIFEST = "authority-update.json"
+_ARCHIVE_SUFFIX = ".authority-bundle.zip"
+_MAX_ARCHIVE_FILES = 20_000
+_MAX_ARCHIVE_MEMBER_BYTES = 512 * 1024 * 1024
+_MAX_ARCHIVE_TOTAL_BYTES = 4 * 1024 * 1024 * 1024
 
 
 class AuthorityUpdateError(ValueError):
@@ -206,6 +211,133 @@ class AuthorityUpdateChannel:
             }
             atomic_write_bytes(self.active_path, _canonical(pointer), mode=0o600)
             return pointer
+
+    def export_archive(self, bundle_id: str | None = None) -> dict[str, Any]:
+        """Create a deterministic portable copy of an already signed bundle.
+
+        This never creates or substitutes a signature. The existing manifest is
+        verified first, then copied byte-for-byte into an archive held outside
+        the application package and authority data product.
+        """
+        active = self._active()
+        requested = str(bundle_id or "").strip() or str((active or {}).get("bundle_id") or "")
+        if not _SAFE_ID.fullmatch(requested):
+            raise AuthorityUpdateError("authority_bundle_id_invalid")
+        source = (self.bundles / requested).resolve()
+        if self.bundles not in source.parents:
+            raise AuthorityUpdateError("authority_bundle_id_invalid")
+        verified = self.verifier.verify(source, minimum_sequence=0)
+        if verified["bundle_id"] != requested:
+            raise AuthorityUpdateError("authority_bundle_id_invalid")
+        export_root = self.root / "exports"
+        export_root.mkdir(parents=True, exist_ok=True)
+        output = export_root / f"{requested}{_ARCHIVE_SUFFIX}"
+        if output.exists():
+            if output.is_symlink() or not output.is_file():
+                raise AuthorityUpdateError("authority_export_output_invalid")
+            return {
+                "status": "already_exported",
+                "bundle_id": requested,
+                "sequence": verified["sequence"],
+                "archive_filename": output.name,
+                "archive_sha256": _sha256(output),
+                "archive_bytes": output.stat().st_size,
+                "signature_verified": True,
+                "hashes_verified": True,
+                "network_used": False,
+                "review_required": True,
+                "notice": "An existing portable archive was preserved; no file was overwritten.",
+            }
+        temporary = export_root / f".{requested}.{uuid.uuid4().hex}.tmp"
+        members = [_MANIFEST, *[str(item["path"]) for item in verified["files"]]]
+        try:
+            with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+                for relative in members:
+                    path = source / Path(*PurePosixPath(relative).parts)
+                    info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.external_attr = 0o600 << 16
+                    archive.writestr(info, path.read_bytes())
+            os.replace(temporary, output)
+        finally:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
+        return {
+            "status": "exported",
+            "bundle_id": requested,
+            "sequence": verified["sequence"],
+            "archive_filename": output.name,
+            "archive_sha256": _sha256(output),
+            "archive_bytes": output.stat().st_size,
+            "signature_verified": True,
+            "hashes_verified": True,
+            "network_used": False,
+            "review_required": True,
+            "notice": "This archive preserves an existing signed authority bundle; it does not add authority data to the MSIX.",
+        }
+
+    def import_archive(self, archive_filename: str) -> dict[str, Any]:
+        """Verify a user-carried archive in the local inbox, then atomically install it."""
+        filename = str(archive_filename or "").strip()
+        if not filename or Path(filename).name != filename or not filename.endswith(_ARCHIVE_SUFFIX):
+            raise AuthorityUpdateError("authority_archive_filename_invalid")
+        inbox = self.root / "inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        archive_path = (inbox / filename).resolve()
+        if inbox not in archive_path.parents or archive_path.is_symlink() or not archive_path.is_file():
+            raise AuthorityUpdateError("authority_archive_unavailable")
+        staging = self.staging / f"archive-{uuid.uuid4().hex}"
+        try:
+            staging.mkdir()
+            self._extract_archive_safely(archive_path, staging)
+            installed = self.install(staging)
+            return {
+                **installed,
+                "status": "imported_and_activated",
+                "archive_filename": filename,
+                "signature_verified": True,
+                "hashes_verified": True,
+                "network_used": False,
+                "review_required": True,
+            }
+        finally:
+            shutil.rmtree(staging, ignore_errors=True)
+
+    @staticmethod
+    def _extract_archive_safely(archive_path: Path, destination: Path) -> None:
+        total_bytes = 0
+        seen: set[str] = set()
+        try:
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                infos = archive.infolist()
+                if not infos or len(infos) > _MAX_ARCHIVE_FILES:
+                    raise AuthorityUpdateError("authority_archive_member_count_invalid")
+                for info in infos:
+                    relative = AuthorityBundleVerifier._safe_relative(info.filename.rstrip("/"))
+                    if relative in seen or info.is_dir():
+                        raise AuthorityUpdateError("authority_archive_member_invalid")
+                    seen.add(relative)
+                    if info.file_size < 0 or info.file_size > _MAX_ARCHIVE_MEMBER_BYTES:
+                        raise AuthorityUpdateError("authority_archive_member_size_invalid")
+                    if info.file_size > 8 * 1024 * 1024 and (info.compress_size <= 0 or info.file_size > info.compress_size * 200):
+                        raise AuthorityUpdateError("authority_archive_compression_ratio_invalid")
+                    total_bytes += info.file_size
+                    if total_bytes > _MAX_ARCHIVE_TOTAL_BYTES:
+                        raise AuthorityUpdateError("authority_archive_total_size_invalid")
+                    target = destination / Path(*PurePosixPath(relative).parts)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    with archive.open(info, "r") as source, target.open("xb") as output:
+                        remaining = info.file_size
+                        while remaining:
+                            block = source.read(min(1024 * 1024, remaining))
+                            if not block:
+                                raise AuthorityUpdateError("authority_archive_member_truncated")
+                            output.write(block)
+                            remaining -= len(block)
+        except (OSError, zipfile.BadZipFile) as exc:
+            raise AuthorityUpdateError("authority_archive_invalid") from exc
 
     def _active(self) -> dict[str, Any] | None:
         if not self.active_path.is_file():

@@ -88,11 +88,20 @@ def compose_answer(
             },
         )
 
-    if safety_result.category == "general" and not safety_result.requires_citations:
+    # A safety classifier's broad ``general`` category is not a license to
+    # discard retrieved authority.  Hearing, organization, and procedural
+    # questions can be classified as general while still having useful source
+    # results.  Returning the greeting in that situation used to make the API
+    # claim ``grounded=True`` with zero source cards.  Preserve the retrieval
+    # lane whenever it found material; the greeting remains only for a truly
+    # source-free, non-substantive interaction.
+    if safety_result.category == "general" and not safety_result.requires_citations and not results:
         return ComposedAnswer(
             answer="Hi. Ask a Maine family-law question and I will look for source-backed information.",
             citations=(),
-            grounded=True,
+            grounded=False,
+            failure_class="general_information_not_source_backed",
+            recovery_hint="Ask a specific Maine family-law or court-process question to retrieve reviewable sources.",
         )
     if safety_result.requires_emergency_language:
         text = (

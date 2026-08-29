@@ -188,7 +188,9 @@ def test_installed_runtime_api_launches_and_serves_feature_status() -> None:
         version = _wait_for_json(f"{base_url}/api/version", timeout_s=30)
         doc_status = _wait_for_json(f"{base_url}/api/document-intelligence/status", timeout_s=30)
         root = urllib.request.urlopen(f"{base_url}/", timeout=30).read().decode("utf-8", errors="replace")
-        assert health["status"] in {"ready", "degraded"}
+        # The current canonical local gateway reports ``ok`` for healthy
+        # desktop operation; older runtime contracts used ready/degraded.
+        assert health["status"] in {"ok", "ready", "degraded"}
         assert resolution.executable_path.endswith("MaineFamilyLawLLM.exe")
         assert version["workbench_url"] == "/"
         assert doc_status["local_only"] is True

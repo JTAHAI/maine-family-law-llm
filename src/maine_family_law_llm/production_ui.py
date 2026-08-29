@@ -9,7 +9,10 @@ from typing import Any
 
 from .local_workbench_ui import ui_asset_root
 
-PRODUCTION_ASSETS = ("workbench.html", "workbench.css", "workbench.js")
+# The existing HTML/CSS/JS entrypoint names stay stable for frozen builds.
+# The dependency-free component module is loaded by workbench.html before the
+# controller and is included explicitly in the production asset inventory.
+PRODUCTION_ASSETS = ("workbench.html", "workbench.css", "workbench_components.js", "workbench.js")
 EXPERIMENTAL_HIDDEN_WORKSPACE_IDS: frozenset[str] = frozenset()
 EXPERIMENTAL_HIDDEN_API_PREFIXES: tuple[str, ...] = ()
 REQUIRED_CONTRACTS = {
@@ -22,6 +25,50 @@ REQUIRED_CONTRACTS = {
     "request_cancellation": ("workbench.js", "AbortController"),
     "production_identity": ("workbench.html", 'data-production-ui="workbench"'),
 }
+
+
+def _accessibility_audit(contents: dict[str, str]) -> dict[str, Any]:
+    """Return a static production-asset accessibility audit.
+
+    This is a repeatable packaging check, not a substitute for testing with a
+    screen reader in the frozen desktop application.  It deliberately reports
+    only what can be established from the shipped assets.
+    """
+
+    markup = contents.get("workbench.html", "")
+    stylesheet = contents.get("workbench.css", "")
+    javascript = contents.get("workbench.js", "")
+    checks = {
+        "single_main_landmark": markup.count("<main") == 1,
+        "skip_link": 'class="skip-link" href="#main-workbench"' in markup,
+        "live_status_regions": "aria-live=" in markup,
+        "dialog_markup": 'role="dialog"' in markup and 'aria-modal="true"' in markup,
+        "dialog_focus_return": "overlayReturnFocus" in javascript,
+        "dialog_focusable_filter": "function overlayFocusableElements" in javascript,
+        "escape_closes_overlays": "event.key === 'Escape'" in javascript,
+        "tabpanel_relationships": "panel.setAttribute('aria-labelledby', tab.id)" in javascript,
+        "visible_keyboard_focus": ":focus-visible" in stylesheet,
+        "reduced_motion": "prefers-reduced-motion" in stylesheet,
+        "forced_colors": "forced-colors: active" in stylesheet,
+        "responsive_profile_announcement": "function syncViewportContract()" in javascript,
+    }
+    blockers = [f"accessibility_contract_failed:{name}" for name, passed in checks.items() if not passed]
+    return {
+        "status": "pass" if not blockers else "fail",
+        "audit_kind": "static_packaged_asset_audit",
+        "checks": checks,
+        "counts": {
+            "main_landmarks": markup.count("<main"),
+            "dialogs": len(re.findall(r'role=["\']dialog["\']', markup)),
+            "modal_dialogs": len(re.findall(r'aria-modal=["\']true["\']', markup)),
+            "live_regions": len(re.findall(r'aria-live=', markup)),
+        },
+        "limitations": [
+            "Does not prove a screen-reader session, browser rendering, frozen executable, or MSIX behavior.",
+            "Does not replace manual keyboard, zoom, high-contrast, or assistive-technology testing.",
+        ],
+        "blockers": blockers,
+    }
 
 
 def _sha256(path: Path) -> str:
@@ -53,6 +100,7 @@ def production_ui_manifest(root: str | Path | None = None) -> dict[str, Any]:
         name: marker in contents.get(filename, "")
         for name, (filename, marker) in REQUIRED_CONTRACTS.items()
     }
+    accessibility_audit = _accessibility_audit(contents)
     javascript = contents.get("workbench.js", "")
     all_api_paths = sorted(set(re.findall(r"[\"'](/api/[a-zA-Z0-9_?&=./{}:-]+)", javascript)))
     experimental_api_paths = [
@@ -80,8 +128,9 @@ def production_ui_manifest(root: str | Path | None = None) -> dict[str, Any]:
     ]
     blockers = [f"missing_asset:{name}" for name in missing]
     blockers.extend(f"contract_failed:{name}" for name, passed in checks.items() if not passed)
+    blockers.extend(accessibility_audit["blockers"])
     return {
-        "schema_version": "production_ui_manifest_v1",
+        "schema_version": "production_ui_manifest_v2",
         "status": "pass" if not blockers else "fail",
         "surface": "bundled_dependency_free_workbench",
         "entrypoint": "/",
@@ -89,6 +138,7 @@ def production_ui_manifest(root: str | Path | None = None) -> dict[str, Any]:
         "assets": files,
         "asset_count": len(files),
         "contracts": checks,
+        "accessibility_audit": accessibility_audit,
         "api_path_count": len(api_paths),
         "api_paths": api_paths,
         "experimental_hidden_api_paths": experimental_api_paths,
@@ -108,5 +158,6 @@ __all__ = [
     "EXPERIMENTAL_HIDDEN_WORKSPACE_IDS",
     "PRODUCTION_ASSETS",
     "REQUIRED_CONTRACTS",
+    "_accessibility_audit",
     "production_ui_manifest",
 ]

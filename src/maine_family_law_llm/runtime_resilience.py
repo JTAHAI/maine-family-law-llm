@@ -63,6 +63,7 @@ def runtime_health_snapshot() -> dict[str, Any]:
 
     ui_files = (
         root / "src" / "maine_family_law_llm" / "ui" / "workbench.html",
+        root / "src" / "maine_family_law_llm" / "ui" / "workbench_components.js",
         root / "src" / "maine_family_law_llm" / "ui" / "workbench.js",
         root / "src" / "maine_family_law_llm" / "ui" / "workbench.css",
     )

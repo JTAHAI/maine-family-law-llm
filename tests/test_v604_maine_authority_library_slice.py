@@ -27,7 +27,7 @@ def test_default_external_authority_root_is_outside_repo(monkeypatch: pytest.Mon
         ensure_external_authority_root(tmp_path / "repo" / "authority", project_root=tmp_path / "repo")
 
 
-def test_authority_library_filters_broad_source_classes_and_exposes_span_preview(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_authority_library_never_exposes_staged_sources_without_an_active_build(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
     root = default_external_data_root(tmp_path / "repo")
     _write_jsonl(
@@ -68,11 +68,15 @@ def test_authority_library_filters_broad_source_classes_and_exposes_span_preview
     )
     service = AuthorityLibraryService(data_root=root)
     statute_results = service.list_sources(source_class="statutes")
-    assert statute_results["count"] == 1
-    assert statute_results["sources"][0]["source_id"] == "statute-1"
+    assert statute_results["status"] == "blocked"
+    assert statute_results["sources"] == []
+    assert "active_authority_build_unverified" in statute_results["blockers"]
     detail = service.get_source("statute-1")
-    assert detail["source_span_preview"] == "best interest"
-    assert detail["source_card"]["source_class_group"] == "statutes"
+    assert detail["status"] == "blocked"
+    assert "active_authority_build_unverified" in detail["blockers"]
+    span = service.get_source_span("statute-1")
+    assert span["status"] == "blocked"
+    assert "active_authority_build_unverified" in span["blockers"]
 
 
 def test_authority_update_requires_network_ack_for_live_mode(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

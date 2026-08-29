@@ -1,0 +1,27 @@
+{
+  "schema": "maine-family-law-llm.fast-interchange-provenance.v1",
+  "implementation_kind": "native_model_empty_implementation",
+  "source_files_copied": false,
+  "source_project": "LEGAL FAST INTERCHANGE",
+  "authorization_note": "User identified LEGAL FAST INTERCHANGE as the authorized open-source successor for selected family-law components. Mainely Code remains proprietary and excluded.",
+  "included_scope": [
+    "closed fleet contract",
+    "artifact hash verification",
+    "loopback-only worker contract",
+    "serialized shared-base adapter switching",
+    "native Ed25519 admission and encrypted high-water state",
+    "native immutable Windows loader snapshots",
+    "owned subprocess cancellation and host capability binding",
+    "native offline signed-pack import and separate activation"
+  ],
+  "excluded_scope": [
+    "Mainely Code source",
+    "model weights",
+    "training corpus",
+    "adapters",
+    "evaluation data",
+    "credentials",
+    "binaries"
+  ],
+  "post_source_changes": "Native implementation designed for Maine Family Law LLM host policy, closed request validation, and model-empty operation."
+}

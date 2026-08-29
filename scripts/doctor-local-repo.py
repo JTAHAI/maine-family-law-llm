@@ -76,6 +76,15 @@ APPROVED_PUBLIC_PDF_ROOTS = (
     Path("maine_family_law_llm/resources/focaf"),
 )
 
+# Public, version-controlled malformed-input fixtures exercise the defensive
+# parser path.  They are not case records, runtime output, or release payloads
+# and must not make a clean source checkout fail the hygiene doctor merely
+# because their extension resembles a quarantined user file.
+PUBLIC_FIXTURE_ROOTS = (
+    Path("data/fixtures"),
+    Path("tests/fixtures"),
+)
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -112,6 +121,14 @@ def _is_approved_public_pdf(repo_root: Path, path: Path) -> bool:
         except (OSError, json.JSONDecodeError):
             return False
     return False
+
+
+def _is_public_fixture(repo_root: Path, path: Path) -> bool:
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        return False
+    return any(rel.parts[: len(root.parts)] == root.parts for root in PUBLIC_FIXTURE_ROOTS)
 
 
 TESTS_ALLOWED_TOP_LEVEL_FILES = {"conftest.py", "__init__.py"}
@@ -229,6 +246,8 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
             forbidden.append(rel.as_posix())
             continue
         if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
+            if _is_public_fixture(repo_root, path):
+                continue
             if path.suffix.lower() == ".pdf" and _is_approved_public_pdf(repo_root, path):
                 continue
             forbidden.append(rel.as_posix())
@@ -237,6 +256,7 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
             path.is_file()
             and path.suffix.lower() == ".txt"
             and rel.as_posix() not in ALLOWED_TEXT_FILES
+            and not _is_public_fixture(repo_root, path)
         ):
             forbidden.append(rel.as_posix())
 

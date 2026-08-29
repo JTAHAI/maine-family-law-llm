@@ -57,6 +57,25 @@ def test_form_pdf_builder_falls_back_to_official_url_form_identifier(tmp_path: P
     assert parsed["text"]
 
 
+def test_builder_excludes_explicitly_quarantined_source_before_parsing(tmp_path: Path, monkeypatch) -> None:
+    data_root = tmp_path / "external"
+    record = _record(
+        data_root,
+        source_id="court-form-pdf-quarantined",
+        source_class="court_form_pdf",
+        url="https://www.courts.maine.gov/forms/fm-088.pdf",
+        parser_name="maine_form_pdf",
+    )
+    record["metadata"] = {"retrieval_admission": "quarantined"}
+    _write_manifest(data_root, [record])
+    monkeypatch.setattr(parsed_store_module, "extract_pdf_text", lambda _content: (_ for _ in ()).throw(AssertionError("must not parse quarantined source")))
+
+    report = ParsedAuthorityStoreBuilder(data_root=data_root).build()
+
+    assert report.status == "blocked"
+    assert any(finding.code == "source_quarantined_from_retrieval" for finding in report.findings)
+
+
 def test_opinion_pdf_builder_quarantines_empty_text_without_failing_build(tmp_path: Path, monkeypatch) -> None:
     data_root = tmp_path / "external"
     empty = _record(

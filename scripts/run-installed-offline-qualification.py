@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import ipaddress
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -12,7 +14,9 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,16 +29,24 @@ if str(ROOT / "src") not in sys.path:
 
 from docx import Document
 from fpdf import FPDF
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from pypdf import PdfReader
 
-from legal.document_intelligence import analyze_document, create_ocr_preservation_copy, create_redacted_copy
 from maine_family_law_llm.installed_runtime import (
     DEFAULT_PACKAGE_NAME,
     InstalledRuntimeResolution,
     resolve_installed_runtime_executable,
 )
 from maine_family_law_llm.local_only_boundary import LocalOnlyNetworkBlocked, local_only_network_boundary
+
+QA_HEADERS = {
+    "X-User-Role": "reviewer",
+    # Use the production desktop tenant for this isolated fictional profile so
+    # API-created audit ownership remains compatible with later real UI actions.
+    "X-Tenant-Id": "local-desktop",
+    "X-MFLL-Client-Session": uuid.uuid4().hex + uuid.uuid4().hex,
+}
+REQUEST_EVENTS: list[dict[str, Any]] = []
 
 
 def utc_now() -> str:
@@ -70,19 +82,122 @@ def wait_json(url: str, *, timeout_s: int = 120) -> dict[str, Any]:
 
 def request_json(method: str, url: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     body = None
-    headers = {"Accept": "application/json"}
+    headers = {**QA_HEADERS, "Accept": "application/json"}
     if payload is not None:
         body = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=body, method=method.upper(), headers=headers)
-    with urllib.request.urlopen(request, timeout=120) as response:
-        raw = response.read().decode("utf-8")
-        return json.loads(raw) if raw else {}
+    started = time.monotonic()
+    event = {"method": method.upper(), "path": urllib.parse.urlsplit(url).path}
+    try:
+        with urllib.request.urlopen(request, timeout=660) as response:
+            event["http_status"] = response.status
+            event["service_instance"] = response.headers.get("X-MFL-Service-Instance", "")
+            event["request_id"] = response.headers.get("X-Request-ID", "")
+            raw = response.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except Exception as exc:
+        event["error_class"] = type(exc).__name__
+        event["http_status"] = getattr(exc, "code", None)
+        raise
+    finally:
+        event["duration_seconds"] = round(time.monotonic() - started, 3)
+        REQUEST_EVENTS.append(event)
+        print(json.dumps({"request": event["path"], "status": event.get("http_status"),
+                          "duration_seconds": event["duration_seconds"]}), flush=True)
 
 
 def download_bytes(url: str) -> bytes:
-    with urllib.request.urlopen(url, timeout=120) as response:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=QA_HEADERS), timeout=120) as response:
         return response.read()
+
+
+def verify_runtime_instance(base_url: str, instance: str) -> bool:
+    if not re.fullmatch(r"[0-9a-f]{64}", instance):
+        return False
+    try:
+        call = urllib.request.Request(base_url + "/api/health", headers=QA_HEADERS)
+        with urllib.request.urlopen(call, timeout=5) as response:
+            return response.status == 200 and response.headers.get("X-MFL-Service-Instance") == instance
+    except (OSError, urllib.error.URLError):
+        return False
+
+
+def verified_artifact_bytes(base_url: str, artifact: dict[str, Any]) -> bytes:
+    route = str(artifact.get("download_url") or "")
+    if not re.fullmatch(r"/api/document-intelligence/artifacts/[a-f0-9]{64}", route):
+        raise ValueError("artifact_capability_route_required")
+    size = artifact.get("size_bytes")
+    if type(size) is not int or not 0 < size <= 64 * 1024 * 1024:
+        raise ValueError("artifact_size_invalid")
+    call = urllib.request.Request(base_url + route, headers=QA_HEADERS)
+    with urllib.request.urlopen(call, timeout=120) as response:
+        if response.headers.get("X-MFL-Hash-Verified") != "true":
+            raise ValueError("artifact_not_verified_by_runtime")
+        data = response.read(size + 1)
+    if len(data) != size or hashlib.sha256(data).hexdigest() != artifact.get("sha256"):
+        raise ValueError("artifact_content_binding_failed")
+    return data
+
+
+def verified_pdf_page(base_url: str, metadata: dict[str, Any], page: int, *, instance: str) -> tuple[bytes, dict[str, Any]]:
+    token = str(metadata.get("token") or "")
+    if not re.fullmatch(r"[a-f0-9]{64}", token) or type(page) is not int or page < 1:
+        raise ValueError("pdf_preview_capability_required")
+    route = f"/api/records/preview/{token}?page={page}"
+    started = time.monotonic()
+    event = {"method": "GET", "path": "/api/records/preview/{token}", "page": page}
+    try:
+        if not verify_runtime_instance(base_url, instance):
+            raise ValueError("pdf_preview_runtime_instance_unverified")
+        call = urllib.request.Request(base_url + route, headers=QA_HEADERS)
+        with urllib.request.urlopen(call, timeout=45) as response:
+            headers = response.headers
+            event["http_status"] = response.status
+            event["service_instance"] = headers.get("X-MFL-Service-Instance", "")
+            if (response.status != 200 or headers.get_content_type() != "image/png"
+                    or headers.get("X-MFL-Hash-Verified") != "true"
+                    or headers.get("X-MFL-Source-Hash") != metadata.get("source_hash")
+                    or headers.get("X-MFL-Page") != str(page)
+                    or headers.get("X-MFL-Review-Required") != "true"
+                    or not re.fullmatch(r"[a-f0-9]{64}", headers.get("X-MFL-Audit-Receipt", ""))
+                    or (event["service_instance"] and event["service_instance"] != instance)):
+                raise ValueError("pdf_preview_binding_failed")
+            data = response.read(8 * 1024 * 1024 + 1)
+            if len(data) > 8 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != headers.get("X-MFL-Preview-Hash"):
+                raise ValueError("pdf_preview_hash_failed")
+            page_count = int(headers.get("X-MFL-Page-Count", "0"))
+            with Image.open(io.BytesIO(data)) as image:
+                image.load()
+                if image.format != "PNG" or not page <= page_count <= 100000 or not 1 <= min(image.size) <= max(image.size) <= 1600:
+                    raise ValueError("pdf_preview_raster_invalid")
+                dimensions = list(image.size)
+            # The secret instance header is intentionally exposed only by the
+            # health route, not by record responses. Bind this action on both
+            # sides using the same loopback origin and owned runtime instance.
+            if not verify_runtime_instance(base_url, instance):
+                raise ValueError("pdf_preview_runtime_instance_changed")
+            event["runtime_instance_verified_before_and_after"] = True
+            return data, {"status": "pass", "page": page, "page_count": page_count,
+                          "dimensions": dimensions, "sha256": hashlib.sha256(data).hexdigest(),
+                          "source_hash": metadata["source_hash"], "review_required": True,
+                          "audit_receipt": headers["X-MFL-Audit-Receipt"]}
+    finally:
+        event["duration_seconds"] = round(time.monotonic() - started, 3)
+        REQUEST_EVENTS.append(event)
+
+
+def ocr_completed(result: dict[str, Any], pdf_text: str, sidecar: bytes) -> bool:
+    """Blocked, empty or unreviewed derivatives never qualify as successful OCR."""
+    phrase = "scan for ocr"
+    return (
+        result.get("status") == "pass"
+        and not result.get("blockers")
+        and result.get("review_required") is True
+        and result.get("original_modified") is False
+        and phrase in " ".join(pdf_text.lower().split())
+        and phrase in " ".join(sidecar.decode("utf-8", errors="replace").lower().split())
+    )
 
 
 def create_docx(path: Path) -> None:
@@ -98,7 +213,7 @@ def create_docx(path: Path) -> None:
     document.save(path)
 
 
-def create_pdf_with_text(path: Path, lines: list[str]) -> None:
+def create_pdf_with_text(path: Path, lines: list[str], *, second_page: bool = False) -> None:
     pdf = FPDF(unit="pt", format="letter")
     pdf.add_page()
     pdf.set_font("Helvetica", size=14)
@@ -107,6 +222,12 @@ def create_pdf_with_text(path: Path, lines: list[str]) -> None:
         pdf.set_xy(48, y)
         pdf.multi_cell(516, 18, line)
         y += 24
+    if second_page:
+        pdf.add_page()
+        pdf.set_xy(48, 48)
+        pdf.multi_cell(516, 22, "FICTIONAL PAGE TWO - Review required. No real records.")
+        pdf.set_fill_color(20, 120, 130)
+        pdf.rect(48, 140, 300, 120, style="F")
     pdf.output(str(path))
 
 
@@ -114,8 +235,9 @@ def create_image_only_pdf(path: Path, *, label: str) -> Path:
     image_path = path.with_suffix(".png")
     image = Image.new("RGB", (1240, 1754), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((80, 120), label, fill="black")
-    draw.text((80, 180), "This page intentionally contains only a raster image.", fill="black")
+    font = ImageFont.load_default(size=36)
+    draw.text((80, 120), f"FICTIONAL {label}", fill="black", font=font)
+    draw.text((80, 180), "Review required. No real records.", fill="black", font=font)
     image.save(image_path)
     pdf = FPDF(unit="pt", format=(612, 792))
     pdf.add_page()
@@ -154,10 +276,10 @@ def build_case_fixture(case_root: Path) -> list[dict[str, Any]]:
     manifest: list[dict[str, Any]] = []
 
     pii_text = (
-        "Motion for temporary relief.\n"
-        "Parent Jane Example lives at 10 Main Street, Portland, Maine.\n"
-        "Email jane.example@example.com and phone (207) 555-1212.\n"
-        "DOB 01/02/2010 and SSN 123-45-6789 are confidential."
+        "FICTIONAL SOFTWARE TEST. Motion for temporary relief.\n"
+        "Parent Fictional Example lives at 10 Example Lane, Fictional Town.\n"
+        "Email jane.example@example.com and phone (207) 555-0109.\n"
+        "Fictional DOB 01/02/2010 and invalid SSN 000-00-0000 are test data."
     )
     pii_txt = case_root / "pii.txt"
     pii_txt.write_text(pii_text, encoding="utf-8")
@@ -215,6 +337,7 @@ def build_case_fixture(case_root: Path) -> list[dict[str, Any]]:
             "The child changed schools on January 3, 2026.",
             "Contact: jane.example@example.com",
         ],
+        second_page=True,
     )
     manifest.append(
         {
@@ -232,6 +355,7 @@ def build_case_fixture(case_root: Path) -> list[dict[str, Any]]:
             filename=pdf_path.name,
             data=pdf_path.read_bytes(),
             title="Ordinary PDF",
+            page_count=2,
             text_excerpt="The child changed schools on January 3, 2026.",
             text_content="This ordinary PDF has a heading, a body paragraph, and a small table. The child changed schools on January 3, 2026.",
             issue_lanes=["school"],
@@ -262,6 +386,17 @@ def build_case_fixture(case_root: Path) -> list[dict[str, Any]]:
             issue_lanes=["ocr"],
         )
     )
+
+    image_path = ocr_pdf.with_suffix(".png")
+    image_bytes = image_path.read_bytes()
+    manifest.append({
+        "evidence_id": "REC-IMAGE", "source_path": str(image_path.resolve()),
+        "private_copy_relpath": "02_PRIVATE_FORENSIC_MASTER/files/scan.png",
+        "source_hash": hashlib.sha256(image_bytes).hexdigest(),
+        "subject": "Fictional image scan for OCR",
+    })
+    records.append(stage_record(case_root, evidence_id="REC-IMAGE", filename="scan.png",
+                                data=image_bytes, title="Fictional image scan for OCR"))
 
     dup_a = case_root / "duplicate-a.docx"
     create_docx(dup_a)
@@ -312,6 +447,23 @@ def build_case_fixture(case_root: Path) -> list[dict[str, Any]]:
             issue_lanes=["duplication"],
         )
     )
+
+    changed = case_root / "changed-copy.docx"
+    changed_doc = Document(dup_a)
+    changed_doc.add_paragraph("FICTIONAL changed copy: a lighthouse attachment is still missing.")
+    changed_doc.save(changed)
+    changed_bytes = changed.read_bytes()
+    manifest.append({
+        "evidence_id": "REC-CHANGED", "source_path": str(changed.resolve()),
+        "private_copy_relpath": "02_PRIVATE_FORENSIC_MASTER/files/changed-copy.docx",
+        "source_hash": hashlib.sha256(changed_bytes).hexdigest(),
+        "subject": "Fictional changed copy",
+    })
+    records.append(stage_record(
+        case_root, evidence_id="REC-CHANGED", filename=changed.name, data=changed_bytes,
+        title="Fictional changed copy", text_excerpt=dup_text + " Lighthouse attachment missing.",
+        text_content=dup_text + " Lighthouse attachment missing.",
+    ))
 
     index_root = case_root / "04_INDEXES"
     index_root.mkdir(parents=True, exist_ok=True)
@@ -394,9 +546,22 @@ def _record_compare(left: dict[str, Any], right: dict[str, Any]) -> dict[str, An
 
 def start_runtime(executable: Path, port: int, *, localappdata: Path) -> subprocess.Popen[str]:
     environment = os.environ.copy()
+    environment.pop("MAINE_MATTER_STORE_KEY", None)
+    for key in list(environment):
+        if key.startswith("MFL_FAST_INTERCHANGE_") or key == "MAINE_FAST_INTERCHANGE_WORKER_TOKEN":
+            environment.pop(key)
+    instance = uuid.uuid4().hex + uuid.uuid4().hex
     environment.update(
         {
             "LOCALAPPDATA": str(localappdata),
+            "MAINE_FAMILY_LAW_DATA_ROOT": str(localappdata / "runtime"),
+            "MFL_AUTHORITY_DATA_ROOT": str(localappdata / "empty-authority"),
+            "MFL_RUNTIME_STATE_ROOT": str(localappdata / "state"),
+            "MFL_IDEMPOTENCY_STATE_ROOT": str(localappdata / "idempotency"),
+            "MFL_VAULT_KEY_ROOT": str(localappdata / "vault"),
+            "MFL_LOCAL_API_INSTANCE_ID": instance,
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": str(localappdata / "bytecode"),
             "MFL_RUNTIME_MODE": "store",
             "HTTP_PROXY": "http://127.0.0.1:9",
             "HTTPS_PROXY": "http://127.0.0.1:9",
@@ -407,14 +572,17 @@ def start_runtime(executable: Path, port: int, *, localappdata: Path) -> subproc
             "TLD_EXTRACT_NO_FETCH": "1",
         }
     )
-    return subprocess.Popen(
+    process = subprocess.Popen(
         [str(executable), "--serve-local-api", "--port", str(port)],
         cwd=str(executable.parent),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         text=True,
         env=environment,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+    process.qa_service_instance = instance
+    return process
 
 
 class RuntimeNetworkMonitor:
@@ -474,7 +642,12 @@ class RuntimeNetworkMonitor:
                 for process in processes:
                     try:
                         connections = process.net_connections(kind="tcp")
-                    except (psutil.AccessDenied, psutil.NoSuchProcess):
+                    except psutil.AccessDenied:
+                        marker = "process_connections_access_denied"
+                        if marker not in self.errors:
+                            self.errors.append(marker)
+                        continue
+                    except psutil.NoSuchProcess:
                         continue
                     for connection in connections:
                         if not connection.raddr:
@@ -492,7 +665,7 @@ class RuntimeNetworkMonitor:
             except psutil.NoSuchProcess:
                 break
             except Exception as exc:  # noqa: BLE001
-                marker = f"{exc.__class__.__name__}:{str(exc)[:160]}"
+                marker = exc.__class__.__name__
                 if marker not in self.errors:
                     self.errors.append(marker)
             self.stop_event.wait(self.interval_seconds)
@@ -522,12 +695,20 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Qualify this exact frozen runtime instead of resolving an installed AppX package.",
     )
+    parser.add_argument("--evidence-root", type=Path)
+    parser.add_argument("--hold-seconds", type=int, default=0,
+                        help="Keep this fictional runtime available for browser checks; stop with stop-probe in the evidence directory.")
     args = parser.parse_args(argv)
+    if not 0 <= args.hold_seconds <= 3600:
+        parser.error("hold-seconds must be between 0 and 3600")
     evidence_root = Path(
-        os.environ.get("MFL_GA_EVIDENCE_ROOT")
+        args.evidence_root or os.environ.get("MFL_GA_EVIDENCE_ROOT")
         or ROOT / "dist" / "store" / "evidence"
     ).expanduser().resolve()
     evidence_root.mkdir(parents=True, exist_ok=True)
+    if (evidence_root / "installed-offline-qualification.json").exists():
+        raise SystemExit("Use a new evidence directory; existing qualification evidence is immutable.")
+    REQUEST_EVENTS.clear()
     resolution = _runtime_resolution(args.runtime_executable)
     if not resolution.executable_path:
         raise SystemExit("Unable to resolve an installed or bundled runtime executable.")
@@ -535,14 +716,22 @@ def main(argv: list[str] | None = None) -> int:
     port = free_port()
     base_url = f"http://127.0.0.1:{port}"
     summary: dict[str, Any] = {
-        "schema_version": "installed_offline_qualification_v1",
+        "schema_version": "installed_offline_qualification_v2",
         "generated_at": utc_now(),
         "runtime_resolution": resolution.as_dict(),
+        "runtime_sha256": sha256_file(Path(resolution.executable_path)),
+        "execution_level": "frozen_runtime_canonical_http",
+        "installed_msix": resolution.source == "appx_package",
+        "fictional_only": True,
+        "encryption_path": "isolated_production_managed_vault_no_environment_matter_key",
+        "browser_interaction_tested": False,
+        "base_url": base_url,
         "offline_boundary": {},
         "feature_results": {},
         "qualification_checks": {},
         "inventory_result": {},
         "qualification_status": "blocked",
+        "feature_check_status": "blocked",
         "blockers": [],
     }
 
@@ -576,8 +765,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     network_monitor = RuntimeNetworkMonitor(process.pid)
     network_monitor.start()
+    runtime_binding_before = False
     try:
         health = wait_json(f"{base_url}/api/health", timeout_s=180)
+        runtime_binding_before = verify_runtime_instance(base_url, process.qa_service_instance)
+        if not runtime_binding_before:
+            raise RuntimeError("runtime_instance_mismatch_before_actions")
         version = request_json("GET", f"{base_url}/api/version")
         root_page = urllib.request.urlopen(f"{base_url}/", timeout=30).read().decode("utf-8", errors="replace")
         document_status = request_json("GET", f"{base_url}/api/document-intelligence/status")
@@ -595,6 +788,15 @@ def main(argv: list[str] | None = None) -> int:
         summary["feature_results"]["activate_corpus"] = activate
 
         request_json("POST", f"{base_url}/api/corpus-rebuild-index", {})
+        request_json("POST", f"{base_url}/api/corpus-ocr/start", {"approved": True, "language": "eng"})
+        ocr_deadline = time.monotonic() + 180
+        corpus_ocr = {}
+        while time.monotonic() < ocr_deadline:
+            corpus_ocr = request_json("GET", f"{base_url}/api/corpus-ocr/status")
+            if corpus_ocr.get("status") not in {"queued", "running"}:
+                break
+            time.sleep(1)
+        summary["feature_results"]["corpus_ocr"] = corpus_ocr
         inventory = request_json("GET", f"{base_url}/api/corpus-inventory")
         retrieval_status = request_json("GET", f"{base_url}/api/retrieval-workbench/status")
         retrieval_search = request_json(
@@ -606,80 +808,56 @@ def main(argv: list[str] | None = None) -> int:
         ask_pdf = request_json("POST", f"{base_url}/ask", {"question": "ordinary PDF", "search_mode": "my_records"})
         ask_pii = request_json("POST", f"{base_url}/ask", {"question": "example.com", "search_mode": "my_records"})
 
-        by_id = {str(row.get("evidence_id") or ""): dict(row) for row in records}
-        pii_path = case_root / "02_PRIVATE_FORENSIC_MASTER" / "files" / "pii.txt"
-        docx_path = case_root / "02_PRIVATE_FORENSIC_MASTER" / "files" / "motion.docx"
-        pdf_path = case_root / "02_PRIVATE_FORENSIC_MASTER" / "files" / "brief.pdf"
         scan_source = case_root / "02_PRIVATE_FORENSIC_MASTER" / "files" / "scan.pdf"
+        # These operations must execute in the candidate, never in the driver
+        # Python environment. The driver creates fixtures and verifies returned
+        # bytes; it does not supply a substitute parser/privacy/OCR service.
+        def record_action(record_id: str, action: str, **options: Any) -> dict[str, Any]:
+            integrity = request_json("GET", f"{base_url}/api/records/{record_id}/integrity")
+            token = integrity["preview"]["token"]
+            return request_json("POST", f"{base_url}/api/records/{record_id}/{action}",
+                                {"source_token": token, "approved": True, **options})
 
-        pii_integrity = analyze_document(
-            case_root=case_root,
-            source_path=pii_path,
-            source_hash=sha256_file(pii_path),
-            run_docling=False,
-            run_presidio=False,
-        )
-        pii_blocks = list((pii_integrity.get("structured_document") or {}).get("blocks") or [])
-        pii_privacy = analyze_document(
-            case_root=case_root,
-            source_path=pii_path,
-            source_hash=sha256_file(pii_path),
-            run_docling=False,
-            run_presidio=True,
-        )
-        pii_redaction_proposal = create_redacted_copy(
-            case_root=case_root,
-            source_path=pii_path,
-            source_hash=sha256_file(pii_path),
-            approved=True,
-            reviewer="qualification",
-            run_presidio=True,
-        )
-        pii_redacted_copy = pii_redaction_proposal
+        pdf_previews = []
+        for record_id, page in (("REC-PDF", 1), ("REC-PDF", 2), ("REC-OCR", 1)):
+            integrity = request_json("GET", f"{base_url}/api/records/{record_id}/integrity")
+            data, receipt = verified_pdf_page(base_url, integrity["preview"], page,
+                                               instance=process.qa_service_instance)
+            filename = f"fictional-{record_id}-page-{page}.png"
+            (evidence_root / filename).write_bytes(data)
+            pdf_previews.append({**receipt, "record_id": record_id, "artifact": filename})
+        summary["feature_results"]["pdf_raster_previews"] = pdf_previews
 
-        docx_parse_fallback = analyze_document(
-            case_root=case_root,
-            source_path=docx_path,
-            source_hash=sha256_file(docx_path),
-            run_docling=False,
-            run_presidio=False,
-        )
-        docx_parse = analyze_document(
-            case_root=case_root,
-            source_path=docx_path,
-            source_hash=sha256_file(docx_path),
-            run_docling=True,
-            run_presidio=True,
-        )
-        pdf_parse = analyze_document(
-            case_root=case_root,
-            source_path=pdf_path,
-            source_hash=sha256_file(pdf_path),
-            run_docling=True,
-            run_presidio=False,
-        )
-        scan_source = case_root / "02_PRIVATE_FORENSIC_MASTER" / "files" / "scan.pdf"
-        scan_hash = hashlib.sha256(scan_source.read_bytes()).hexdigest()
-        ocr_result = create_ocr_preservation_copy(
-            case_root=case_root,
-            source_path=scan_source,
-            source_hash=scan_hash,
-            approved=True,
-            language="eng",
-        )
+        pii_integrity = request_json("GET", f"{base_url}/api/records/REC-PII-TXT/integrity")
+        pii_blocks = request_json("GET", f"{base_url}/api/records/REC-PII-TXT/blocks")["blocks"]
+        pii_privacy = record_action("REC-PII-TXT", "privacy-scan", run_presidio=True)
+        pii_redaction_proposal = record_action("REC-PII-TXT", "redaction-proposal", run_presidio=True)
+        pii_redacted_copy = record_action("REC-PII-TXT", "redacted-copy", run_presidio=True,
+                                          reviewer="fictional-release-qa")
+        redacted_artifact = pii_redacted_copy.get("artifacts", {}).get("redacted_copy", {})
+        redacted_bytes = verified_artifact_bytes(base_url, redacted_artifact)
+        redacted_receipt = request_json("GET", f"{base_url}/api/artifacts/{redacted_artifact['artifact_id']}/receipt")
+        docx_parse_fallback = record_action("REC-DOCX", "parse", run_docling=False, run_presidio=False)
+        docx_parse = record_action("REC-DOCX", "parse", run_docling=True, run_presidio=True)
+        pdf_parse = record_action("REC-PDF", "parse", run_docling=True, run_presidio=False)
+        scan_hash = sha256_file(scan_source)
+        ocr_result = record_action("REC-OCR", "ocr", language="eng")
         ocr_artifacts = dict(ocr_result.get("artifacts") or {})
-        ocr_pdf = None
-        ocr_sidecar = None
+        ocr_pdf_bytes = b""
+        ocr_sidecar_bytes = b""
         ocr_text = ""
         if "pdf" in ocr_artifacts and "sidecar" in ocr_artifacts:
             ocr_pdf_artifact = ocr_artifacts["pdf"]
             ocr_sidecar_artifact = ocr_artifacts["sidecar"]
-            ocr_pdf = case_root / ocr_pdf_artifact["relative_path"]
-            ocr_sidecar = case_root / ocr_sidecar_artifact["relative_path"]
-            ocr_text = PdfReader(str(ocr_pdf)).pages[0].extract_text() or ""
+            ocr_pdf_bytes = verified_artifact_bytes(base_url, ocr_pdf_artifact)
+            ocr_sidecar_bytes = verified_artifact_bytes(base_url, ocr_sidecar_artifact)
+            ocr_text = PdfReader(io.BytesIO(ocr_pdf_bytes)).pages[0].extract_text() or ""
         ocr_comparison = ocr_result.get("comparison", {})
-        duplicates = _duplicate_report(records, "REC-DUP-A")
-        compare = _record_compare(by_id["REC-DUP-A"], by_id["REC-DUP-B"])
+        duplicates = request_json("GET", f"{base_url}/api/records/REC-DUP-A/duplicates")
+        compare = request_json("POST", f"{base_url}/api/records/compare",
+                               {"left_record_id": "REC-DUP-A", "right_record_id": "REC-DUP-B"})
+        changed_compare = request_json("POST", f"{base_url}/api/records/compare",
+                                       {"left_record_id": "REC-DUP-A", "right_record_id": "REC-CHANGED"})
 
         summary["feature_results"].update(
             {
@@ -717,14 +895,15 @@ def main(argv: list[str] | None = None) -> int:
                     "pdf_parse": pdf_parse,
                     "ocr": {
                         "result": ocr_result,
-                        "pdf_hash": sha256_file(ocr_pdf) if ocr_pdf else None,
-                        "sidecar_hash": sha256_file(ocr_sidecar) if ocr_sidecar else None,
+                        "pdf_hash": hashlib.sha256(ocr_pdf_bytes).hexdigest() if ocr_pdf_bytes else None,
+                        "sidecar_hash": hashlib.sha256(ocr_sidecar_bytes).hexdigest() if ocr_sidecar_bytes else None,
                         "pdf_text": ocr_text[:2000],
                         "comparison": ocr_comparison,
                     },
                     "redaction": pii_redacted_copy,
                     "duplicates": duplicates,
                     "compare": compare,
+                    "changed_copy": changed_compare,
                 },
             }
         )
@@ -737,6 +916,11 @@ def main(argv: list[str] | None = None) -> int:
         }
 
         fail_conditions = {
+            "pdf_raster_pages": len(pdf_previews) != 3 or any(row["status"] != "pass" for row in pdf_previews),
+            "pdf_distinct_pages": pdf_previews[0]["sha256"] == pdf_previews[1]["sha256"],
+            "pdf_page_count": pdf_previews[0]["page_count"] != 2 or pdf_previews[1]["page_count"] != 2,
+            "corpus_ocr": corpus_ocr.get("status") != "completed"
+            or corpus_ocr.get("failed") != 0 or int(corpus_ocr.get("completed") or 0) < 1,
             "runtime_health": health.get("status") not in {"ok", "ready", "degraded"},
             "workbench_root": not summary["feature_results"]["launch"]["rootHasWorkbench"],
             "retrieval_status": retrieval_status.get("status") == "blocked",
@@ -754,13 +938,19 @@ def main(argv: list[str] | None = None) -> int:
             "fallback_reason": "deterministic_baseline_selected"
             not in str(docx_parse_fallback.get("selection_reason") or ""),
             "docling_or_fallback": docx_parse.get("selected_extractor") not in {"docling", "deterministic_baseline"},
-            "privacy_worker": pii_privacy.get("privacy_review", {}).get("presidio_status")
-            not in {"pass", "unavailable"},
-            "redacted_copy": pii_redacted_copy.get("status") != "pass",
-            "ocr_status": ocr_result.get("status") not in {"pass", "blocked"},
+            "docling_engine": docx_parse.get("selected_extractor") != "docling",
+            "privacy_worker": pii_privacy.get("privacy_review", {}).get("presidio_status") != "pass",
+            "redacted_copy": pii_redacted_copy.get("status") != "pass"
+            or pii_redacted_copy.get("review_required") is not True
+            or not redacted_bytes or b"jane.example@example.com" in redacted_bytes,
+            "redaction_receipt": redacted_receipt.get("artifact_type") != "redacted_copy",
+            "ocr_status": not ocr_completed(ocr_result, ocr_text, ocr_sidecar_bytes),
             "original_immutable": ocr_result.get("original_modified") is not False,
+            "original_hash_unchanged": sha256_file(scan_source) != scan_hash,
             "duplicate_detection": duplicates.get("exact_duplicate") is not True,
             "record_comparison": compare.get("exact_duplicate") is not True,
+            "changed_copy": changed_compare.get("exact_duplicate") is not False
+            or not changed_compare.get("field_differences", {}).get("source_hash"),
         }
         failed_checks = [name for name, failed in fail_conditions.items() if failed]
         summary["qualification_checks"] = {
@@ -770,19 +960,46 @@ def main(argv: list[str] | None = None) -> int:
             summary["failed_qualification_checks"] = failed_checks
             summary["blockers"].append("one_or_more_feature_checks_failed")
 
-        summary["qualification_status"] = "pass" if not summary["blockers"] else "blocked"
+        summary["feature_check_status"] = "pass" if not summary["blockers"] else "blocked"
+        if args.hold_seconds:
+            (evidence_root / "browser-ready.json").write_text(
+                json.dumps({"base_url": base_url, "fictional_only": True,
+                            "runtime_sha256": summary["runtime_sha256"],
+                            "feature_check_status": summary["feature_check_status"]}), encoding="utf-8")
+            deadline = time.monotonic() + args.hold_seconds
+            while time.monotonic() < deadline and not (evidence_root / "stop-probe").exists():
+                time.sleep(1)
+    except Exception as exc:
+        summary["blockers"].append(f"qualification_exception:{type(exc).__name__}")
+        summary["feature_check_status"] = "blocked"
     finally:
         runtime_network = network_monitor.stop()
         summary["offline_boundary"]["runtime_network_observation"] = runtime_network
         if runtime_network.get("external_connection_count"):
             summary["blockers"].append("installed_runtime_external_network_connection_observed")
-            summary["qualification_status"] = "blocked"
+            summary["feature_check_status"] = "blocked"
+        if runtime_network.get("errors") or not runtime_network.get("sample_count"):
+            summary["blockers"].append("runtime_network_observation_incomplete")
+        summary["request_events"] = list(REQUEST_EVENTS)
+        instance = str(getattr(process, "qa_service_instance", ""))
+        summary["runtime_instance_verified"] = runtime_binding_before and verify_runtime_instance(base_url, instance)
+        summary["runtime_instance_proof"] = "fresh secret instance header on health before and after actions on the same loopback origin"
+        if not summary["runtime_instance_verified"]:
+            summary["blockers"].append("runtime_instance_not_verified")
+            summary["feature_check_status"] = "blocked"
         try:
             process.terminate()
             process.wait(timeout=30)
         except Exception:
             process.kill()
 
+    # TCP polling and dead proxies do not prove zero UDP/DNS/native requests.
+    # A successful explicit frozen-runtime run is not an installed-package run.
+    summary["feature_blockers"] = list(summary["blockers"])
+    summary["blockers"].append("os_level_zero_network_proof_not_executed")
+    if resolution.source != "appx_package":
+        summary["blockers"].append("installed_msix_not_tested")
+    summary["qualification_status"] = "blocked"
     summary_path = evidence_root / "installed-offline-qualification.json"
     text_path = evidence_root / "installed-offline-qualification.txt"
     summary["files"] = {
@@ -794,9 +1011,10 @@ def main(argv: list[str] | None = None) -> int:
     text_path.write_text(
         "\n".join(
             [
-                f"Installed package tested: {summary['runtime_resolution']['executable_path']}",
-                "Offline method: local-only socket boundary plus installed runtime HTTP probe",
+                f"Runtime source: {summary['runtime_resolution']['source']}",
+                "Method: canonical frozen HTTP calls; driver-only socket guard and best-effort TCP observation, not OS network proof",
                 f"Feature result: {summary['qualification_status']}",
+                f"Scoped API result: {summary['feature_check_status']}",
                 f"Network attempt: {summary['offline_boundary'].get('external_request')}",
                 f"Network restoration: {summary['offline_boundary'].get('socket_restored')}",
                 f"Inventory records: {summary['inventory_result'].get('records')}",
@@ -805,8 +1023,10 @@ def main(argv: list[str] | None = None) -> int:
         + "\n",
         encoding="utf-8",
     )
-    print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    print(json.dumps({"report": str(summary_path), "feature_check_status": summary["feature_check_status"],
+                      "qualification_status": summary["qualification_status"],
+                      "blockers": summary["blockers"]}, indent=2, sort_keys=True))
+    return 0 if summary["qualification_status"] == "pass" else 2
 
 
 if __name__ == "__main__":

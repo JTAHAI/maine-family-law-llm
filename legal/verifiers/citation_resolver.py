@@ -26,12 +26,18 @@ _FRESHNESS_PRIORITY = {
 _DIRECT_SOURCE_CLASS_BONUS = {
     "statute_section": 0,
     "court_form": 0,
+    "court_form_pdf": 0,
     "law_court_opinion": 0,
+    "law_court_opinion_pdf": 0,
     "court_rule": 0,
+    "court_rule_pdf": 0,
     "statute_title_index": 5,
     "court_forms_index": 5,
     "law_court_opinion_index": 5,
+    "law_court_opinion_reference": 5,
     "court_rules_index": 5,
+    "court_rule_reference": 5,
+    "court_rule_text": 5,
 }
 
 
@@ -113,7 +119,16 @@ class SourceAuthorityIndex:
                         if key in incoming_metadata
                     }
                     for candidate_pinpoint in (prior, incoming):
-                        if candidate_pinpoint and candidate_pinpoint not in exact_pinpoints:
+                        # A record-level span identifies the full source, not a
+                        # citation pinpoint.  Retaining it in ``exact_pinpoints``
+                        # creates a malformed selectable entry with no pinpoint
+                        # label, which can make a later exact-span inspection
+                        # fail.  Only explicitly named pinpoint metadata may be
+                        # exposed as selectable pinpoint evidence.
+                        if (
+                            candidate_pinpoint.get("pinpoint")
+                            and candidate_pinpoint not in exact_pinpoints
+                        ):
                             exact_pinpoints.append(candidate_pinpoint)
                     incoming_metadata["exact_pinpoints"] = exact_pinpoints
                     # A bare citation keeps its record-level source span. A

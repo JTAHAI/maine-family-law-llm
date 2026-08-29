@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -199,14 +200,32 @@ class EnterpriseDataProductAuditor:
             "dist",
             "node_modules",
         }
-        for path in self.project_root.rglob("*"):
-            rel = path.relative_to(self.project_root).as_posix()
-            if any(part in ignored_dirs for part in path.parts):
-                continue
-            for pattern in patterns:
-                normalized = pattern.rstrip("/")
-                if pattern.endswith("/") and path.is_dir() and rel == normalized:
-                    findings.append(rel + "/")
-                elif fnmatch.fnmatch(path.name, pattern) or fnmatch.fnmatch(rel, pattern):
-                    findings.append(rel)
+        public_fixture_prefixes = {
+            ("data", "fixtures"),
+            ("tests", "fixtures"),
+        }
+        # ``Path.rglob`` decides which children to visit before the caller can
+        # reject a generated directory.  On a release tree that makes this
+        # fail-closed audit needlessly traverse large MSIX/build artifacts and
+        # can exceed the CLI's bounded test timeout.  Prune those directory
+        # trees during discovery; the package-specific audit owns their
+        # inspection and this repository-boundary audit never treats them as
+        # source contents.
+        for root, directories, filenames in os.walk(self.project_root, topdown=True):
+            current = Path(root)
+            relative_root = current.relative_to(self.project_root)
+            directories[:] = [name for name in directories if name not in ignored_dirs]
+            names = [*directories, *filenames]
+            for name in names:
+                path = current / name
+                relative_path = relative_root / name
+                rel = relative_path.as_posix()
+                if any(relative_path.parts[: len(prefix)] == prefix for prefix in public_fixture_prefixes):
+                    continue
+                for pattern in patterns:
+                    normalized = pattern.rstrip("/")
+                    if pattern.endswith("/") and path.is_dir() and rel == normalized:
+                        findings.append(rel + "/")
+                    elif fnmatch.fnmatch(path.name, pattern) or fnmatch.fnmatch(rel, pattern):
+                        findings.append(rel)
         return sorted(set(findings))

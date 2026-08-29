@@ -17,48 +17,42 @@ if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
 if (-not $PackagePath) {
-  $PackagePath = Join-Path $RepoRoot "dist\release\v7.0.0\msix\MaineFamilyLawLLM_7.0.0.0_x64.msix"
+  $PackagePath = Join-Path $RepoRoot "dist\release\v8.0.0\msix\MaineFamilyLawLLM_8.0.0.0_x64.msix"
 }
 if (-not $OutputRoot) {
-  $OutputRoot = Join-Path $RepoRoot "dist\store\evidence\wack"
+  $OutputRoot = Join-Path $RepoRoot "dist\release\v8.0.0\evidence\wack"
 }
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 $resultPath = Join-Path $OutputRoot "wack-result.json"
+$parser = Join-Path $RepoRoot "scripts\parse-wack-report.py"
+
+function Write-WackQualification([string]$ExecutionStatus, [string]$Reason) {
+  if (-not (Test-Path -LiteralPath $parser)) { throw "WACK parser was not found: $parser" }
+  & python $parser --package $PackagePath --output-root $OutputRoot --execution-status $ExecutionStatus --reason $Reason --output $resultPath
+  if ($LASTEXITCODE -gt 1) { throw "WACK evidence parser failed with exit code $LASTEXITCODE" }
+}
 
 if (-not (Test-IsAdministrator)) {
-  @{
-    status = "not_run"
-    reason = "Windows App Certification Kit requires elevation on this machine."
-    package_path = $PackagePath
-  } | ConvertTo-Json -Depth 4 | Set-Content -Path $resultPath -Encoding UTF8
+  Write-WackQualification "not_run" "Windows App Certification Kit requires elevation on this machine."
   Write-Host "WACK was not run because elevation is required."
   return
 }
 
 $appCert = "C:\Program Files (x86)\Windows Kits\10\App Certification Kit\appcert.exe"
 if (-not (Test-Path -LiteralPath $appCert)) {
-  @{
-    status = "not_run"
-    reason = "appcert.exe was not found."
-    package_path = $PackagePath
-  } | ConvertTo-Json -Depth 4 | Set-Content -Path $resultPath -Encoding UTF8
+  Write-WackQualification "not_run" "appcert.exe was not found."
   Write-Host "WACK tool was not found."
   return
 }
 
 try {
   & $appCert test -appxpackagepath $PackagePath -reportoutputpath $OutputRoot
-  @{
-    status = "completed"
-    package_path = $PackagePath
-    output_root = $OutputRoot
-  } | ConvertTo-Json -Depth 4 | Set-Content -Path $resultPath -Encoding UTF8
+  if ($LASTEXITCODE -eq 0) {
+    Write-WackQualification "completed" ""
+  } else {
+    Write-WackQualification "failed" "appcert.exe returned exit code $LASTEXITCODE."
+  }
 } catch {
-  @{
-    status = "failed"
-    reason = $_.Exception.Message
-    package_path = $PackagePath
-    output_root = $OutputRoot
-  } | ConvertTo-Json -Depth 4 | Set-Content -Path $resultPath -Encoding UTF8
+  Write-WackQualification "failed" "WACK invocation threw an exception."
   throw
 }

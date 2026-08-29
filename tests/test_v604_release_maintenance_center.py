@@ -60,6 +60,7 @@ def _seed_case_root(case_root: Path) -> None:
     (case_root / "order.pdf").write_bytes(b"synthetic-order")
     (case_root / "notes.txt").write_text("synthetic notes", encoding="utf-8")
     store = PrivacySafeObservabilityStore(case_root)
+    store.configure(mode="local_metrics", approved=True)
     store.record("api_request", metrics={"count": 1}, labels={"component": "maintenance", "operation": "seed", "status": "pass"})
     assert store.verify()["status"] == "pass"
 

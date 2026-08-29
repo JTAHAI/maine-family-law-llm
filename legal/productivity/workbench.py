@@ -25,7 +25,7 @@ from legal.security.durable_io import (
     exclusive_file_lock,
     read_bounded_regular_file,
 )
-from legal.security.local_encryption import LocalEnvelopeEncryptor
+from legal.security.local_encryption import EncryptedBlob, LocalEnvelopeEncryptor
 from legal.security.strict_json import strict_json_load_path
 
 
@@ -50,6 +50,8 @@ _ALLOWED_RECIPE_STEPS = frozenset(
 _MAX_STATE_BYTES = 16 * 1024 * 1024
 _MAX_BACKUP_FILE = 2 * 1024 * 1024
 _MAX_BACKUP_TOTAL = 32 * 1024 * 1024
+_BACKUP_CHUNK_BYTES = 512 * 1024
+_MAX_BACKUP_CHUNKS = 1_024
 
 
 class ProductivitySuiteError(RuntimeError):
@@ -774,10 +776,121 @@ class ProductivitySuiteStore:
     def _backup_root(self) -> Path:
         configured = str(os.environ.get("MFL_BACKUP_ROOT") or "").strip()
         root = Path(configured).expanduser().resolve() if configured else self.case_root.parent / ".mfl_encrypted_backups" / self.scope
+        if root == self.case_root or self.case_root in root.parents:
+            raise ProductivitySuiteError("backup_root_must_be_outside_active_matter", status_code=409)
         if root.exists() and root.is_symlink():
             raise ProductivitySuiteError("backup_root_symlink_refused", status_code=409)
         root.mkdir(parents=True, exist_ok=True)
         return root
+
+    @staticmethod
+    def _backup_manifest_path(backup_root: Path, backup_id: str) -> Path:
+        return backup_root / f"{backup_id}.json.enc"
+
+    @staticmethod
+    def _backup_chunk_root(backup_root: Path) -> Path:
+        root = backup_root / "chunks"
+        if root.exists() and root.is_symlink():
+            raise ProductivitySuiteError("backup_chunk_root_symlink_refused", status_code=409)
+        root.mkdir(parents=True, exist_ok=True)
+        return root
+
+    def _backup_chunk_path(self, backup_root: Path, digest: str) -> Path:
+        if not _SHA256.fullmatch(digest):
+            raise ProductivitySuiteError("backup_chunk_hash_invalid", status_code=409)
+        return self._backup_chunk_root(backup_root) / f"{digest}.json.enc"
+
+    def _store_backup_chunk(self, backup_root: Path, raw: bytes) -> tuple[str, bool]:
+        """Store one independently encrypted chunk, reusing only verified data."""
+
+        digest = _digest(raw)
+        target = self._backup_chunk_path(backup_root, digest)
+        if target.exists():
+            if not target.is_file() or target.is_symlink():
+                raise ProductivitySuiteError("backup_chunk_unavailable", status_code=409)
+            try:
+                envelope = strict_json_load_path(
+                    target, max_bytes=_BACKUP_CHUNK_BYTES * 3, require_object=True
+                )
+                restored = self.encryptor.decrypt(EncryptedBlob.from_dict(envelope))
+            except Exception as exc:
+                raise ProductivitySuiteError("backup_chunk_integrity_failed", status_code=409) from exc
+            if _digest(restored) != digest:
+                raise ProductivitySuiteError("backup_chunk_integrity_failed", status_code=409)
+            return digest, True
+        try:
+            envelope = self.encryptor.encrypt(raw).as_dict()
+            atomic_write_bytes(target, json.dumps(envelope, sort_keys=True).encode("utf-8"), mode=0o600)
+            persisted = strict_json_load_path(target, max_bytes=_BACKUP_CHUNK_BYTES * 3, require_object=True)
+            if _digest(self.encryptor.decrypt(EncryptedBlob.from_dict(persisted))) != digest:
+                raise ProductivitySuiteError("backup_chunk_integrity_failed", status_code=409)
+        except ProductivitySuiteError:
+            raise
+        except Exception as exc:
+            raise ProductivitySuiteError("backup_chunk_write_failed", status_code=409) from exc
+        return digest, False
+
+    def _read_backup_chunk(self, backup_root: Path, digest: str) -> bytes:
+        path = self._backup_chunk_path(backup_root, digest)
+        if not path.is_file() or path.is_symlink():
+            raise ProductivitySuiteError("backup_chunk_missing", status_code=409)
+        try:
+            envelope = strict_json_load_path(path, max_bytes=_BACKUP_CHUNK_BYTES * 3, require_object=True)
+            raw = self.encryptor.decrypt(EncryptedBlob.from_dict(envelope))
+        except Exception as exc:
+            raise ProductivitySuiteError("backup_chunk_integrity_failed", status_code=409) from exc
+        if len(raw) > _BACKUP_CHUNK_BYTES or _digest(raw) != digest:
+            raise ProductivitySuiteError("backup_chunk_integrity_failed", status_code=409)
+        return raw
+
+    def _verify_incremental_package(self, backup_root: Path, package: dict[str, Any]) -> dict[str, Any]:
+        if package.get("schema_version") != "encrypted_matter_backup_v2" or package.get("matter_scope") != self.scope:
+            return {"status": "blocked", "blockers": ["backup_manifest_invalid"], "file_count": 0, "chunk_count": 0}
+        files = package.get("files")
+        if not isinstance(files, list) or len(files) > _MAX_BACKUP_CHUNKS:
+            return {"status": "blocked", "blockers": ["backup_manifest_files_invalid"], "file_count": 0, "chunk_count": 0}
+        seen_paths: set[str] = set()
+        referenced_chunks: set[str] = set()
+        blockers: list[str] = []
+        for row in files:
+            if not isinstance(row, dict):
+                blockers.append("backup_manifest_file_invalid")
+                continue
+            relative = Path(str(row.get("path") or ""))
+            if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+                blockers.append("backup_manifest_path_invalid")
+                continue
+            path_key = relative.as_posix()
+            if path_key in seen_paths:
+                blockers.append("backup_manifest_duplicate_path")
+                continue
+            seen_paths.add(path_key)
+            chunks = row.get("chunks")
+            if not isinstance(chunks, list) or not chunks or len(chunks) > 8:
+                blockers.append("backup_manifest_chunks_invalid")
+                continue
+            assembled = bytearray()
+            for digest in chunks:
+                if not isinstance(digest, str) or not _SHA256.fullmatch(digest):
+                    blockers.append("backup_manifest_chunk_hash_invalid")
+                    continue
+                try:
+                    assembled.extend(self._read_backup_chunk(backup_root, digest))
+                    referenced_chunks.add(digest)
+                except ProductivitySuiteError as exc:
+                    blockers.append(exc.code)
+            if len(assembled) != int(row.get("size") or -1) or _digest(bytes(assembled)) != str(row.get("sha256") or ""):
+                blockers.append("backup_file_integrity_failed")
+        expected_count = int(package.get("file_count") or -1)
+        if expected_count != len(files):
+            blockers.append("backup_file_count_mismatch")
+        return {
+            "status": "pass" if not blockers else "blocked",
+            "blockers": sorted(set(blockers)),
+            "file_count": len(files),
+            "chunk_count": len(referenced_chunks),
+            "restore_independent": True,
+        }
 
     def run_backup(self, payload: dict[str, Any]) -> dict[str, Any]:
         schedule_id = _safe_id(payload.get("schedule_id"), "schedule_id")
@@ -786,10 +899,13 @@ class ProductivitySuiteStore:
             schedule = next((x for x in value["backup_schedules"] if x["schedule_id"] == schedule_id), None)
             if schedule is None:
                 raise ProductivitySuiteError("backup_schedule_not_found", status_code=404)
+            backup_root = self._backup_root()
             files = []
             total = 0
+            chunk_count = 0
+            reused_chunk_count = 0
             for path in sorted(self.case_root.rglob("*")):
-                if not path.is_file() or path.is_symlink() or self._backup_root() in path.parents:
+                if not path.is_file() or path.is_symlink() or backup_root in path.parents:
                     continue
                 try:
                     raw = read_bounded_regular_file(path, max_bytes=_MAX_BACKUP_FILE)
@@ -798,24 +914,37 @@ class ProductivitySuiteStore:
                 if total + len(raw) > _MAX_BACKUP_TOTAL:
                     break
                 relative = str(path.relative_to(self.case_root)).replace("\\", "/")
-                files.append({"path": relative, "sha256": _digest(raw), "size": len(raw), "content": base64.b64encode(raw).decode("ascii")})
+                chunks = []
+                raw_chunks = [raw[offset : offset + _BACKUP_CHUNK_BYTES] for offset in range(0, len(raw), _BACKUP_CHUNK_BYTES)] or [b""]
+                for chunk in raw_chunks:
+                    digest, reused = self._store_backup_chunk(backup_root, chunk)
+                    chunks.append(digest)
+                    chunk_count += 1
+                    reused_chunk_count += int(reused)
+                    if chunk_count > _MAX_BACKUP_CHUNKS:
+                        raise ProductivitySuiteError("backup_chunk_limit_exceeded", status_code=413)
+                files.append({"path": relative, "sha256": _digest(raw), "size": len(raw), "chunks": chunks})
                 total += len(raw)
             backup_id = f"backup_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}"
             package = {
-                "schema_version": "encrypted_matter_backup_v1",
+                "schema_version": "encrypted_matter_backup_v2",
                 "backup_id": backup_id,
                 "matter_scope": self.scope,
                 "created_at": _now(),
                 "files": files,
                 "file_count": len(files),
                 "total_unencrypted_bytes": total,
+                "chunk_size_bytes": _BACKUP_CHUNK_BYTES,
+                "chunk_count": chunk_count,
+                "restore_independent": True,
             }
             envelope = self.encryptor.encrypt_json(package)
-            target = self._backup_root() / f"{backup_id}.json.enc"
+            target = self._backup_manifest_path(backup_root, backup_id)
             atomic_write_bytes(target, json.dumps(envelope, sort_keys=True).encode("utf-8"), mode=0o600)
             persisted = strict_json_load_path(target, max_bytes=_MAX_BACKUP_TOTAL * 3, require_object=True)
             verified = self.encryptor.decrypt_json(persisted)
-            if verified.get("backup_id") != backup_id or verified.get("matter_scope") != self.scope:
+            verification = self._verify_incremental_package(backup_root, verified)
+            if verified.get("backup_id") != backup_id or verification["status"] != "pass":
                 raise ProductivitySuiteError("backup_verification_failed", status_code=409)
             receipt = {
                 "backup_id": backup_id,
@@ -824,6 +953,11 @@ class ProductivitySuiteStore:
                 "total_unencrypted_bytes": total,
                 "encrypted_size": target.stat().st_size,
                 "encrypted_sha256": _digest(target.read_bytes()),
+                "backup_format": "incremental_encrypted_chunks_v2",
+                "chunk_count": chunk_count,
+                "reused_chunk_count": reused_chunk_count,
+                "new_chunk_count": chunk_count - reused_chunk_count,
+                "restore_independent": True,
                 "verified": True,
                 "created_at": _now(),
                 "review_required": True,
@@ -839,14 +973,15 @@ class ProductivitySuiteStore:
             value["revision"] += 1
             self._save(value)
             retention = int(schedule["retention_count"])
-            existing = sorted(self._backup_root().glob("backup_*.json.enc"), key=lambda p: p.stat().st_mtime, reverse=True)
+            existing = sorted(backup_root.glob("backup_*.json.enc"), key=lambda p: p.stat().st_mtime, reverse=True)
             for old in existing[retention:]:
                 old.unlink(missing_ok=True)
             return receipt
 
     def verify_backup(self, backup_id: str) -> dict[str, Any]:
         safe_backup_id = _safe_id(backup_id, "backup_id")
-        path = self._backup_root() / f"{safe_backup_id}.json.enc"
+        backup_root = self._backup_root()
+        path = self._backup_manifest_path(backup_root, safe_backup_id)
         if not path.is_file() or path.is_symlink():
             raise ProductivitySuiteError("backup_not_found", status_code=404)
         try:
@@ -854,15 +989,77 @@ class ProductivitySuiteStore:
             package = self.encryptor.decrypt_json(envelope)
         except Exception as exc:
             raise ProductivitySuiteError("backup_integrity_failed", status_code=409) from exc
-        valid = package.get("matter_scope") == self.scope and all(
-            _digest(base64.b64decode(row["content"])) == row["sha256"] for row in package.get("files", [])
-        )
+        if package.get("schema_version") == "encrypted_matter_backup_v2":
+            verification = self._verify_incremental_package(backup_root, package)
+            valid = verification["status"] == "pass"
+            chunk_count = verification["chunk_count"]
+            backup_format = "incremental_encrypted_chunks_v2"
+        else:
+            valid = package.get("matter_scope") == self.scope and all(
+                _digest(base64.b64decode(row["content"])) == row["sha256"] for row in package.get("files", [])
+            )
+            chunk_count = 0
+            backup_format = "legacy_encrypted_snapshot_v1"
         return {
             "backup_id": safe_backup_id,
             "status": "pass" if valid else "blocked",
             "file_count": int(package.get("file_count") or 0),
             "encrypted_sha256": _digest(path.read_bytes()),
             "restore_mode": "separate_recovery_directory_only",
+            "backup_format": backup_format,
+            "chunk_count": chunk_count,
+            "restore_independent": package.get("schema_version") == "encrypted_matter_backup_v2",
+            "review_required": True,
+        }
+
+    def list_backups(self) -> dict[str, Any]:
+        """Browse bounded, content-free snapshot metadata for this matter only."""
+
+        backup_root = self._backup_root()
+        snapshots: list[dict[str, Any]] = []
+        for path in sorted(backup_root.glob("backup_*.json.enc"), key=lambda item: item.stat().st_mtime, reverse=True)[:30]:
+            if not path.is_file() or path.is_symlink():
+                continue
+            backup_id = path.name.removesuffix(".json.enc")
+            try:
+                safe_backup_id = _safe_id(backup_id, "backup_id")
+                envelope = strict_json_load_path(path, max_bytes=_MAX_BACKUP_TOTAL * 3, require_object=True)
+                package = self.encryptor.decrypt_json(envelope)
+            except Exception:
+                # A corrupt or foreign item is not an active-matter snapshot
+                # and does not belong in this matter-scoped browser.
+                continue
+            if package.get("matter_scope") != self.scope or package.get("backup_id") != safe_backup_id:
+                continue
+            verification = self.verify_backup(safe_backup_id)
+            snapshots.append(
+                {
+                    "snapshot_id": safe_backup_id,
+                    "created_at": str(package.get("created_at") or ""),
+                    "backup_format": "incremental_encrypted_chunks_v2"
+                    if package.get("schema_version") == "encrypted_matter_backup_v2"
+                    else "legacy_encrypted_snapshot_v1",
+                    "file_count": int(package.get("file_count") or 0),
+                    "total_unencrypted_bytes": int(package.get("total_unencrypted_bytes") or 0),
+                    "chunk_count": int(verification.get("chunk_count") or 0),
+                    "verification_status": str(verification.get("status") or "blocked"),
+                    "restore_eligible": verification.get("status") == "pass",
+                    "source_drill_down": {
+                        "source_type": "encrypted_backup_manifest",
+                        "source_id": f"backup_snapshot:{safe_backup_id}",
+                        "exact_file_paths_disclosed": False,
+                    },
+                    "review_required": True,
+                }
+            )
+        return {
+            "schema_version": "matter_backup_snapshot_browser_v1",
+            "status": "review_required",
+            "snapshot_count": len(snapshots),
+            "snapshots": snapshots,
+            "paths_disclosed": False,
+            "private_record_content_included": False,
+            "network_used": False,
             "review_required": True,
         }
 
@@ -872,7 +1069,8 @@ class ProductivitySuiteStore:
         safe_backup_id = _safe_id(backup_id, "backup_id")
         if payload.get("confirmed") is not True:
             raise ProductivitySuiteError("backup_restore_confirmation_required", status_code=409)
-        path = self._backup_root() / f"{safe_backup_id}.json.enc"
+        backup_root = self._backup_root()
+        path = self._backup_manifest_path(backup_root, safe_backup_id)
         if not path.is_file() or path.is_symlink():
             raise ProductivitySuiteError("backup_not_found", status_code=404)
         try:
@@ -882,7 +1080,10 @@ class ProductivitySuiteStore:
             raise ProductivitySuiteError("backup_integrity_failed", status_code=409) from exc
         if package.get("matter_scope") != self.scope:
             raise ProductivitySuiteError("cross_matter_access_denied", status_code=404)
-        recovery_root = self._backup_root() / "recovery" / safe_backup_id
+        verification = self.verify_backup(safe_backup_id)
+        if verification["status"] != "pass":
+            raise ProductivitySuiteError("backup_integrity_failed", status_code=409)
+        recovery_root = backup_root / "recovery" / safe_backup_id
         if recovery_root.exists():
             raise ProductivitySuiteError("backup_recovery_already_exists", status_code=409)
         recovery_root.mkdir(parents=True, exist_ok=False)
@@ -892,7 +1093,11 @@ class ProductivitySuiteStore:
             relative = Path(str(row.get("path") or ""))
             if relative.is_absolute() or ".." in relative.parts or not relative.parts:
                 raise ProductivitySuiteError("backup_path_invalid", status_code=409)
-            raw = base64.b64decode(str(row.get("content") or ""), validate=True)
+            if package.get("schema_version") == "encrypted_matter_backup_v2":
+                chunks = row.get("chunks") if isinstance(row.get("chunks"), list) else []
+                raw = b"".join(self._read_backup_chunk(backup_root, str(digest)) for digest in chunks)
+            else:
+                raw = base64.b64decode(str(row.get("content") or ""), validate=True)
             if _digest(raw) != row.get("sha256"):
                 raise ProductivitySuiteError("backup_integrity_failed", status_code=409)
             target = (recovery_root / relative).resolve()
@@ -902,13 +1107,22 @@ class ProductivitySuiteStore:
             atomic_write_bytes(target, raw, mode=0o600)
             restored.append({"path": relative.as_posix(), "sha256": _digest(raw), "size": len(raw)})
             total += len(raw)
+        recovery_matter_id = f"recovery_{_digest({'scope': self.scope, 'backup_id': safe_backup_id})[:20]}"
         receipt = {
             "backup_id": safe_backup_id,
             "status": "restored_to_separate_recovery_directory",
             "file_count": len(restored),
             "total_bytes": total,
             "recovery_token": _digest(str(recovery_root))[:24],
+            "recovery_matter": {
+                "recovery_matter_id": recovery_matter_id,
+                "status": "isolated_recovery_copy",
+                "active_matter_changed": False,
+                "source_drill_down": {"source_type": "encrypted_backup_manifest", "source_id": f"backup_snapshot:{safe_backup_id}"},
+            },
             "live_matter_overwritten": False,
+            "backup_format": "incremental_encrypted_chunks_v2" if package.get("schema_version") == "encrypted_matter_backup_v2" else "legacy_encrypted_snapshot_v1",
+            "restore_independent": package.get("schema_version") == "encrypted_matter_backup_v2",
             "review_required": True,
         }
         receipt["receipt_hash"] = _digest(receipt)

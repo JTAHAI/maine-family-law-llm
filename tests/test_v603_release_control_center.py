@@ -83,6 +83,7 @@ def _passing_release_evidence(root: Path) -> None:
 
 def _seed_observability(case_root: Path) -> None:
     store = PrivacySafeObservabilityStore(case_root)
+    store.configure(mode="local_metrics", approved=True)
     store.record("api_request", metrics={"count": 1}, labels={"component": "api", "operation": "release_control", "status": "pass"})
     store.record("self_test", metrics={"count": 1}, labels={"status": "pass"})
     assert store.verify()["status"] == "pass"

@@ -29,8 +29,20 @@ def test_no_source_legal_answer_refuses_substantive_claim() -> None:
 def test_general_greeting_remains_normal() -> None:
     answer = compose_answer("hello", [], classify_prompt("hello"))
 
-    assert answer.grounded is True
+    assert answer.grounded is False
+    assert answer.failure_class == "general_information_not_source_backed"
     assert "attorney-client" not in answer.answer.lower()
+
+
+def test_general_substantive_question_keeps_retrieved_sources() -> None:
+    question = "What records should I preserve before a hearing?"
+    retrieval = retrieve_fixture_sources(question)
+
+    answer = compose_answer(question, retrieval.results, classify_prompt(question))
+
+    assert answer.grounded is True
+    assert answer.citations
+    assert "Based on the retrieved source snippets:" in answer.answer
 
 
 def test_draft_helper_warns_not_filing_ready_and_uses_citations() -> None:

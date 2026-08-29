@@ -36,7 +36,8 @@ def assess_answer_support_integrity(
         item for item in cards
         if str(_metadata(item).get("source_lane") or "legal_authority") != "private_record"
     ]
-    claims = extract_legal_claims(str(answer_text or ""))[:max_claims]
+    all_claims = extract_legal_claims(str(answer_text or ""))
+    claims = all_claims[:max_claims]
     evidence = [str(item.get("snippet") or _metadata(item).get("text_excerpt") or "") for item in legal_cards]
     source_ids = [str(item.get("source_id") or _metadata(item).get("id") or "") for item in legal_cards]
     jurisdictions = [str(_metadata(item).get("jurisdiction") or "Maine") for item in legal_cards]
@@ -65,6 +66,8 @@ def assess_answer_support_integrity(
     grounding = dict(grounding_integrity or {})
     blockers: list[str] = []
     warnings: list[str] = []
+    if len(all_claims) > len(claims):
+        blockers.append("candidate_claim_review_incomplete_use_full_verification")
     if claims and not legal_cards:
         blockers.append("legal_claims_without_legal_source_cards")
     if counts["unsupported"]:
@@ -78,6 +81,7 @@ def assess_answer_support_integrity(
     if current_law_language and not bool(grounding.get("current_law_verified")):
         blockers.append("current_law_language_requires_live_official_verification")
     if counts["partially_supported"]:
+        blockers.append("candidate_legal_claims_only_partially_supported")
         warnings.append("One or more legal claims have only partial lexical overlap with a retrieved passage.")
     if results:
         warnings.append(
@@ -97,6 +101,7 @@ def assess_answer_support_integrity(
         "schema_version": "answer_support_integrity_v1",
         "status": status,
         "candidate_legal_claim_count": len(claims),
+        "candidate_legal_claim_total": len(all_claims),
         "legal_source_card_count": len(legal_cards),
         "current_law_language_detected": current_law_language,
         "status_counts": counts,

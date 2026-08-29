@@ -66,7 +66,8 @@ def test_only_pass_changes_txt_is_packaged() -> None:
     txt_files = sorted(
         path.relative_to(ROOT).as_posix()
         for path in ROOT.rglob("*.txt")
-        if not any(
+        if path.relative_to(ROOT).parts[:2] not in {("data", "fixtures"), ("tests", "fixtures")}
+        and not any(
             part in ignored_parts or part.endswith(".egg-info")
             for part in path.relative_to(ROOT).parts
         )

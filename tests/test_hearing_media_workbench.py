@@ -138,7 +138,7 @@ def test_hearing_media_workbench_records_transcripts_timeline_exhibits_privacy_a
 
     speaker_review = client.post(
         "/api/hearing-media/media/hearing-audio/speaker-review",
-        json={"labels": [{"segment_id": "segment-0001", "speaker_label": "Judge"}, {"segment_id": "segment-0002", "speaker_label": "Counsel"}]},
+        json={"confirmed": True, "labels": [{"segment_id": "segment-0001", "speaker_label": "Judge"}, {"segment_id": "segment-0002", "speaker_label": "Counsel"}]},
         headers=_headers(),
     )
     assert speaker_review.status_code == 200

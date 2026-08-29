@@ -34,14 +34,19 @@ def test_v3_pass01_uses_split_local_ui_assets() -> None:
     assert "prefers-reduced-motion" in css
     assert "forced-colors" in css
 
-    assert "event.key.toLowerCase() === 'k'" in js
-    assert "event.key.toLowerCase() === 'j'" in js
+    # Shortcuts are now configurable and normalized in one matcher rather than
+    # duplicated raw-key handlers.  Keep this test bound to the behavioral
+    # contract without requiring the previous implementation spelling.
+    assert "function keyboardShortcutMatches" in js
+    assert "toLocaleLowerCase()" in js
+    assert "shortcut === 'ctrl+k'" in js
+    assert "shortcut === 'ctrl+j'" in js
     assert "openCommandPalette" in js
     assert "openJustice" in js
     assert "setDrawerOpen" in js
     assert "drawerReturnFocus" in js
     assert "closeDrawerButton?.focus({preventScroll: true})" in js
-    assert "returnTarget.focus()" in js
+    assert "returnTarget.focus({preventScroll: true})" in js
     assert "sessionStorage.getItem('mfl-welcome-dismissed')" not in js
 
 

@@ -66,6 +66,23 @@ APPROVED_PUBLIC_PDF_ROOTS = (
     Path("maine_family_law_llm/resources/focaf"),
 )
 
+# These are version-controlled source inputs.  ``legal/runtime`` is an
+# implementation package (not a persisted runtime directory), while the two
+# fixture roots intentionally carry malformed binaries to prove parser
+# quarantine behavior.  Release assembly has a separate exact-package audit;
+# this source-tree audit must not mistake either for operator data.
+PUBLIC_SOURCE_DIRECTORY_PREFIXES = {
+    ("legal", "runtime"),
+}
+PUBLIC_FIXTURE_DIRECTORY_PREFIXES = {
+    ("data", "fixtures"),
+    ("tests", "fixtures"),
+}
+
+
+def _has_prefix(parts: tuple[str, ...], prefixes: set[tuple[str, ...]]) -> bool:
+    return any(parts[: len(prefix)] == prefix for prefix in prefixes)
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -131,10 +148,14 @@ class ReleaseArtifactAudit:
             rel_posix = rel.as_posix()
             if any(part in IGNORED_TREE_PARTS or part.endswith(".egg-info") for part in rel.parts):
                 continue
-            if path.is_dir() and path.name in PROHIBITED_RELEASE_DIR_NAMES:
+            is_public_runtime_source = _has_prefix(rel.parts, PUBLIC_SOURCE_DIRECTORY_PREFIXES)
+            is_public_fixture = _has_prefix(rel.parts, PUBLIC_FIXTURE_DIRECTORY_PREFIXES)
+            if path.is_dir() and path.name in PROHIBITED_RELEASE_DIR_NAMES and not is_public_runtime_source:
                 blockers.append({"path": rel_posix, "reason": "external_artifact_directory_in_repo"})
                 continue
             if path.is_file() and path.suffix.lower() in PROHIBITED_SUFFIXES:
+                if is_public_fixture:
+                    continue
                 if path.suffix.lower() == ".pdf" and _is_approved_public_pdf(root, path):
                     continue
                 blockers.append({"path": rel_posix, "reason": "prohibited_release_file_type"})

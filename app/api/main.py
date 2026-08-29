@@ -15,7 +15,9 @@ from app.api.routes.multimedia import router as multimedia_router
 from app.api.routes.productivity import router as productivity_router
 from app.api.routes.addons import router as addons_router
 from app.api.routes.privacy import router as privacy_router
+from app.api.routes.admin_console import router as admin_console_router
 from app.api.security import AuditHeaderMiddleware, require_api_role
+from legal.runtime.idempotency import IdempotencyMiddleware
 from maine_family_law_llm import __version__
 
 
@@ -50,13 +52,17 @@ app = _InspectableFastAPI(
     dependencies=[Depends(require_api_role)],
 )
 app.add_middleware(AuditHeaderMiddleware)
+# Enterprise-only routes share the same encrypted, tenant/role/session-bound
+# duplicate-suppression contract as the shipped local workbench.
+app.add_middleware(IdempotencyMiddleware)
 
 app.router.include_router(health_router)
 app.router.include_router(models_router, prefix="/api")
 
-from app.api.routes import authority, citations, draft, evidence, intake, matters, quotes, research, review, sources, version
+from app.api.routes import authority, authority_impact, citations, draft, evidence, intake, matters, quotes, research, review, sources, version
 
 app.router.include_router(authority.router, prefix="/api")
+app.router.include_router(authority_impact.router, prefix="/api")
 app.router.include_router(research.router, prefix="/api")
 app.router.include_router(review.router, prefix="/api")
 app.router.include_router(evidence.router, prefix="/api")
@@ -80,3 +86,4 @@ app.router.include_router(multimedia_router, prefix="/api")
 app.router.include_router(productivity_router, prefix="/api")
 app.router.include_router(addons_router, prefix="/api")
 app.router.include_router(privacy_router, prefix="/api")
+app.router.include_router(admin_console_router, prefix="/api")

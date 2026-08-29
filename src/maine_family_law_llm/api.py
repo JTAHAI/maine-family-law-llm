@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from contextvars import ContextVar
 import hashlib
 import io
 import json
@@ -23,20 +24,107 @@ from typing import Any, Callable, Iterable
 
 from legal.product.family_justice_workbench_v205 import build_workbench_packet
 from legal.drafting.findings_engine import Rule52BestInterestFindingsEngine
+from legal.drafting.outline_workbench import OutlineWorkbenchStore
+from legal.drafting.sentence_support_map import SentenceSupportMapStore
+from legal.drafting.citation_insertion import CitationInsertionStore
+from legal.drafting.quote_safe_drafting import QuoteSafeDraftStore
+from legal.drafting.requirement_profiles import DraftRequirementProfileStore
+from legal.drafting.revision_rationale import RevisionRationaleStore
+from legal.drafting.dual_view import DualViewStore
+from legal.drafting.argument_matrix import ArgumentMatrixStore
+from legal.drafting.export_provenance import ExportProvenanceStore
+from legal.matter.procedure_pathway import ProcedurePathwayStore
+from legal.matter.service_method_matrix import ServiceMethodMatrixStore
+from legal.matter.business_day_review import BusinessDayReviewStore
+from legal.matter.hearing_countdown import HearingCountdownStore
+from legal.matter.filing_preflight import FilingPreflightStore
+from legal.matter.fee_waiver_workspace import FeeWaiverWorkspaceStore
+from legal.matter.venue_location_navigator import VenueLocationNavigatorStore
+from legal.matter.post_filing_reconciliation import PostFilingReconciliationStore
+from legal.matter.order_calendar_extraction import OrderCalendarExtractionStore
+from legal.matter.child_support_worksheet import ChildSupportWorksheetStore
+from legal.matter.financial_affidavit import FinancialAffidavitStore
+from legal.matter.asset_tracing import AssetTracingStore
+from legal.matter.debt_reconciliation import DebtReconciliationStore
+from legal.matter.settlement_scenarios import SettlementScenarioStore
+from legal.matter.implementation_feasibility import ImplementationFeasibilityStore
+from legal.matter.communication_plan import CommunicationPlanStore
+from legal.matter.compliance_log import ComplianceLogStore
+from legal.runtime.hardware_benchmark import HardwareBenchmarkStore
+from legal.runtime.model_admission_benchmark import ModelAdmissionBenchmarkStore
+from legal.runtime.warm_model_pool import WarmModelPoolStore
+from legal.runtime.context_cache import ContextCacheStore
+from legal.runtime.speculative_retrieval import SpeculativeRetrievalStore
+from legal.runtime.context_budget import ContextBudgetStore
+from legal.runtime.batch_scheduler import BatchInferenceScheduler
+from legal.runtime.low_memory_mode import LowMemoryModeStore
+from legal.runtime.crash_recovery import RuntimeCrashRecovery
+from legal.runtime.health_dashboard import (
+    HealthDashboardError,
+    HealthDependencyDashboardStore,
+    collect_dashboard as collect_health_dependency_dashboard,
+)
+from legal.runtime.job_journal import (
+    JobJournalError,
+    JobJournalReceiptStore,
+    collect_job_journal,
+)
+from legal.runtime.idempotency import IdempotencyMiddleware, IdempotencyRegistry
+from legal.runtime.database_integrity import (
+    DatabaseIntegrityError,
+    DatabaseIntegrityReceiptStore,
+    run_database_integrity_check,
+)
+from legal.runtime.power_loss_resilience import (
+    PowerLossResilienceError,
+    PowerLossResilienceReceiptStore,
+    run_power_loss_resilience_drill,
+)
+from legal.runtime.storage_pressure import (
+    StoragePressureError,
+    StoragePressureReceiptStore,
+    forecast_storage_pressure,
+)
+from legal.runtime.clock_skew import ClockSkewError, ClockSkewMonitor
+from legal.runtime.performance_regression import (
+    PerformanceGateError,
+    PerformanceGateReceiptStore,
+    evaluate_performance_gates,
+    performance_budget_catalog,
+)
+from legal.runtime.failure_replay import (
+    FailureReplayError,
+    FailureReplayReceiptStore,
+    failure_replay_catalog,
+    replay_sanitized_failure,
+)
+from legal.runtime.cross_device_transfer import CrossDeviceTransferError, CrossDeviceTransferStore
+from legal.runtime.schema_migration_lab import SchemaMigrationLab, SchemaMigrationLabError
+from legal.product.command_bar import search as search_command_bar
+from legal.product.unified_matter_search import search as unified_matter_search
+from legal.product.smart_views import SmartViewStore
+from legal.product.recent_work import RecentWorkStore
+from legal.product.workspace_tabs import WorkspaceTabsStore
+from legal.product.command_history import CommandHistoryStore
+from legal.product.bulk_review_queue import BulkReviewQueueStore
+from legal.product.favorites import FavoritesStore
+from legal.product.user_labels import UserLabelsStore
+from legal.product.daily_matter_brief import DailyMatterBriefStore
 from app.services import AuthorityLibraryService, AuthorityProductService
 from legal.security.prompt_injection import PromptInjectionScanner
 from legal.security.local_request_firewall import DEFAULT_MAX_BODY_BYTES, evaluate_local_request
+from legal.security.local_api_abuse_guard import LocalApiAbuseGuard
 from legal.agent_runtime import (
     LocalAgentRunRequest,
     LocalAgentRuntime,
     LocalModelError,
-    ToolInvocation,
     build_local_client,
 )
 from legal.local_workbench import LocalWorkbenchError, LocalWorkbenchService
 from legal.document_intelligence import (
     DocumentIntelligenceError,
     analyze_document,
+    create_content_disarm_copy,
     create_ocr_preservation_copy,
     create_redacted_copy,
     document_intelligence_status,
@@ -48,6 +136,12 @@ from legal.evidence import (
     MatterCommandCenterError,
     MatterCommandCenterStore,
 )
+from legal.evidence.watch_folder_queue import scan_candidates as scan_watch_folder_candidates
+from legal.evidence.scanner_review import scanner_review_plan
+from legal.evidence.handwriting_review import review_handwriting
+from legal.evidence.document_type_review import classify_document
+from legal.evidence.page_quality_review import page_quality_map
+from legal.evidence.table_lineage_review import table_lineage
 from legal.matter.intake_workbench import IntakeWorkbenchError, MatterIntakeStore
 from legal.matter.order_intelligence import OrderIntelligenceStore
 from legal.matter.calendar_review import CalendarReviewStore
@@ -70,11 +164,22 @@ from legal.matter.foaa_requests import FoaaRequestStore
 from legal.matter.filing_readiness import FilingReadinessStore
 from legal.matter.image_evidence_review import ImageEvidenceStore
 from legal.matter.email_integrity import EmailIntegrityStore
+from legal.matter.archival_pdf_export import ArchivalPdfExportStore
+from legal.matter.structured_evidence_export import StructuredEvidenceExportStore
+from legal.matter.print_review import PrintReviewStore
+from legal.matter.external_tool_boundary import ExternalToolBoundaryStore
+from legal.matter.document_comparison import DocumentComparisonStore
+from legal.matter.metadata_review import MetadataReviewStore
+from legal.matter.import_policy import ImportPolicyStore
 from legal.matter.reviewer_handoff import ReviewerHandoffStore
+from legal.matter.structured_comment_threads import StructuredCommentThreadStore
+from legal.matter.review_assignments import ReviewAssignmentStore
+from legal.matter.bundle_merge import BundleMergeStore
 from legal.matter.language_access import LanguageAccessStore
 from legal.matter.resource_navigator import ResourceNavigatorStore
 from legal.matter.golden_path import MatterJourneyStore
 from legal.forms import MaineFindingsFormsError, MaineFindingsFormsStore
+from legal.forms.session_store import GuidedFormSessionStore
 from legal.retrieval.workbench import RetrievalWorkbenchError, RetrievalWorkbenchService
 from legal.ops.release_pilot_hardening import (
     AttorneySandboxStore,
@@ -139,6 +244,7 @@ from legal.documents.workspace import (
     workspace_paths,
     workspace_status,
 )
+from legal.governance.legal_hold import LegalHoldError, LegalHoldStore
 
 from . import __version__
 from .answer import compose_answer
@@ -160,6 +266,7 @@ from .draft import ALLOWED_DRAFT_MODES, draft_from_sources
 from .family_answer_contract import build_family_answer_contract, render_legacy_answer
 from .grounding_integrity import annotate_grounding_metadata, assess_grounding_integrity
 from .answer_support_integrity import assess_answer_support_integrity
+from legal.answering.review_scope import AnswerAssertions, AnswerReviewScopes
 from .handoff_integrity import build_handoff_safe_source_cards
 from .input_integrity import harden_text_input, normalize_search_id, normalize_session_id
 from .focaf_library import (
@@ -202,13 +309,13 @@ from .runtime_resilience import runtime_health_snapshot
 from .runtime_kernel import ACTIVE_STATUSES, get_runtime_kernel
 from .local_agent_bridge import (
     build_host_context_and_receipt,
-    context_sources_from_cards,
-    source_cards_from_payload,
 )
 
 try:
     from fastapi import FastAPI, HTTPException, Request
-    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.exception_handlers import request_validation_exception_handler
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
     from fastapi.staticfiles import StaticFiles
     from starlette.requests import ClientDisconnect
     from pydantic import BaseModel, Field, StrictBool
@@ -232,6 +339,17 @@ except Exception:  # pragma: no cover - lets CLI import without API extras
 
     def Field(default: Any = None, *, default_factory: Any = None, **_: Any) -> Any:  # type: ignore[no-redef]
         return default_factory() if default_factory is not None else default
+
+
+if FastAPI is not None:
+    # These contracts require the optional API extra. Keep CLI import model/API
+    # empty, but do not hide real integration errors once that extra is present.
+    from app.services.local_agent_context_service import (
+        LocalAgentApprovalStore, LocalAgentAuditStore, LocalAgentContextError,
+        LocalAgentContextService, LocalAgentSourceReference, digest as local_agent_digest,
+    )
+    from app.services.local_agent_run_service import LocalAgentRunStore
+    from app.api.model_packs import register_model_pack_routes
 
 
 class QueryRequest(BaseModel):
@@ -381,8 +499,292 @@ class DraftRequest(BaseModel):
     mode: str = "checklist"
 
 
+class DraftOutlineCreateRequest(BaseModel):
+    outline_id: str
+    issue_id: str
+    issue_label: str
+    reviewer_safe_id: str
+    purpose: str = ""
+    selected_evidence: list[dict[str, Any]] = Field(default_factory=list)
+    selected_authority: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class SentenceSupportMapRequest(BaseModel):
+    reviewer_safe_id: str
+    selected_authority: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class CitationInsertionRequest(BaseModel):
+    reviewer_safe_id: str
+    selected_text: str
+    occurrence_index: int = 0
+    authority: dict[str, Any] = Field(default_factory=dict)
+    user_confirmed: StrictBool = False
+
+
+class QuoteSafeDraftRequest(BaseModel):
+    reviewer_safe_id: str
+    selected_text: str
+    quote_text: str
+    authority: dict[str, Any] = Field(default_factory=dict)
+    normalized_quote_approved: StrictBool = False
+    user_confirmed: StrictBool = False
+
+
+class DraftRequirementProfileRequest(BaseModel):
+    profile_id: str
+    label: str
+    reviewer_safe_id: str
+    required_sections: list[str] = Field(default_factory=list)
+    max_characters: int = 10000
+    review_gates: list[str] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+class RevisionRationaleRequest(BaseModel):
+    reviewer_safe_id: str
+    change_summary: str
+    reason: str
+    affected_claim_ids: list[str] = Field(default_factory=list)
+    verifier_impact: str = "not_run"
+    user_confirmed: StrictBool = False
+
+class DualViewRequest(BaseModel):
+    view_id: str
+    reviewer_safe_id: str
+    plain_language_text: str
+    user_confirmed: StrictBool = False
+
+
+class ArgumentMatrixRequest(BaseModel):
+    matrix_id: str
+    issue_label: str
+    reviewer_safe_id: str
+    positions: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class ProcedurePathwayRequest(BaseModel):
+    pathway_id: str
+    reviewer_safe_id: str
+    case_type: str = "unknown"
+    posture: str = "unknown"
+    venue_label: str
+    existing_orders: list[dict[str, Any]] = Field(default_factory=list)
+    authority_source_id: str
+    user_confirmed: StrictBool = False
+
+
+class ServiceMethodMatrixRequest(BaseModel):
+    matrix_id: str
+    reviewer_safe_id: str
+    selected_method: str = "unknown"
+    proof: dict[str, Any] = Field(default_factory=dict)
+    authority_source_id: str
+    exceptions: list[str] = Field(default_factory=list)
+    unresolved_facts: list[str] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class BusinessDayCalendarInputRequest(BaseModel):
+    input_id: str
+    calendar_key: str
+    version_label: str
+    jurisdiction_label: str
+    reviewer_safe_id: str
+    valid_from: str
+    valid_through: str
+    holidays: list[str] = Field(default_factory=list)
+    authority_source_id: str
+    user_confirmed: StrictBool = False
+
+
+class BusinessDayCalculationRequest(BaseModel):
+    calculation_id: str
+    input_id: str
+    reviewer_safe_id: str
+    start_date: str
+    business_days: int
+    user_confirmed: StrictBool = False
+
+
+class HearingCountdownRequest(BaseModel):
+    countdown_id: str
+    reviewer_safe_id: str
+    hearing_label: str
+    confirmed_date: str
+    notice_source: dict[str, Any] = Field(default_factory=dict)
+    milestone_offsets: list[int] = Field(default_factory=list)
+    missing_proof_prompts: list[str] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class FilingPreflightRequest(BaseModel):
+    preflight_id: str
+    reviewer_safe_id: str
+    caption_label: str
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+    form_source_ids: list[str] = Field(default_factory=list)
+    checks: dict[str, bool] = Field(default_factory=dict)
+    document_id: str = ""
+    user_confirmed: StrictBool = False
+
+
+class FeeWaiverWorkspaceRequest(BaseModel):
+    workspace_id: str
+    reviewer_safe_id: str
+    purpose_label: str
+    authority_source_id: str
+    facts: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class ChildSupportWorksheetRequest(BaseModel):
+    workspace_id: str
+    reviewer_safe_id: str
+    authority_source_id: str
+    inputs: list[dict[str, Any]] = Field(default_factory=list)
+    missing_facts: list[str] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class FinancialAffidavitRequest(BaseModel):
+    workspace_id: str
+    reviewer_safe_id: str
+    entries: list[dict[str, Any]] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class AssetTracingRequest(BaseModel):
+    ledger_id: str
+    reviewer_safe_id: str
+    assets: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class DebtReconciliationRequest(BaseModel):
+    workspace_id: str
+    reviewer_safe_id: str
+    statements: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class SettlementScenarioRequest(BaseModel):
+    comparison_id: str
+    reviewer_safe_id: str
+    scenarios: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class ImplementationFeasibilityRequest(BaseModel):
+    review_id: str
+    reviewer_safe_id: str
+    clauses: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class CommunicationPlanRequest(BaseModel):
+    plan_id: str
+    reviewer_safe_id: str
+    terms: list[dict[str, Any]] = Field(default_factory=list)
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class ComplianceLogRequest(BaseModel):
+    log_id: str
+    reviewer_safe_id: str
+    term_id: str
+    event_id: str
+    date_candidate: str
+    text: str
+    event_state: str
+    event_source_ref: dict[str, Any] = Field(default_factory=dict)
+    user_confirmed: StrictBool = False
+
+
+class HardwareBenchmarkRequest(BaseModel):
+    benchmark_id: str
+    user_confirmed: StrictBool = False
+
+
+class ModelAdmissionBenchmarkRequest(BaseModel):
+    benchmark_id: str
+    provider: str = "ollama"
+    endpoint: str = "http://127.0.0.1:11434"
+    model: str = "qwen2.5:7b"
+    user_confirmed: StrictBool = False
+
+
+class WarmModelPoolWarmRequest(BaseModel):
+    task: str
+    preferred_model_id: str = ""
+    thermal_state: str = "unknown"
+    user_confirmed: StrictBool = False
+
+
+class WarmModelPoolReleaseRequest(BaseModel):
+    model_id: str
+    reason: str = "operator_requested"
+
+
+class ContextCacheEntryRequest(BaseModel):
+    cache_id: str
+    kind: str
+    scope: str
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    artifact: dict[str, Any] | list[Any] | str = Field(default_factory=dict)
+
+
+class ContextCacheInvalidationRequest(BaseModel):
+    changes: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SpeculativeRetrievalRequest(BaseModel):
+    preview_id: str
+    typed_intent: str
+
+
+class ContextBudgetRequest(BaseModel):
+    budget_id: str
+    task: str = "review"
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    verifier_requirements: dict[str, Any] = Field(default_factory=dict)
+    requested_context_tokens: int = 0
+
+
+class BatchInferenceScheduleRequest(BaseModel):
+    batch_id: str
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
+class LowMemoryModeRequest(BaseModel):
+    active: StrictBool = True
+    user_confirmed: StrictBool = False
+
+class VenueLocationWorkspaceRequest(BaseModel):
+    workspace_id: str
+    reviewer_safe_id: str
+    location_label: str
+    contact_label: str = ""
+    unresolved_facts: list[str] = Field(default_factory=list)
+    authority_source_id: str
+    user_confirmed: StrictBool = False
+class PostFilingReconciliationRequest(BaseModel):
+    reconciliation_id: str
+    reviewer_safe_id: str
+    receipt_source: dict[str, Any] = Field(default_factory=dict)
+    submitted_items: list[dict[str, Any]] = Field(default_factory=list)
+    docket_expectations: list[dict[str, Any]] = Field(default_factory=list)
+    user_confirmed: StrictBool = False
+
+
 class AuthorityVerifyAnswerRequest(BaseModel):
     text: str
+    answer_review_scope: str = Field(default="", max_length=128)
     source_ids: list[str] = Field(default_factory=list)
     quotes: list[dict[str, Any]] = Field(default_factory=list)
     claims: list[dict[str, Any] | str] = Field(default_factory=list)
@@ -436,6 +838,12 @@ class DocumentIntelligenceRedactionRequest(BaseModel):
     approved: StrictBool = False
     reviewer: str = "local_operator"
     run_presidio: StrictBool = True
+
+
+class DocumentIntelligenceContentDisarmRequest(BaseModel):
+    source_token: str
+    approved: StrictBool = False
+    reviewer: str = "local_operator"
 
 
 class RecordCompareRequest(BaseModel):
@@ -523,6 +931,8 @@ class EvidenceTimelineEventPatchRequest(BaseModel):
     participant_refs: list[str] | None = None
     child_impact_tags: list[str] | None = None
     reviewer_status: str | None = None
+    source_record_id: str | None = None
+    source_hash: str | None = None
     reviewer_name: str | None = None
     reason: str | None = None
 
@@ -543,6 +953,147 @@ class EvidenceClaimCreateRequest(BaseModel):
 class EvidenceClaimReviewRequest(BaseModel):
     reviewer_status: str = "reviewed"
     reviewer_notes: str = ""
+
+
+class AttachmentCoverageCreateRequest(BaseModel):
+    attachment_id: str
+    attachment_label: str
+    coverage_state: str = "referenced"
+    source_record_id: str
+    source_hash: str = ""
+    linked_record_id: str = ""
+
+
+class AttachmentCoverageReviewRequest(BaseModel):
+    coverage_state: str
+    linked_record_id: str = ""
+    reviewer_notes: str = ""
+
+
+class FactGraphNodeRequest(BaseModel):
+    node_id: str
+    node_kind: str
+    label: str
+    fact_state: str = "not_yet_reviewed"
+    source_record_id: str
+    source_hash: str = ""
+
+
+class FactGraphEdgeRequest(BaseModel):
+    edge_id: str
+    source_node_id: str
+    target_node_id: str
+    relationship: str
+    fact_state: str = "not_yet_reviewed"
+    source_record_id: str
+    source_hash: str = ""
+    relationship_basis: str = "reviewer_supplied"
+    relationship_note: str = ""
+
+
+class IssueProofMatrixCreateRequest(BaseModel):
+    item_id: str
+    issue_id: str
+    issue_label: str
+    proof_item_id: str
+    proof_label: str
+    evidence_role: str
+    source_record_id: str
+    source_hash: str = ""
+    authority_candidate: str = ""
+    review_state: str = "review_required"
+
+
+class IssueProofMatrixReviewRequest(BaseModel):
+    review_state: str = "review_required"
+    reviewer_notes: str = ""
+
+
+class MatterChangeDigestCheckpointRequest(BaseModel):
+    checkpoint_id: str
+    checkpoint_label: str
+
+
+class RecordLineageCreateRequest(BaseModel):
+    link_id: str
+    relationship: str
+    original_record_id: str
+    original_source_hash: str = ""
+    derivative_record_id: str
+    derivative_source_hash: str = ""
+    reviewer_notes: str = ""
+
+
+class EntityResolutionCandidateRequest(BaseModel):
+    candidate_id: str
+    entity_label: str
+    entity_type: str = "person"
+    left_record_id: str
+    left_source_hash: str = ""
+    right_record_id: str
+    right_source_hash: str = ""
+    reviewer_notes: str = ""
+
+
+class EntityResolutionConfirmationRequest(BaseModel):
+    confirmation: str
+    canonical_entity_id: str = ""
+    reviewer_notes: str = ""
+
+
+class EntityResolutionRevokeRequest(BaseModel):
+    reviewer_notes: str = ""
+
+
+class WatchFolderScanRequest(BaseModel):
+    folder: str
+    limit: int = 200
+
+class ScannerReviewRequest(BaseModel):
+    original_sha256: str
+    page_count: int
+    duplex: bool = False
+    blank_pages: list[int] = Field(default_factory=list)
+    rotations: dict[int, int] = Field(default_factory=dict)
+class HandwritingReviewRequest(BaseModel):
+    source_hash: str
+    ocr_confidence: float | None = None
+    handwriting_signal: bool = False
+class DocumentTypeReviewRequest(BaseModel):
+    source_hash: str
+    text_excerpt: str = ""
+class PageQualityReviewRequest(BaseModel):
+    source_hash: str
+    pages: list[dict[str, Any]] = Field(default_factory=list)
+class TableLineageRequest(BaseModel):
+    source_hash: str
+    cells: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class DocumentComparisonCreateRequest(BaseModel):
+    comparison_id: str
+    left_record_id: str
+    right_record_id: str
+
+
+class MetadataReviewBatchRequest(BaseModel):
+    batch_id: str
+    record_ids: list[str] = Field(default_factory=list)
+    labels: list[str] = Field(default_factory=list)
+    document_date: str = "unknown"
+    custodian_safe_id: str = "unknown"
+    confidentiality: str = "review_required"
+    document_type: str = "unknown"
+    reviewer_notes: str = ""
+
+
+class ImportPolicyProfileRequest(BaseModel):
+    profile_id: str
+    max_file_bytes: int = 250 * 1024 * 1024
+    allowed_extensions: list[str] = Field(default_factory=list)
+    privacy_scan_required: StrictBool = True
+    quarantine_unknown_extensions: StrictBool = True
+    local_ocr_review_for_images: StrictBool = True
 
 
 class EvidenceMissingRecordsRequest(BaseModel):
@@ -1059,21 +1610,35 @@ class AuthorityImpactBuildRequest(AuthorityImpactAnalyzeRequest):
     approved: StrictBool = False
 
 
+class AuthorityImpactMatterRequest(BaseModel):
+    base_build_id: str
+    target_build_id: str
+
+
 class LocalAgentPreviewRequest(BaseModel):
-    question: str
-    source_cards: list[dict[str, Any]] = Field(default_factory=list)
+    model_config = {"extra": "forbid"}
+    question: str = Field(min_length=1, max_length=20_000)
+    source_refs: list[LocalAgentSourceReference] = Field(default_factory=list, max_length=24)
+    matter_id: str = Field(default="", max_length=64)
+    task: str = Field(default="authority_review", pattern=r"^(intake_triage|evidence_review|authority_review|drafting|parenting_plan_review|financial_disclosure_review|safety_privacy_review)$")
     provider: str = "ollama"
-    endpoint: str = "http://127.0.0.1:11434"
-    model: str = "qwen2.5:7b"
-    run_id: str = ""
+    endpoint: str = Field(default="http://127.0.0.1:11434", max_length=256)
+    model: str = Field(default="qwen2.5:7b", max_length=256)
+    run_id: str = Field(default="", max_length=128)
 
 
 class LocalAgentExecuteRequest(LocalAgentPreviewRequest):
-    approved_manifest_sha256: str
-    matter_id: str = ""
+    approved_manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    approval_token: str = Field(pattern=r"^[a-f0-9]{64}$")
     tool_invocations: list[dict[str, Any]] = Field(default_factory=list)
     permitted_tools: list[str] = Field(default_factory=list)
     retrieval_diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
+class LocalAgentCancelRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    matter_id: str = Field(min_length=1, max_length=64)
+    run_id: str = Field(pattern=r"^[a-f0-9]{32}$")
 
 
 class LocalWorkbenchModelRequest(BaseModel):
@@ -1087,6 +1652,9 @@ class LocalWorkbenchModelRequest(BaseModel):
     min_ram_bytes: int = 0
     min_vram_bytes: int = 0
     context_limit_tokens: int = 0
+    runtime_provider: str = ""
+    runtime_endpoint: str = ""
+    runtime_model_name: str = ""
 
 
 class LocalWorkbenchRouteRequest(BaseModel):
@@ -1194,12 +1762,33 @@ if FastAPI is not None:
     _RECENT_SOURCE_MAX_CARDS = 24
     _OCR_STALLED_AFTER_SECONDS = 60
     _prompt_injection_scanner = PromptInjectionScanner()
+    _local_api_abuse_guard = LocalApiAbuseGuard()
     # Tokens are server-side capabilities, scoped to the currently active case.
     # They deliberately contain neither a filesystem location nor a corpus label.
     _record_open_tokens: dict[str, dict[str, Any]] = {}
     _record_open_lock = threading.RLock()
+    _local_agent_approvals = LocalAgentApprovalStore()
+    _local_agent_runs = LocalAgentRunStore()
+    _answer_review_scopes = AnswerReviewScopes()
+    _record_capability_identity: ContextVar[dict[str, str]] = ContextVar(
+        "record_capability_identity",
+        default={"role": "reviewer", "tenant_id": "local-desktop", "client_session_id": "legacy-local-session"},
+    )
     _RECORD_OPEN_TTL_SECONDS = 60 * 60
     _RECORD_OPEN_MAX_TOKENS = 4096
+    _RECORD_CAPABILITY_ACTIONS = frozenset(
+        {
+            "record_inspect",
+            "record_open",
+            "record_document_intelligence",
+            "record_workspace_import",
+            "record_local_agent",
+        }
+    )
+    # Download capabilities use the same non-secret browser-session boundary as
+    # record capabilities.  Every registry keeps its capability server-side;
+    # URLs contain only an opaque, short-lived token and never a matter path.
+    _ARTIFACT_CAPABILITY_ACTIONS = frozenset({"artifact_download", "artifact_receipt"})
     _RECORD_PREVIEW_TEXT_LIMIT = 120_000
     _RECORD_PREVIEW_MEMBER_LIMIT = 250
     _OPEN_CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -1209,6 +1798,10 @@ if FastAPI is not None:
     _document_intelligence_artifact_lock = threading.RLock()
     _DOCUMENT_INTELLIGENCE_ARTIFACT_TTL_SECONDS = 60 * 60
     _DOCUMENT_INTELLIGENCE_ARTIFACT_MAX_TOKENS = 1024
+    _document_workspace_artifacts: dict[str, dict[str, Any]] = {}
+    _document_workspace_artifact_lock = threading.RLock()
+    _DOCUMENT_WORKSPACE_ARTIFACT_TTL_SECONDS = 60 * 60
+    _DOCUMENT_WORKSPACE_ARTIFACT_MAX_TOKENS = 1024
     _evidence_work_product_artifacts: dict[str, dict[str, Any]] = {}
     _evidence_work_product_artifact_lock = threading.RLock()
     _EVIDENCE_WORK_PRODUCT_ARTIFACT_TTL_SECONDS = 60 * 60
@@ -1387,8 +1980,28 @@ if FastAPI is not None:
                 for token, _binding in oldest:
                     _record_open_tokens.pop(token, None)
 
-    def _record_open_token(case_root: Path, evidence_id: str, source_locator: str = "") -> str:
-        """Mint a short-lived opaque capability for one active-corpus record."""
+    def _record_open_token(
+        case_root: Path,
+        evidence_id: str,
+        source_locator: str = "",
+        *,
+        allowed_actions: Iterable[str] | None = None,
+    ) -> str:
+        """Mint a short-lived opaque capability for one active-corpus record.
+
+        The value is an in-memory bearer secret, but is additionally bound to
+        the active matter, the current local browser session, role/tenant labels
+        and a small read-action allow-list. It deliberately contains no path,
+        record text, or user-provided label.
+        """
+
+        requested_actions = {
+            str(action or "").strip()
+            for action in (allowed_actions if allowed_actions is not None else _RECORD_CAPABILITY_ACTIONS)
+        }
+        if not requested_actions or not requested_actions.issubset(_RECORD_CAPABILITY_ACTIONS):
+            raise ValueError("record_capability_action_invalid")
+        identity = dict(_record_capability_identity.get())
         with _record_open_lock:
             _prune_record_open_tokens()
             token = secrets.token_hex(32)
@@ -1396,9 +2009,98 @@ if FastAPI is not None:
                 "case_id": _case_id(case_root),
                 "evidence_id": str(evidence_id or ""),
                 "source_locator": str(source_locator or ""),
+                "resource_type": "matter_record",
+                "resource_id": str(evidence_id or ""),
+                "allowed_actions": sorted(requested_actions),
+                "role": str(identity.get("role") or "reviewer"),
+                "tenant_id": str(identity.get("tenant_id") or "local-desktop"),
+                "client_session_id": str(
+                    identity.get("client_session_id") or "legacy-local-session"
+                ),
                 "created_at": time.time(),
             }
             return token
+
+    def _artifact_capability_binding(
+        *,
+        resource_type: str,
+        resource_id: str,
+        allowed_actions: Iterable[str] | None = None,
+    ) -> dict[str, Any]:
+        """Bind one opaque artifact registry entry to this local session.
+
+        The caller retains the matter/scope and integrity fields needed to
+        locate the artifact.  This helper adds only the fail-closed access
+        boundary and intentionally never serializes a filesystem location.
+        """
+
+        requested_actions = {
+            str(action or "").strip()
+            for action in (
+                allowed_actions
+                if allowed_actions is not None
+                else {"artifact_download", "artifact_receipt"}
+            )
+        }
+        if (
+            not str(resource_type or "").strip()
+            or not str(resource_id or "").strip()
+            or not requested_actions.issubset(_ARTIFACT_CAPABILITY_ACTIONS)
+        ):
+            raise ValueError("artifact_capability_invalid")
+        identity = dict(_record_capability_identity.get())
+        return {
+            "resource_type": str(resource_type),
+            "resource_id": str(resource_id),
+            "allowed_actions": sorted(requested_actions),
+            "role": str(identity.get("role") or "reviewer"),
+            "tenant_id": str(identity.get("tenant_id") or "local-desktop"),
+            "client_session_id": str(
+                identity.get("client_session_id") or "legacy-local-session"
+            ),
+        }
+
+    def _artifact_capability_allowed(
+        binding: dict[str, Any],
+        *,
+        resource_type: str,
+        expected_action: str = "artifact_download",
+    ) -> bool:
+        """Return true only for the originating session and artifact class."""
+
+        if expected_action not in _ARTIFACT_CAPABILITY_ACTIONS:
+            return False
+        identity = dict(_record_capability_identity.get())
+        return bool(
+            binding
+            and str(binding.get("resource_type") or "") == resource_type
+            and bool(str(binding.get("resource_id") or ""))
+            and expected_action in set(binding.get("allowed_actions") or [])
+            and all(
+                str(binding.get(key) or "") == str(identity.get(key) or "")
+                for key in ("role", "tenant_id", "client_session_id")
+            )
+        )
+
+    def _prune_document_workspace_artifacts(now: float | None = None) -> None:
+        current = float(now if now is not None else time.time())
+        stale_before = current - _DOCUMENT_WORKSPACE_ARTIFACT_TTL_SECONDS
+        with _document_workspace_artifact_lock:
+            stale = [
+                token
+                for token, binding in _document_workspace_artifacts.items()
+                if float(binding.get("created_at") or 0) < stale_before
+            ]
+            for token in stale:
+                _document_workspace_artifacts.pop(token, None)
+            overflow = len(_document_workspace_artifacts) - _DOCUMENT_WORKSPACE_ARTIFACT_MAX_TOKENS
+            if overflow > 0:
+                oldest = sorted(
+                    _document_workspace_artifacts.items(),
+                    key=lambda item: float(item[1].get("created_at") or 0),
+                )[:overflow]
+                for token, _binding in oldest:
+                    _document_workspace_artifacts.pop(token, None)
 
     def _record_identity(citation: dict[str, Any]) -> tuple[str, str]:
         """Return the parent record and optional ZIP/email member identity."""
@@ -1832,6 +2534,58 @@ if FastAPI is not None:
                 chunks.append(bytes(chunk))
         return b"".join(chunks)
 
+    def _record_capability_request_identity(request: Request) -> dict[str, str]:
+        """Return the non-secret local session boundary for opaque record tokens.
+
+        This is deliberately a browser-session binding, not an identity proof or
+        a replacement for the canonical role boundary. It prevents a token from
+        one local workbench tab/session being replayed by another session while
+        keeping the legacy local-desktop default deterministic for supported
+        migrations and API-only recovery paths.
+        """
+
+        role = str(request.headers.get("X-User-Role") or "reviewer").strip().lower()
+        if role not in {"admin", "attorney", "paralegal", "reviewer"}:
+            role = "reviewer"
+        tenant_id = str(request.headers.get("X-Tenant-Id") or "local-desktop").strip()
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", tenant_id):
+            tenant_id = "local-desktop"
+        client_session_id = str(
+            request.headers.get("X-MFLL-Client-Session") or "legacy-local-session"
+        ).strip().lower()
+        if not re.fullmatch(r"[a-f0-9]{32,64}|legacy-local-session", client_session_id):
+            client_session_id = "legacy-local-session"
+        return {"role": role, "tenant_id": tenant_id, "client_session_id": client_session_id}
+
+    def _require_local_dashboard_identity(request: Request) -> dict[str, str]:
+        """Require an explicit local role, tenant, and browser session for a receipt.
+
+        The dashboard is read-only as to the matter's records, but its explicit
+        refresh creates an encrypted audit receipt.  Do not silently fall back
+        to the legacy/default header values for that state-changing action.
+        """
+
+        role = str(request.headers.get("X-User-Role") or "").strip().lower()
+        tenant_id = str(request.headers.get("X-Tenant-Id") or "").strip()
+        session_id = str(request.headers.get("X-MFLL-Client-Session") or "").strip().lower()
+        if role not in {"admin", "attorney", "paralegal", "reviewer"}:
+            raise HTTPException(status_code=403, detail="dashboard_role_required")
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,80}", tenant_id):
+            raise HTTPException(status_code=403, detail="dashboard_tenant_required")
+        if not re.fullmatch(r"[a-f0-9]{32,64}", session_id):
+            raise HTTPException(status_code=403, detail="dashboard_session_required")
+        return {"role": role, "tenant_id": tenant_id, "client_session_id": session_id}
+
+    # A single encrypted boundary covers every JSON mutation route.  The
+    # resolver is evaluated per request (after this module has defined
+    # ``_case_id``), so its only persisted contribution is a matter hash.
+    app.add_middleware(
+        IdempotencyMiddleware,
+        matter_scope_resolver=lambda: (
+            _case_id(Path(active_case_root())) if active_case_root() is not None else "no_active_matter"
+        ),
+    )
+
     @app.middleware("http")
     async def local_security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
         request_id = uuid.uuid4().hex
@@ -1860,6 +2614,25 @@ if FastAPI is not None:
                 },
                 headers={"X-Request-ID": request_id, "Cache-Control": "no-store"},
         )
+        rate_decision = _local_api_abuse_guard.check(
+            method=request.method,
+            path=request.url.path,
+            client_host=getattr(request.client, "host", None),
+        )
+        if not rate_decision.allowed:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": rate_decision.code,
+                    "message": "The local workbench is receiving requests too quickly. Wait briefly and try again.",
+                    "request_id": request_id,
+                },
+                headers={
+                    "X-Request-ID": request_id,
+                    "Retry-After": str(rate_decision.retry_after_seconds),
+                    "Cache-Control": "no-store",
+                },
+            )
         # Streaming answers must keep the original receive channel intact so
         # Starlette can observe a genuine client disconnect.  The stream route
         # requires the bounded Content-Length checked above and its schema is
@@ -1904,19 +2677,26 @@ if FastAPI is not None:
                 return {"type": "http.request", "body": body, "more_body": False}
 
             request._receive = _receive  # type: ignore[attr-defined]
-        response = await call_next(request)
+        identity_context = _record_capability_identity.set(
+            _record_capability_request_identity(request)
+        )
+        try:
+            response = await call_next(request)
+        finally:
+            _record_capability_identity.reset(identity_context)
         record_preview = request.url.path.startswith("/api/records/open/")
         if not response.headers.get("Content-Security-Policy"):
             frame_ancestors = "'self'" if record_preview else "'none'"
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "connect-src 'self'; "
-                "img-src 'self' data:; "
+                "img-src 'self' data: blob:; "
+                "media-src 'self' blob:; "
                 "style-src 'self' 'unsafe-inline'; "
                 "script-src 'self' 'unsafe-inline'; "
                 "font-src 'self'; "
                 "object-src 'none'; "
-                "frame-src 'self'; "
+                "frame-src 'self' blob:; "
                 f"frame-ancestors {frame_ancestors}; "
                 "base-uri 'none'; "
                 "form-action 'self'"
@@ -2636,6 +3416,12 @@ if FastAPI is not None:
             },
         )
 
+    def _answer_review_context() -> str:
+        return json.dumps({
+            "identity": _record_capability_identity.get(),
+            "matter": str(active_case_root() or ""),
+        }, sort_keys=True)
+
     def _general_law_payload(
         payload: AskRequest,
         *,
@@ -2741,6 +3527,13 @@ if FastAPI is not None:
                     "authority_build_id": primary.metadata.get("build_id"),
                     "exact_source_span": True,
                 },
+                "_answer_assertions": AnswerAssertions(
+                    text=primary.snippet,
+                    authority_build_id=str(retrieval.diagnostics.get("authority_build_id") or ""),
+                    source_ids=tuple(item.source_id for item in retrieval.results),
+                    quotes=((primary.source_id, primary.snippet),),
+                    basis="server_exact_authority_quote",
+                ),
             }
         else:
             answer = compose_answer(
@@ -2788,6 +3581,14 @@ if FastAPI is not None:
         result["retrieval_confidence"] = retrieval.confidence
         result["metadata"] = metadata
         result["family_printables"] = suggest_printables(retrieval_question or question)
+
+        if (retrieval.diagnostics.get("authority_product_active") is True
+                and retrieval.results and "_answer_assertions" not in result):
+            result["_answer_assertions"] = AnswerAssertions(
+                text=str(result.get("answer") or ""),
+                authority_build_id=str(retrieval.diagnostics.get("authority_build_id") or ""),
+                source_ids=tuple(item.source_id for item in retrieval.results),
+            )
 
         return _finalize_family_response(result, payload) if finalize else result
 
@@ -2919,7 +3720,16 @@ if FastAPI is not None:
         )
         result["context_manifest"] = manifest
         result["provenance_receipt"] = receipt
-        result["local_agent_available"] = bool(manifest.get("entry_count"))
+        case_root = active_case_root()
+        identity = _record_capability_identity.get()
+        refs = []
+        if case_root is not None and identity.get("client_session_id") != "legacy-local-session":
+            refs = _local_agent_context_service().references_from_cards(citations)
+        result["local_agent_source_refs"] = [ref.model_dump() for ref in refs]
+        result["local_agent_matter_id"] = _case_id(Path(case_root)) if case_root else ""
+        result["local_agent_task"] = "evidence_review" if any(ref.lane == "private_record" for ref in refs) else "authority_review"
+        result["local_agent_available"] = bool(refs)
+        result["local_agent_unavailable_reason"] = "" if refs else "An active matter and exact verified source excerpts are required for a local model preview."
         result["local_agent_policy"] = {
             "enabled_by_default": False,
             "loopback_only": True,
@@ -2934,7 +3744,12 @@ if FastAPI is not None:
     def _finalize_family_response(result: dict[str, Any], payload: AskRequest) -> dict[str, Any]:
         """Attach the canonical v3 answer contract and derive the legacy text from it."""
 
+        assertion_input = result.pop("_answer_assertions", None)
         mode = _normalize_search_mode(str(result.get("search_mode") or payload.search_mode))
+        # Combined/private answers retain full-text review. This scope only
+        # separates this producer's public-law body from its own UI templates.
+        if mode != "maine_law":
+            assertion_input = None
         raw_citations = _attach_record_open_capabilities(
             active_case_root(), list(result.get("citations") or [])
         )
@@ -3015,7 +3830,7 @@ if FastAPI is not None:
                 )
             )
         answer_support_integrity = assess_answer_support_integrity(
-            str(result.get("answer") or ""),
+            assertion_input.text if isinstance(assertion_input, AnswerAssertions) else str(result.get("answer") or ""),
             citations,
             grounding_integrity=grounding_integrity,
         )
@@ -3147,6 +3962,11 @@ if FastAPI is not None:
             return _remember_record_search(payload, result)
         result["structured_answer"] = contract
         result["answer"] = render_legacy_answer(contract)
+        if isinstance(assertion_input, AnswerAssertions):
+            result["answer_review_scope"] = _answer_review_scopes.issue(
+                answer=result["answer"], context=_answer_review_context(), assertions=assertion_input,
+            )
+            result["answer_review_basis"] = assertion_input.basis
         result["source_lanes"] = contract["lane_grounding"]
         result["metadata"] = metadata
         _attach_local_agent_disclosure(result, payload, citations, metadata)
@@ -3189,6 +4009,306 @@ if FastAPI is not None:
     def api_health() -> dict[str, Any]:
         return _health_payload()
 
+    @app.get("/api/runtime/idempotency-status")
+    def runtime_idempotency_status(request: Request) -> dict[str, Any]:
+        """Expose the local duplicate-suppression boundary without state content."""
+
+        identity = _require_local_dashboard_identity(request)
+        try:
+            return {
+                **IdempotencyRegistry().status(),
+                "actor_role": identity["role"],
+                "tenant_scope": "current_local_tenant_only",
+                "matter_scope": "request-bound; no matter records returned",
+            }
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="idempotency_registry_unavailable") from exc
+
+    @app.get("/api/runtime/database-integrity")
+    def runtime_database_integrity(request: Request) -> dict[str, Any]:
+        """Run a bounded, read-only integrity check and preserve a receipt.
+
+        This endpoint is intentionally incapable of repair. It returns no
+        database name, path, table rows, payloads, prompts, or record text.
+        A failed check leaves the original runtime state untouched and supplies
+        only conservative recovery guidance for a human reviewer.
+        """
+
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            report = run_database_integrity_check(get_runtime_kernel().path)
+            return DatabaseIntegrityReceiptStore(case_root).record(
+                report,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except DatabaseIntegrityError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.post("/api/runtime/power-loss-drill")
+    def runtime_power_loss_drill(request: Request) -> dict[str, Any]:
+        """Run an admin-approved, synthetic fault-injection drill only.
+
+        The drill creates no user record, does not interrupt the running
+        process, and never claims physical power-cut qualification. Its only
+        durable result is an encrypted active-matter review receipt.
+        """
+
+        identity = _require_local_dashboard_identity(request)
+        if identity["role"] != "admin":
+            raise HTTPException(status_code=403, detail="admin_role_required")
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            report = run_power_loss_resilience_drill(
+                workspace_parent=Path(case_root) / "40_RUNTIME"
+            )
+            return PowerLossResilienceReceiptStore(case_root).record(
+                report,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except PowerLossResilienceError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/storage-pressure")
+    def runtime_storage_pressure(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return StoragePressureReceiptStore(case_root).record(
+                forecast_storage_pressure(case_root), actor_role=identity["role"], tenant_id=identity["tenant_id"]
+            )
+        except StoragePressureError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/clock-skew")
+    def runtime_clock_skew(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return ClockSkewMonitor(case_root).check(actor_role=identity["role"], tenant_id=identity["tenant_id"])
+        except ClockSkewError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/performance-gates")
+    def runtime_performance_gate_catalog(request: Request) -> dict[str, Any]:
+        """Expose local review budgets without creating a measurement receipt."""
+
+        identity = _require_local_dashboard_identity(request)
+        return {
+            **performance_budget_catalog(),
+            "actor_role": identity["role"],
+            "tenant_scope": "current_local_tenant_only",
+            "matter_scope": "an active matter is required when saving a review receipt",
+        }
+
+    @app.post("/api/runtime/performance-gates")
+    async def record_runtime_performance_gates(request: Request) -> dict[str, Any]:
+        """Save a bounded local budget review for the active matter.
+
+        The caller can submit only allow-listed numeric values and a declared
+        evidence kind.  No prompt, record, path, package inventory, or machine
+        identifier can enter the receipt through this route.
+        """
+
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="performance_payload_invalid") from exc
+        if not isinstance(payload, dict) or set(payload) - {"observations", "evidence_kind"}:
+            raise HTTPException(status_code=422, detail="performance_payload_invalid")
+        try:
+            report = evaluate_performance_gates(
+                payload.get("observations") or {},
+                evidence_kind=str(payload.get("evidence_kind") or "operator_supplied_unverified"),
+            )
+            return PerformanceGateReceiptStore(case_root).record(
+                report,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except PerformanceGateError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/failure-replay")
+    def runtime_failure_replay_catalog(request: Request) -> dict[str, Any]:
+        """List replayable safe-error contracts; no failure state is created."""
+
+        identity = _require_local_dashboard_identity(request)
+        return {
+            **failure_replay_catalog(),
+            "actor_role": identity["role"],
+            "tenant_scope": "current_local_tenant_only",
+            "matter_scope": "an active matter is required when recording a replay receipt",
+        }
+
+    @app.post("/api/runtime/failure-replay")
+    async def record_runtime_failure_replay(request: Request) -> dict[str, Any]:
+        """Replay one allow-listed safe envelope without rerunning an operation."""
+
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="failure_replay_payload_invalid") from exc
+        if not isinstance(payload, dict) or set(payload) - {"scenario_id", "confirmed"}:
+            raise HTTPException(status_code=422, detail="failure_replay_payload_invalid")
+        if payload.get("confirmed") is not True:
+            raise HTTPException(status_code=422, detail="failure_replay_confirmation_required")
+        try:
+            report = replay_sanitized_failure(payload.get("scenario_id"))
+            return FailureReplayReceiptStore(case_root).record(
+                report,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except FailureReplayError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/cross-device-transfer")
+    def runtime_cross_device_transfer_status(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            store = CrossDeviceTransferStore(case_root)
+            return {**store.status(), **store.list_bundles(), "actor_role": identity["role"]}
+        except CrossDeviceTransferError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.post("/api/runtime/cross-device-transfer/export")
+    async def export_runtime_cross_device_transfer(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="transfer_payload_invalid") from exc
+        if not isinstance(payload, dict) or set(payload) - {"transfer_id", "passphrase", "confirmed"} or payload.get("confirmed") is not True:
+            raise HTTPException(status_code=422, detail="transfer_confirmation_required")
+        try:
+            return CrossDeviceTransferStore(case_root).create_bundle(transfer_id=payload.get("transfer_id"), passphrase=payload.get("passphrase"), actor_role=identity["role"], tenant_id=identity["tenant_id"])
+        except CrossDeviceTransferError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.post("/api/runtime/cross-device-transfer/import")
+    async def import_runtime_cross_device_transfer(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="transfer_payload_invalid") from exc
+        if not isinstance(payload, dict) or set(payload) - {"transfer_id", "passphrase", "confirmed"} or payload.get("confirmed") is not True:
+            raise HTTPException(status_code=422, detail="transfer_confirmation_required")
+        try:
+            return CrossDeviceTransferStore(case_root).import_bundle(transfer_id=payload.get("transfer_id"), passphrase=payload.get("passphrase"), actor_role=identity["role"], tenant_id=identity["tenant_id"])
+        except CrossDeviceTransferError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/schema-migration-lab")
+    def runtime_schema_migration_lab_status(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return {**SchemaMigrationLab(case_root).status(tenant_id=identity["tenant_id"]), "actor_role": identity["role"]}
+        except SchemaMigrationLabError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.post("/api/runtime/schema-migration-lab/run")
+    async def run_runtime_schema_migration_lab(request: Request) -> dict[str, Any]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="migration_lab_payload_invalid") from exc
+        if not isinstance(payload, dict) or set(payload) - {"source_schema", "scenario", "confirmed"} or payload.get("confirmed") is not True:
+            raise HTTPException(status_code=422, detail="migration_lab_confirmation_required")
+        try:
+            return SchemaMigrationLab(case_root).run(source_schema=payload.get("source_schema"), scenario=payload.get("scenario"), actor_role=identity["role"], tenant_id=identity["tenant_id"])
+        except SchemaMigrationLabError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/health-dashboard")
+    def runtime_health_dependency_dashboard(request: Request) -> dict[str, Any]:
+        """Record and return a content-free readiness view for the active matter.
+
+        This is deliberately a local, protected diagnostic action: the response
+        contains component states and safe counters only, while its receipt is
+        encrypted in the active matter.  It does not contact providers, download
+        engines, inspect record text, or reveal local filesystem paths.
+        """
+
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            dashboard = collect_health_dependency_dashboard(
+                case_root=case_root,
+                runtime_health=runtime_health_snapshot,
+                authority_status=lambda: AuthorityProductService().status(),
+                ocr_status=ocr_prerequisite_status,
+                backup_status=lambda: MatterBackupRestoreDrill(
+                    case_root, repo_root=Path(__file__).resolve().parents[2]
+                ).status(),
+                runtime_kernel=get_runtime_kernel(),
+                matter_id=_case_id(Path(case_root)),
+            )
+            return HealthDependencyDashboardStore(case_root).record(
+                dashboard,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except HealthDashboardError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    @app.get("/api/runtime/job-journal")
+    def runtime_job_journal(request: Request) -> dict[str, Any]:
+        """Return a receipt-backed, content-free active-matter job journal."""
+
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            journal = collect_job_journal(
+                kernel=get_runtime_kernel(), matter_id=_case_id(Path(case_root))
+            )
+            return JobJournalReceiptStore(case_root).record(
+                journal,
+                actor_role=identity["role"],
+                tenant_id=identity["tenant_id"],
+            )
+        except JobJournalError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
     @app.get("/api/local-agent/status")
     def local_agent_status() -> dict[str, Any]:
         return {
@@ -3208,9 +4328,68 @@ if FastAPI is not None:
                     "default_endpoint": "http://127.0.0.1:1234",
                     "default_model": "local-model",
                 },
+                {
+                    "provider_id": "fast_interchange_local",
+                    "default_endpoint": "http://127.0.0.1:8105",
+                    "default_model": "admitted-release-model",
+                    "requires_host_worker_token": True,
+                    "bundled_model_artifacts": False,
+                    "external_admission_required": True,
+                },
             ],
             "exact_manifest_approval_required": True,
+            "server_rehydrated_sources_required": True,
+            "single_use_session_approval_required": True,
             "review_required": True,
+        }
+
+    @app.exception_handler(RequestValidationError)
+    async def local_agent_validation_error(request: Request, exc: RequestValidationError):
+        if request.url.path.startswith(("/api/local-agent/", "/api/model-packs")):
+            return JSONResponse(status_code=422, content={"detail": "local_agent_request_invalid", "review_required": True})
+        return await request_validation_exception_handler(request, exc)
+
+    def _local_agent_record_source(token: str) -> dict[str, Any]:
+        try:
+            resolved = _resolve_record_capability(token, 0, expected_action="record_local_agent")
+            if not re.fullmatch(r"[a-fA-F0-9]{64}", str(resolved["root"].get("source_hash") or "")):
+                raise LocalAgentContextError("local_agent_record_hash_required")
+            if len(resolved["data"]) > 50 * 1024 * 1024:
+                raise LocalAgentContextError("local_agent_record_too_large")
+            parsed = parse_bytes(resolved["data"], suffix=resolved["suffix"], locator=resolved["filename"])
+            if not parsed.text or not parsed.text.strip():
+                raise LocalAgentContextError("local_agent_verified_text_required")
+            return {
+                "source_id": str(resolved["binding"]["resource_id"]),
+                "source_sha256": resolved["source_hash"], "text": parsed.text,
+                "title": resolved["filename"], "source_class": "private_record",
+            }
+        except LocalAgentContextError:
+            raise
+        except Exception as exc:
+            raise LocalAgentContextError("local_agent_record_unavailable") from exc
+
+    def _local_agent_context_service() -> LocalAgentContextService:
+        return LocalAgentContextService(authority=AuthorityProductService(), record_loader=_local_agent_record_source)
+
+    def _local_agent_scope(payload: LocalAgentPreviewRequest, request: Request) -> tuple[dict[str, str], Path]:
+        identity = _require_local_dashboard_identity(request)
+        case_root = active_case_root()
+        if case_root is None or payload.matter_id != _case_id(Path(case_root)):
+            raise HTTPException(status_code=409, detail="local_agent_active_matter_mismatch")
+        return {**identity, "matter_id": payload.matter_id}, Path(case_root)
+
+    def _local_agent_audit_store(root: Path) -> LocalAgentAuditStore:
+        return LocalAgentAuditStore(root, encryption_key=os.environ.get("MAINE_MATTER_STORE_KEY") or "local-development-key-change-me")
+
+    register_model_pack_routes(app, scope_resolver=_local_agent_scope, audit_factory=_local_agent_audit_store)
+
+    def _local_agent_binding(payload: LocalAgentPreviewRequest, scope: dict[str, str], runtime: LocalAgentRuntime) -> dict[str, Any]:
+        return {
+            "scope": scope, "question": payload.question, "task": payload.task,
+            "provider": payload.provider, "endpoint": payload.endpoint, "model": payload.model,
+            "run_id": payload.run_id, "source_refs": [ref.model_dump() for ref in payload.source_refs],
+            "model_admission": getattr(runtime.client, "model_binding", {}),
         }
 
     def _local_agent_runtime_from_request(payload: LocalAgentPreviewRequest) -> LocalAgentRuntime:
@@ -3220,33 +4399,46 @@ if FastAPI is not None:
                 endpoint=payload.endpoint,
                 model_name=payload.model,
                 timeout_seconds=120,
+                capability=payload.task,
             )
         except (ValueError, LocalModelError) as exc:
             detail = getattr(exc, "code", None) or str(exc)
             raise HTTPException(
-                status_code=400, detail={"error": detail, "loopback_only": True}
+                status_code=400, detail={"error": detail, "code": detail, "loopback_only": True}
             ) from exc
         return LocalAgentRuntime(client)
 
     @app.post("/api/local-agent/preview")
-    def local_agent_preview(payload: LocalAgentPreviewRequest) -> dict[str, Any]:
-        sources = context_sources_from_cards(source_cards_from_payload(payload.source_cards))
-        if not sources:
-            raise HTTPException(
-                status_code=400, detail={"error": "local_agent_context_sources_required"}
-            )
+    def local_agent_preview(payload: LocalAgentPreviewRequest, request: Request) -> dict[str, Any]:
+        scope, root = _local_agent_scope(payload, request)
         runtime = _local_agent_runtime_from_request(payload)
         try:
+            sources, cards = _local_agent_context_service().resolve(payload.source_refs)
+            # The host owns run identity. The returned value is required on run.
+            payload = payload.model_copy(update={"run_id": uuid.uuid4().hex})
             manifest, _, injection_report = runtime.preview(
                 question=payload.question,
                 sources=sources,
-                run_id=payload.run_id or uuid.uuid4().hex,
+                run_id=payload.run_id,
             )
+            binding = _local_agent_binding(payload, scope, runtime)
+            audit = _local_agent_audit_store(root).record("preview", scope=scope, binding_sha256=local_agent_digest(binding))
+            token = _local_agent_approvals.issue(binding, manifest.to_dict())
+            if hasattr(runtime.client, "model_binding") and callable(getattr(runtime.client, "cancel", None)):
+                _local_agent_runs.register(payload.run_id, scope, runtime.client)
+        except LocalAgentContextError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail={"error": str(exc)}) from exc
+            raise HTTPException(status_code=400, detail="local_agent_context_invalid") from exc
         return {
-            "schema_version": "local_agent_preview_response_v1",
+            "schema_version": "local_agent_preview_response_v2",
             "status": "approval_required",
+            "approval_token": token,
+            "approval_expires_in_seconds": 300,
+            "matter_id": scope["matter_id"],
+            "task": payload.task,
+            "source_refs": [ref.model_dump() for ref in payload.source_refs],
+            "audit_receipt": audit,
             "context_manifest": manifest.to_dict(),
             "injection_report": injection_report,
             "model": {
@@ -3257,13 +4449,29 @@ if FastAPI is not None:
                 "endpoint_port": runtime.client.endpoint.port,
                 "loopback_only": True,
             },
-            "source_cards": source_cards_from_payload(payload.source_cards),
+            "source_cards": cards,
             "review_required": True,
+            "model_admission": getattr(runtime.client, "model_binding", {}),
+            "cancellation_supported": hasattr(runtime.client, "model_binding") and callable(getattr(runtime.client, "cancel", None)),
         }
 
+    @app.post("/api/local-agent/cancel")
+    def local_agent_cancel(payload: LocalAgentCancelRequest, request: Request) -> dict[str, Any]:
+        scope, root = _local_agent_scope(payload, request)
+        try:
+            audit = _local_agent_audit_store(root).record("cancel_requested", scope=scope,
+                                                         binding_sha256=local_agent_digest({"run_id": payload.run_id}))
+            result = _local_agent_runs.cancel(payload.run_id, scope)
+        except LocalAgentContextError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+        except LocalModelError as exc:
+            raise HTTPException(status_code=503, detail=exc.code) from exc
+        return {**result, "run_id": payload.run_id, "audit_receipt": audit, "review_required": True}
+
     @app.post("/api/local-agent/run")
-    def local_agent_run(payload: LocalAgentExecuteRequest) -> dict[str, Any]:
-        if payload.tool_invocations:
+    def local_agent_run(payload: LocalAgentExecuteRequest, request: Request) -> dict[str, Any]:
+        scope, root = _local_agent_scope(payload, request)
+        if payload.tool_invocations or payload.permitted_tools or payload.retrieval_diagnostics:
             raise HTTPException(
                 status_code=400,
                 detail={
@@ -3271,32 +4479,54 @@ if FastAPI is not None:
                     "message": "The browser flow uses approved source context only. Host tools require a separately registered handler.",
                 },
             )
-        sources = context_sources_from_cards(source_cards_from_payload(payload.source_cards))
-        if not sources:
-            raise HTTPException(
-                status_code=400, detail={"error": "local_agent_context_sources_required"}
-            )
         runtime = _local_agent_runtime_from_request(payload)
-        request = LocalAgentRunRequest(
-            question=payload.question,
-            sources=sources,
-            approved_manifest_sha256=payload.approved_manifest_sha256,
-            matter_id=payload.matter_id or None,
-            tool_invocations=tuple(
-                ToolInvocation(str(item.get("name") or ""), dict(item.get("args") or {}))
-                for item in payload.tool_invocations
-                if isinstance(item, dict)
-            ),
-            permitted_tools=frozenset(payload.permitted_tools),
-            retrieval_diagnostics=dict(payload.retrieval_diagnostics or {}),
-            run_id=payload.run_id or uuid.uuid4().hex,
-        )
-        result = runtime.run(request)
+        controlled_run = False
+        try:
+            sources, cards = _local_agent_context_service().resolve(payload.source_refs)
+            binding = _local_agent_binding(payload, scope, runtime)
+            manifest = _local_agent_approvals.consume(payload.approval_token, binding, payload.approved_manifest_sha256)
+            audit_store = _local_agent_audit_store(root)
+            audit_store.record("dispatch", scope=scope, binding_sha256=local_agent_digest(binding))
+            # Audit I/O and model selection cannot bypass a late matter/source change.
+            current_root = active_case_root()
+            if current_root is None or _case_id(Path(current_root)) != payload.matter_id:
+                raise LocalAgentContextError("local_agent_active_matter_mismatch")
+            sources, cards = _local_agent_context_service().resolve(payload.source_refs)
+            if hasattr(runtime.client, "model_binding") and callable(getattr(runtime.client, "cancel", None)):
+                runtime = LocalAgentRuntime(_local_agent_runs.claim(payload.run_id, scope, runtime.client.model_binding))
+                controlled_run = True
+            result = runtime.run(LocalAgentRunRequest(
+                question=payload.question, sources=sources,
+                approved_manifest_sha256=payload.approved_manifest_sha256,
+                matter_id=payload.matter_id, run_id=payload.run_id,
+                manifest_created_at=manifest["created_at"],
+            ))
+            audit = audit_store.record("result", scope=scope, binding_sha256=local_agent_digest(binding),
+                                       receipt_sha256=result.provenance_receipt.receipt_sha256)
+            current_root = active_case_root()
+            if current_root is None or _case_id(Path(current_root)) != payload.matter_id:
+                raise LocalAgentContextError("local_agent_active_matter_changed_result_withheld")
+            # A completed worker request does not override revocation or a source
+            # generation change that happened while it was running.
+            _local_agent_context_service().resolve(payload.source_refs)
+            if controlled_run:
+                canceled = _local_agent_runs.finish(payload.run_id, scope, failed=result.status != "completed_review_required")
+                controlled_run = False
+                if canceled or "fast_interchange_generation_canceled" in result.warnings:
+                    _local_agent_audit_store(root).record("canceled", scope=scope, binding_sha256=local_agent_digest(binding))
+                    raise LocalAgentContextError("fast_interchange_generation_canceled")
+        except LocalAgentContextError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+        finally:
+            if controlled_run:
+                _local_agent_runs.finish(payload.run_id, scope, failed=True)
         if result.status == "blocked":
             raise HTTPException(status_code=409, detail=result.to_dict())
         return {
             **result.to_dict(),
-            "citations": source_cards_from_payload(payload.source_cards),
+            "citations": cards,
+            "audit_receipt": audit,
+            "matter_id": payload.matter_id,
             "local_agent_result": True,
             "grounded": bool(result.context_manifest.entries),
             "source_card_count": len(result.context_manifest.entries),
@@ -3326,6 +4556,129 @@ if FastAPI is not None:
     @app.get("/api/authority/status")
     def local_authority_status() -> dict[str, Any]:
         return AuthorityLibraryService().status()
+
+    @app.get("/api/authority/gaps")
+    def local_authority_gaps(issue: str = "") -> dict[str, Any]:
+        try:
+            return AuthorityProductService().authority_gap_review(issue=str(issue or "")[:500])
+        except (FileNotFoundError, ValueError, OSError):
+            return {"status": "blocked", "blockers": ["active_authority_product_unavailable_or_unverified"], "review_required": True}
+
+    @app.get("/api/authority/gaps/sources/{source_id}")
+    def local_authority_gap_source(source_id: str, build_id: str) -> dict[str, Any]:
+        try:
+            return AuthorityProductService().authority_gap_source(source_id, build_id=build_id)
+        except (FileNotFoundError, ValueError, OSError):
+            return {"status": "blocked", "blockers": ["active_authority_product_unavailable_or_unverified"], "review_required": True}
+
+    @app.get("/api/authority/freshness")
+    def local_authority_freshness_dashboard() -> dict[str, Any]:
+        try:
+            return AuthorityLibraryService().freshness_dashboard()
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "blockers": ["authority_freshness_metadata_unavailable"],
+                "review_required": True,
+                "current_law_determined": False,
+            }
+
+    @app.get("/api/authority/availability")
+    def local_authority_availability_monitor() -> dict[str, Any]:
+        try:
+            return AuthorityLibraryService().availability_monitor()
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "blockers": ["authority_availability_metadata_unavailable"],
+                "review_required": True,
+                "availability_determined": False,
+                "network_used": False,
+                "mirror_substitution": False,
+            }
+
+    @app.get("/api/authority/parser-regression")
+    def local_authority_parser_regression() -> dict[str, Any]:
+        try:
+            return AuthorityLibraryService().parser_regression_corpus()
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "blockers": ["parser_regression_corpus_unavailable"],
+                "review_required": True,
+                "corpus_is_legal_authority": False,
+                "network_used": False,
+            }
+
+    @app.get("/api/authority/parser-regression/{fixture_id}")
+    def local_authority_parser_regression_fixture(fixture_id: str) -> dict[str, Any]:
+        try:
+            return AuthorityLibraryService().parser_regression_fixture(fixture_id)
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "fixture_id": fixture_id[:160],
+                "blockers": ["parser_regression_fixture_unavailable"],
+                "review_required": True,
+                "can_support_legal_claim": False,
+            }
+
+    @app.get("/api/authority/lineage/{source_id}")
+    def local_authority_lineage(source_id: str) -> dict[str, Any]:
+        try:
+            return AuthorityProductService().authority_lineage(source_id)
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "source_id": source_id[:256],
+                "blockers": ["active_authority_product_unavailable_or_unverified"],
+                "review_required": True,
+                "network_used": False,
+                "current_law_determined": False,
+            }
+
+    @app.post("/api/authority/forms/synchronize")
+    def local_authority_forms_synchronize(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return AuthorityProductService().synchronize_forms(payload.get("installed_forms"))
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "blockers": ["active_authority_form_catalog_unavailable_or_unverified"],
+                "review_required": True,
+                "completion_blocked": True,
+                "network_used": False,
+            }
+
+    @app.get("/api/authority/opinions/{source_id}/enrichment")
+    def local_authority_law_court_opinion_enrichment(source_id: str) -> dict[str, Any]:
+        try:
+            return AuthorityProductService().law_court_opinion_enrichment(source_id)
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "source_id": source_id[:256],
+                "blockers": ["active_law_court_opinion_unavailable_or_unverified"],
+                "review_required": True,
+                "network_used": False,
+                "current_law_determined": False,
+                "treatment_determined": False,
+            }
+
+    @app.get("/api/authority/rules/history")
+    def local_authority_rule_history_timeline(query: str = "") -> dict[str, Any]:
+        try:
+            return AuthorityProductService().rule_history_timeline(query)
+        except (FileNotFoundError, ValueError, OSError):
+            return {
+                "status": "blocked",
+                "query": query[:256],
+                "timeline": [],
+                "blockers": ["active_rule_history_unavailable_or_unverified"],
+                "review_required": True,
+                "network_used": False,
+                "as_of_determined": False,
+            }
 
     @app.get("/api/authority/graph/{source_id}")
     def local_authority_graph(source_id: str) -> dict[str, Any]:
@@ -3382,6 +4735,10 @@ if FastAPI is not None:
         source_classes: list[str] = Field(default_factory=list)
         max_targets: int | None = None
 
+    class AuthorityBuildActivationRequest(BaseModel):
+        build_id: str = Field(min_length=24, max_length=24)
+        acknowledged: StrictBool = False
+
     @app.post("/api/authority/update")
     def local_authority_update(payload: AuthorityUpdateRequest) -> dict[str, Any]:
         return AuthorityLibraryService().update(
@@ -3397,6 +4754,22 @@ if FastAPI is not None:
     def local_authority_update_cancel(payload: dict | None = None) -> dict[str, Any]:
         job_id = str((payload or {}).get("job_id") or "").strip() or None
         return AuthorityLibraryService().cancel_update(job_id)
+
+    @app.get("/api/authority/builds/{build_id}/diff")
+    def local_authority_build_diff(build_id: str) -> dict[str, Any]:
+        return AuthorityLibraryService().compare_builds(build_id)
+
+    @app.post("/api/authority/activate")
+    def local_authority_activate(payload: AuthorityBuildActivationRequest) -> dict[str, Any]:
+        if not payload.acknowledged:
+            return {"status": "blocked", "build_id": payload.build_id, "blockers": ["authority_activation_acknowledgement_required"], "review_required": True}
+        return AuthorityLibraryService().activate_build(payload.build_id, operation="activate")
+
+    @app.post("/api/authority/rollback")
+    def local_authority_rollback(payload: AuthorityBuildActivationRequest) -> dict[str, Any]:
+        if not payload.acknowledged:
+            return {"status": "blocked", "build_id": payload.build_id, "blockers": ["authority_rollback_acknowledgement_required"], "review_required": True}
+        return AuthorityLibraryService().activate_build(payload.build_id, operation="rollback")
 
     @app.post("/api/authority/citations/resolve")
     @app.post("/api/authority/pinpoints/resolve")
@@ -3423,14 +4796,27 @@ if FastAPI is not None:
         payload: AuthorityVerifyAnswerRequest,
     ) -> dict[str, Any]:
         text_result = harden_text_input(payload.text, max_length=200_000, preserve_newlines=True)
+        review_scope = None
+        if payload.answer_review_scope:
+            try:
+                review_scope = _answer_review_scopes.resolve(
+                    payload.answer_review_scope, answer=payload.text, context=_answer_review_context(),
+                )
+            except ValueError:
+                return {
+                    "status": "blocked", "blockers": ["answer_review_scope_expired_or_mismatch"],
+                    "review_required": True,
+                    "recovery_hint": "Ask again to refresh the answer-bound review, or verify the complete text without a saved scope.",
+                }
         try:
             result = AuthorityProductService().verify_output(
-                text=text_result.value,
+                text=payload.text if review_scope else text_result.value,
                 source_ids=payload.source_ids,
                 quotes=payload.quotes,
                 claims=payload.claims,
                 expected_jurisdiction=str(payload.expected_jurisdiction or "maine")[:64],
                 auto_extract_claims=bool(payload.auto_extract_claims),
+                review_scope=review_scope,
             )
         except (FileNotFoundError, ValueError, OSError):
             result = {
@@ -3980,6 +5366,55 @@ if FastAPI is not None:
     def calendar_add_events(payload: dict[str, Any]) -> dict[str, Any]:
         return _intake_call(lambda: _calendar_store().add_events(payload))
 
+    def _order_calendar_store() -> OrderCalendarExtractionStore:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return OrderCalendarExtractionStore(case_root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.post("/api/calendar/order-term-extractions")
+    def order_calendar_extraction_create(payload: dict[str, Any]) -> dict[str, Any]:
+        def create() -> dict[str, Any]:
+            case_root = active_case_root()
+            if case_root is None:
+                raise IntakeWorkbenchError("no_active_matter", 409)
+            return _order_calendar_store().create(
+                payload,
+                terms=_order_store().terms().get("terms", []),
+                records=_review_records(case_root),
+            )
+
+        return _intake_call(create)
+
+    @app.get("/api/calendar/order-term-extractions/{extraction_id}")
+    def order_calendar_extraction_get(extraction_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _order_calendar_store().get(extraction_id))
+
+    @app.get("/api/calendar/order-term-extractions/{extraction_id}/source")
+    def order_calendar_extraction_source(extraction_id: str) -> dict[str, Any]:
+        def resolve() -> dict[str, Any]:
+            case_root = active_case_root()
+            if case_root is None:
+                raise IntakeWorkbenchError("no_active_matter", 409)
+            payload = _order_calendar_store().source(extraction_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            record_id = str(source.get("record_id") or "")
+            row = next(
+                (item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == record_id.casefold()),
+                None,
+            )
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("order_calendar_source_not_in_active_matter", 404)
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            source["source_token"] = _record_open_token(case_root, record_id, locator)
+            return {**payload, "source": source}
+
+        return _intake_call(resolve)
+
     @app.post("/api/calendar/rules")
     def calendar_add_rules(payload: dict[str, Any]) -> dict[str, Any]:
         return _intake_call(lambda: _calendar_store().add_rules(payload))
@@ -3988,9 +5423,81 @@ if FastAPI is not None:
     def calendar_deadline_candidate(payload: dict[str, Any]) -> dict[str, Any]:
         return _intake_call(lambda: _calendar_store().calculate(payload))
 
+    @app.post("/api/calendar/deadline-dependencies")
+    def calendar_deadline_dependency(payload: dict[str, Any]) -> dict[str, Any]:
+        def create() -> dict[str, Any]:
+            store = _calendar_store()
+            trigger_id = str(payload.get("trigger_event_id") or "")
+            event = next((row for row in store.inventory().get("events", []) if str(row.get("event_id") or "") == trigger_id), None)
+            source = dict((event or {}).get("source_ref") or {})
+            record_id = str(source.get("record_id") or "")
+            source_hash = str(source.get("source_hash") or "").casefold()
+            case_root = active_case_root()
+            row = next((item for item in load_case_search_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == record_id), None) if case_root is not None else None
+            if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("deadline_dependency_trigger_not_in_active_matter", 404)
+            return store.calculate_dependency(payload)
+        return _intake_call(create)
+
+    @app.get("/api/calendar/deadline-dependencies/{dependency_id}")
+    def calendar_deadline_dependency_get(dependency_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _calendar_store().dependency(dependency_id))
+
+    @app.get("/api/calendar/deadline-dependencies/{dependency_id}/trigger-source")
+    def calendar_deadline_dependency_trigger_source(dependency_id: str) -> dict[str, Any]:
+        """Return a short-lived, matter-scoped capability for the active trigger record."""
+        def resolve() -> dict[str, Any]:
+            case_root = active_case_root()
+            if case_root is None:
+                raise IntakeWorkbenchError("no_active_matter", 409)
+            graph = _calendar_store().dependency(dependency_id)
+            candidate = dict(graph.get("active_candidate") or {})
+            trigger_id = str(candidate.get("trigger_event") or "")
+            event = next(
+                (item for item in _calendar_store().inventory().get("events", []) if str(item.get("event_id") or "") == trigger_id),
+                None,
+            )
+            source = dict((event or {}).get("source_ref") or {})
+            record_id = str(source.get("record_id") or "")
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next(
+                (
+                    item
+                    for item in load_case_search_records(case_root)
+                    if str(item.get("evidence_id") or item.get("source_id") or "") == record_id
+                ),
+                None,
+            )
+            if (
+                row is None
+                or not re.fullmatch(r"[a-f0-9]{64}", source_hash)
+                or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash
+            ):
+                raise IntakeWorkbenchError("deadline_dependency_trigger_not_in_active_matter", 404)
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {
+                "dependency_id": graph["dependency_id"],
+                "candidate_id": str(candidate.get("candidate_id") or ""),
+                "source": {
+                    "record_id": record_id,
+                    "source_hash": source_hash,
+                    "page": max(0, int(source.get("page") or 0)),
+                    "source_token": _record_open_token(case_root, record_id, locator),
+                },
+                "review_required": True,
+                "filing_ready": False,
+            }
+
+        return _intake_call(resolve)
+
     @app.get("/api/calendar/receipt")
     def calendar_receipt() -> dict[str, Any]:
         return _intake_call(lambda: _calendar_store().receipt())
+
+    @app.post("/api/calendar/ics-export")
+    def calendar_ics_export(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _calendar_store().ics_export(payload))
 
     def _docket_store() -> DocketReconciliationStore:
         case_root = active_case_root()
@@ -4082,6 +5589,34 @@ if FastAPI is not None:
     @app.get("/api/exhibits/binders/{binder_id}/manifest")
     def exhibit_manifest(binder_id: str) -> dict[str, Any]:
         return _intake_call(lambda: _exhibit_store().manifest(binder_id))
+
+    @app.post("/api/exhibits/admission-checklists")
+    def exhibit_admission_checklist(payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().create_admission_checklist(payload))
+
+    @app.get("/api/exhibits/admission-checklists/{checklist_id}")
+    def exhibit_admission_checklist_get(checklist_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().admission_checklist(checklist_id))
+
+    @app.get("/api/exhibits/admission-checklists/{checklist_id}/source")
+    def exhibit_admission_checklist_source(checklist_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().admission_checklist_source(checklist_id))
+
+    @app.post("/api/exhibits/custody-events")
+    def exhibit_custody_event(payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().record_custody_event(payload))
+
+    @app.get("/api/exhibits/custody-events/verify")
+    def exhibit_custody_verify() -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().verify_custody_chain())
+
+    @app.get("/api/exhibits/custody-events/{event_id}")
+    def exhibit_custody_event_get(event_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().custody_event(event_id))
+
+    @app.get("/api/exhibits/custody-events/{event_id}/source")
+    def exhibit_custody_event_source(event_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _exhibit_store().custody_event_source(event_id))
 
     @app.get("/api/exhibits/receipt")
     def exhibit_receipt() -> dict[str, Any]:
@@ -4325,6 +5860,38 @@ if FastAPI is not None:
     def schedule_scenario(payload: dict[str, Any]) -> dict[str, Any]:
         return _intake_call(lambda: _schedule_store().scenario(payload))
 
+    @app.post("/api/parenting-schedule/simulations-v2")
+    def schedule_simulation_v2(payload: dict[str, Any]) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return _intake_call(lambda: _schedule_store().simulate_v2(payload, records=_review_records(root)))
+
+    @app.get("/api/parenting-schedule/simulations-v2/{simulation_id}")
+    def schedule_simulation_v2_get(simulation_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _schedule_store().simulation_v2(simulation_id))
+
+    @app.get("/api/parenting-schedule/simulations-v2/{simulation_id}/sources/{record_id}")
+    def schedule_simulation_v2_source(simulation_id: str, record_id: str) -> dict[str, Any]:
+        def resolve() -> dict[str, Any]:
+            case_root = active_case_root()
+            if case_root is None:
+                raise IntakeWorkbenchError("no_active_matter", 409)
+            payload = _schedule_store().simulation_v2_source(simulation_id, record_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next(
+                (item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == str(source.get("record_id") or "")),
+                None,
+            )
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("schedule_simulation_source_not_in_active_matter", 404)
+            locator = str(row.get("source_locator") or row.get("title") or source["record_id"])
+            source["source_token"] = _record_open_token(case_root, str(source["record_id"]), locator)
+            return {**payload, "source": source}
+
+        return _intake_call(resolve)
+
     @app.get("/api/parenting-schedule/receipt")
     def schedule_receipt() -> dict[str, Any]:
         return _intake_call(lambda: _schedule_store().receipt())
@@ -4484,6 +6051,103 @@ if FastAPI is not None:
     def email_receipt() -> dict[str, Any]:
         return _intake_call(lambda: _email_store().receipt())
 
+    @app.post("/api/email-integrity/handoff-package")
+    def email_handoff_package(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Build a local review package only; this endpoint never delivers email."""
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _email_store().build_handoff_package(payload))
+
+    def _archival_pdf_store() -> ArchivalPdfExportStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return ArchivalPdfExportStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/archival-pdf/exports")
+    def archival_pdf_inventory(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _archival_pdf_store().inventory())
+
+    @app.post("/api/archival-pdf/exports")
+    def archival_pdf_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _archival_pdf_store().create(payload))
+
+    def _structured_evidence_export_store() -> StructuredEvidenceExportStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return StructuredEvidenceExportStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence-exports/structured")
+    def structured_evidence_export_inventory(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _structured_evidence_export_store().inventory())
+
+    @app.post("/api/evidence-exports/structured")
+    def structured_evidence_export_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _structured_evidence_export_store().create(payload))
+
+    def _print_review_store() -> PrintReviewStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return PrintReviewStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/print-review/previews")
+    def print_review_inventory(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _print_review_store().inventory())
+
+    @app.post("/api/print-review/previews")
+    def print_review_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _print_review_store().create(payload))
+
+    @app.get("/api/print-review/previews/{preview_id}")
+    def print_review_get(preview_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _print_review_store().get(preview_id))
+
+    @app.post("/api/print-review/previews/{preview_id}/request-print")
+    def print_review_request_print(preview_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _print_review_store().request_print(preview_id, payload))
+
+    def _external_tool_boundary_store() -> ExternalToolBoundaryStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return ExternalToolBoundaryStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/external-tool-boundaries")
+    def external_tool_boundary_inventory(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _external_tool_boundary_store().inventory())
+
+    @app.post("/api/external-tool-boundaries")
+    def external_tool_boundary_record(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _external_tool_boundary_store().record(payload))
+
+    @app.get("/api/external-tool-boundaries/{receipt_id}")
+    def external_tool_boundary_get(receipt_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _external_tool_boundary_store().get(receipt_id))
+
     def _handoff_store() -> ReviewerHandoffStore:
         root = active_case_root()
         if root is None:
@@ -4492,6 +6156,23 @@ if FastAPI is not None:
             return ReviewerHandoffStore(root)
         except IntakeWorkbenchError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    def _require_reviewer_bundle_role(request: Request, *, action: str) -> str:
+        """Apply the local role boundary before a reviewer-bundle mutation.
+
+        The original manifest endpoint keeps its legacy local-desktop behavior
+        for existing matters.  The round-trip endpoints are new and explicit:
+        a viewer may inspect a source locator but cannot export, comment,
+        attest, or reimport on behalf of a reviewer.
+        """
+
+        role = str(request.headers.get("X-User-Role") or "reviewer").strip().lower()
+        allowed = {"admin", "attorney", "paralegal", "reviewer"}
+        if action == "source":
+            allowed.add("viewer")
+        if role not in allowed:
+            raise HTTPException(status_code=403, detail="reviewer_bundle_role_required")
+        return role
 
     @app.get("/api/reviewer-handoff/inventory")
     def handoff_inventory() -> dict[str, Any]:
@@ -4504,6 +6185,130 @@ if FastAPI is not None:
     @app.get("/api/reviewer-handoff/receipt")
     def handoff_receipt() -> dict[str, Any]:
         return _intake_call(lambda: _handoff_store().receipt())
+
+    @app.post("/api/reviewer-handoff/{handoff_id}/export")
+    def handoff_export(handoff_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="export")
+        return _intake_call(lambda: _handoff_store().export_bundle(handoff_id, payload))
+
+    @app.post("/api/reviewer-handoff/{handoff_id}/comments")
+    def handoff_comment(handoff_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _handoff_store().add_comment(handoff_id, payload))
+
+    @app.post("/api/reviewer-handoff/{handoff_id}/attest")
+    def handoff_attest(handoff_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="attest")
+        return _intake_call(lambda: _handoff_store().attest(handoff_id, payload))
+
+    @app.post("/api/reviewer-handoff/{handoff_id}/reimport")
+    def handoff_reimport(handoff_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="reimport")
+        return _intake_call(lambda: _handoff_store().reimport(handoff_id, payload))
+
+    @app.get("/api/reviewer-handoff/{handoff_id}/reconcile")
+    def handoff_reconcile(handoff_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _handoff_store().reconcile(handoff_id))
+
+    @app.get("/api/reviewer-handoff/{handoff_id}/records/{record_id}/source")
+    def handoff_record_source(handoff_id: str, record_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _handoff_store().source_reference(handoff_id, record_id))
+
+    def _structured_comment_store() -> StructuredCommentThreadStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return StructuredCommentThreadStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/review-comments/inventory")
+    def structured_comment_inventory(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _structured_comment_store().inventory())
+
+    @app.post("/api/review-comments/threads")
+    def structured_comment_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _structured_comment_store().create_thread(payload))
+
+    @app.get("/api/review-comments/threads/{thread_id}")
+    def structured_comment_get(thread_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _structured_comment_store().get(thread_id))
+
+    @app.post("/api/review-comments/threads/{thread_id}/comments")
+    def structured_comment_add(thread_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _structured_comment_store().add_comment(thread_id, payload))
+
+    @app.post("/api/review-comments/threads/{thread_id}/resolve")
+    def structured_comment_resolve(thread_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _structured_comment_store().resolve(thread_id, payload))
+
+    def _review_assignment_store() -> ReviewAssignmentStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        try:
+            return ReviewAssignmentStore(root)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/review-assignments")
+    def review_assignments(request: Request, include_completed: bool = False) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _review_assignment_store().inventory(include_completed=include_completed))
+
+    @app.post("/api/review-assignments")
+    def review_assignment_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _review_assignment_store().create(payload))
+
+    @app.get("/api/review-assignments/{assignment_id}")
+    def review_assignment_get(assignment_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
+        return _intake_call(lambda: _review_assignment_store().get(assignment_id))
+
+    @app.post("/api/review-assignments/{assignment_id}/claim")
+    def review_assignment_claim(assignment_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _review_assignment_store().claim(assignment_id, payload))
+
+    @app.post("/api/review-assignments/{assignment_id}/complete")
+    def review_assignment_complete(assignment_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment")
+        return _intake_call(lambda: _review_assignment_store().complete(assignment_id, payload))
+
+    def _bundle_merge_store() -> BundleMergeStore:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        try: return BundleMergeStore(root)
+        except IntakeWorkbenchError as exc: raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/bundle-merges")
+    def bundle_merges(request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source"); return _intake_call(lambda: _bundle_merge_store().inventory())
+
+    @app.post("/api/bundle-merges")
+    def bundle_merge_create(payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment"); return _intake_call(lambda: _bundle_merge_store().create(payload))
+
+    @app.get("/api/bundle-merges/{merge_id}")
+    def bundle_merge_get(merge_id: str, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source"); return _intake_call(lambda: _bundle_merge_store().get(merge_id))
+
+    @app.post("/api/bundle-merges/{merge_id}/resolve")
+    def bundle_merge_resolve(merge_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment"); return _intake_call(lambda: _bundle_merge_store().resolve(merge_id, payload))
+
+    @app.post("/api/bundle-merges/{merge_id}/finalize")
+    def bundle_merge_finalize(merge_id: str, payload: dict[str, Any], request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="comment"); return _intake_call(lambda: _bundle_merge_store().finalize(merge_id, payload))
 
     def _language_store() -> LanguageAccessStore:
         root = active_case_root()
@@ -4845,11 +6650,18 @@ if FastAPI is not None:
                 removed.append(name)
         return {"status": "ok", "removed": removed, "source_documents_deleted": False}
 
-    def _resolve_record_capability(token: str, page: int = 0) -> dict[str, Any]:
+    def _resolve_record_capability(
+        token: str,
+        page: int = 0,
+        *,
+        expected_action: str = "record_inspect",
+    ) -> dict[str, Any]:
         """Resolve an opaque token to a verified active-corpus file or member."""
 
         token = str(token or "").strip().lower()
         if not re.fullmatch(r"[a-f0-9]{64}", token):
+            raise HTTPException(status_code=404, detail="record_open_not_available")
+        if expected_action not in _RECORD_CAPABILITY_ACTIONS:
             raise HTTPException(status_code=404, detail="record_open_not_available")
         if page < 0 or page > 100_000:
             raise HTTPException(status_code=422, detail="record_open_invalid_page")
@@ -4861,6 +6673,17 @@ if FastAPI is not None:
         if case_root is None or not binding:
             raise HTTPException(status_code=404, detail="record_open_not_available")
         if str(binding.get("case_id") or "") != _case_id(case_root):
+            raise HTTPException(status_code=404, detail="record_open_not_available")
+        identity = dict(_record_capability_identity.get())
+        if (
+            binding.get("resource_type") != "matter_record"
+            or str(binding.get("resource_id") or "") != str(binding.get("evidence_id") or "")
+            or expected_action not in set(binding.get("allowed_actions") or [])
+            or any(
+                str(binding.get(key) or "") != str(identity.get(key) or "")
+                for key in ("role", "tenant_id", "client_session_id")
+            )
+        ):
             raise HTTPException(status_code=404, detail="record_open_not_available")
 
         evidence_id = str(binding.get("evidence_id") or "")
@@ -5127,9 +6950,9 @@ if FastAPI is not None:
                 "text_status": parsed.text_status,
             }
         elif viewer_kind == "pdf":
-            if not page_count:
-                parsed = parse_bytes(data, suffix=suffix, locator=str(resolved["filename"]))
-                page_count = parsed.page_count
+            page = max(1, page)
+            # Unknown counts are supplied by the timed raster worker. Do not
+            # parse an untrusted PDF in the API merely to prepare its metadata.
             text = str(row.get("text_content") or row.get("text_excerpt") or "")
             text, truncated = _bounded_preview_text(text)
             preview = {"page_text": text, "page_text_truncated": truncated}
@@ -5160,6 +6983,7 @@ if FastAPI is not None:
             "page_count": page_count,
             "source_hash_verified": True,
             "evidence_id": str(row.get("evidence_id") or root.get("evidence_id") or "")[:256],
+            "source_hash": str(resolved.get("source_hash") or "").casefold(),
             "safe_locator": _public_source_locator(str(resolved["source_locator"])),
             "source_type": str(
                 row.get("source_type") or root.get("source_type") or suffix.lstrip(".") or "record"
@@ -5170,6 +6994,7 @@ if FastAPI is not None:
             "text_status": str(row.get("text_status") or root.get("text_status") or "unknown"),
             "ocr_status": str(row.get("ocr_status") or root.get("ocr_status") or "unknown"),
             "open_url": f"/api/records/open/{resolved['token']}{query}",
+            "preview_url": f"/api/records/preview/{resolved['token']}{query}" if viewer_kind == "pdf" else "",
             "download_url": f"/api/records/open/{resolved['token']}{query}&download=true",
             "preview": preview,
         }
@@ -5295,6 +7120,10 @@ if FastAPI is not None:
         with _document_intelligence_artifact_lock:
             _document_intelligence_artifacts[token] = {
                 "case_id": _case_id(case_root),
+                **_artifact_capability_binding(
+                    resource_type="document_intelligence_artifact",
+                    resource_id=actual,
+                ),
                 "relative_path": relative.as_posix(),
                 "sha256": actual,
                 "created_at": time.time(),
@@ -5319,6 +7148,10 @@ if FastAPI is not None:
         with _document_intelligence_artifact_lock:
             _document_intelligence_artifacts[token] = {
                 "case_id": _case_id(case_root),
+                **_artifact_capability_binding(
+                    resource_type="document_intelligence_artifact",
+                    resource_id=str(record_id or row.get("sha256") or token),
+                ),
                 "record_id": str(record_id or ""),
                 "relative_path": str(artifact.get("relative_path") or ""),
                 "sha256": str(artifact.get("sha256") or ""),
@@ -5335,7 +7168,9 @@ if FastAPI is not None:
         return row
 
     def _document_intelligence_input(source_token: str) -> dict[str, Any]:
-        resolved = _resolve_record_capability(source_token, 0)
+        resolved = _resolve_record_capability(
+            source_token, 0, expected_action="record_document_intelligence"
+        )
         case_root = Path(resolved["case_root"])
         data = bytes(resolved["data"])
         suffix = str(resolved["suffix"])
@@ -5364,7 +7199,9 @@ if FastAPI is not None:
         evidence_id = str(row.get("evidence_id") or "")
         locator = str(row.get("source_locator") or row.get("title") or "")
         return _resolve_record_capability(
-            _record_open_token(case_root, evidence_id, locator), int(row.get("page_number") or 0)
+            _record_open_token(case_root, evidence_id, locator),
+            int(row.get("page_number") or 0),
+            expected_action="record_inspect",
         )
 
     def _record_text_for_row(case_root: Path, row: dict[str, Any]) -> str:
@@ -5469,7 +7306,16 @@ if FastAPI is not None:
         case_root = active_case_root()
         with _document_intelligence_artifact_lock:
             binding = dict(_document_intelligence_artifacts.get(token) or {})
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(
+                binding,
+                resource_type="document_intelligence_artifact",
+                expected_action="artifact_receipt",
+            )
+        ):
             raise HTTPException(
                 status_code=404, detail="document_intelligence_receipt_not_available"
             )
@@ -5589,7 +7435,14 @@ if FastAPI is not None:
         case_root = active_case_root()
         with _document_intelligence_artifact_lock:
             binding = dict(_document_intelligence_artifacts.get(token) or {})
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(
+                binding, resource_type="document_intelligence_artifact"
+            )
+        ):
             raise HTTPException(
                 status_code=404, detail="document_intelligence_artifact_not_available"
             )
@@ -5878,6 +7731,42 @@ if FastAPI is not None:
         output["record_id"] = str(row.get("evidence_id") or "")
         return output
 
+    @app.post("/api/records/{record_id}/safe-review-copy")
+    def record_document_safe_review_copy(
+        record_id: str, payload: DocumentIntelligenceContentDisarmRequest
+    ) -> dict[str, Any]:
+        if payload.approved is not True:
+            raise HTTPException(status_code=409, detail="content_disarm_consent_required")
+        case_root, _rows, row = _resolve_record_rows(record_id)
+        resolved = _record_capability_for_row(case_root, row)
+        supplied = _document_intelligence_input(payload.source_token)
+        if (
+            Path(supplied["case_root"]).resolve() != case_root.resolve()
+            or str(supplied["source_hash"]) != str(resolved["source_hash"])
+        ):
+            raise HTTPException(status_code=403, detail="record_source_capability_mismatch")
+        try:
+            result = create_content_disarm_copy(
+                case_root=case_root,
+                source_path=Path(resolved["path"]),
+                source_hash=str(resolved["source_hash"]),
+                approved=True,
+                reviewer=str(payload.reviewer or "local_operator"),
+            )
+        except DocumentIntelligenceError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+        output = dict(result)
+        output["artifacts"] = {
+            key: _attach_document_intelligence_artifact(
+                case_root, value, record_id=str(row.get("evidence_id") or "")
+            )
+            for key, value in dict(result.get("artifacts") or {}).items()
+        }
+        output["record_id"] = str(row.get("evidence_id") or "")
+        output["local_only"] = True
+        output["review_required"] = True
+        return output
+
     @app.get("/api/records/{record_id}/duplicates")
     def record_document_duplicates(record_id: str) -> dict[str, Any]:
         case_root, rows, row = _resolve_record_rows(record_id)
@@ -5954,12 +7843,63 @@ if FastAPI is not None:
     @app.get("/api/records/inspect/{token}")
     def inspect_record(token: str, page: int = 0) -> dict[str, Any]:
         """Return a bounded, safe local preview for any indexed record type."""
-        return _record_inspection_payload(_resolve_record_capability(token, page))
+        return _record_inspection_payload(
+            _resolve_record_capability(token, page, expected_action="record_inspect")
+        )
+
+    @app.get("/api/records/preview/{token}")
+    def preview_record_pdf(token: str, request: Request, page: int = 1) -> Response:
+        from legal.document_intelligence.pdf_preview import PdfPreviewError, render_pdf_preview
+
+        # Explicit identity for audited access; never let an image URL alone
+        # bypass session, role, active matter, expiry or original hash checks.
+        identity = _require_local_dashboard_identity(request)
+        resolved = _resolve_record_capability(token, page, expected_action="record_inspect")
+        if str(resolved["suffix"]).lower() != ".pdf":
+            raise HTTPException(status_code=415, detail="record_preview_pdf_required")
+        recorded_hash = str(resolved["root"].get("source_hash") or "").lower()
+        if not re.fullmatch(r"[a-f0-9]{64}", recorded_hash) or recorded_hash != resolved["source_hash"]:
+            raise HTTPException(status_code=409, detail="record_preview_source_hash_required")
+        # LocalAgentAuditStore resolves the standard per-user OS-protected
+        # vault when no explicit key is configured. Never require a QA-only
+        # environment secret or bypass that managed key provider.
+        case_root = Path(resolved["case_root"])
+        # Do not follow redirected audit sidecars outside this matter.
+        for relative in ("40_RUNTIME", "40_RUNTIME/local-agent", "40_RUNTIME/local-agent/audit.json.enc", "40_RUNTIME/local-agent/.audit.lock"):
+            if (case_root / relative).is_symlink():
+                raise HTTPException(status_code=409, detail="record_preview_audit_unsafe")
+        try:
+            raster = render_pdf_preview(bytes(resolved["data"]), page)
+            # Rendering may be slow: revalidate source and active matter before
+            # releasing any bytes or writing an access receipt.
+            current = _resolve_record_capability(token, page, expected_action="record_inspect")
+            if current["source_hash"] != recorded_hash or str(current["root"].get("source_hash") or "").lower() != recorded_hash:
+                raise HTTPException(status_code=409, detail="record_open_source_hash_mismatch")
+            scope = {**identity, "matter_id": _case_id(case_root)}
+            receipt = _local_agent_audit_store(case_root).record(
+                "record_pdf_preview", scope=scope,
+                binding_sha256=local_agent_digest({"source_sha256": resolved["source_hash"], "page": page}),
+                receipt_sha256=local_agent_digest({name: value for name, value in raster.items() if name != "data"}),
+            )
+        except PdfPreviewError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=503, detail="record_preview_audit_unavailable") from None
+        return Response(content=raster["data"], media_type="image/png", headers={
+            "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "X-MFL-Hash-Verified": "true", "X-MFL-Source-Hash": resolved["source_hash"],
+            "X-MFL-Preview-Hash": raster["sha256"], "X-MFL-Page": str(page),
+            "X-MFL-Page-Count": str(raster["page_count"]), "X-MFL-Review-Required": "true",
+            "X-MFL-Audit-Receipt": receipt["event_sha256"],
+        })
 
     @app.get("/api/records/open/{token}")
     def open_record(token: str, page: int = 0, download: bool = False):  # type: ignore[no-untyped-def]
         """Open or download a hash-verified active-corpus source without exposing paths."""
-        resolved = _resolve_record_capability(token, page)
+        resolved = _resolve_record_capability(token, page, expected_action="record_open")
         path = Path(resolved["path"])
         data = bytes(resolved["data"])
         suffix = str(resolved["suffix"])
@@ -5994,6 +7934,33 @@ if FastAPI is not None:
         if case_root is None:
             raise HTTPException(status_code=409, detail="no_active_matter")
         return Path(case_root)
+
+    def _assert_workspace_delete_allowed(case_root: Path, document_id: str) -> None:
+        """Block document-workspace deletion when an active legal hold exists."""
+
+        try:
+            result = LegalHoldStore().deletion_check(
+                matter_scope=_case_id(case_root), artifact_id=document_id
+            )
+        except LegalHoldError:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "legal_hold_check_unavailable",
+                    "message": "Deletion was preserved because legal-hold status could not be verified.",
+                    "review_required": True,
+                },
+            ) from None
+        if not result["allowed"]:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "legal_hold_active",
+                    "message": "This document is preserved by an active legal hold. No deletion request or deletion was performed.",
+                    "affected_scope": "active_matter_document",
+                    "review_required": True,
+                },
+            )
 
     def _raise_workspace_error(exc: DocumentWorkspaceError) -> None:
         raise HTTPException(
@@ -6174,7 +8141,9 @@ if FastAPI is not None:
     @app.post("/api/document-workspace/documents/{document_id}/delete-request")
     def document_workspace_delete_request(document_id: str) -> dict[str, Any]:
         try:
-            return request_soft_delete(_workspace_case_root(), document_id)
+            case_root = _workspace_case_root()
+            _assert_workspace_delete_allowed(case_root, document_id)
+            return request_soft_delete(case_root, document_id)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
 
@@ -6184,8 +8153,10 @@ if FastAPI is not None:
         payload: WorkspaceDeleteCommitRequest,
     ) -> dict[str, Any]:
         try:
+            case_root = _workspace_case_root()
+            _assert_workspace_delete_allowed(case_root, document_id)
             return commit_soft_delete(
-                _workspace_case_root(),
+                case_root,
                 document_id,
                 confirmation_token=payload.confirmation_token,
                 confirmed=payload.confirmed,
@@ -6206,7 +8177,11 @@ if FastAPI is not None:
     @app.post("/api/document-workspace/import-record")
     def document_workspace_import_record(payload: WorkspaceImportRecordRequest) -> dict[str, Any]:
         try:
-            resolved = _resolve_record_capability(payload.source_token, payload.page)
+            resolved = _resolve_record_capability(
+                payload.source_token,
+                payload.page,
+                expected_action="record_workspace_import",
+            )
             parsed = parse_bytes(
                 bytes(resolved["data"]),
                 suffix=str(resolved["suffix"]),
@@ -6257,15 +8232,79 @@ if FastAPI is not None:
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
 
-    @app.get("/api/document-workspace/documents/{document_id}/export")
-    def document_workspace_export(document_id: str, format: str = "txt"):  # type: ignore[no-untyped-def,redefined-builtin]
+    @app.post("/api/document-workspace/documents/{document_id}/export-sessions")
+    def document_workspace_export_session(
+        document_id: str, format: str = "txt"
+    ) -> dict[str, Any]:  # type: ignore[no-untyped-def,redefined-builtin]
+        """Mint an opaque local-session capability before exporting a draft."""
+
         try:
             case_root = _workspace_case_root()
             requested = str(format or "txt").lower()
+            if requested not in {"txt", "md", "docx"}:
+                raise DocumentWorkspaceError(
+                    "unsupported_export_format",
+                    "Supported export formats are txt, md, and docx.",
+                )
+            document = get_workspace_document(case_root, document_id)
+            token = secrets.token_hex(32)
+            _prune_document_workspace_artifacts()
+            with _document_workspace_artifact_lock:
+                _document_workspace_artifacts[token] = {
+                    "case_id": _case_id(case_root),
+                    **_artifact_capability_binding(
+                        resource_type="document_workspace_export",
+                        resource_id=f"{document_id}:{requested}:{token}",
+                        allowed_actions={"artifact_download"},
+                    ),
+                    "document_id": str(document["document_id"]),
+                    "format": requested,
+                    "created_at": time.time(),
+                }
+            return {
+                "status": "export_session_ready",
+                "download_url": f"/api/document-workspace/exports/{token}",
+                "review_required": True,
+                "filing_ready": False,
+            }
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+
+    @app.get("/api/document-workspace/exports/{token}")
+    def document_workspace_export(token: str):  # type: ignore[no-untyped-def]
+        try:
+            token = str(token or "").strip().lower()
+            if not re.fullmatch(r"[a-f0-9]{64}", token):
+                raise DocumentWorkspaceError(
+                    "artifact_not_found", "The artifact was not found.", status_code=404
+                )
+            _prune_document_workspace_artifacts()
+            case_root = _workspace_case_root()
+            with _document_workspace_artifact_lock:
+                binding = dict(_document_workspace_artifacts.get(token) or {})
+            if (
+                not binding
+                or binding.get("case_id") != _case_id(case_root)
+                or not _artifact_capability_allowed(
+                    binding, resource_type="document_workspace_export"
+                )
+            ):
+                raise DocumentWorkspaceError(
+                    "artifact_not_found", "The artifact was not found.", status_code=404
+                )
+            document_id = str(binding.get("document_id") or "")
+            requested = str(binding.get("format") or "").lower()
+            if requested not in {"txt", "md", "docx"} or not document_id:
+                raise DocumentWorkspaceError(
+                    "artifact_not_found", "The artifact was not found.", status_code=404
+                )
             document = get_workspace_document(case_root, document_id)
             gate_headers = _document_workspace_filing_gate_headers(case_root, document_id)
+            provenance = ExportProvenanceStore(case_root)
+            receipt = provenance.start(document, product_version=__version__, format_name=requested)
+            footer = str(receipt.get("footer_text") or "")
             if requested in {"txt", "md"}:
-                path = export_text_artifact(case_root, document_id, format_name=requested)
+                path = export_text_artifact(case_root, document_id, format_name=requested, provenance_footer=footer)
             elif requested == "docx":
                 paths = workspace_paths(case_root)
                 slug = (
@@ -6275,7 +8314,7 @@ if FastAPI is not None:
                 path = paths.exports / f"{slug}-{str(document['current_revision_id'])[:8]}.docx"
                 result = create_docx_from_text(
                     title=str(document["title"]),
-                    content=str(document.get("content") or ""),
+                    content=f"{str(document.get('content') or '').rstrip()}\n\n{footer}",
                     output_path=path,
                     allowed_output_root=paths.exports,
                 )
@@ -6286,12 +8325,13 @@ if FastAPI is not None:
                     format_name="docx",
                     artifact_sha256=str(result["sha256"]),
                     size_bytes=int(result["size_bytes"]),
+                    provenance_receipt_id=str(receipt["receipt_id"]),
                 )
-            else:
-                raise DocumentWorkspaceError(
-                    "unsupported_export_format",
-                    "Supported export formats are txt, md, and docx.",
-                )
+            completed_receipt = provenance.complete(
+                str(receipt["receipt_id"]),
+                artifact_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                size_bytes=path.stat().st_size,
+            )
             media_type = {
                 ".txt": "text/plain; charset=utf-8",
                 ".md": "text/markdown; charset=utf-8",
@@ -6305,11 +8345,26 @@ if FastAPI is not None:
                 headers={
                     "Cache-Control": "no-store",
                     "X-Content-Type-Options": "nosniff",
+                    "X-MFLL-Export-Provenance-Receipt": str(completed_receipt["receipt_id"]),
+                    "X-MFLL-Export-Review-State": "review_required_not_filing_ready",
                     **gate_headers,
                 },
             )
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+
+    @app.get("/api/document-workspace/documents/{document_id}/export-provenance")
+    def document_workspace_export_provenance(document_id: str) -> dict[str, Any]:
+        try:
+            case_root = _workspace_case_root()
+            document = get_workspace_document(case_root, document_id)
+            return ExportProvenanceStore(case_root).receipts(str(document.get("document_id") or document_id))
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
 
     def _raise_evidence_work_product_error(exc: EvidenceWorkProductError) -> None:
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
@@ -6373,6 +8428,10 @@ if FastAPI is not None:
         with _evidence_work_product_artifact_lock:
             _evidence_work_product_artifacts[token] = {
                 "case_id": _case_id(case_root),
+                **_artifact_capability_binding(
+                    resource_type="evidence_work_product_artifact",
+                    resource_id=f"{build_id}:{Path(filename).name}",
+                ),
                 "build_id": build_id,
                 "filename": Path(filename).name,
                 "sha256": actual,
@@ -6495,7 +8554,14 @@ if FastAPI is not None:
         case_root = active_case_root()
         with _evidence_work_product_artifact_lock:
             binding = dict(_evidence_work_product_artifacts.get(token) or {})
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(
+                binding, resource_type="evidence_work_product_artifact"
+            )
+        ):
             raise HTTPException(
                 status_code=404, detail="evidence_work_product_artifact_not_available"
             )
@@ -6534,6 +8600,44 @@ if FastAPI is not None:
             )
         except MatterCommandCenterError as exc:
             _raise_matter_command_center_error(exc)
+
+    @app.get("/api/matters/{matter_id}/command-center/health-history")
+    def matter_command_center_health_history(matter_id: str) -> dict[str, Any]:
+        try:
+            return _matter_command_center_store().health_history(matter_id)
+        except MatterCommandCenterError as exc:
+            _raise_matter_command_center_error(exc)
+
+    @app.get("/api/matters/{matter_id}/command-center/records/{record_id}/source")
+    def matter_command_center_record_source(matter_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        row = next(
+            (
+                item
+                for item in _matter_command_center_records()
+                if str(item.get("evidence_id") or "") == str(record_id or "")
+            ),
+            None,
+        )
+        if row is None:
+            raise HTTPException(status_code=404, detail="command_center_record_not_found_in_active_matter")
+        source_hash = str(row.get("source_hash") or row.get("sha256") or "").lower()
+        if len(source_hash) != 64:
+            raise HTTPException(status_code=409, detail="command_center_record_source_hash_unavailable")
+        locator = str(row.get("source_locator") or row.get("title") or record_id)
+        return {
+            "status": "pass",
+            "matter_id": str(matter_id or "")[:240],
+            "source": {
+                "record_id": str(record_id or "")[:256],
+                "source_hash": source_hash,
+                "page_number": max(0, int(row.get("page_number") or 0)),
+                "source_token": _record_open_token(case_root, str(record_id), locator),
+            },
+            "review_required": True,
+        }
 
     @app.post("/api/matters/{matter_id}/review-snapshot")
     def matter_review_snapshot(
@@ -6635,7 +8739,7 @@ if FastAPI is not None:
             _raise_matter_command_center_error(exc)
 
     def _raise_evidence_review_error(exc: Exception) -> None:
-        detail = str(exc) or exc.__class__.__name__
+        detail = str(exc.args[0]) if isinstance(exc, KeyError) and exc.args else (str(exc) or exc.__class__.__name__)
         if detail == "case_root_unavailable":
             raise HTTPException(status_code=404, detail="active_matter_unavailable") from None
         if detail in {"event_not_found", "claim_not_found", "ledger_event_not_found"}:
@@ -6695,7 +8799,9 @@ if FastAPI is not None:
         if case_root is None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
-            return _review_store(case_root).create_event(payload.model_dump())
+            return _review_store(case_root).create_event(
+                payload.model_dump(), records=_review_records(case_root)
+            )
         except Exception as exc:
             _raise_evidence_review_error(exc)
 
@@ -6708,7 +8814,9 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
             data = {key: value for key, value in payload.model_dump().items() if value is not None}
-            return _review_store(case_root).patch_event(event_id, data)
+            return _review_store(case_root).patch_event(
+                event_id, data, records=_review_records(case_root)
+            )
         except Exception as exc:
             _raise_evidence_review_error(exc)
 
@@ -6719,6 +8827,44 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
             return _review_store(case_root).get_event_history(event_id)
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/timeline/events/{event_id}/source")
+    def timeline_event_source(event_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            event = _review_store(case_root).get_event_history(event_id).get("event") or {}
+            source_record_id = str(event.get("source_record_id") or "")
+            source_hash = str(event.get("source_hash") or "").lower()
+            if not source_record_id or not source_hash:
+                raise ValueError("event_source_binding_required")
+            row = next(
+                (
+                    item
+                    for item in _review_records(case_root)
+                    if str(item.get("evidence_id") or "") == source_record_id
+                ),
+                None,
+            )
+            if row is None:
+                raise ValueError("event_source_record_not_found_in_active_matter")
+            if str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("event_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or source_record_id)
+            return {
+                "status": "pass",
+                "event_id": event_id,
+                "source": {
+                    "record_id": source_record_id,
+                    "source_hash": source_hash,
+                    "source_block": event.get("source_block") or {},
+                    "source_token": _record_open_token(case_root, source_record_id, locator),
+                },
+                "review_required": True,
+            }
         except Exception as exc:
             _raise_evidence_review_error(exc)
 
@@ -6755,6 +8901,386 @@ if FastAPI is not None:
         except Exception as exc:
             _raise_evidence_review_error(exc)
 
+    @app.get("/api/evidence/claims/{claim_id}/cards/{card_kind}/{card_index}/source")
+    def evidence_claim_card_source(
+        claim_id: str, card_kind: str, card_index: int
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            card = _review_store(case_root).get_claim_source_card(
+                claim_id, card_kind, card_index
+            )
+            record_id = str(card["record_id"])
+            source_hash = str(card["source_hash"]).lower()
+            row = next(
+                (
+                    item
+                    for item in _review_records(case_root)
+                    if str(item.get("evidence_id") or "") == record_id
+                ),
+                None,
+            )
+            if row is None:
+                raise ValueError("claim_source_record_not_found_in_active_matter")
+            if str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("claim_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {
+                **card,
+                "source": {
+                    "record_id": record_id,
+                    "source_hash": source_hash,
+                    "source_span": card["card"].get("source_span") or {},
+                    "source_token": _record_open_token(case_root, record_id, locator),
+                },
+                "review_required": True,
+            }
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/attachment-coverage")
+    def evidence_attachment_coverage_create(
+        payload: AttachmentCoverageCreateRequest,
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_attachment_coverage(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/attachment-coverage")
+    def evidence_attachment_coverage_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).attachment_coverage()
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/attachment-coverage/{attachment_id}")
+    def evidence_attachment_coverage_get(attachment_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).attachment_coverage(attachment_id)
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/attachment-coverage/{attachment_id}/review")
+    def evidence_attachment_coverage_review(
+        attachment_id: str, payload: AttachmentCoverageReviewRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).review_attachment_coverage(
+                attachment_id, payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/attachment-coverage/{attachment_id}/source")
+    def evidence_attachment_coverage_source(attachment_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            item = _review_store(case_root).attachment_coverage(attachment_id).get("attachment") or {}
+            record_id = str(item.get("source_record_id") or "")
+            source_hash = str(item.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise ValueError("attachment_source_record_not_found_in_active_matter")
+            if not source_hash or str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("attachment_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {
+                "status": "pass",
+                "attachment_id": attachment_id,
+                "source": {
+                    "record_id": record_id,
+                    "source_hash": source_hash,
+                    "source_block": item.get("source_block") or {},
+                    "source_token": _record_open_token(case_root, record_id, locator),
+                },
+                "review_required": True,
+            }
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/fact-graph")
+    def evidence_fact_graph() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        return _review_store(case_root).fact_graph()
+
+    @app.post("/api/evidence/fact-graph/nodes")
+    def evidence_fact_graph_node(payload: FactGraphNodeRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_fact_graph_node(payload.model_dump(), records=_review_records(case_root))
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/fact-graph/edges")
+    def evidence_fact_graph_edge(payload: FactGraphEdgeRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_fact_graph_edge(payload.model_dump(), records=_review_records(case_root))
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/fact-graph/{entity_kind}/{entity_id}/source")
+    def evidence_fact_graph_source(entity_kind: str, entity_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        if entity_kind not in {"nodes", "edges"}:
+            raise HTTPException(status_code=400, detail="fact_graph_entity_kind_invalid")
+        try:
+            entity = _review_store(case_root).fact_graph_source(entity_kind, entity_id).get("entity") or {}
+            record_id = str(entity.get("source_record_id") or "")
+            source_hash = str(entity.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise ValueError("fact_graph_source_record_not_found_in_active_matter")
+            if not source_hash or str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("fact_graph_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {"status": "pass", "entity_kind": entity_kind, "entity_id": entity_id, "source": {"record_id": record_id, "source_hash": source_hash, "source_block": entity.get("source_block") or {}, "source_token": _record_open_token(case_root, record_id, locator)}, "review_required": True}
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/issue-proof-matrix/items")
+    def evidence_issue_proof_matrix_create(
+        payload: IssueProofMatrixCreateRequest,
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_issue_proof_item(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/issue-proof-matrix")
+    def evidence_issue_proof_matrix_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).issue_proof_matrix()
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/issue-proof-matrix/items/{item_id}")
+    def evidence_issue_proof_matrix_get(item_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).issue_proof_matrix(item_id)
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/issue-proof-matrix/items/{item_id}/review")
+    def evidence_issue_proof_matrix_review(
+        item_id: str, payload: IssueProofMatrixReviewRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).review_issue_proof_item(
+                item_id, payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/issue-proof-matrix/items/{item_id}/source")
+    def evidence_issue_proof_matrix_source(item_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            item = _review_store(case_root).issue_proof_matrix_source(item_id).get("item") or {}
+            record_id = str(item.get("source_record_id") or "")
+            source_hash = str(item.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise ValueError("issue_proof_source_record_not_found_in_active_matter")
+            if not source_hash or str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("issue_proof_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {"status": "pass", "item_id": item_id, "source": {"record_id": record_id, "source_hash": source_hash, "source_block": item.get("source_block") or {}, "source_token": _record_open_token(case_root, record_id, locator)}, "review_required": True}
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/matter-change-digest/checkpoints")
+    def evidence_matter_change_digest_checkpoint(
+        payload: MatterChangeDigestCheckpointRequest,
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_change_digest_checkpoint(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/matter-change-digest/checkpoints")
+    def evidence_matter_change_digest_checkpoints() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        return _review_store(case_root).change_digest_checkpoints()
+
+    @app.post("/api/evidence/matter-change-digest/{checkpoint_id}/generate")
+    def evidence_matter_change_digest_generate(checkpoint_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).matter_change_digest(
+                checkpoint_id, records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/matter-change-digest/{checkpoint_id}/records/{record_id}/source")
+    def evidence_matter_change_digest_record_source(
+        checkpoint_id: str, record_id: str
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            binding = _review_store(case_root).change_digest_record_source(
+                checkpoint_id, record_id, records=_review_records(case_root)
+            )
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise ValueError("change_digest_source_record_not_found_in_active_matter")
+            if str(row.get("source_hash") or "").lower() != str(binding.get("source_hash") or "").lower():
+                raise ValueError("change_digest_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {"status": "pass", "checkpoint_id": checkpoint_id, "source": {"record_id": record_id, "source_hash": binding["source_hash"], "source_token": _record_open_token(case_root, record_id, locator)}, "review_required": True}
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/record-lineage/links")
+    def evidence_record_lineage_create(payload: RecordLineageCreateRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_record_lineage_link(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/record-lineage")
+    def evidence_record_lineage_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        return _review_store(case_root).record_lineage()
+
+    @app.get("/api/evidence/record-lineage/links/{link_id}")
+    def evidence_record_lineage_get(link_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).record_lineage(link_id)
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/record-lineage/links/{link_id}/{side}/source")
+    def evidence_record_lineage_source(link_id: str, side: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            binding = _review_store(case_root).record_lineage_source(link_id, side).get("binding") or {}
+            record_id = str(binding.get("record_id") or "")
+            source_hash = str(binding.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise ValueError("record_lineage_source_record_not_found_in_active_matter")
+            if not source_hash or str(row.get("source_hash") or "").lower() != source_hash:
+                raise ValueError("record_lineage_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {"status": "pass", "link_id": link_id, "side": side, "source": {"record_id": record_id, "source_hash": source_hash, "source_block": binding.get("source_block") or {}, "source_token": _record_open_token(case_root, record_id, locator)}, "review_required": True}
+        except Exception as exc:
+            _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/entity-resolution/candidates")
+    def evidence_entity_resolution_create(payload: EntityResolutionCandidateRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _review_store(case_root).create_entity_resolution_candidate(payload.model_dump(), records=_review_records(case_root))
+        except Exception as exc: _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/entity-resolution")
+    def evidence_entity_resolution_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        return _review_store(case_root).entity_resolution()
+
+    @app.get("/api/evidence/entity-resolution/candidates/{candidate_id}")
+    def evidence_entity_resolution_get(candidate_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _review_store(case_root).entity_resolution(candidate_id)
+        except Exception as exc: _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/entity-resolution/candidates/{candidate_id}/confirm")
+    def evidence_entity_resolution_confirm(candidate_id: str, payload: EntityResolutionConfirmationRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _review_store(case_root).confirm_entity_resolution(candidate_id, payload.model_dump(), records=_review_records(case_root))
+        except Exception as exc: _raise_evidence_review_error(exc)
+
+    @app.post("/api/evidence/entity-resolution/candidates/{candidate_id}/revoke")
+    def evidence_entity_resolution_revoke(candidate_id: str, payload: EntityResolutionRevokeRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _review_store(case_root).revoke_entity_resolution(candidate_id, payload.model_dump())
+        except Exception as exc: _raise_evidence_review_error(exc)
+
+    @app.get("/api/evidence/entity-resolution/candidates/{candidate_id}/{side}/source")
+    def evidence_entity_resolution_source(candidate_id: str, side: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            binding = _review_store(case_root).entity_resolution_source(candidate_id, side).get("binding") or {}; record_id = str(binding.get("record_id") or ""); source_hash = str(binding.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None: raise ValueError("entity_resolution_source_record_not_found_in_active_matter")
+            if not source_hash or str(row.get("source_hash") or "").lower() != source_hash: raise ValueError("entity_resolution_source_hash_mismatch")
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {"status": "pass", "candidate_id": candidate_id, "side": side, "source": {"record_id": record_id, "source_hash": source_hash, "source_token": _record_open_token(case_root, record_id, locator)}, "review_required": True}
+        except Exception as exc: _raise_evidence_review_error(exc)
+
     @app.get("/api/evidence/coverage")
     def evidence_coverage(selected_record_ids: str = "") -> dict[str, Any]:
         case_root = active_case_root()
@@ -6764,6 +9290,173 @@ if FastAPI is not None:
         return _review_store(case_root).coverage(
             records=_review_records(case_root, selected), selected_record_ids=selected
         )
+
+    @app.get("/api/evidence/matter-completeness")
+    def evidence_matter_completeness() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        return _review_store(case_root).matter_completeness(records=_review_records(case_root))
+
+    @app.post("/api/evidence/watch-folder/scan")
+    def evidence_watch_folder_scan(payload: WatchFolderScanRequest) -> dict[str, Any]:
+        if active_case_root() is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return scan_watch_folder_candidates(payload.folder, limit=payload.limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.post("/api/evidence/scanner-review/plan")
+    def evidence_scanner_review_plan(payload: ScannerReviewRequest) -> dict[str, Any]:
+        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return scanner_review_plan(**payload.model_dump())
+        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+    @app.post("/api/evidence/handwriting-review")
+    def evidence_handwriting_review(payload: HandwritingReviewRequest) -> dict[str, Any]:
+        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return review_handwriting(**payload.model_dump())
+        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+    @app.post("/api/evidence/document-type-review")
+    def evidence_document_type_review(payload: DocumentTypeReviewRequest) -> dict[str, Any]:
+        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return classify_document(**payload.model_dump())
+        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+    @app.post("/api/evidence/page-quality-review")
+    def evidence_page_quality_review(payload: PageQualityReviewRequest) -> dict[str, Any]:
+        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return page_quality_map(**payload.model_dump())
+        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+    @app.post("/api/evidence/table-lineage-review")
+    def evidence_table_lineage_review(payload: TableLineageRequest) -> dict[str, Any]:
+        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return table_lineage(**payload.model_dump())
+        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.post("/api/evidence/document-comparisons")
+    def evidence_document_comparison_create(payload: DocumentComparisonCreateRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        rows = {str(row.get("evidence_id") or ""): row for row in _review_records(case_root)}
+        left = rows.get(payload.left_record_id)
+        right = rows.get(payload.right_record_id)
+        if left is None or right is None:
+            raise HTTPException(status_code=404, detail="document_comparison_record_not_found_in_active_matter")
+        try:
+            return DocumentComparisonStore(case_root).create(
+                comparison_id=payload.comparison_id,
+                left_record=left,
+                right_record=right,
+            )
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/document-comparisons")
+    def evidence_document_comparison_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return DocumentComparisonStore(case_root).get()
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/document-comparisons/{comparison_id}")
+    def evidence_document_comparison_get(comparison_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return DocumentComparisonStore(case_root).get(comparison_id)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/document-comparisons/{comparison_id}/source/{side}")
+    def evidence_document_comparison_source(comparison_id: str, side: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            binding = DocumentComparisonStore(case_root).source_binding(comparison_id, side).get("binding") or {}
+            record_id = str(binding.get("record_id") or "")
+            source_hash = str(binding.get("source_hash") or "").lower()
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == record_id), None)
+            if row is None:
+                raise IntakeWorkbenchError("document_comparison_source_record_not_found_in_active_matter", 404)
+            if str(row.get("source_hash") or "").lower() != source_hash:
+                raise IntakeWorkbenchError("document_comparison_source_hash_mismatch", 409)
+            locator = str(row.get("source_locator") or row.get("title") or record_id)
+            return {
+                "status": "pass",
+                "comparison_id": comparison_id,
+                "side": side,
+                "source": {
+                    "record_id": record_id,
+                    "source_hash": source_hash,
+                    "source_token": _record_open_token(case_root, record_id, locator),
+                },
+                "review_required": True,
+            }
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.post("/api/evidence/metadata-review/batches")
+    def evidence_metadata_review_apply(payload: MetadataReviewBatchRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return MetadataReviewStore(case_root).apply_batch(payload.model_dump(), records=_review_records(case_root))
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/metadata-review/batches")
+    def evidence_metadata_review_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return MetadataReviewStore(case_root).inventory()
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/metadata-review/batches/{batch_id}/source/{record_id}")
+    def evidence_metadata_review_source(batch_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            binding = MetadataReviewStore(case_root).source_binding(batch_id, record_id)
+            row = next((entry for entry in _review_records(case_root) if str(entry.get("evidence_id") or "") == binding["record_id"]), None)
+            if row is None:
+                raise IntakeWorkbenchError("metadata_review_source_record_not_found_in_active_matter", 404)
+            if str(row.get("source_hash") or "").lower() != binding["source_hash"]:
+                raise IntakeWorkbenchError("metadata_review_source_hash_mismatch", 409)
+            locator = str(row.get("source_locator") or row.get("title") or binding["record_id"])
+            return {"status": "pass", "batch_id": batch_id, "source": {**binding, "source_token": _record_open_token(case_root, binding["record_id"], locator)}, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.post("/api/evidence/import-policy/profiles")
+    def evidence_import_policy_create(payload: ImportPolicyProfileRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return ImportPolicyStore(case_root).create(payload.model_dump())
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
+
+    @app.get("/api/evidence/import-policy/profiles")
+    def evidence_import_policy_inventory() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return ImportPolicyStore(case_root).inventory()
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from None
 
     @app.post("/api/evidence/missing-records")
     def evidence_missing_records(payload: EvidenceMissingRecordsRequest) -> dict[str, Any]:
@@ -6863,7 +9556,8 @@ if FastAPI is not None:
             _raise_retrieval_workbench_error(exc)
 
     @app.post("/api/retrieval-workbench/evaluate")
-    def retrieval_workbench_evaluate(payload: RetrievalWorkbenchEvalRequest) -> dict[str, Any]:
+    def retrieval_workbench_evaluate(payload: RetrievalWorkbenchEvalRequest, request: Request) -> dict[str, Any]:
+        _require_reviewer_bundle_role(request, action="source")
         case_root = active_case_root()
         if case_root is None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
@@ -7071,6 +9765,10 @@ if FastAPI is not None:
             token = secrets.token_hex(32)
             with _sandbox_operations_artifact_lock:
                 _sandbox_operations_artifacts[token] = {
+                    **_artifact_capability_binding(
+                        resource_type="attorney_sandbox_operations_artifact",
+                        resource_id=f"{generation_id}:{filename}",
+                    ),
                     "created_at": time.time(),
                     "scope": _sandbox_operations_scope(store),
                     "generation_id": generation_id,
@@ -7242,7 +9940,13 @@ if FastAPI is not None:
             raise HTTPException(
                 status_code=404, detail="sandbox_operations_artifact_not_available"
             ) from None
-        if not binding or binding.get("scope") != _sandbox_operations_scope(store):
+        if (
+            not binding
+            or binding.get("scope") != _sandbox_operations_scope(store)
+            or not _artifact_capability_allowed(
+                binding, resource_type="attorney_sandbox_operations_artifact"
+            )
+        ):
             raise HTTPException(status_code=404, detail="sandbox_operations_artifact_not_available")
         try:
             path, media_type = store.resolve_artifact(
@@ -7311,6 +10015,10 @@ if FastAPI is not None:
             token = secrets.token_hex(32)
             with _real_matter_pilot_artifact_lock:
                 _real_matter_pilot_artifacts[token] = {
+                    **_artifact_capability_binding(
+                        resource_type="limited_real_matter_pilot_artifact",
+                        resource_id=f"{generation_id}:{filename}",
+                    ),
                     "created_at": time.time(),
                     "scope": _real_matter_pilot_scope(store),
                     "generation_id": generation_id,
@@ -7497,7 +10205,13 @@ if FastAPI is not None:
             raise HTTPException(
                 status_code=404, detail="real_matter_pilot_artifact_not_available"
             ) from None
-        if not binding or binding.get("scope") != _real_matter_pilot_scope(store):
+        if (
+            not binding
+            or binding.get("scope") != _real_matter_pilot_scope(store)
+            or not _artifact_capability_allowed(
+                binding, resource_type="limited_real_matter_pilot_artifact"
+            )
+        ):
             raise HTTPException(status_code=404, detail="real_matter_pilot_artifact_not_available")
         try:
             path, media_type = store.resolve_artifact(
@@ -7566,6 +10280,10 @@ if FastAPI is not None:
             token = secrets.token_hex(32)
             with _ga_release_candidate_artifact_lock:
                 _ga_release_candidate_artifacts[token] = {
+                    **_artifact_capability_binding(
+                        resource_type="ga_release_candidate_artifact",
+                        resource_id=f"{generation_id}:{filename}",
+                    ),
                     "created_at": time.time(),
                     "scope": _ga_release_candidate_scope(store),
                     "generation_id": generation_id,
@@ -7695,7 +10413,13 @@ if FastAPI is not None:
             raise HTTPException(
                 status_code=404, detail="ga_release_candidate_artifact_not_available"
             ) from None
-        if not binding or binding.get("scope") != _ga_release_candidate_scope(store):
+        if (
+            not binding
+            or binding.get("scope") != _ga_release_candidate_scope(store)
+            or not _artifact_capability_allowed(
+                binding, resource_type="ga_release_candidate_artifact"
+            )
+        ):
             raise HTTPException(
                 status_code=404, detail="ga_release_candidate_artifact_not_available"
             )
@@ -7767,6 +10491,10 @@ if FastAPI is not None:
             with _findings_forms_artifact_lock:
                 _findings_forms_artifacts[token] = {
                     "case_id": _case_id(case_root),
+                    **_artifact_capability_binding(
+                        resource_type="findings_form_artifact",
+                        resource_id=f"{build_id}:{completion_id}:{name}",
+                    ),
                     "build_id": build_id,
                     "completion_id": completion_id,
                     "filename": name,
@@ -7789,6 +10517,9 @@ if FastAPI is not None:
 
     def _findings_session_path(case_root: Path, session_id: str) -> Path:
         return _findings_root(case_root) / "sessions" / f"{session_id}.json"
+
+    def _guided_form_session_store(case_root: Path) -> GuidedFormSessionStore:
+        return GuidedFormSessionStore(case_root)
 
     def _utc_now() -> str:
         return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -7889,14 +10620,20 @@ if FastAPI is not None:
 
     def _session_payload(case_root: Path, session_id: str) -> dict[str, Any]:
         try:
+            return _guided_form_session_store(case_root).get(session_id)
+        except IntakeWorkbenchError as exc:
+            if exc.code != "forms_session_not_found":
+                raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+        try:
             session = _load_json(_findings_session_path(case_root, session_id))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             raise HTTPException(status_code=404, detail="forms_session_not_found") from None
-        except ValueError:
-            raise HTTPException(status_code=409, detail="forms_session_invalid") from None
         if str(session.get("session_id") or "") != session_id:
             raise HTTPException(status_code=409, detail="forms_session_invalid") from None
-        return session
+        try:
+            return _guided_form_session_store(case_root).create(session)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
 
     def _active_authority_forms() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         try:
@@ -8029,7 +10766,12 @@ if FastAPI is not None:
         case_root = active_case_root()
         with _findings_forms_artifact_lock:
             binding = dict(_findings_forms_artifacts.get(token) or {})
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(binding, resource_type="findings_form_artifact")
+        ):
             raise HTTPException(status_code=404, detail="findings_forms_artifact_not_available")
         try:
             path, media_type = MaineFindingsFormsStore(case_root).resolve_artifact(
@@ -8291,14 +11033,17 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         forms, authority = _active_authority_forms()
         store = MaineFindingsFormsStore(case_root)
-        build = store.build_review(
-            payload.document_id,
-            authority_forms=forms,
-            selected_form_ids=payload.selected_form_ids,
-            posture=payload.proceeding_type or payload.posture,
-            evidence_records=load_case_search_records(case_root),
-            approved=payload.approved,
-        )
+        try:
+            build = store.build_review(
+                payload.document_id,
+                authority_forms=forms,
+                selected_form_ids=payload.selected_form_ids,
+                posture=payload.proceeding_type or payload.posture,
+                evidence_records=load_case_search_records(case_root),
+                approved=payload.approved,
+            )
+        except MaineFindingsFormsError as exc:
+            _raise_findings_forms_error(exc)
         session_id = uuid.uuid4().hex[:24]
         session = {
             "schema_version": "maine_forms_session_v1",
@@ -8314,7 +11059,10 @@ if FastAPI is not None:
             "completion_id": "",
             "review_required": True,
         }
-        _write_json(_findings_session_path(case_root, session_id), session)
+        try:
+            session = _guided_form_session_store(case_root).create(session)
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
         return {
             "status": build.status,
             "session_id": session_id,
@@ -8327,6 +11075,14 @@ if FastAPI is not None:
             "blockers": list(build.blockers),
             "review_required": True,
         }
+
+    @app.get("/api/forms/session/{session_id}")
+    def forms_session_get(session_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        session = _session_payload(case_root, session_id)
+        return {"status": "pass", "session": session, "review_required": True, "filing_ready": False}
 
     @app.patch("/api/forms/session/{session_id}")
     def forms_session_patch(session_id: str, payload: FormsSessionPatchRequest) -> dict[str, Any]:
@@ -8341,8 +11097,11 @@ if FastAPI is not None:
         session["reviewer_notes"] = _safe_snippet(payload.reviewer_notes, limit=2000)
         session["updated_at"] = _utc_now()
         session["review_required"] = True
-        _write_json(_findings_session_path(case_root, session_id), session)
-        return {"status": "pass", "session": session, "review_required": True}
+        try:
+            session = _guided_form_session_store(case_root).replace(session, action="patch_guided_form_session")
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+        return {"status": "pass", "session": session, "review_required": True, "filing_ready": False}
 
     @app.post("/api/forms/session/{session_id}/validate")
     def forms_session_validate(
@@ -8357,13 +11116,19 @@ if FastAPI is not None:
         merged_values = dict(session.get("form_values") or {})
         for form_id, fields in (payload.form_values or {}).items():
             merged_values[form_id] = dict(fields or {})
-        result = MaineFindingsFormsStore(case_root).complete_forms(
-            session["build_id"], form_values=merged_values, confirmed=True
-        )
+        try:
+            result = MaineFindingsFormsStore(case_root).complete_forms(
+                session["build_id"], form_values=merged_values, confirmed=True
+            )
+        except MaineFindingsFormsError as exc:
+            _raise_findings_forms_error(exc)
         session["form_values"] = merged_values
         session["completion_id"] = result.get("completion_id") or ""
         session["updated_at"] = _utc_now()
-        _write_json(_findings_session_path(case_root, session_id), session)
+        try:
+            _guided_form_session_store(case_root).replace(session, action="validate_guided_form_session")
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
         return {
             "status": result["status"],
             "validation": result["completion"],
@@ -8385,13 +11150,19 @@ if FastAPI is not None:
         merged_values = dict(session.get("form_values") or {})
         for form_id, fields in (payload.form_values or {}).items():
             merged_values[form_id] = dict(fields or {})
-        result = MaineFindingsFormsStore(case_root).complete_forms(
-            session["build_id"], form_values=merged_values, confirmed=True
-        )
+        try:
+            result = MaineFindingsFormsStore(case_root).complete_forms(
+                session["build_id"], form_values=merged_values, confirmed=True
+            )
+        except MaineFindingsFormsError as exc:
+            _raise_findings_forms_error(exc)
         session["form_values"] = merged_values
         session["completion_id"] = result.get("completion_id") or ""
         session["updated_at"] = _utc_now()
-        _write_json(_findings_session_path(case_root, session_id), session)
+        try:
+            _guided_form_session_store(case_root).replace(session, action="generate_guided_form_session")
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
         return {
             "status": result["status"],
             **result,
@@ -8584,6 +11355,10 @@ if FastAPI is not None:
             with _filing_packet_artifact_lock:
                 _filing_packet_artifacts[token] = {
                     "case_id": _case_id(case_root),
+                    **_artifact_capability_binding(
+                        resource_type="reviewed_filing_packet_artifact",
+                        resource_id=f"{build_id}:{name}",
+                    ),
                     "build_id": build_id,
                     "filename": name,
                     "sha256": actual,
@@ -8721,7 +11496,14 @@ if FastAPI is not None:
         with _filing_packet_artifact_lock:
             binding = dict(_filing_packet_artifacts.get(str(token or "")) or {})
         case_root = active_case_root()
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(
+                binding, resource_type="reviewed_filing_packet_artifact"
+            )
+        ):
             raise HTTPException(status_code=404, detail="filing_packet_artifact_not_available")
         try:
             path, media_type = ReviewedFilingPacketStore(case_root).resolve_artifact(
@@ -8799,6 +11581,10 @@ if FastAPI is not None:
             with _authority_impact_artifact_lock:
                 _authority_impact_artifacts[token] = {
                     "case_id": _case_id(case_root),
+                    **_artifact_capability_binding(
+                        resource_type="authority_change_impact_artifact",
+                        resource_id=f"{build_id}:{name}",
+                    ),
                     "build_id": build_id,
                     "filename": name,
                     "sha256": actual,
@@ -8868,6 +11654,32 @@ if FastAPI is not None:
         except AuthorityImpactError as exc:
             _raise_authority_impact_error(exc)
 
+    @app.post("/api/authority-change-impact/matter/analyze")
+    def authority_change_impact_matter_analyze(payload: AuthorityImpactMatterRequest) -> dict[str, Any]:
+        """Create a source-overlap revalidation queue for the active matter.
+
+        This is deliberately an analysis-only path: it never decides that a
+        rule, form, deadline, or legal conclusion changed because a source hash
+        changed.  The durable access receipt contains no document prose.
+        """
+        try:
+            case_root = _workspace_case_root()
+            store = _authority_impact_store(case_root)
+            result = store.analyze_matter(payload.base_build_id, payload.target_build_id)
+            result["access_receipt"] = store.record_access(
+                action="matter_impact_analyze",
+                actor_role="local_owner",
+                tenant_id="local",
+                audit_event_id=secrets.token_hex(16),
+            )
+            return result
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except ReviewLedgerError as exc:
+            _raise_review_error(exc)
+        except AuthorityImpactError as exc:
+            _raise_authority_impact_error(exc)
+
     @app.get("/api/authority-change-impact/verify")
     def authority_change_impact_verify(build_id: str) -> dict[str, Any]:
         try:
@@ -8883,7 +11695,14 @@ if FastAPI is not None:
         with _authority_impact_artifact_lock:
             binding = dict(_authority_impact_artifacts.get(str(token or "")) or {})
         case_root = active_case_root()
-        if case_root is None or not binding or binding.get("case_id") != _case_id(case_root):
+        if (
+            case_root is None
+            or not binding
+            or binding.get("case_id") != _case_id(case_root)
+            or not _artifact_capability_allowed(
+                binding, resource_type="authority_change_impact_artifact"
+            )
+        ):
             raise HTTPException(status_code=404, detail="authority_impact_artifact_not_available")
         try:
             path, media_type = _authority_impact_store(case_root).resolve_artifact(
@@ -8964,6 +11783,21 @@ if FastAPI is not None:
                 size_bytes=int(result["size_bytes"]),
                 tracked_changes=True,
             )
+            _prune_document_workspace_artifacts()
+            with _document_workspace_artifact_lock:
+                _document_workspace_artifacts[artifact_id] = {
+                    "case_id": _case_id(case_root),
+                    **_artifact_capability_binding(
+                        resource_type="document_workspace_tracked_edit_artifact",
+                        resource_id=artifact_id,
+                        allowed_actions={"artifact_download"},
+                    ),
+                    "document_id": str(document_id),
+                    "revision_id": str(document["current_revision_id"]),
+                    "filename": output.name,
+                    "sha256": str(result["sha256"]),
+                    "created_at": time.time(),
+                }
             return {
                 "status": "tracked_copy_created",
                 "artifact_id": artifact_id,
@@ -8989,7 +11823,21 @@ if FastAPI is not None:
                 raise DocumentWorkspaceError(
                     "artifact_not_found", "The artifact was not found.", status_code=404
                 )
-            paths = workspace_paths(_workspace_case_root())
+            _prune_document_workspace_artifacts()
+            case_root = _workspace_case_root()
+            with _document_workspace_artifact_lock:
+                binding = dict(_document_workspace_artifacts.get(artifact_id) or {})
+            if (
+                not binding
+                or binding.get("case_id") != _case_id(case_root)
+                or not _artifact_capability_allowed(
+                    binding, resource_type="document_workspace_tracked_edit_artifact"
+                )
+            ):
+                raise DocumentWorkspaceError(
+                    "artifact_not_found", "The artifact was not found.", status_code=404
+                )
+            paths = workspace_paths(case_root)
             candidates = [
                 path
                 for path in paths.exports.glob(f"*-{artifact_id}.docx")
@@ -9001,6 +11849,14 @@ if FastAPI is not None:
                 )
             artifact = candidates[0]
             if artifact.resolve(strict=True).parent != paths.exports.resolve(strict=True):
+                raise DocumentWorkspaceError(
+                    "artifact_not_found", "The artifact was not found.", status_code=404
+                )
+            if (
+                artifact.name != str(binding.get("filename") or "")
+                or hashlib.sha256(artifact.read_bytes()).hexdigest()
+                != str(binding.get("sha256") or "")
+            ):
                 raise DocumentWorkspaceError(
                     "artifact_not_found", "The artifact was not found.", status_code=404
                 )
@@ -9959,6 +12815,1786 @@ if FastAPI is not None:
             "filing_ready": False,
         }
 
+    def _raise_outline_error(exc: IntakeWorkbenchError) -> None:
+        raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+
+    def _outline_store(case_root: Path) -> OutlineWorkbenchStore:
+        return OutlineWorkbenchStore(case_root)
+
+    @app.get("/api/drafting/outline-evidence-candidates")
+    def drafting_outline_evidence_candidates() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        candidates = []
+        for row in _review_records(case_root):
+            record_id = str(row.get("evidence_id") or "").strip()
+            source_hash = str(row.get("source_hash") or row.get("sha256") or "").casefold()
+            if record_id and re.fullmatch(r"[a-f0-9]{64}", source_hash):
+                candidates.append({
+                    "record_id": record_id,
+                    "source_hash": source_hash,
+                    "title": str(row.get("title") or row.get("source_locator") or record_id)[:300],
+                    "source_type": str(row.get("source_type") or "record")[:80],
+                    "lane": "private_matter_record",
+                })
+        return {"status": "pass", "candidates": candidates[:200], "review_required": True, "local_only": True}
+
+    @app.get("/api/drafting/outline-authority-candidate/{source_id}")
+    def drafting_outline_authority_candidate(source_id: str) -> dict[str, Any]:
+        source_id = str(source_id or "").strip()
+        if not source_id or len(source_id) > 240 or "/" in source_id or "\\" in source_id:
+            raise HTTPException(status_code=400, detail="authority_source_id_invalid")
+        try:
+            resolved = inspect_source(source_id)
+        except HTTPException:
+            raise HTTPException(status_code=404, detail="authority_source_not_found") from None
+        card = dict(resolved.get("source_card") or resolved)
+        source_span = card.get("source_span") if isinstance(card.get("source_span"), dict) else {}
+        pinpoint = str(
+            source_span.get("pinpoint") or source_span.get("section") or source_span.get("paragraph")
+            or card.get("pinpoint") or ""
+        )[:240]
+        source_hash = str(card.get("source_hash") or card.get("hash") or "").casefold()
+        if not re.fullmatch(r"[a-f0-9]{64}", source_hash):
+            raise HTTPException(status_code=409, detail="authority_source_hash_unavailable")
+        return {
+            "status": "pass",
+            "candidate": {
+                "authority_id": f"authority_{hashlib.sha256(source_id.encode()).hexdigest()[:16]}",
+                "source_id": source_id,
+                "source_hash": source_hash,
+                "citation": str(card.get("citation") or card.get("citation_hint") or source_id)[:500],
+                "title": str(card.get("title") or source_id)[:500],
+                "exact_span": str(card.get("source_span_preview") or "")[:2_000],
+                "pinpoint": pinpoint,
+                "lane": "official_authority",
+                "freshness_status": str(card.get("freshness_status") or "unknown")[:80],
+            },
+            "review_required": True,
+        }
+
+    @app.post("/api/drafting/outlines")
+    def drafting_outline_create(payload: DraftOutlineCreateRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return {
+                "status": "pass",
+                "outline": _outline_store(case_root).create_outline(
+                    payload.model_dump(), records=_review_records(case_root)
+                ),
+                "review_required": True,
+            }
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/outlines")
+    def drafting_outline_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _outline_store(case_root).outlines()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/outlines/{outline_id}")
+    def drafting_outline_get(outline_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _outline_store(case_root).outlines(outline_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/outlines/{outline_id}/evidence/{record_id}/source")
+    def drafting_outline_evidence_source(outline_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _outline_store(case_root).evidence_source(outline_id, record_id)
+            source = dict(payload.get("source") or {})
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or "") == str(source.get("record_id") or "")), None)
+            if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                raise IntakeWorkbenchError("outline_evidence_source_not_in_active_matter", 404)
+            locator = str(row.get("source_locator") or row.get("title") or source.get("record_id") or "")
+            source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), locator)
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/outlines/{outline_id}/authority/{authority_id}/source")
+    def drafting_outline_authority_source(outline_id: str, authority_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _outline_store(case_root).authority_source(outline_id, authority_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _argument_matrix_store(case_root: Path) -> ArgumentMatrixStore:
+        return ArgumentMatrixStore(case_root)
+
+    def _verified_argument_matrix_payload(payload: ArgumentMatrixRequest) -> dict[str, Any]:
+        """Replace client-supplied authority fields with resolver-verified source cards."""
+        value = payload.model_dump()
+        for position in list(value.get("positions") or []):
+            if not isinstance(position, dict):
+                continue
+            verified: list[dict[str, Any]] = []
+            for raw in list(position.get("supporting_authority") or []):
+                if not isinstance(raw, dict):
+                    raise IntakeWorkbenchError("position_authority_invalid")
+                source_id = str(raw.get("source_id") or "").strip()
+                candidate = dict(drafting_outline_authority_candidate(source_id).get("candidate") or {})
+                supplied_hash = str(raw.get("source_hash") or "").strip().casefold()
+                verified_hash = str(candidate.get("source_hash") or "").strip().casefold()
+                if supplied_hash and supplied_hash != verified_hash:
+                    raise IntakeWorkbenchError("argument_matrix_authority_hash_mismatch", 409)
+                if not candidate:
+                    raise IntakeWorkbenchError("argument_matrix_authority_not_found", 404)
+                verified.append(candidate)
+            position["supporting_authority"] = verified
+        return value
+
+    @app.post("/api/drafting/argument-matrices")
+    def drafting_argument_matrix_create(payload: ArgumentMatrixRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            matrix = _argument_matrix_store(case_root).create(
+                _verified_argument_matrix_payload(payload), records=_review_records(case_root)
+            )
+            return {"status": "pass", "matrix": matrix, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/argument-matrices")
+    def drafting_argument_matrix_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _argument_matrix_store(case_root).matrices()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/argument-matrices/{matrix_id}")
+    def drafting_argument_matrix_get(matrix_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _argument_matrix_store(case_root).matrices(matrix_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/drafting/argument-matrices/{matrix_id}/positions/{position_id}/{lane}/{source_id}/source")
+    def drafting_argument_matrix_source(matrix_id: str, position_id: str, lane: str, source_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _argument_matrix_store(case_root).source(matrix_id, position_id, lane, source_id)
+            source = dict(payload.get("source") or {})
+            if source.get("lane") == "private_matter_record":
+                row = next(
+                    (item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == str(source.get("record_id") or "")),
+                    None,
+                )
+                if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                    raise IntakeWorkbenchError("argument_matrix_evidence_not_in_active_matter", 404)
+                locator = str(row.get("source_locator") or row.get("title") or source.get("record_id") or "")
+                source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), locator)
+            else:
+                source["source_token"] = ""
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _procedure_pathway_store(case_root: Path) -> ProcedurePathwayStore:
+        return ProcedurePathwayStore(case_root)
+
+    @app.post("/api/procedure-pathways")
+    def procedure_pathway_create(payload: ProcedurePathwayRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {})
+            pathway = _procedure_pathway_store(case_root).create(
+                payload.model_dump(), records=_review_records(case_root), authority=authority
+            )
+            return {"status": "pass", "pathway": pathway, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/procedure-pathways")
+    def procedure_pathway_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _procedure_pathway_store(case_root).pathways()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/procedure-pathways/{pathway_id}")
+    def procedure_pathway_get(pathway_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _procedure_pathway_store(case_root).pathways(pathway_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/procedure-pathways/{pathway_id}/{lane}/{source_id}/source")
+    def procedure_pathway_source(pathway_id: str, lane: str, source_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _procedure_pathway_store(case_root).source(pathway_id, lane, source_id)
+            source = dict(payload.get("source") or {})
+            if source.get("lane") == "private_matter_record":
+                row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == str(source.get("record_id") or "")), None)
+                if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                    raise IntakeWorkbenchError("existing_order_not_in_active_matter", 404)
+                source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            else:
+                source["source_token"] = ""
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _service_method_matrix_store(case_root: Path) -> ServiceMethodMatrixStore:
+        return ServiceMethodMatrixStore(case_root)
+
+    @app.post("/api/service-method-matrices")
+    def service_method_matrix_create(payload: ServiceMethodMatrixRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(
+                drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {}
+            )
+            matrix = _service_method_matrix_store(case_root).create(
+                payload.model_dump(), records=_review_records(case_root), authority=authority
+            )
+            return {"status": "pass", "matrix": matrix, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/service-method-matrices")
+    def service_method_matrix_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _service_method_matrix_store(case_root).matrices()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/service-method-matrices/{matrix_id}")
+    def service_method_matrix_get(matrix_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _service_method_matrix_store(case_root).matrices(matrix_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/service-method-matrices/{matrix_id}/{lane}/source")
+    def service_method_matrix_source(matrix_id: str, lane: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _service_method_matrix_store(case_root).source(matrix_id, lane)
+            source = dict(payload.get("source") or {})
+            if source.get("lane") == "private_matter_record":
+                row = next(
+                    (
+                        item
+                        for item in _review_records(case_root)
+                        if str(item.get("evidence_id") or item.get("source_id") or "")
+                        == str(source.get("record_id") or "")
+                    ),
+                    None,
+                )
+                if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                    raise IntakeWorkbenchError("service_proof_not_in_active_matter", 404)
+                locator = str(row.get("source_locator") or row.get("title") or source.get("record_id") or "")
+                source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), locator)
+            else:
+                source["source_token"] = ""
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _business_day_store(case_root: Path) -> BusinessDayReviewStore:
+        return BusinessDayReviewStore(case_root)
+
+    @app.post("/api/business-day-calendar-inputs")
+    def business_day_calendar_input_create(payload: BusinessDayCalendarInputRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(
+                drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {}
+            )
+            entry = _business_day_store(case_root).create_input(payload.model_dump(), authority=authority)
+            return {"status": "pass", "input": entry, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/business-day-calendar-inputs")
+    def business_day_calendar_input_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _business_day_store(case_root).inputs()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/business-day-calendar-inputs/{input_id}")
+    def business_day_calendar_input_get(input_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _business_day_store(case_root).inputs(input_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/business-day-calendar-inputs/{input_id}/authority/source")
+    def business_day_calendar_input_authority(input_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _business_day_store(case_root).authority_source(input_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.post("/api/business-day-calculations")
+    def business_day_calculation_create(payload: BusinessDayCalculationRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            calculation = _business_day_store(case_root).calculate(payload.model_dump())
+            return {"status": "pass", "calculation": calculation, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/business-day-calculations/{calculation_id}")
+    def business_day_calculation_get(calculation_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _business_day_store(case_root).calculations(calculation_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _hearing_countdown_store(case_root: Path) -> HearingCountdownStore:
+        return HearingCountdownStore(case_root)
+
+    @app.post("/api/hearing-countdowns")
+    def hearing_countdown_create(payload: HearingCountdownRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            countdown = _hearing_countdown_store(case_root).create(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+            return {"status": "pass", "countdown": countdown, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/hearing-countdowns")
+    def hearing_countdown_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _hearing_countdown_store(case_root).countdowns()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/hearing-countdowns/{countdown_id}")
+    def hearing_countdown_get(countdown_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _hearing_countdown_store(case_root).countdowns(countdown_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/hearing-countdowns/{countdown_id}/notice-source")
+    def hearing_countdown_notice_source(countdown_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _hearing_countdown_store(case_root).source(countdown_id)
+            source = dict(payload.get("source") or {})
+            row = next(
+                (
+                    item
+                    for item in _review_records(case_root)
+                    if str(item.get("evidence_id") or item.get("source_id") or "")
+                    == str(source.get("record_id") or "")
+                ),
+                None,
+            )
+            if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                raise IntakeWorkbenchError("hearing_countdown_notice_not_in_active_matter", 404)
+            locator = str(row.get("source_locator") or row.get("title") or source.get("record_id") or "")
+            source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), locator)
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _filing_preflight_store(case_root: Path) -> FilingPreflightStore:
+        return FilingPreflightStore(case_root)
+
+    def _verified_preflight_forms(source_ids: list[str]) -> list[dict[str, Any]]:
+        if len(source_ids) > 50 or len(set(source_ids)) != len(source_ids):
+            raise IntakeWorkbenchError("preflight_forms_invalid")
+        result: list[dict[str, Any]] = []
+        for source_id in source_ids:
+            candidate = dict(drafting_outline_authority_candidate(str(source_id)).get("candidate") or {})
+            if not candidate:
+                raise IntakeWorkbenchError("preflight_form_not_found", 404)
+            result.append(candidate)
+        return result
+
+    @app.post("/api/filing-preflights")
+    def filing_preflight_create(payload: FilingPreflightRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            canonical_packet_gate_seen = False
+            document_id = str(payload.document_id or "").strip()
+            if document_id:
+                try:
+                    packet = ReviewedFilingPacketStore(case_root).active(document_id=document_id)
+                    canonical_packet_gate_seen = str(packet.get("status") or "") == "pass"
+                except (ReviewedFilingPacketError, DocumentWorkspaceError):
+                    canonical_packet_gate_seen = False
+            value = payload.model_dump() | {"canonical_packet_gate_seen": canonical_packet_gate_seen}
+            preflight = _filing_preflight_store(case_root).create(
+                value,
+                records=_review_records(case_root),
+                forms=_verified_preflight_forms(list(payload.form_source_ids or [])),
+            )
+            return {"status": "pass", "preflight": preflight, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/filing-preflights")
+    def filing_preflight_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _filing_preflight_store(case_root).preflights()
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/filing-preflights/{preflight_id}")
+    def filing_preflight_get(preflight_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _filing_preflight_store(case_root).preflights(preflight_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/filing-preflights/{preflight_id}/{lane}/{source_id}/source")
+    def filing_preflight_source(preflight_id: str, lane: str, source_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _filing_preflight_store(case_root).source(preflight_id, lane, source_id)
+            source = dict(payload.get("source") or {})
+            if source.get("lane") == "private_matter_record":
+                row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == str(source.get("record_id") or "")), None)
+                if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                    raise IntakeWorkbenchError("preflight_attachment_not_in_active_matter", 404)
+                source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            else:
+                source["source_token"] = ""
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _fee_waiver_workspace_store(case_root: Path) -> FeeWaiverWorkspaceStore:
+        return FeeWaiverWorkspaceStore(case_root)
+
+    @app.post("/api/fee-waiver-workspaces")
+    def fee_waiver_workspace_create(payload: FeeWaiverWorkspaceRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {})
+            workspace = _fee_waiver_workspace_store(case_root).create(payload.model_dump(), authority=authority)
+            return {"status": "pass", "workspace": workspace, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/fee-waiver-workspaces/{workspace_id}")
+    def fee_waiver_workspace_get(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _fee_waiver_workspace_store(case_root).workspaces(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/fee-waiver-workspaces/{workspace_id}/authority/source")
+    def fee_waiver_workspace_source(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _fee_waiver_workspace_store(case_root).source(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _child_support_worksheet_store(case_root: Path) -> ChildSupportWorksheetStore:
+        return ChildSupportWorksheetStore(case_root)
+
+    @app.post("/api/child-support-worksheets")
+    def child_support_worksheet_create(payload: ChildSupportWorksheetRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {})
+            workspace = _child_support_worksheet_store(case_root).create(payload.model_dump(), authority=authority)
+            return {"status": "pass", "workspace": workspace, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/child-support-worksheets/{workspace_id}")
+    def child_support_worksheet_get(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _child_support_worksheet_store(case_root).get(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/child-support-worksheets/{workspace_id}/authority/source")
+    def child_support_worksheet_source(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _child_support_worksheet_store(case_root).authority_source(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _financial_affidavit_store(case_root: Path) -> FinancialAffidavitStore:
+        return FinancialAffidavitStore(case_root)
+
+    @app.post("/api/financial-affidavit-workspaces")
+    def financial_affidavit_create(payload: FinancialAffidavitRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            workspace = _financial_affidavit_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "workspace": workspace, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/financial-affidavit-workspaces/{workspace_id}")
+    def financial_affidavit_get(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _financial_affidavit_store(case_root).get(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/financial-affidavit-workspaces/{workspace_id}/entries/{entry_id}/source")
+    def financial_affidavit_source(workspace_id: str, entry_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _financial_affidavit_store(case_root).source(workspace_id, entry_id)
+            source = dict(payload.get("source") or {})
+            record_id = str(source.get("record_id") or "")
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == record_id.casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("financial_affidavit_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or record_id), str(row.get("source_locator") or row.get("title") or record_id))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _asset_tracing_store(case_root: Path) -> AssetTracingStore:
+        return AssetTracingStore(case_root)
+
+    @app.post("/api/asset-tracing-ledgers")
+    def asset_tracing_create(payload: AssetTracingRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            ledger = _asset_tracing_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "ledger": ledger, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/asset-tracing-ledgers/{ledger_id}")
+    def asset_tracing_get(ledger_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _asset_tracing_store(case_root).get(ledger_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/asset-tracing-ledgers/{ledger_id}/assets/{asset_id}/sources/{record_id}")
+    def asset_tracing_source(ledger_id: str, asset_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _asset_tracing_store(case_root).source(ledger_id, asset_id, record_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("asset_tracing_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _debt_reconciliation_store(case_root: Path) -> DebtReconciliationStore:
+        return DebtReconciliationStore(case_root)
+
+    @app.post("/api/debt-reconciliation-workspaces")
+    def debt_reconciliation_create(payload: DebtReconciliationRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            workspace = _debt_reconciliation_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "workspace": workspace, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/debt-reconciliation-workspaces/{workspace_id}")
+    def debt_reconciliation_get(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _debt_reconciliation_store(case_root).get(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/debt-reconciliation-workspaces/{workspace_id}/statements/{statement_id}/source")
+    def debt_reconciliation_source(workspace_id: str, statement_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _debt_reconciliation_store(case_root).source(workspace_id, statement_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("debt_reconciliation_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _settlement_scenario_store(case_root: Path) -> SettlementScenarioStore:
+        return SettlementScenarioStore(case_root)
+
+    @app.post("/api/settlement-scenario-comparisons")
+    def settlement_scenario_create(payload: SettlementScenarioRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            comparison = _settlement_scenario_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "comparison": comparison, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/settlement-scenario-comparisons/{comparison_id}")
+    def settlement_scenario_get(comparison_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _settlement_scenario_store(case_root).get(comparison_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/settlement-scenario-comparisons/{comparison_id}/scenarios/{scenario_id}/source")
+    def settlement_scenario_source(comparison_id: str, scenario_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _settlement_scenario_store(case_root).source(comparison_id, scenario_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("settlement_scenario_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _implementation_feasibility_store(case_root: Path) -> ImplementationFeasibilityStore:
+        return ImplementationFeasibilityStore(case_root)
+
+    @app.post("/api/implementation-feasibility-reviews")
+    def implementation_feasibility_create(payload: ImplementationFeasibilityRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            review = _implementation_feasibility_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "review": review, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/implementation-feasibility-reviews/{review_id}")
+    def implementation_feasibility_get(review_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _implementation_feasibility_store(case_root).get(review_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/implementation-feasibility-reviews/{review_id}/clauses/{clause_id}/source")
+    def implementation_feasibility_source(review_id: str, clause_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _implementation_feasibility_store(case_root).source(review_id, clause_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("implementation_feasibility_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _communication_plan_store(case_root: Path) -> CommunicationPlanStore:
+        return CommunicationPlanStore(case_root)
+
+    @app.post("/api/communication-plans")
+    def communication_plan_create(payload: CommunicationPlanRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            plan = _communication_plan_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status": "pass", "plan": plan, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/communication-plans/{plan_id}")
+    def communication_plan_get(plan_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _communication_plan_store(case_root).get(plan_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/communication-plans/{plan_id}/sources/{record_id}")
+    def communication_plan_source(plan_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _communication_plan_store(case_root).source(plan_id, record_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("communication_plan_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _compliance_log_store(case_root: Path) -> ComplianceLogStore:
+        return ComplianceLogStore(case_root)
+
+    @app.post("/api/compliance-logs")
+    def compliance_log_create(payload: ComplianceLogRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            log = _compliance_log_store(case_root).create(payload.model_dump(), terms=_order_store().terms().get("terms", []), records=_review_records(case_root))
+            return {"status": "pass", "log": log, "review_required": True, "filing_ready": False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/compliance-logs/{log_id}")
+    def compliance_log_get(log_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _compliance_log_store(case_root).get(log_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/compliance-logs/{log_id}/event-source")
+    def compliance_log_source(log_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _compliance_log_store(case_root).source(log_id)
+            source = dict(payload.get("source") or {})
+            source_hash = str(source.get("source_hash") or "").casefold()
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == str(source.get("record_id") or "").casefold()), None)
+            if row is None or not re.fullmatch(r"[a-f0-9]{64}", source_hash) or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                raise IntakeWorkbenchError("compliance_log_event_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(row.get("evidence_id") or row.get("source_id") or source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _hardware_benchmark_store() -> HardwareBenchmarkStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return HardwareBenchmarkStore(root)
+
+    @app.post("/api/runtime/hardware-benchmarks")
+    def hardware_benchmark_create(payload: HardwareBenchmarkRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _hardware_benchmark_store().run(payload.model_dump()))
+
+    @app.get("/api/runtime/hardware-benchmarks/{benchmark_id}")
+    def hardware_benchmark_get(benchmark_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _hardware_benchmark_store().get(benchmark_id))
+
+    def _model_admission_benchmark_store() -> ModelAdmissionBenchmarkStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return ModelAdmissionBenchmarkStore(root)
+
+    @app.post("/api/runtime/model-admission-benchmarks")
+    def model_admission_benchmark_create(payload: ModelAdmissionBenchmarkRequest) -> dict[str, Any]:
+        preview = LocalAgentPreviewRequest(
+            question="Local benchmark setup.", provider=payload.provider, endpoint=payload.endpoint, model=payload.model
+        )
+        return _intake_call(lambda: _model_admission_benchmark_store().run(payload.model_dump(), _local_agent_runtime_from_request(preview)))
+
+    def _warm_model_pool_store() -> WarmModelPoolStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return WarmModelPoolStore(root)
+
+    @staticmethod
+    def _warm_model_worker_from_record(model: dict[str, Any] | None) -> LocalAgentRuntime | None:
+        if not model:
+            return None
+        provider = str(model.get("runtime_provider") or "").strip()
+        endpoint = str(model.get("runtime_endpoint") or "").strip()
+        runtime_model_name = str(model.get("runtime_model_name") or "").strip()
+        if not provider or not endpoint or not runtime_model_name:
+            return None
+        try:
+            return LocalAgentRuntime(
+                build_local_client(
+                    provider=provider,
+                    endpoint=endpoint,
+                    model_name=runtime_model_name,
+                    timeout_seconds=30,
+                )
+            )
+        except (ValueError, LocalModelError):
+            return None
+
+    @app.post("/api/runtime/warm-model-pool/warm")
+    def warm_model_pool_warm(payload: WarmModelPoolWarmRequest) -> dict[str, Any]:
+        service = _local_workbench_service()
+        route = service.route_model(
+            {"task": payload.task, "preferred_model_id": payload.preferred_model_id}
+        )
+        selected = route.get("selected_model")
+        result = _intake_call(
+            lambda: _warm_model_pool_store().warm(
+                payload.model_dump(),
+                model=selected if isinstance(selected, dict) else None,
+                worker=_warm_model_worker_from_record(selected if isinstance(selected, dict) else None),
+            )
+        )
+        result["route"] = {
+            "status": route.get("status"),
+            "selected_model_id": (selected or {}).get("model_id") if isinstance(selected, dict) else None,
+            "admission_boundary": route.get("admission_boundary"),
+        }
+        return result
+
+    @app.post("/api/runtime/warm-model-pool/release")
+    def warm_model_pool_release(payload: WarmModelPoolReleaseRequest) -> dict[str, Any]:
+        model = _local_workbench_service().admitted_model_for_warm_pool(payload.model_id)
+        return _intake_call(
+            lambda: _warm_model_pool_store().release(
+                payload.model_dump(), worker=_warm_model_worker_from_record(model)
+            )
+        )
+
+    @app.get("/api/runtime/warm-model-pool")
+    def warm_model_pool_status(thermal_state: str = "unknown") -> dict[str, Any]:
+        return _intake_call(lambda: _warm_model_pool_store().status(thermal_state=thermal_state))
+
+    def _context_cache_store() -> ContextCacheStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return ContextCacheStore(root)
+
+    @app.post("/api/runtime/context-cache")
+    def context_cache_put(payload: ContextCacheEntryRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _context_cache_store().put(payload.model_dump()))
+
+    @app.post("/api/runtime/context-cache/invalidate")
+    def context_cache_invalidate(payload: ContextCacheInvalidationRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _context_cache_store().invalidate(payload.model_dump()))
+
+    @app.get("/api/runtime/context-cache")
+    def context_cache_status() -> dict[str, Any]:
+        return _intake_call(lambda: _context_cache_store().status())
+
+    @app.get("/api/runtime/context-cache/{cache_id}")
+    def context_cache_get(cache_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _context_cache_store().get(cache_id))
+
+    @app.get("/api/runtime/context-cache/{cache_id}/sources/{source_id}")
+    def context_cache_source(cache_id: str, source_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _context_cache_store().source(cache_id, source_id))
+
+    def _speculative_retrieval_store() -> SpeculativeRetrievalStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return SpeculativeRetrievalStore(root)
+
+    @app.post("/api/runtime/speculative-retrieval")
+    def speculative_retrieval_stage(payload: SpeculativeRetrievalRequest) -> dict[str, Any]:
+        def retrieve_local(query: str) -> list[dict[str, Any]]:
+            response = _retrieve_official_authority(query, limit=5)
+            return [item.to_dict() for item in response.results]
+
+        return _intake_call(
+            lambda: _speculative_retrieval_store().stage(
+                payload.model_dump(), retriever=retrieve_local
+            )
+        )
+
+    @app.get("/api/runtime/speculative-retrieval/{preview_id}")
+    def speculative_retrieval_get(preview_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _speculative_retrieval_store().get(preview_id))
+
+    @app.get("/api/runtime/speculative-retrieval/{preview_id}/candidates/{source_id}")
+    def speculative_retrieval_candidate(preview_id: str, source_id: str) -> dict[str, Any]:
+        return _intake_call(
+            lambda: _speculative_retrieval_store().candidate(preview_id, source_id)
+        )
+
+    @app.post("/api/runtime/speculative-retrieval/{preview_id}/discard")
+    def speculative_retrieval_discard(preview_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _speculative_retrieval_store().discard(preview_id))
+
+    def _context_budget_store() -> ContextBudgetStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return ContextBudgetStore(root)
+
+    @app.post("/api/runtime/context-budgets")
+    def context_budget_create(payload: ContextBudgetRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _context_budget_store().create(payload.model_dump()))
+
+    @app.get("/api/runtime/context-budgets/{budget_id}")
+    def context_budget_get(budget_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _context_budget_store().get(budget_id))
+
+    @app.get("/api/runtime/context-budgets/{budget_id}/sources/{source_id}")
+    def context_budget_source(budget_id: str, source_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _context_budget_store().source(budget_id, source_id))
+
+    def _batch_inference_scheduler() -> BatchInferenceScheduler:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return BatchInferenceScheduler(root, kernel=get_runtime_kernel(), matter_id=_case_id(root))
+
+    @app.post("/api/runtime/batch-inference")
+    def batch_inference_schedule(payload: BatchInferenceScheduleRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _batch_inference_scheduler().create(payload.model_dump()))
+
+    @app.get("/api/runtime/batch-inference/{batch_id}")
+    def batch_inference_get(batch_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _batch_inference_scheduler().get(batch_id))
+
+    @app.get("/api/runtime/batch-inference/{batch_id}/items/{item_id}/source")
+    def batch_inference_source(batch_id: str, item_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _batch_inference_scheduler().source(batch_id, item_id))
+
+    @app.post("/api/runtime/batch-inference/{batch_id}/items/{item_id}/cancel")
+    def batch_inference_cancel(batch_id: str, item_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _batch_inference_scheduler().cancel_item(batch_id, item_id))
+
+    def _low_memory_mode_store() -> LowMemoryModeStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return LowMemoryModeStore(root)
+
+    @app.get("/api/runtime/low-memory-mode")
+    def low_memory_mode_status() -> dict[str, Any]:
+        return _intake_call(lambda: _low_memory_mode_store().status())
+
+    @app.put("/api/runtime/low-memory-mode")
+    def low_memory_mode_set(payload: LowMemoryModeRequest) -> dict[str, Any]:
+        return _intake_call(lambda: _low_memory_mode_store().set_active(payload.model_dump()))
+
+    def _runtime_crash_recovery() -> RuntimeCrashRecovery:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return RuntimeCrashRecovery(get_runtime_kernel(), matter_id=_case_id(root))
+
+    @app.post("/api/runtime/crash-recovery")
+    def runtime_crash_recovery_run() -> dict[str, Any]:
+        return _runtime_crash_recovery().recover()
+
+    @app.get("/api/runtime/crash-recovery/jobs/{job_id}")
+    def runtime_crash_recovery_job(job_id: str) -> dict[str, Any]:
+        try:
+            return _runtime_crash_recovery().job(job_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="runtime_recovery_job_not_found") from None
+
+    @app.get("/api/command-bar/search")
+    def command_bar_search(q: str = "", limit: int = 30) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            return search_command_bar(q, matter=None, records=[], sources=[], drafts=[], limit=limit)
+        records = []
+        for row in _review_records(case_root)[:200]:
+            record_id = str(row.get("evidence_id") or row.get("source_id") or "").strip()
+            if not record_id:
+                continue
+            records.append({
+                "evidence_id": record_id,
+                "title": str(row.get("title") or row.get("safe_filename") or record_id),
+                "source_token": _record_open_token(case_root, record_id, str(row.get("source_locator") or row.get("title") or "")),
+            })
+        try:
+            drafts = list((_outline_store(case_root).outlines().get("outlines") or []))[:100]
+        except Exception:
+            drafts = []
+        try:
+            retrieval = _retrieve_official_authority(q, limit=8)
+            sources = [item.to_dict() for item in retrieval.results]
+        except Exception:
+            sources = []
+        return search_command_bar(
+            q,
+            matter={"case_id": _case_id(case_root), "label": "Active local matter"},
+            records=records,
+            sources=sources,
+            drafts=drafts,
+            limit=limit,
+        )
+
+    @app.get("/api/matter-search")
+    def matter_search(q: str = "", limit: int = 100) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            return {"status": "blocked", "blockers": ["active_matter_unavailable"], "results": [], "review_required": True}
+        results = unified_matter_search(q, _review_records(case_root), limit=limit)
+        for row in results.get("results") or []:
+            record_id = str(row.get("record_id") or "")
+            source = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == record_id), None)
+            if source is not None:
+                row["source_token"] = _record_open_token(case_root, record_id, str(source.get("source_locator") or source.get("title") or ""))
+        return results
+
+    def _smart_view_store() -> SmartViewStore:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        return SmartViewStore(root)
+
+    @app.post("/api/smart-views")
+    def smart_view_create(payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _smart_view_store().create(payload))
+
+    @app.get("/api/smart-views")
+    def smart_view_list() -> dict[str, Any]:
+        return _intake_call(lambda: _smart_view_store().list())
+
+    @app.get("/api/smart-views/{view_id}/run")
+    def smart_view_run(view_id: str) -> dict[str, Any]:
+        root=active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        result=_intake_call(lambda: _smart_view_store().run(view_id,_review_records(root)))
+        for row in result.get("results") or []:
+            rid=str(row.get("record_id") or "")
+            source=next((item for item in _review_records(root) if str(item.get("evidence_id") or item.get("source_id") or "")==rid),None)
+            if source: row['source_token']=_record_open_token(root,rid,str(source.get('source_locator') or source.get('title') or ''))
+        return result
+
+    def _recent_work_store() -> RecentWorkStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return RecentWorkStore(root)
+
+    @app.put("/api/recent-work")
+    def recent_work_save(payload: dict[str, Any]) -> dict[str, Any]:
+        """Save only an encrypted, active-matter UI restore point."""
+        return _intake_call(lambda: _recent_work_store().save(payload))
+
+    @app.get("/api/recent-work")
+    def recent_work_get(workspace_id: str = "chat") -> dict[str, Any]:
+        return _intake_call(lambda: _recent_work_store().get(workspace_id))
+
+    @app.delete("/api/recent-work")
+    def recent_work_clear(workspace_id: str = "chat") -> dict[str, Any]:
+        return _intake_call(lambda: _recent_work_store().clear(workspace_id))
+
+    @app.get("/api/recent-work/{workspace_id}/sources/{index}")
+    def recent_work_source(workspace_id: str, index: int) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        result = _intake_call(lambda: _recent_work_store().source(workspace_id, index))
+        source = dict(result.get("source") or {})
+        if source.get("lane") != "private_matter_record":
+            return result
+        record_id = str(source.get("record_id") or "")
+        source_hash = str(source.get("source_hash") or "").casefold()
+        record = next(
+            (
+                row for row in _review_records(root)
+                if str(row.get("evidence_id") or row.get("source_id") or "") == record_id
+                and str(row.get("source_hash") or row.get("sha256") or "").casefold() == source_hash
+            ),
+            None,
+        )
+        if record is None:
+            raise HTTPException(status_code=404, detail="recent_work_source_not_in_active_matter")
+        source["source_token"] = _record_open_token(
+            root, record_id, str(record.get("source_locator") or record.get("title") or "")
+        )
+        result["source"] = source
+        return result
+
+    def _workspace_tabs_store() -> WorkspaceTabsStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return WorkspaceTabsStore(root)
+
+    def _workspace_tab_record_is_active(root: Path, target: dict[str, Any]) -> dict[str, Any]:
+        record_id = str(target.get("record_id") or "")
+        source_hash = str(target.get("source_hash") or "").casefold()
+        record = next(
+            (
+                row for row in _review_records(root)
+                if str(row.get("evidence_id") or row.get("source_id") or "") == record_id
+                and str(row.get("source_hash") or row.get("sha256") or "").casefold() == source_hash
+            ),
+            None,
+        )
+        if record is None:
+            raise HTTPException(status_code=404, detail="workspace_tab_record_not_in_active_matter")
+        return record
+
+    @app.post("/api/workspace-tabs")
+    def workspace_tab_create(payload: dict[str, Any]) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        if str(payload.get("kind") or "").strip().casefold() == "record":
+            target = payload.get("target") if isinstance(payload.get("target"), dict) else {}
+            _workspace_tab_record_is_active(root, target)
+        return _intake_call(lambda: _workspace_tabs_store().create(payload))
+
+    @app.get("/api/workspace-tabs")
+    def workspace_tab_list() -> dict[str, Any]:
+        return _intake_call(lambda: _workspace_tabs_store().list())
+
+    @app.post("/api/workspace-tabs/{tab_id}/activate")
+    def workspace_tab_activate(tab_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _workspace_tabs_store().activate(tab_id))
+
+    @app.delete("/api/workspace-tabs/{tab_id}")
+    def workspace_tab_close(tab_id: str) -> dict[str, Any]:
+        return _intake_call(lambda: _workspace_tabs_store().close(tab_id))
+
+    @app.get("/api/workspace-tabs/{tab_id}/target")
+    def workspace_tab_target(tab_id: str) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        result = _intake_call(lambda: _workspace_tabs_store().target(tab_id))
+        tab = dict(result.get("tab") or {})
+        target = dict(result.get("target") or {})
+        if tab.get("kind") == "record":
+            record = _workspace_tab_record_is_active(root, target)
+            target["source_token"] = _record_open_token(
+                root,
+                str(target.get("record_id") or ""),
+                str(record.get("source_locator") or record.get("title") or ""),
+            )
+        result["target"] = target
+        return result
+
+    def _command_history_store() -> CommandHistoryStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return CommandHistoryStore(root)
+
+    @app.post("/api/command-history")
+    def command_history_record(payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _command_history_store().record(payload))
+
+    @app.get("/api/command-history")
+    def command_history_list() -> dict[str, Any]:
+        return _intake_call(lambda: _command_history_store().list())
+
+    @app.post("/api/command-history/{command_id}/replay")
+    def command_history_replay(command_id: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        replay = _intake_call(
+            lambda: _command_history_store().replay(command_id, reconfirmed=bool((payload or {}).get("reconfirmed", False)))
+        )
+        if not replay.get("execute"):
+            return replay
+        command = dict(replay.get("command") or {})
+        params = dict(command.get("parameters") or {})
+        operation = str(command.get("operation") or "")
+        if operation == "matter_search":
+            result = unified_matter_search(str(params.get("query") or ""), _review_records(root))
+            for row in result.get("results") or []:
+                record_id = str(row.get("record_id") or "")
+                source = next((item for item in _review_records(root) if str(item.get("evidence_id") or item.get("source_id") or "") == record_id), None)
+                if source is not None:
+                    row["source_token"] = _record_open_token(root, record_id, str(source.get("source_locator") or source.get("title") or ""))
+            replay["result"] = result
+        elif operation == "authority_search":
+            authority = _retrieve_official_authority(str(params.get("query") or ""), limit=20)
+            replay["result"] = {
+                "status": "pass",
+                "sources": [item.to_dict() for item in authority.results],
+                "review_required": True,
+                "local_only": True,
+                "network_used": False,
+            }
+        elif operation == "smart_view_run":
+            result = _smart_view_store().run(str(params.get("view_id") or ""), _review_records(root))
+            for row in result.get("results") or []:
+                record_id = str(row.get("record_id") or "")
+                source = next((item for item in _review_records(root) if str(item.get("evidence_id") or item.get("source_id") or "") == record_id), None)
+                if source is not None:
+                    row["source_token"] = _record_open_token(root, record_id, str(source.get("source_locator") or source.get("title") or ""))
+            replay["result"] = result
+        else:
+            raise HTTPException(status_code=409, detail="command_history_replay_not_allowed")
+        return replay
+
+    def _bulk_review_queue_store() -> BulkReviewQueueStore:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        return BulkReviewQueueStore(root)
+
+    def _bulk_review_source_in_active_matter(root: Path, source: dict[str, Any]) -> dict[str, Any]:
+        record_id = str(source.get("record_id") or "")
+        source_hash = str(source.get("source_hash") or "").casefold()
+        record = next((row for row in _review_records(root) if str(row.get("evidence_id") or row.get("source_id") or "") == record_id and str(row.get("source_hash") or row.get("sha256") or "").casefold() == source_hash), None)
+        if record is None:
+            raise HTTPException(status_code=404, detail="bulk_review_source_not_in_active_matter")
+        return record
+
+    @app.post("/api/bulk-review-queue")
+    def bulk_review_create(payload: dict[str, Any]) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        source = payload.get("source_ref") if isinstance(payload.get("source_ref"), dict) else {}
+        _bulk_review_source_in_active_matter(root, source)
+        return _intake_call(lambda: _bulk_review_queue_store().create(payload))
+
+    @app.get("/api/bulk-review-queue")
+    def bulk_review_list() -> dict[str, Any]:
+        return _intake_call(lambda: _bulk_review_queue_store().list())
+
+    @app.post("/api/bulk-review-queue/{item_id}/triage")
+    def bulk_review_triage(item_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return _intake_call(lambda: _bulk_review_queue_store().triage(item_id, payload))
+
+    @app.get("/api/bulk-review-queue/{item_id}/source")
+    def bulk_review_source(item_id: str) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None:
+            raise HTTPException(status_code=409, detail="no_active_matter")
+        result = _intake_call(lambda: _bulk_review_queue_store().source(item_id))
+        source = dict(result.get("source") or {})
+        record = _bulk_review_source_in_active_matter(root, source)
+        source["source_token"] = _record_open_token(root, str(source.get("record_id") or ""), str(record.get("source_locator") or record.get("title") or ""))
+        result["source"] = source
+        return result
+
+    def _favorites_store() -> FavoritesStore:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        return FavoritesStore(root)
+
+    @app.post("/api/favorites")
+    def favorite_create(payload: dict[str, Any]) -> dict[str, Any]:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        if str(payload.get("kind") or "").strip().casefold() == "record":
+            target = payload.get("target") if isinstance(payload.get("target"), dict) else {}
+            _workspace_tab_record_is_active(root, target)
+        return _intake_call(lambda: _favorites_store().create(payload))
+
+    @app.get("/api/favorites")
+    def favorite_list(viewer_role: str = "other_reviewer") -> dict[str, Any]:
+        return _intake_call(lambda: _favorites_store().list(viewer_role))
+
+    @app.get("/api/favorites/{favorite_id}")
+    def favorite_get(favorite_id: str, viewer_role: str = "other_reviewer") -> dict[str, Any]:
+        return _intake_call(lambda: _favorites_store().get(favorite_id, viewer_role))
+
+    @app.delete("/api/favorites/{favorite_id}")
+    def favorite_remove(favorite_id: str, owner_role: str = "other_reviewer") -> dict[str, Any]:
+        return _intake_call(lambda: _favorites_store().remove(favorite_id, owner_role))
+
+    @app.get("/api/favorites/{favorite_id}/open")
+    def favorite_open(favorite_id: str, viewer_role: str = "other_reviewer") -> dict[str, Any]:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        result = _intake_call(lambda: _favorites_store().get(favorite_id, viewer_role))
+        favorite = dict(result.get("favorite") or {})
+        target = dict(result.get("target") or {})
+        if favorite.get("kind") == "record":
+            record = _workspace_tab_record_is_active(root, target)
+            target["source_token"] = _record_open_token(root, str(target.get("record_id") or ""), str(record.get("source_locator") or record.get("title") or ""))
+        result["target"] = target
+        return result
+
+    def _user_labels_store() -> UserLabelsStore:
+        root = active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        return UserLabelsStore(root)
+
+    @app.post("/api/user-labels")
+    def user_label_create(payload: dict[str, Any]) -> dict[str, Any]: return _intake_call(lambda: _user_labels_store().create(payload))
+
+    @app.get("/api/user-labels")
+    def user_label_list() -> dict[str, Any]: return _intake_call(lambda: _user_labels_store().list())
+
+    @app.post("/api/user-labels/{label_id}/assignments")
+    def user_label_assign(label_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        root=active_case_root()
+        if root is None: raise HTTPException(status_code=409, detail="no_active_matter")
+        _workspace_tab_record_is_active(root,payload)
+        return _intake_call(lambda: _user_labels_store().assign(label_id,payload))
+
+    @app.post("/api/user-labels/export")
+    def user_label_export(payload: dict[str, Any]) -> dict[str, Any]: return _intake_call(lambda: _user_labels_store().export(payload))
+
+    @app.post("/api/user-labels/import")
+    def user_label_import(payload: dict[str, Any]) -> dict[str, Any]: return _intake_call(lambda: _user_labels_store().import_export(payload))
+
+    def _daily_matter_brief_store() -> DailyMatterBriefStore:
+        root=active_case_root()
+        if root is None: raise HTTPException(status_code=409,detail="no_active_matter")
+        return DailyMatterBriefStore(root)
+
+    @app.post("/api/daily-matter-briefs")
+    def daily_matter_brief_build(payload:dict[str,Any])->dict[str,Any]:
+        root=active_case_root()
+        if root is None: raise HTTPException(status_code=409,detail="no_active_matter")
+        return _intake_call(lambda:_daily_matter_brief_store().build(payload,_review_records(root)))
+
+    @app.get("/api/daily-matter-briefs/{brief_id}")
+    def daily_matter_brief_get(brief_id:str)->dict[str,Any]:return _intake_call(lambda:_daily_matter_brief_store().get(brief_id))
+
+    def _venue_location_store(case_root: Path) -> VenueLocationNavigatorStore:
+        return VenueLocationNavigatorStore(case_root)
+
+    @app.post("/api/venue-location-workspaces")
+    def venue_location_workspace_create(payload: VenueLocationWorkspaceRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            authority = dict(drafting_outline_authority_candidate(payload.authority_source_id).get("candidate") or {})
+            workspace = _venue_location_store(case_root).create(payload.model_dump(), authority=authority)
+            return {"status":"pass","workspace":workspace,"review_required":True,"filing_ready":False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/venue-location-workspaces/{workspace_id}")
+    def venue_location_workspace_get(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _venue_location_store(case_root).workspaces(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/venue-location-workspaces/{workspace_id}/authority/source")
+    def venue_location_workspace_source(workspace_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _venue_location_store(case_root).source(workspace_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _post_filing_store(case_root: Path) -> PostFilingReconciliationStore:
+        return PostFilingReconciliationStore(case_root)
+
+    @app.post("/api/post-filing-reconciliations")
+    def post_filing_reconciliation_create(payload: PostFilingReconciliationRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            result = _post_filing_store(case_root).create(payload.model_dump(), records=_review_records(case_root))
+            return {"status":"pass","reconciliation":result,"review_required":True,"filing_ready":False}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/post-filing-reconciliations/{reconciliation_id}")
+    def post_filing_reconciliation_get(reconciliation_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _post_filing_store(case_root).get(reconciliation_id)
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    @app.get("/api/post-filing-reconciliations/{reconciliation_id}/sources/{record_id}")
+    def post_filing_reconciliation_source(reconciliation_id: str, record_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            payload = _post_filing_store(case_root).source(reconciliation_id, record_id)
+            source = dict(payload.get("source") or {})
+            row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == str(source.get("record_id") or "")), None)
+            if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != str(source.get("source_hash") or "").casefold():
+                raise IntakeWorkbenchError("post_filing_source_not_in_active_matter", 404)
+            source["source_token"] = _record_open_token(case_root, str(source.get("record_id") or ""), str(row.get("source_locator") or row.get("title") or ""))
+            return {**payload, "source": source, "review_required": True}
+        except IntakeWorkbenchError as exc:
+            _raise_outline_error(exc)
+
+    def _raise_sentence_support_error(exc: IntakeWorkbenchError) -> None:
+        raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+
+    def _sentence_support_store(case_root: Path) -> SentenceSupportMapStore:
+        return SentenceSupportMapStore(case_root)
+
+    def _mark_sentence_map_revision(payload: dict[str, Any], document: dict[str, Any]) -> dict[str, Any]:
+        current_revision_id = str(document.get("current_revision_id") or "")
+        def mark(row: dict[str, Any]) -> dict[str, Any]:
+            value = dict(row)
+            value["current_document_revision_id"] = current_revision_id
+            value["current_revision_match"] = bool(current_revision_id) and str(value.get("revision_id") or "") == current_revision_id
+            value["stale_for_current_draft"] = not value["current_revision_match"]
+            value["review_required"] = True
+            return value
+        result = dict(payload)
+        if isinstance(result.get("map"), dict):
+            result["map"] = mark(dict(result["map"]))
+        if isinstance(result.get("maps"), list):
+            result["maps"] = [mark(dict(row)) for row in result["maps"] if isinstance(row, dict)]
+        return result
+
+    @app.post("/api/drafting/documents/{document_id}/sentence-support-maps")
+    def drafting_sentence_support_create(
+        document_id: str, payload: SentenceSupportMapRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            result = _sentence_support_store(case_root).create_map(
+                payload.model_dump(), document=document, records=_review_records(case_root)
+            )
+            return _mark_sentence_map_revision({"status": "pass", "map": result, "review_required": True, "filing_ready": False}, document)
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/sentence-support-maps")
+    def drafting_sentence_support_list(document_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            return _mark_sentence_map_revision(_sentence_support_store(case_root).maps(str(document.get("document_id") or document_id)), document)
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/sentence-support-maps/{map_id}")
+    def drafting_sentence_support_get(document_id: str, map_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            return _mark_sentence_map_revision(_sentence_support_store(case_root).maps(str(document.get("document_id") or document_id), map_id), document)
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/sentence-support-maps/{map_id}/sentences/{sentence_id}/{lane}/{card_index}/source")
+    def drafting_sentence_support_source(
+        document_id: str, map_id: str, sentence_id: str, lane: str, card_index: int
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            payload = _sentence_support_store(case_root).sentence_source(
+                str(document.get("document_id") or document_id), map_id, sentence_id, lane, card_index
+            )
+            source = dict(payload.get("source") or {})
+            if source.get("lane") == "private_matter_record":
+                record_id = str(source.get("record_id") or "")
+                source_hash = str(source.get("source_hash") or "").casefold()
+                row = next((item for item in _review_records(case_root) if str(item.get("evidence_id") or "") == record_id), None)
+                if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
+                    raise IntakeWorkbenchError("sentence_support_record_not_in_active_matter", 404)
+                locator = str(row.get("source_locator") or row.get("title") or record_id)
+                source["source_token"] = _record_open_token(case_root, record_id, locator)
+            else:
+                source["source_token"] = ""
+            return {**payload, "source": source, "review_required": True}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    def _citation_insertion_store(case_root: Path) -> CitationInsertionStore:
+        return CitationInsertionStore(case_root)
+
+    @app.post("/api/drafting/documents/{document_id}/citation-insertions")
+    def drafting_citation_insertion_create(
+        document_id: str, payload: CitationInsertionRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            receipt = _citation_insertion_store(case_root).create(payload.model_dump(), document=document)
+            return {"status": "pass", "receipt": receipt, "review_required": True, "filing_ready": False}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/citation-insertions/{receipt_id}")
+    def drafting_citation_insertion_get(document_id: str, receipt_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            receipt = _citation_insertion_store(case_root).receipt(str(document.get("document_id") or document_id), receipt_id)
+            receipt["current_revision_match"] = str(receipt.get("revision_id") or "") == str(document.get("current_revision_id") or "")
+            receipt["stale_for_current_draft"] = not receipt["current_revision_match"]
+            return {"receipt": receipt, "review_required": True}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.post("/api/drafting/documents/{document_id}/citation-insertions/{receipt_id}/propose")
+    def drafting_citation_insertion_propose(document_id: str, receipt_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            receipt = _citation_insertion_store(case_root).receipt(str(document.get("document_id") or document_id), receipt_id)
+            if str(receipt.get("revision_id") or "") != str(document.get("current_revision_id") or ""):
+                raise IntakeWorkbenchError("citation_insertion_stale_for_current_draft", 409)
+            proposal = propose_workspace_revision(
+                case_root,
+                str(document.get("document_id") or document_id),
+                content=str(receipt.get("proposed_content") or ""),
+                base_revision_id=str(document.get("current_revision_id") or ""),
+                note=f"Source-bound citation insertion receipt {receipt_id}; explicit revision review remains required.",
+            )
+            return {"status": "proposal_ready", "receipt_id": receipt_id, "proposal": proposal, "review_required": True, "filing_ready": False, "original_preserved": True}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    def _quote_safe_store(case_root: Path) -> QuoteSafeDraftStore:
+        return QuoteSafeDraftStore(case_root)
+
+    @app.post("/api/drafting/documents/{document_id}/quote-receipts")
+    def drafting_quote_safe_create(document_id: str, payload: QuoteSafeDraftRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            return {"status": "pass", "receipt": _quote_safe_store(case_root).create(payload.model_dump(), document=document), "review_required": True, "filing_ready": False}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    @app.post("/api/drafting/documents/{document_id}/quote-receipts/{receipt_id}/propose")
+    def drafting_quote_safe_propose(document_id: str, receipt_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            document = get_workspace_document(case_root, document_id)
+            receipt = _quote_safe_store(case_root).receipt(str(document.get("document_id") or document_id), receipt_id)
+            if str(receipt.get("revision_id") or "") != str(document.get("current_revision_id") or ""):
+                raise IntakeWorkbenchError("quote_receipt_stale_for_current_draft", 409)
+            proposal = propose_workspace_revision(case_root, str(document.get("document_id") or document_id), content=str(receipt.get("proposed_content") or ""), base_revision_id=str(document.get("current_revision_id") or ""), note=f"Quote-safe drafting receipt {receipt_id}; explicit revision review remains required.")
+            return {"status": "proposal_ready", "receipt_id": receipt_id, "proposal": proposal, "original_preserved": True, "review_required": True, "filing_ready": False}
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:
+            _raise_sentence_support_error(exc)
+
+    def _requirement_profile_store(case_root: Path) -> DraftRequirementProfileStore:
+        return DraftRequirementProfileStore(case_root)
+
+    @app.post("/api/drafting/requirement-profiles")
+    def drafting_requirement_profile_create(payload: DraftRequirementProfileRequest) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return {"status":"pass","profile":_requirement_profile_store(case_root).create(payload.model_dump()),"review_required":True,"filing_ready":False}
+        except IntakeWorkbenchError as exc: _raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/requirement-profiles")
+    def drafting_requirement_profile_list() -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _requirement_profile_store(case_root).profiles()
+        except IntakeWorkbenchError as exc: _raise_sentence_support_error(exc)
+
+    @app.post("/api/drafting/documents/{document_id}/requirement-profiles/{profile_id}/evaluate")
+    def drafting_requirement_profile_evaluate(document_id: str, profile_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try: return _requirement_profile_store(case_root).evaluate(profile_id, get_workspace_document(case_root, document_id))
+        except DocumentWorkspaceError as exc: _raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc: _raise_sentence_support_error(exc)
+
+    @app.post("/api/drafting/documents/{document_id}/revision-rationales")
+    def drafting_revision_rationale_record(document_id: str, payload: RevisionRationaleRequest) -> dict[str, Any]:
+        case_root=active_case_root()
+        if case_root is None: raise HTTPException(status_code=404,detail="active_matter_unavailable")
+        try:return {"status":"pass","rationale":RevisionRationaleStore(case_root).record(payload.model_dump(),document=get_workspace_document(case_root,document_id)),"review_required":True,"filing_ready":False}
+        except DocumentWorkspaceError as exc:_raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:_raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/revision-rationales")
+    def drafting_revision_rationale_list(document_id: str) -> dict[str, Any]:
+        case_root=active_case_root()
+        if case_root is None: raise HTTPException(status_code=404,detail="active_matter_unavailable")
+        try:
+            document=get_workspace_document(case_root,document_id);return RevisionRationaleStore(case_root).list(str(document.get("document_id") or document_id))
+        except DocumentWorkspaceError as exc:_raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:_raise_sentence_support_error(exc)
+
+    @app.post("/api/drafting/documents/{document_id}/dual-views")
+    def drafting_dual_view_create(document_id: str,payload:DualViewRequest)->dict[str,Any]:
+        root=active_case_root()
+        if root is None:raise HTTPException(status_code=404,detail="active_matter_unavailable")
+        try:return {"status":"pass","view":DualViewStore(root).create(payload.model_dump(),get_workspace_document(root,document_id)),"review_required":True,"filing_ready":False}
+        except DocumentWorkspaceError as exc:_raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:_raise_sentence_support_error(exc)
+
+    @app.get("/api/drafting/documents/{document_id}/dual-views/{view_id}")
+    def drafting_dual_view_get(document_id:str,view_id:str)->dict[str,Any]:
+        root=active_case_root()
+        if root is None:raise HTTPException(status_code=404,detail="active_matter_unavailable")
+        try:
+            d=get_workspace_document(root,document_id);return {"view":DualViewStore(root).get(str(d.get('document_id') or document_id),view_id,str(d.get('current_revision_id') or '')),"review_required":True}
+        except DocumentWorkspaceError as exc:_raise_workspace_error(exc)
+        except IntakeWorkbenchError as exc:_raise_sentence_support_error(exc)
+
     @app.get("/inspect-source/{source_id}")
     def inspect_source(
         source_id: str,
@@ -10043,6 +14679,10 @@ if FastAPI is not None:
             ).hexdigest()
             with _ga_shipment_artifact_lock:
                 _ga_shipment_artifacts[token] = {
+                    **_artifact_capability_binding(
+                        resource_type="ga_shipment_artifact",
+                        resource_id=f"{result.get('generation_id')}:{filename}",
+                    ),
                     "generation_id": result.get("generation_id"),
                     "filename": filename,
                     "sha256": digest,
@@ -10134,7 +14774,11 @@ if FastAPI is not None:
             raise HTTPException(
                 status_code=404, detail="ga_shipment_artifact_not_available"
             ) from None
-        if not binding or binding.get("scope") != _ga_shipment_scope(store):
+        if (
+            not binding
+            or binding.get("scope") != _ga_shipment_scope(store)
+            or not _artifact_capability_allowed(binding, resource_type="ga_shipment_artifact")
+        ):
             raise HTTPException(status_code=404, detail="ga_shipment_artifact_not_available")
         try:
             path, media_type = store.resolve_artifact(

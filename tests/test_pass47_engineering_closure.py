@@ -23,6 +23,8 @@ def test_pass47_legal_red_team_engineering_evidence_passes() -> None:
 
 def test_pass47_closure_script_writes_non_attorney_non_pilot_evidence(tmp_path: Path) -> None:
     output = tmp_path / "pass47.json"
+    original = ROOT / "docs/sample-evidence/pass47_legal_red_team_report.json"
+    before = original.read_bytes() if original.exists() else None
     completed = subprocess.run(
         [
             sys.executable,
@@ -39,6 +41,9 @@ def test_pass47_closure_script_writes_non_attorney_non_pilot_evidence(tmp_path: 
     )
     assert completed.returncode == 0, completed.stderr
     payload = json.loads(output.read_text(encoding="utf-8"))
+    assert (original.read_bytes() if original.exists() else None) == before
+    assert payload["red_team_report_path"] == "pass47.red-team.json"
+    assert (tmp_path / payload["red_team_report_path"]).is_file()
 
     assert payload["status"] == "pass"
     assert payload["completed_passes"] == [47]
@@ -46,7 +51,11 @@ def test_pass47_closure_script_writes_non_attorney_non_pilot_evidence(tmp_path: 
     assert payload["legal_signoff"] is False
     assert payload["pilot_signoff"] is False
     assert payload["no_filing_ready_bypass"] is True
-    assert payload["case_count"] == payload["safe_case_count"] == 9
+    # The corpus grows as new deterministic attack classes are added. Its
+    # integrity is the one-to-one category/result relationship, not a frozen
+    # historical case count.
+    assert payload["case_count"] == payload["safe_case_count"] == len(payload["required_categories"])
+    assert payload["case_count"] >= 9
 
 
 def test_pass47_reduces_tracker_count_without_closing_external_release_or_pilot_gates() -> None:

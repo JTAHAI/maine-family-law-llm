@@ -26,6 +26,11 @@ from legal.evals.release_measurements import (
     ReleaseMetricMeasurementTemplateBuilder,
     required_external_metric_names,
 )
+from legal.evals.release_metric_eligibility import (
+    ReleaseMetricEligibilityGate,
+    ReleaseMetricEligibilityReport,
+    ReleaseMetricEligibilityStatus,
+)
 from legal.evals.conversation_eval import ConversationEvalCase, ConversationEvalReport, ConversationEvalRunner
 from legal.evals.conversation_quality_metrics import ConversationQualityRegressionReport, ConversationQualityRegressionRunner
 from legal.evals.external_eval_root import (
@@ -77,6 +82,9 @@ __all__ = [
     "ReleaseMetricMeasurementAuditReport",
     "ReleaseMetricMeasurementAuditor",
     "ReleaseMetricMeasurementTemplateBuilder",
+    "ReleaseMetricEligibilityGate",
+    "ReleaseMetricEligibilityReport",
+    "ReleaseMetricEligibilityStatus",
     "required_external_metric_names",
     "ReleaseMetricsEvidenceBuilder",
     "ReleaseMetricsEvidenceReport",

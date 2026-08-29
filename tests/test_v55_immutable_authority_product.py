@@ -156,6 +156,68 @@ def test_active_generation_is_independent_of_mutable_workspace(tmp_path: Path) -
     assert all("authority_product/builds/" in row["relative_path"] for row in manifest["artifacts"])
 
 
+def test_gap_review_and_drilldown_bind_to_verified_generation(tmp_path: Path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from app.api.main import app as canonical_app
+    from app.services import AuthorityLibraryService
+    from app.services.authority_product_service import AuthorityProductService
+    from maine_family_law_llm import api as desktop_api
+
+    data_root = _fixture_data_root(tmp_path)
+    published = AuthorityProductPublisher(data_root=data_root).publish(product_version="8.0.0")
+    assert published.status == "pass"
+    service = AuthorityProductService(data_root=data_root)
+    initial = service.authority_gap_review()
+    assert initial["record_count"] == 1
+    assert initial["sources"][0]["source_id"] == "statute-19a-1653"
+
+    library = AuthorityLibraryService(data_root=data_root)
+    admitted_inventory = library.list_sources()
+    assert admitted_inventory["status"] == "pass"
+    assert admitted_inventory["build_id"] == published.build_id
+    assert [row["source_id"] for row in admitted_inventory["sources"]] == ["maine-title-19a"]
+    assert library.get_source("statute-19a-1653")["source_text"] == "Best interest factors."
+    assert library.get_source_span("statute-19a-1653")["preview"] == "Best interest factor"
+
+    mutable = data_root / "parsed_authority_store" / "statutes" / "statute_sections.jsonl"
+    mutable.write_text('{"record_id":"UNADMITTED-CANARY","freshness_status":"fresh"}\n')
+    assert service.authority_gap_review() == initial
+    assert service.authority_gap_source("UNADMITTED-CANARY", build_id=published.build_id)["status"] == "not_found"
+    assert [row["source_id"] for row in library.list_sources()["sources"]] == ["maine-title-19a"]
+    assert library.get_source("UNADMITTED-CANARY")["status"] == "not_found"
+    assert library.get_source_span("UNADMITTED-CANARY")["status"] == "not_found"
+    assert service.authority_gap_source("statute-19a-1653", build_id="0" * 24)["status"] == "blocked"
+
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(data_root))
+    path = f"/api/authority/gaps/sources/statute-19a-1653?build_id={published.build_id}"
+    headers = {"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-gap-tenant"}
+    assert TestClient(canonical_app).get(path).status_code == 403
+    for host in (canonical_app, desktop_api.app):
+        result = TestClient(host).get(path, headers=headers)
+        assert result.status_code == 200
+        payload = result.json()
+        assert payload["source_text"] == "Best interest factors."
+        assert payload["source_span_preview"] == "Best interest factor"
+        assert payload["review_required"] is True
+        assert payload["build_id"] == published.build_id
+        assert str(data_root) not in result.text
+        if host is canonical_app:
+            assert payload["audit_event"]["action"] == "authority_gap_source_review"
+
+        inventory = TestClient(host).get("/api/authority/sources", headers=headers)
+        assert inventory.status_code == 200
+        assert [row["source_id"] for row in inventory.json()["sources"]] == ["maine-title-19a"]
+        assert TestClient(host).get("/api/authority/sources/UNADMITTED-CANARY", headers=headers).json()["status"] == "not_found"
+
+    manifest = json.loads(Path(published.build_manifest_path).read_text())
+    artifact = next(row for row in manifest["artifacts"] if "parsed_collection:" in row["role"])
+    (data_root / artifact["relative_path"]).write_text("{}\n")
+    with pytest.raises(ValueError, match="mismatch"):
+        service.authority_gap_review()
+    assert TestClient(desktop_api.app).get(path).json()["status"] == "blocked"
+
+
 def test_authority_generation_fails_closed_after_materialized_artifact_tamper(tmp_path: Path) -> None:
     data_root = _fixture_data_root(tmp_path)
     published = AuthorityProductPublisher(data_root=data_root).publish(product_version="5.5.0")
@@ -307,6 +369,16 @@ def test_authority_product_service_exposes_verified_status_citations_and_source(
     source = service.get_source("statute-19a-1653")
     assert source["source_text"] == "Best interest factors."
     assert "snapshot_path" not in source["source_card"]
+    inventory = service.list_sources()
+    assert [row["source_id"] for row in inventory["sources"]] == ["statute-19a-1653"]
+    assert service.get_source_span("statute-19a-1653", start_offset=0, end_offset=13)["source_span_preview"] == "Best interest"
+
+    # A staged canary must never appear through active-build source helpers.
+    (data_root / "parsed_authority_store" / "statutes" / "statute_sections.jsonl").write_text(
+        '{"record_id":"UNADMITTED-CANARY","text":"mutable only"}\n', encoding="utf-8"
+    )
+    assert [row["source_id"] for row in service.list_sources()["sources"]] == ["statute-19a-1653"]
+    assert service.get_source_span("UNADMITTED-CANARY", start_offset=0, end_offset=10)["status"] == "not_found"
 
 
 def test_failed_materialization_does_not_replace_active_pointer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

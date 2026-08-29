@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from html.parser import HTMLParser
 import importlib.util
 import json
 import mimetypes
@@ -21,6 +22,8 @@ from typing import Any
 from .baseline import extract_baseline_blocks
 from .contracts import AdapterStatus
 from .privacy import deterministic_privacy_review, merge_privacy_findings
+from legal.security.secure_temp import SecureTempBroker
+from legal.security.parser_sandbox import ParserSandbox, ParserSandboxError
 from pypdf import PdfReader
 from maine_family_law_llm.local_corpus_index import local_ocr_engine_status
 
@@ -257,7 +260,7 @@ def _offline_env() -> dict[str, str]:
     return env
 
 
-def _run_worker(adapter: str, path: Path, *, timeout: int) -> dict[str, Any]:
+def _run_worker(adapter: str, path: Path, *, timeout: int, worker_env: dict[str, str] | None = None) -> dict[str, Any]:
     started = time.monotonic()
     worker_output_path: Path | None = None
     if getattr(sys, "frozen", False):
@@ -278,18 +281,15 @@ def _run_worker(adapter: str, path: Path, *, timeout: int) -> dict[str, Any]:
     else:
         command = [sys.executable, "-m", "legal.document_intelligence.worker", adapter, str(path)]
     try:
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
-            env=_offline_env(),
-        )
+        completed = ParserSandbox(timeout).run(command, env={**_offline_env(), **(worker_env or {})})
     except subprocess.TimeoutExpired:
         if worker_output_path is not None:
             worker_output_path.unlink(missing_ok=True)
         return {"status": "timeout", "adapter": adapter, "duration_ms": round((time.monotonic() - started) * 1000), "review_required": True}
+    except ParserSandboxError:
+        if worker_output_path is not None:
+            worker_output_path.unlink(missing_ok=True)
+        return {"status": "blocked", "adapter": adapter, "blockers": ["parser_sandbox_blocked"], "review_required": True}
     if worker_output_path is not None:
         try:
             stdout = worker_output_path.read_text(encoding="utf-8")[:32 * 1024 * 1024]
@@ -363,6 +363,88 @@ def _source_text(data: bytes, suffix: str, baseline: dict[str, Any]) -> str:
         except UnicodeDecodeError:
             return data.decode("latin-1", errors="replace")[:MAX_TEXT_CHARS]
     return "\n".join(str(row.get("text") or "") for row in baseline.get("blocks") or [])[:MAX_TEXT_CHARS]
+
+
+class _SafeHtmlTextExtractor(HTMLParser):
+    """Extract inert display text while deliberately ignoring executable markup."""
+
+    _IGNORED = {"script", "style", "iframe", "object", "embed", "template", "noscript"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._ignored_depth = 0
+        self.parts: list[str] = []
+        self.removed_elements: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        normalized = str(tag or "").lower()
+        if normalized in self._IGNORED:
+            self._ignored_depth += 1
+            self.removed_elements.add(normalized)
+        elif normalized in {"p", "br", "div", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6"}:
+            self.parts.append("\n")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if str(tag or "").lower() in self._IGNORED:
+            self.removed_elements.add(str(tag).lower())
+
+    def handle_endtag(self, tag: str) -> None:
+        normalized = str(tag or "").lower()
+        if normalized in self._IGNORED and self._ignored_depth:
+            self._ignored_depth -= 1
+        elif normalized in {"p", "div", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6"}:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._ignored_depth:
+            self.parts.append(data)
+
+
+def _inert_review_text(source_text: str, suffix: str) -> tuple[str, list[str], dict[str, Any]]:
+    """Create an inert plain-text review representation, never an executable preview.
+
+    The result intentionally trades fidelity for safety: it is not a replacement
+    for the original, does not remove private information, and leaves all meaning
+    and authenticity questions to a reviewer.
+    """
+    warnings = [
+        "safe_review_copy_not_a_fidelity_preserving_original",
+        "untrusted_document_text_may_contain_instructions_or_inaccuracies",
+        "private_content_inherits_active_matter_protection",
+    ]
+    metadata: dict[str, Any] = {
+        "source_format": suffix.lstrip(".") or "unknown",
+        "output_format": "plain_text_utf8",
+        "active_content_executed": False,
+        "external_resources_loaded": False,
+    }
+    text = str(source_text or "")
+    if suffix in {".html", ".htm"}:
+        parser = _SafeHtmlTextExtractor()
+        try:
+            parser.feed(text)
+            parser.close()
+            text = "".join(parser.parts)
+        except Exception:
+            # A malformed page is still rendered as inert escaped-text content,
+            # never loaded by a browser or interpreted as HTML.
+            warnings.append("html_parse_incomplete_review_the_original")
+        if parser.removed_elements:
+            warnings.append("active_or_nonreview_markup_removed")
+        metadata["removed_markup_elements"] = sorted(parser.removed_elements)
+    # Remove control sequences that can alter terminal/viewer behavior. Preserve
+    # normal whitespace so a reviewer can still compare line-oriented text.
+    text = "".join(character if character in "\n\r\t" or ord(character) >= 32 else "�" for character in text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")[:MAX_TEXT_CHARS]
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    header = (
+        "SAFE REVIEW COPY — INERT PLAIN TEXT\n"
+        "This local derivative is for review only. It is not the original record, "
+        "does not establish authenticity or completeness, and may contain untrusted instructions.\n"
+        "No active content or external resource was executed or loaded.\n\n"
+        "--- extracted review text ---\n"
+    )
+    return f"{header}{text}\n", warnings, metadata
 
 
 def _normalize_for_compare(value: str) -> str:
@@ -567,8 +649,8 @@ def analyze_document(
     presidio_result: dict[str, Any] = {"status": "not_requested", "adapter": "presidio"}
     if run_presidio and source_text:
         if available.get("presidio"):
-            with tempfile.TemporaryDirectory(prefix="mfl-presidio-") as temporary:
-                text_path = Path(temporary) / "document.txt"
+            with SecureTempBroker(case_root).workspace("presidio") as temporary:
+                text_path = temporary / "document.txt"
                 text_path.write_text(source_text, encoding="utf-8")
                 presidio_result = _run_worker("presidio", text_path, timeout=180)
         else:
@@ -751,8 +833,7 @@ def create_ocr_preservation_copy(
         }
 
     root = _artifact_root(case_root, actual_hash)
-    with tempfile.TemporaryDirectory(prefix="mfl-ocrmypdf-") as temporary:
-        temporary_root = Path(temporary)
+    with SecureTempBroker(case_root).workspace("ocrmypdf") as temporary_root:
         temp_output = temporary_root / "output.pdf"
         temp_sidecar = temporary_root / "output.txt"
         started = time.monotonic()
@@ -772,13 +853,16 @@ def create_ocr_preservation_copy(
                     rotate_pages=True,
                     rasterizer="pypdfium",
                     jobs=1,
+                    # Keep plugin registration in this frozen process; the API
+                    # handler already runs off the ASGI event loop.
+                    use_threads=True,
                     progress_bar=False,
                 )
         except Exception as exc:
             return {
                 "status": "blocked",
                 "blockers": ["ocrmypdf_failed"],
-                "error_summary": f"{exc.__class__.__name__}: {exc}"[:1000],
+                "error_summary": f"ocr_preservation_failed:{exc.__class__.__name__}",
                 "source_sha256": actual_hash,
                 "original_modified": False,
                 "review_required": True,
@@ -897,7 +981,7 @@ def create_redacted_copy(
     if run_presidio and source_text:
         status = document_intelligence_status()
         if any(item["adapter_id"] == "presidio" and item.get("available") for item in status.get("adapters", [])):
-            with tempfile.TemporaryDirectory(prefix="mfl-presidio-") as temporary:
+            with SecureTempBroker(case_root).workspace("presidio-redaction") as temporary:
                 text_path = Path(temporary) / "document.txt"
                 text_path.write_text(source_text, encoding="utf-8")
                 presidio_result = _run_worker("presidio", text_path, timeout=180)
@@ -907,8 +991,11 @@ def create_redacted_copy(
     output_root = _artifact_root(case_root, actual_hash)
     redacted_path = output_root / f"redacted-copy-{output_hash[:24]}.txt"
     receipt_path = output_root / f"redaction-receipt-{output_hash[:24]}.json"
-    if redacted_path.exists() and _sha256_file(redacted_path) != output_hash:
-        raise DocumentIntelligenceError("redacted_copy_collision", "A redacted copy already exists with different content.", status_code=409)
+    if redacted_path.exists():
+        if redacted_path.is_symlink() or not redacted_path.is_file():
+            raise DocumentIntelligenceError("redacted_copy_unsafe", "The redacted-copy path is unsafe.", status_code=409)
+        if _sha256_file(redacted_path) != output_hash:
+            raise DocumentIntelligenceError("redacted_copy_collision", "A redacted copy already exists with different content.", status_code=409)
     if not redacted_path.exists():
         _atomic_text(redacted_path, redacted_text)
     receipt = _build_receipt_payload(
@@ -944,6 +1031,8 @@ def create_redacted_copy(
             "privacy_review": privacy,
         },
     )
+    if receipt_path.exists() and (receipt_path.is_symlink() or not receipt_path.is_file()):
+        raise DocumentIntelligenceError("redaction_receipt_unsafe", "The redaction receipt path is unsafe.", status_code=409)
     if not receipt_path.exists():
         _atomic_json(receipt_path, receipt)
     return {
@@ -962,6 +1051,111 @@ def create_redacted_copy(
                 "sha256": _sha256_file(receipt_path),
                 "size_bytes": receipt_path.stat().st_size,
                 "artifact_type": "redaction_receipt",
+                "receipt_relative_path": receipt_path.relative_to(case_root.resolve(strict=True)).as_posix(),
+                "receipt_sha256": _sha256_file(receipt_path),
+            },
+        },
+    }
+
+
+def create_content_disarm_copy(
+    *,
+    case_root: Path,
+    source_path: Path,
+    source_hash: str | None = None,
+    approved: bool,
+    reviewer: str = "local_operator",
+) -> dict[str, Any]:
+    """Create a separate inert plaintext review copy for an untrusted record.
+
+    This is deliberately not a converter or a sanitization claim: original bytes
+    stay untouched, the output retains active-matter privacy scope, and the
+    receipt makes the loss-of-fidelity boundary visible to the UI and exports.
+    """
+    if approved is not True:
+        raise DocumentIntelligenceError(
+            "content_disarm_consent_required",
+            "Explicit approval is required before creating a safe review copy.",
+            status_code=409,
+        )
+    source = _safe_input(source_path, case_root=case_root)
+    data = source.read_bytes()
+    actual_hash = _sha256_bytes(data)
+    if source_hash and source_hash.lower() != actual_hash:
+        raise DocumentIntelligenceError(
+            "document_source_hash_mismatch",
+            "The source hash changed before creating a safe review copy.",
+            status_code=409,
+        )
+    suffix = source.suffix.lower()
+    if suffix not in ALLOWED_ANALYSIS_SUFFIXES:
+        raise DocumentIntelligenceError(
+            "document_type_not_supported",
+            "This file type cannot be converted to a safe review copy.",
+            status_code=415,
+        )
+    baseline = extract_baseline_blocks(data, suffix, actual_hash)
+    source_text = _source_text(data, suffix, baseline)
+    review_text, warnings, disarm_metadata = _inert_review_text(source_text, suffix)
+    output_hash = _sha256_bytes(review_text.encode("utf-8"))
+    output_root = _artifact_root(case_root, actual_hash)
+    review_path = output_root / f"safe-review-copy-{output_hash[:24]}.txt"
+    receipt_path = output_root / f"content-disarm-receipt-{output_hash[:24]}.json"
+    if review_path.exists():
+        if review_path.is_symlink() or not review_path.is_file():
+            raise DocumentIntelligenceError("content_disarm_copy_unsafe", "The safe review-copy path is unsafe.", status_code=409)
+        if _sha256_file(review_path) != output_hash:
+            raise DocumentIntelligenceError("content_disarm_copy_collision", "A safe review copy already exists with different content.", status_code=409)
+    else:
+        _atomic_text(review_path, review_text)
+    receipt = _build_receipt_payload(
+        schema_version="content_disarm_receipt_v1",
+        artifact_type="content_disarm_safe_review_copy",
+        source_sha256=actual_hash,
+        output_sha256=output_hash,
+        component_id="inert_plaintext_derivative",
+        component_version="built_in_v1",
+        component_license="project_license",
+        configuration={"reviewer": str(reviewer or "local_operator")[:160], "source_suffix": suffix},
+        warnings=warnings,
+        page_block_mapping=[
+            {
+                "block_id": row.get("block_id"),
+                "page_number": int(row.get("page_number") or 0),
+                "kind": row.get("kind"),
+                "char_start": int(row.get("char_start") or 0),
+                "char_end": int(row.get("char_end") or 0),
+            }
+            for row in list(baseline.get("blocks") or [])[:20_000]
+        ],
+        extra={
+            "reviewer": str(reviewer or "local_operator")[:160],
+            "original_modified": False,
+            "derivative_scope": "private_active_matter_only",
+            "disarm": disarm_metadata,
+            "source_text_available": bool(source_text),
+        },
+    )
+    if receipt_path.exists() and (receipt_path.is_symlink() or not receipt_path.is_file()):
+        raise DocumentIntelligenceError("content_disarm_receipt_unsafe", "The safe review-copy receipt path is unsafe.", status_code=409)
+    if not receipt_path.exists():
+        _atomic_json(receipt_path, receipt)
+    return {
+        **receipt,
+        "artifacts": {
+            "safe_review_copy": {
+                "relative_path": review_path.relative_to(case_root.resolve(strict=True)).as_posix(),
+                "sha256": output_hash,
+                "size_bytes": review_path.stat().st_size,
+                "artifact_type": "content_disarm_safe_review_copy",
+                "receipt_relative_path": receipt_path.relative_to(case_root.resolve(strict=True)).as_posix(),
+                "receipt_sha256": _sha256_file(receipt_path),
+            },
+            "receipt": {
+                "relative_path": receipt_path.relative_to(case_root.resolve(strict=True)).as_posix(),
+                "sha256": _sha256_file(receipt_path),
+                "size_bytes": receipt_path.stat().st_size,
+                "artifact_type": "content_disarm_receipt",
                 "receipt_relative_path": receipt_path.relative_to(case_root.resolve(strict=True)).as_posix(),
                 "receipt_sha256": _sha256_file(receipt_path),
             },

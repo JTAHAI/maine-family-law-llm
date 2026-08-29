@@ -190,6 +190,7 @@ class MatterCommandCenterStore:
         self.snapshots = self.root / "snapshots"
         self.packets = self.root / "packets"
         self.history = self.root / "packet_review_history.jsonl"
+        self.health_history_path = self.root / "health_history.jsonl"
         self.active_snapshot_pointer = self.root / "ACTIVE_SNAPSHOT.json"
         self.active_packet_pointer = self.root / "ACTIVE_PACKET.json"
         for folder in (self.root, self.snapshots, self.packets):
@@ -563,6 +564,209 @@ class MatterCommandCenterStore:
             )
         return {"schema_version": "matter_command_center_packet_list_v1", "packets": rows, "count": len(rows), "review_required": True}
 
+    def _health_state(
+        self,
+        matter_id: str,
+        records: Sequence[dict[str, Any]],
+        *,
+        snapshot: dict[str, Any] | None,
+        stale: bool,
+        stale_reasons: Sequence[str],
+        packet_list: Sequence[dict[str, Any]],
+        latest_packet_id: str,
+    ) -> dict[str, Any]:
+        included, _excluded, inventory_warnings = self._record_rows(records, variant="metadata_only")
+        blockers: list[dict[str, Any]] = []
+
+        def add(
+            blocker_id: str,
+            *,
+            severity: str,
+            title: str,
+            detail: str,
+            action_id: str,
+            action_label: str,
+            record_ids: Sequence[str] = (),
+        ) -> None:
+            blockers.append(
+                {
+                    "blocker_id": blocker_id,
+                    "severity": severity,
+                    "title": title,
+                    "detail": detail,
+                    "record_ids": sorted({str(item) for item in record_ids if str(item)})[:100],
+                    "corrective_action": {
+                        "action_id": action_id,
+                        "label": action_label,
+                        "scope": "active_matter_only",
+                        "review_required": True,
+                    },
+                    "review_required": True,
+                }
+            )
+
+        if not snapshot:
+            add(
+                "no_frozen_snapshot",
+                severity="attention",
+                title="No review snapshot has been frozen",
+                detail="Freeze an explicit active-matter record scope before relying on a packet comparison.",
+                action_id="freeze_review_snapshot",
+                action_label="Freeze a new review snapshot",
+            )
+        if stale:
+            for reason in sorted(set(stale_reasons)):
+                add(
+                    reason,
+                    severity="attention",
+                    title="Frozen snapshot no longer matches the active matter",
+                    detail="Review the changed scope and freeze a new snapshot before using the old packet as current.",
+                    action_id="review_scope_and_refreeze",
+                    action_label="Review scope and freeze a replacement snapshot",
+                )
+        if not packet_list:
+            add(
+                "no_evidence_packet",
+                severity="attention",
+                title="No evidence packet has been built",
+                detail="A packet is not available for handoff or comparison until a reviewed snapshot is selected and built.",
+                action_id="build_review_required_packet",
+                action_label="Build a review-required evidence packet",
+            )
+        missing_hashes = [row["evidence_id"] for row in included if not row.get("source_hash")]
+        if missing_hashes:
+            add(
+                "source_hash_missing",
+                severity="attention",
+                title="Some active-matter records lack a source hash",
+                detail="Inspect these records before treating them as provenance-bound evidence.",
+                action_id="inspect_record_provenance",
+                action_label="Inspect record provenance",
+                record_ids=missing_hashes,
+            )
+        privacy_review = [
+            row["evidence_id"]
+            for row in included
+            if str(row.get("privacy_status") or "").strip()
+            and str(row.get("privacy_status") or "").strip().lower() not in {"pass", "cleared", "reviewed"}
+        ]
+        if privacy_review:
+            add(
+                "privacy_review_required",
+                severity="attention",
+                title="Some records retain a privacy-review status",
+                detail="Review privacy findings before selecting these records for a shareable or full-content work product.",
+                action_id="review_record_privacy",
+                action_label="Review record privacy status",
+                record_ids=privacy_review,
+            )
+        parser_review = [
+            row["evidence_id"]
+            for row in included
+            if any(
+                str(row.get(field) or "").strip().lower() not in {"", "pass", "complete", "not_required"}
+                for field in ("parser_status", "ocr_status")
+            )
+        ]
+        if parser_review:
+            add(
+                "parser_or_ocr_review_required",
+                severity="attention",
+                title="Some records have parser or OCR review signals",
+                detail="Inspect the original record and the local extraction before relying on derived text.",
+                action_id="inspect_parser_or_ocr_result",
+                action_label="Inspect parser or OCR result",
+                record_ids=parser_review,
+            )
+        if latest_packet_id:
+            packet_reviews = self.review_history(latest_packet_id).get("history") or []
+            if not packet_reviews:
+                add(
+                    "latest_packet_review_not_recorded",
+                    severity="attention",
+                    title="The latest evidence packet has no recorded reviewer decision",
+                    detail="A generated packet remains review-required until a reviewer records an outcome.",
+                    action_id="record_packet_reviewer_decision",
+                    action_label="Record a packet reviewer decision",
+                )
+        warning_ids = [str(item).split(":", 1)[-1] for item in inventory_warnings if ":" in str(item)]
+        return {
+            "schema_version": "matter_command_center_health_v1",
+            "matter_id": _safe_id(matter_id),
+            "record_count": len(included),
+            "packet_count": len(packet_list),
+            "latest_packet_id": latest_packet_id,
+            "snapshot_id": str(snapshot.get("snapshot_id") or "") if snapshot else "",
+            "stale_snapshot_detected": bool(stale),
+            "blockers": blockers,
+            "blocker_count": len(blockers),
+            "inventory_warning_record_ids": sorted(set(warning_ids))[:100],
+            "review_required": True,
+            "health_status": "attention_required" if blockers else "review_required_no_known_blocker",
+        }
+
+    def _load_health_history(self, matter_id: str) -> list[dict[str, Any]]:
+        if not self.health_history_path.exists():
+            return []
+        if self.health_history_path.is_symlink():
+            raise MatterCommandCenterError("command_center_health_history_symlink_refused", "The command-center health history was refused.", status_code=409)
+        rows: list[dict[str, Any]] = []
+        previous_entry_sha256 = "0" * 64
+        for line in self.health_history_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise MatterCommandCenterError("command_center_health_history_invalid", "The command-center health history is invalid.", status_code=409) from exc
+            if not isinstance(row, dict):
+                raise MatterCommandCenterError("command_center_health_history_invalid", "The command-center health history is invalid.", status_code=409)
+            entry_sha256 = str(row.get("entry_sha256") or "")
+            expected_entry_sha256 = _sha({key: value for key, value in row.items() if key != "entry_sha256"})
+            if (
+                not entry_sha256
+                or entry_sha256 != expected_entry_sha256
+                or str(row.get("previous_entry_sha256") or "") != previous_entry_sha256
+            ):
+                raise MatterCommandCenterError("command_center_health_history_tampered", "The command-center health history failed verification.", status_code=409)
+            previous_entry_sha256 = entry_sha256
+            if str(row.get("matter_id") or "") == _safe_id(matter_id):
+                rows.append(row)
+        return rows
+
+    def _record_health_state(self, health: dict[str, Any]) -> list[dict[str, Any]]:
+        matter_id = str(health.get("matter_id") or "")
+        previous = self._load_health_history(matter_id)
+        fingerprint_payload = {key: value for key, value in health.items() if key not in {"observed_at", "health_id", "state_sha256", "entry_sha256"}}
+        fingerprint = _sha(fingerprint_payload)
+        if previous and str(previous[-1].get("state_sha256") or "") == fingerprint:
+            return previous
+        entry = {
+            **fingerprint_payload,
+            "health_id": fingerprint[:24],
+            "observed_at": _utc_now(),
+            "state_sha256": fingerprint,
+            "previous_entry_sha256": str(previous[-1].get("entry_sha256") or "0" * 64) if previous else "0" * 64,
+        }
+        entry["entry_sha256"] = _sha(entry)
+        if self.health_history_path.exists() and self.health_history_path.is_symlink():
+            raise MatterCommandCenterError("command_center_health_history_symlink_refused", "The command-center health history was refused.", status_code=409)
+        with self.health_history_path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(entry, sort_keys=True, ensure_ascii=False))
+            handle.write("\n")
+        os.chmod(self.health_history_path, 0o600)
+        return [*previous, entry]
+
+    def health_history(self, matter_id: str) -> dict[str, Any]:
+        rows = self._load_health_history(matter_id)
+        return {
+            "schema_version": "matter_command_center_health_history_v1",
+            "matter_id": _safe_id(matter_id),
+            "history": rows[-100:],
+            "count": len(rows),
+            "review_required": True,
+        }
+
     def command_center(self, matter_id: str, records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         latest_snapshot_id = self._latest_snapshot_id()
         snapshot = self._snapshot_payload(latest_snapshot_id) if latest_snapshot_id else None
@@ -576,6 +780,17 @@ class MatterCommandCenterStore:
         stale_reasons: list[str] = []
         if snapshot:
             stale, stale_reasons = self._stale_status(snapshot, records)
+        packet_list = self.list_packets(matter_id).get("packets", [])
+        health = self._health_state(
+            matter_id,
+            records,
+            snapshot=snapshot,
+            stale=stale,
+            stale_reasons=stale_reasons,
+            packet_list=packet_list,
+            latest_packet_id=latest_packet_id,
+        )
+        health_history = self._record_health_state(health)
         return {
             "schema_version": SCHEMA_VERSION,
             "matter_id": _safe_id(matter_id),
@@ -584,7 +799,9 @@ class MatterCommandCenterStore:
             "snapshot": snapshot,
             "stale_snapshot_detected": stale,
             "stale_reasons": stale_reasons,
-            "packet_list": self.list_packets(matter_id).get("packets", []),
+            "packet_list": packet_list,
+            "health": health,
+            "health_history": health_history[-100:],
             "review_required": True,
         }
 

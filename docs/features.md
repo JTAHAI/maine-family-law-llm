@@ -209,7 +209,9 @@ permalink: /features/
 
   <h2>Availability and qualification</h2>
 
-  <p>The current GitHub source is v8.0.0 and exposes 70 accepted workflows: 16 verified core workflows, 24 specialized workbenches, 10 Matter Productivity Studio capabilities, and 20 verified Add-on Studio verticals. The published Microsoft Store package remains v7 until a separately qualified v8 package is uploaded and Microsoft distributes it.</p>
+  <p>The current GitHub source is v8.0.0 and exposes 70 accepted workflows: 16 verified core workflows, 24 specialized workbenches, 10 Matter Productivity Studio capabilities, and 20 verified Add-on Studio verticals. The full-tier v8.0.0.0 candidate passed frozen-runtime smoke and package-boundary audits. Microsoft upload, signing, and distribution remain separate steps.</p>
+
+  <p>Fast Interchange support is an optional local-model-pack boundary, not a bundled legal-model claim. The current candidate includes no legal weights or adapters. Future packs must be explicitly installed, hash-verified, rights-cleared, admitted, and review-required before they can be activated.</p>
 
   <div class="cta-band">
     <div>

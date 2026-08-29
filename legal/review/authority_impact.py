@@ -24,17 +24,22 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from legal.data_boundaries.storage_layout import is_inside_project_repo
-from legal.documents.workspace import get_document, workspace_paths
+from legal.documents.workspace import get_document, list_documents, workspace_paths
+from legal.matter.calendar_review import CalendarReviewStore
 from legal.production.authority_product import AuthorityProductVerifier
 from legal.review.review_ledger import list_review_history
+from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
+from legal.security.local_encryption import LocalEnvelopeEncryptor
 
-SCHEMA_VERSION = "authority_change_impact_v1"
-ALGORITHM_VERSION = "5.15.0-authority-impact-v1"
+SCHEMA_VERSION = "authority_change_impact_v2"
+ALGORITHM_VERSION = "8.0.0-authority-impact-v2"
 ROOT_FOLDER = "21_AUTHORITY_CHANGE_IMPACT"
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_GENERATIONS = 200
 MAX_SOURCE_ROWS = 250_000
 MAX_REFERENCES = 5_000
+MAX_MATTER_DOCUMENTS = 1_000
+MAX_AUDIT_EVENTS = 2_000
 _ID_RE = re.compile(r"^[a-f0-9]{32}$")
 _BUILD_RE = re.compile(r"^[a-f0-9]{24}$")
 _SHA_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -170,7 +175,116 @@ class AuthorityChangeImpactStore:
         self.root = self.case_root / ROOT_FOLDER
         self.builds = self.root / "builds"
         self.active_pointer = self.root / "ACTIVE_BUILD.json"
+        self.audit_path = self.root / "access_audit.json.enc"
+        self.audit_lock = self.root / ".access_audit.lock"
+        self.encryptor = LocalEnvelopeEncryptor(
+            os.environ.get("MAINE_MATTER_STORE_KEY")
+            or LocalEnvelopeEncryptor.development_default
+        )
         self.builds.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    def _audit_scope(self) -> str:
+        return _sha(str(self.case_root))[:24]
+
+    def _load_audit(self) -> dict[str, Any]:
+        if not self.audit_path.exists():
+            return {
+                "schema_version": "authority_change_impact_access_audit_v1",
+                "scope": self._audit_scope(),
+                "events": [],
+            }
+        if self.audit_path.is_symlink():
+            raise AuthorityImpactError(
+                "authority_impact_audit_symlink_refused",
+                "The authority-impact audit location is invalid.",
+                status_code=409,
+            )
+        try:
+            encrypted = json.loads(
+                read_bounded_regular_file(self.audit_path, max_bytes=MAX_FILE_BYTES).decode("utf-8")
+            )
+            value = self.encryptor.decrypt_json(encrypted)
+        except Exception as exc:
+            raise AuthorityImpactError(
+                "authority_impact_audit_unavailable",
+                "The authority-impact audit record is unavailable.",
+                status_code=409,
+            ) from exc
+        if (
+            not isinstance(value, dict)
+            or value.get("schema_version") != "authority_change_impact_access_audit_v1"
+            or value.get("scope") != self._audit_scope()
+            or not isinstance(value.get("events"), list)
+        ):
+            raise AuthorityImpactError(
+                "authority_impact_audit_scope_invalid",
+                "The authority-impact audit record is invalid.",
+                status_code=409,
+            )
+        return value
+
+    def record_access(
+        self,
+        *,
+        action: str,
+        actor_role: str,
+        tenant_id: str,
+        audit_event_id: str,
+        document_id: str = "",
+        build_id: str = "",
+    ) -> dict[str, Any]:
+        """Append an encrypted, no-prose receipt for a private impact action.
+
+        The response audit header is useful for correlation, but it is not a
+        durable matter audit.  Keep only identifiers and hashes here: never a
+        document title, document text, source text, or filesystem path.
+        """
+        safe_action = re.sub(r"[^a-z0-9_.-]", "-", str(action or "").casefold())[:96]
+        if not safe_action:
+            raise AuthorityImpactError("authority_impact_audit_action_invalid", "The audit action is invalid.")
+        safe_role = re.sub(r"[^a-z0-9_.-]", "-", str(actor_role or "").casefold())[:96] or "local_owner"
+        safe_tenant = re.sub(r"[^a-z0-9_.-]", "-", str(tenant_id or "").casefold())[:96] or "local"
+        safe_event = re.sub(r"[^a-zA-Z0-9_.-]", "", str(audit_event_id or ""))[:128] or secrets.token_hex(16)
+        safe_document_id = _validate_document_id(document_id) if document_id else ""
+        safe_build_id = _validate_build_id(build_id) if build_id else ""
+        with exclusive_file_lock(self.audit_lock):
+            ledger = self._load_audit()
+            if len(ledger["events"]) >= MAX_AUDIT_EVENTS:
+                # Never compact or overwrite an immutable matter audit merely
+                # to make room for another request.  The caller must export or
+                # archive through a reviewed maintenance path first.
+                raise AuthorityImpactError(
+                    "authority_impact_audit_capacity_reached",
+                    "The authority-impact audit reached its safe local capacity and needs reviewed maintenance.",
+                    status_code=409,
+                )
+            previous_hash = str((ledger["events"][-1] if ledger["events"] else {}).get("event_sha256") or "")
+            event = {
+                "event_id": f"authority-impact-access-{uuid.uuid4().hex}",
+                "at": _utc_now(),
+                "action": safe_action,
+                "actor_role": safe_role,
+                "tenant_id": safe_tenant,
+                "request_audit_event_id": safe_event,
+                "document_id": safe_document_id,
+                "build_id": safe_build_id,
+                "previous_event_sha256": previous_hash,
+                "review_required": True,
+            }
+            event["event_sha256"] = _sha(event)
+            ledger["events"].append(event)
+            atomic_write_bytes(
+                self.audit_path,
+                json.dumps(self.encryptor.encrypt_json(ledger), sort_keys=True).encode("utf-8"),
+                mode=0o600,
+            )
+        return {
+            "status": "pass",
+            "event_id": event["event_id"],
+            "event_sha256": event["event_sha256"],
+            "review_required": True,
+            "encrypted": True,
+        }
 
     def _manifest_path(self, build_id: str) -> Path:
         build_id = _validate_build_id(build_id)
@@ -379,6 +493,205 @@ class AuthorityChangeImpactStore:
             "notice": "This analysis detects source-generation changes and reference overlap. It does not determine legal materiality, negative treatment, or current-law effect.",
         }
         return impact
+
+    @staticmethod
+    def _changed_source_hashes(generation_diff: dict[str, Any]) -> dict[str, set[str]]:
+        """Return admitted before/after hashes keyed by changed source ID.
+
+        Calendar rules retain an admitted source hash rather than an authority
+        source ID.  Matching either generation hash is deliberately narrow: a
+        citation string alone is never treated as proof that a deadline is
+        affected by a source change.
+        """
+        result: dict[str, set[str]] = {}
+        for row in generation_diff.get("changes") or []:
+            if not isinstance(row, dict):
+                continue
+            source_id = str(row.get("source_id") or "").strip()
+            if not source_id:
+                continue
+            hashes: set[str] = set()
+            for side in (row.get("before"), row.get("after")):
+                if not isinstance(side, dict):
+                    continue
+                candidate = str(side.get("sha256") or "").casefold()
+                if _SHA_RE.fullmatch(candidate):
+                    hashes.add(candidate)
+            result[source_id] = hashes
+        return result
+
+    def analyze_matter(self, base_build_id: str, target_build_id: str) -> dict[str, Any]:
+        """Map one verified source-generation diff to available local work.
+
+        This is a coverage and revalidation queue.  It intentionally does not
+        infer legal materiality, whether a deadline changed, or that any saved
+        research exists.  Conversation research is not persisted as a raw
+        matter store in this product, so the result says so explicitly instead
+        of fabricating a coverage result.
+        """
+        generation_diff = self.compare(base_build_id, target_build_id)
+        changed_source_ids = set(generation_diff.get("changed_source_ids") or [])
+        changed_rows = {
+            str(row.get("source_id") or ""): row
+            for row in generation_diff.get("changes") or []
+            if isinstance(row, dict) and str(row.get("source_id") or "")
+        }
+        changed_form_sources = {
+            source_id
+            for source_id, row in changed_rows.items()
+            if "form" in str(((row.get("after") or row.get("before") or {}).get("source_class") or "")).casefold()
+        }
+
+        documents: list[dict[str, Any]] = []
+        packets: list[dict[str, Any]] = []
+        forms: list[dict[str, Any]] = []
+        for document in list_documents(self.case_root, include_deleted=False, limit=MAX_MATTER_DOCUMENTS):
+            document_id = str(document.get("document_id") or "")
+            if not _ID_RE.fullmatch(document_id):
+                continue
+            try:
+                full_document = get_document(self.case_root, document_id)
+                decision, review_packet = _latest_review_packet(self.case_root, document_id)
+                references = self._review_references(full_document, review_packet)
+            except (AuthorityImpactError, OSError, ValueError):
+                # A broken local work product is not silently ignored; surface
+                # a no-prose queue row for a human to inspect it.
+                documents.append(
+                    {
+                        "document_id": document_id,
+                        "document_type": str(document.get("document_type") or "other"),
+                        "status": "unavailable_for_impact_review",
+                        "review_required": True,
+                    }
+                )
+                continue
+            impacted_source_ids = sorted(changed_source_ids & set(references["source_ids"]))
+            form_source_change = bool(references["form_ids"] and changed_form_sources)
+            has_review_packet = decision is not None and review_packet is not None
+            status = (
+                "direct_source_overlap"
+                if impacted_source_ids
+                else "form_catalog_recheck_required"
+                if form_source_change
+                else "no_direct_source_overlap_detected"
+            )
+            row = {
+                "document_id": document_id,
+                "document_type": str(full_document.get("document_type") or "other"),
+                "current_revision_id": str(full_document.get("current_revision_id") or ""),
+                "source_ids": references["source_ids"],
+                "form_ids": references["form_ids"],
+                "impacted_source_ids": impacted_source_ids,
+                "form_source_change": form_source_change,
+                "prior_review_packet_present": has_review_packet,
+                "status": status,
+                "review_required": True,
+            }
+            documents.append(row)
+            if has_review_packet:
+                packets.append(
+                    {
+                        "document_id": document_id,
+                        "prior_review_decision_sha256": str((decision or {}).get("decision_sha256") or ""),
+                        "prior_review_packet_sha256": str((review_packet or {}).get("packet_sha256") or ""),
+                        "impacted_source_ids": impacted_source_ids,
+                        "status": "revalidation_required" if impacted_source_ids or form_source_change else "no_direct_source_overlap_detected",
+                        "review_required": True,
+                    }
+                )
+            if references["form_ids"]:
+                forms.append(
+                    {
+                        "document_id": document_id,
+                        "form_ids": references["form_ids"],
+                        "changed_form_source_ids": sorted(changed_form_sources),
+                        "status": "form_catalog_recheck_required" if form_source_change else "no_changed_form_source_detected",
+                        "review_required": True,
+                    }
+                )
+
+        deadline_rules: list[dict[str, Any]] = []
+        deadline_inventory_status = "available"
+        deadline_inventory_blocker = ""
+        changed_hashes = self._changed_source_hashes(generation_diff)
+        try:
+            calendar = CalendarReviewStore(self.case_root).inventory()
+            for rule in calendar.get("rules") or []:
+                if not isinstance(rule, dict):
+                    continue
+                source_hash = str((rule.get("source_ref") or {}).get("source_hash") or "").casefold()
+                matching_source_ids = sorted(
+                    source_id for source_id, hashes in changed_hashes.items() if source_hash and source_hash in hashes
+                )
+                deadline_rules.append(
+                    {
+                        "rule_id": str(rule.get("rule_id") or ""),
+                        "source_hash_present": bool(source_hash),
+                        "matching_changed_source_ids": matching_source_ids,
+                        "status": "source_hash_recheck_required" if matching_source_ids else "no_direct_source_hash_overlap_detected",
+                        "review_required": True,
+                    }
+                )
+        except Exception:
+            deadline_inventory_status = "unavailable"
+            deadline_inventory_blocker = "deadline_inventory_unavailable"
+
+        impacted_documents = [
+            row
+            for row in documents
+            if row.get("status") in {"direct_source_overlap", "form_catalog_recheck_required", "unavailable_for_impact_review"}
+        ]
+        affected_deadline_rules = [row for row in deadline_rules if row.get("matching_changed_source_ids")]
+        target_freshness = generation_diff.get("target_freshness_counts") or {}
+        blockers = ["full_human_revalidation_required"]
+        if impacted_documents:
+            blockers.append("authority_change_impacts_saved_documents")
+        if any(row.get("form_source_change") for row in documents):
+            blockers.append("court_form_sources_changed_recheck_required")
+        if affected_deadline_rules:
+            blockers.append("deadline_rule_source_hash_changed_recheck_required")
+        if deadline_inventory_blocker:
+            blockers.append(deadline_inventory_blocker)
+        if int(target_freshness.get("stale") or 0) > 0:
+            blockers.append("target_authority_generation_contains_stale_sources")
+        if int(target_freshness.get("unknown") or 0) > 0:
+            blockers.append("target_authority_generation_contains_unknown_freshness")
+        return {
+            "schema_version": "authority_change_matter_impact_v1",
+            "algorithm_version": ALGORITHM_VERSION,
+            "base_build_id": base_build_id,
+            "target_build_id": target_build_id,
+            "generation_diff": generation_diff,
+            "documents": documents,
+            "drafts": [row for row in documents if row.get("document_type") in {"draft", "memo", "letter", "motion", "affidavit", "parenting_plan"}],
+            "forms": forms,
+            "deadlines": {
+                "status": deadline_inventory_status,
+                "rules": deadline_rules,
+                "affected_rule_count": len(affected_deadline_rules),
+                "matching_method": "admitted_source_hash_only",
+            },
+            "review_packets": packets,
+            "saved_research": {
+                "status": "not_persisted_by_design",
+                "items": [],
+                "notice": "Raw conversation research is intentionally not retained as a matter store, so no saved-research coverage result is inferred.",
+            },
+            "counts": {
+                "documents_scanned": len(documents),
+                "documents_requiring_recheck": len(impacted_documents),
+                "drafts_scanned": len([row for row in documents if row.get("document_type") in {"draft", "memo", "letter", "motion", "affidavit", "parenting_plan"}]),
+                "forms_requiring_recheck": len([row for row in forms if row.get("status") == "form_catalog_recheck_required"]),
+                "deadline_rules_requiring_recheck": len(affected_deadline_rules),
+                "review_packets_requiring_recheck": len([row for row in packets if row.get("status") == "revalidation_required"]),
+            },
+            "blockers": sorted(set(blockers)),
+            "status": "revalidation_required",
+            "review_required": True,
+            "filing_ready": False,
+            "generated_at": _utc_now(),
+            "notice": "This is an exact-source overlap and source-hash review queue. It does not determine whether a source amendment changes law, a deadline, a form, or any legal outcome.",
+        }
 
     @staticmethod
     def _render_html(impact: dict[str, Any]) -> str:

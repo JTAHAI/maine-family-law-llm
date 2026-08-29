@@ -154,11 +154,15 @@ def _presidio(path: Path) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("adapter", choices=("docling", "presidio"))
+    parser.add_argument("adapter", choices=("docling", "presidio", "pdf_preview"))
     parser.add_argument("input")
     parser.add_argument("--output", default="")
     args = parser.parse_args(argv)
     _deny_network()
+    if args.adapter == "pdf_preview":
+        from .pdf_preview import render_worker
+
+        return _write(render_worker(Path(args.input)), args.output)
     path = Path(args.input).resolve()
     if path.is_symlink() or not path.is_file():
         return _write({"status": "blocked", "error": "input_not_regular_file"}, args.output)

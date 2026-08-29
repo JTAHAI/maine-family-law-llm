@@ -122,6 +122,44 @@ def test_pass17_authority_build_auditor_accepts_valid_external_manifest(tmp_path
     assert not report.blockers
 
 
+def test_pass17_authority_build_allows_only_explicitly_quarantined_nonrequired_sources(tmp_path):
+    official_store = tmp_path / "official_authority_store"
+    quarantined = _record(
+        official_store,
+        source_id="unidentified-form-pdf",
+        source_class="court_form_pdf",
+        parser_status="partial",
+    )
+    quarantined["metadata"] = {
+        "retrieval_admission": "quarantined",
+        "retrieval_quarantine_reason": "parser_status:partial",
+        "retrieval_quarantine_review_required": True,
+    }
+    manifest = [_record(official_store, source_id="title19a", source_class="statute_title_index"), quarantined]
+    (official_store / "source_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    policy = {
+        "version": "test-explicit-quarantine",
+        "external_data_root_required": True,
+        "official_store_name": "official_authority_store",
+        "manifest_filename": "source_manifest.json",
+        "minimum_ingested_targets": 2,
+        "required_source_class_minimums": {"statute_title_index": 1},
+        "acceptable_parser_statuses": ["parsed", "snapshot_only"],
+        "parsed_status_required_for_classes": ["statute_title_index"],
+        "snapshot_only_allowed_for_classes": [],
+        "required_manifest_fields": [],
+        "minimum_snapshot_bytes": 1,
+        "require_snapshot_files_exist": True,
+        "require_manifest_hash_matches_snapshot": True,
+    }
+
+    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+
+    assert report.production_ready is True
+    assert not report.blockers
+    assert any(finding.code == "source_quarantined_from_retrieval" for finding in report.findings)
+
+
 def test_pass17_ingest_manifest_includes_snapshot_path_and_parser_audit(tmp_path):
     target = SourceTarget(
         target_id="fixture-title-19a",

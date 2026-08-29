@@ -12,8 +12,8 @@ permalink: /
       <h1>A next-generation local AI workbench for Maine family law.</h1>
       <p class="lead">Research official Maine authority, organize private matter records, inspect exact sources, verify citations and claims, build reviewable work product, and use specialized family-law workbenches—all with local-first privacy and human review.</p>
       <div class="hero-actions">
-        <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Download v7 free</a>
-        <a class="button button--secondary" href="{{ '/features/' | relative_url }}">Explore the complete v7 catalog</a>
+        <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Download from Microsoft Store</a>
+        <a class="button button--secondary" href="{{ '/features/' | relative_url }}">Explore the v8 catalog</a>
         <a class="button button--warm" href="https://github.com/JTAHAI/maine-family-law-llm">View source</a>
       </div>
       <p class="microcopy">Not a lawyer. Not legal advice. Not affiliated with the Maine Judicial Branch or any court. Every legal output remains review-required.</p>
@@ -22,7 +22,7 @@ permalink: /
         <span class="status-pill">Available in Microsoft Store</span>
         <span class="status-pill">Local-only by default</span>
         <span class="status-pill">Official sources first</span>
-        <span class="status-pill">40 cataloged capabilities</span>
+        <span class="status-pill">70 cataloged workflows</span>
       </div>
     </div>
     <div class="hero-mark" aria-label="For Our Children and Families Maine Family Law LLM brand mark">
@@ -38,15 +38,15 @@ permalink: /
 <section class="section section--wash">
   <div class="shell">
     <div class="section-intro">
-      <div class="eyebrow">v7 source release</div>
-      <h2>The v7 codebase, documentation, and feature catalog are live.</h2>
+      <div class="eyebrow">v8 source release</div>
+      <h2>The v8 codebase, documentation, and feature catalog are live.</h2>
       <p class="lead">Version 8.0.0 expands the local workbench across research, records, evidence, drafting, courtroom preparation, local transcription, secure handoff, accessibility, and resource navigation. Each capability below carries an explicit readiness tier.</p>
     </div>
     <div class="grid-3">
       <article class="card">
         <div class="card-number">01</div>
-        <h3>Current v7 source</h3>
-        <p>Version 8.0.0 is the current GitHub source release. Its twenty new Add-on Studio verticals passed source and frozen-runtime production-UI acceptance; package and Store qualification remain separate.</p>
+        <h3>Current v8 source</h3>
+        <p>Version 8.0.0 is the current GitHub source release. The full-tier 8.0.0.0 candidate passed its frozen-runtime smoke and package-boundary audits; Microsoft distribution remains a separate step.</p>
       </article>
       <article class="card">
         <div class="card-number">02</div>
@@ -60,8 +60,18 @@ permalink: /
       </article>
     </div>
     <div class="hero-actions">
-      <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Get v7 from Microsoft Store</a>
-      <a class="button button--secondary" href="{{ '/features/' | relative_url }}">View all 40 capabilities</a>
+      <a class="button button--primary" href="https://apps.microsoft.com/detail/9NV67WCQW0DM">Get the current Store release</a>
+      <a class="button button--secondary" href="{{ '/features/' | relative_url }}">View all 70 workflows</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--wash">
+  <div class="shell">
+    <div class="section-intro">
+      <div class="eyebrow">Optional local models</div>
+      <h2>Model packs stay separate, inspectable, and under your control.</h2>
+      <p class="lead">The v8 base workbench includes no legal model weights or adapters. A future full offline model pack can be explicitly installed, verified by hash and admission record, activated locally, and rolled back without changing private matter records. Unadmitted or development-only adapters never become a source of current law.</p>
     </div>
   </div>
 </section>

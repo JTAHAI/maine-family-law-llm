@@ -91,6 +91,11 @@ def _is_ignored(rel_path: Path) -> bool:
         return True
     if rel.startswith(".local_tmp/"):
         return True
+    # Deliberately inert parser fixtures are version-controlled source inputs,
+    # not operator logs or matter records.  Their extensions are intentionally
+    # broad so defensive parsers can be exercised.
+    if rel.startswith(("data/fixtures/", "tests/fixtures/")):
+        return True
     if rel == "tests/PASS_CHANGES.txt":
         return True
 

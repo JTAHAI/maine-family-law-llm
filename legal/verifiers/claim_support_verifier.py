@@ -25,6 +25,7 @@ STOPWORDS = {
 LEGAL_CLAIM_TRIGGERS = {
     "must", "shall", "may", "requires", "required", "prohibits", "standard", "findings", "best interest",
     "parental rights", "support", "custody", "jurisdiction", "deadline", "file", "appeal", "contempt", "order",
+    "rule", "rules", "statute", "statutes", "law", "court", "courts", "filing", "filings", "orders", "appeals", "entitled",
 }
 _MAX_CHUNKS = 128
 _MAX_CHUNK_CHARS = 100_000
@@ -36,13 +37,13 @@ def extract_legal_claims(text: str) -> list[str]:
     claims: list[str] = []
     seen: set[str] = set()
     normalized = (text or "").replace("\r\n", "\n")
-    for _start, _end, sentence in _sentence_spans(normalized.strip()):
-        cleaned = re.sub(r"\s+", " ", sentence).strip(" \t\n-*•")
-        if len(cleaned) < 12 or len(cleaned) > 4000:
+    for _start, _end, sentence in _sentence_spans(normalized.strip(), limit=None):
+        cleaned = re.sub(r"\s+", " ", sentence).strip(" \t\n-*•\"“”‘’")
+        if len(cleaned) < 12:
             continue
         lowered = cleaned.lower()
         if (
-            any(trigger in lowered for trigger in LEGAL_CLAIM_TRIGGERS)
+            any(re.search(r"\b" + re.escape(trigger) + r"\b", lowered) for trigger in LEGAL_CLAIM_TRIGGERS)
             or re.search(r"\b\d+(?:-[A-Z])?\s*M\.?R\.?S\.?A?\.?\s*§", cleaned, re.I)
             or re.search(r"\b\d{4}\s+ME\s+\d+\b", cleaned)
             or re.search(r"\bM\.R\.\s*(?:Civ|App|Evid)\.\s*P\.", cleaned, re.I)
@@ -79,19 +80,41 @@ def _has_negation(text: str) -> bool:
     return bool(_tokens(text) & NEGATION_TERMS)
 
 
-def _sentence_spans(text: str) -> list[tuple[int, int, str]]:
+def _has_uncovered_clause(claim: str, source_span: str) -> bool:
+    """Do not let a well-matched clause hide an unsupported added assertion.
+
+    This is deliberately lexical and conservative, not an entailment claim.
+    Coordinated lists are checked too: an extra unmatched item needs review.
+    Citation/number scoring bonuses cannot supply a missing clause's terms.
+    """
+    clauses = re.split(r";|\b(?:and|or|but|because|therefore|although|unless|while|whereas)\b", claim, flags=re.I)
+    if len(clauses) < 2:
+        return False
+    source_terms = _tokens(source_span)
+    return any(terms and not terms.issubset(source_terms) for terms in map(_tokens, clauses))
+
+
+def _sentence_spans(text: str, *, limit: int | None = _MAX_SENTENCES_PER_CHUNK) -> list[tuple[int, int, str]]:
     """Return bounded sentence-like spans without splitting legal abbreviations.
 
-    A boundary requires terminal punctuation followed by whitespace and an
-    uppercase letter, or a blank-line break/end of text. This keeps citations
-    such as ``M.R.S. § 1653`` in one span.
+    Include closing quotation marks in the preceding sentence. Legal
+    abbreviations stay intact and list/paragraph boundaries cannot merge a
+    quoted assertion with a following freshness label or workflow bullet.
     """
     value = text or ""
     spans: list[tuple[int, int, str]] = []
     start = 0
-    boundary = re.compile(r"(?<=[.!?])(?=\s+[A-Z])|(?=\n{2,})|$")
+    boundary = re.compile(
+        r"[.!?][\"”’')\]]*(?=\s+[\"“‘(\[]*[A-Z0-9]|\s*$)"
+        r"|\n[ \t]*\n+|\n(?=[ \t]*[-*•]\s+)|$"
+    )
     for match in boundary.finditer(value):
-        end = match.start()
+        end = match.end()
+        if match.group().endswith(".") and re.search(
+            r"(?:\bM\.R\.(?:S\.(?:A\.)?)?|\b(?:Civ|Crim|App|Evid|P|No|v)\.|\bU\.S\.(?:C\.)?)$",
+            value[:end], re.I,
+        ):
+            continue
         raw = value[start:end]
         stripped = raw.strip()
         if stripped:
@@ -99,11 +122,11 @@ def _sentence_spans(text: str) -> list[tuple[int, int, str]]:
             item_start = start + leading
             item_end = item_start + len(stripped)
             spans.append((item_start, item_end, stripped))
-            if len(spans) >= _MAX_SENTENCES_PER_CHUNK:
+            if limit is not None and len(spans) >= limit:
                 break
         if match.start() == match.end() and match.start() == len(value):
             break
-        start = match.start()
+        start = end
         while start < len(value) and value[start].isspace():
             start += 1
     if not spans and value:
@@ -299,6 +322,14 @@ class ClaimSupportVerifier:
             return self._result(claim, claim_hash, "contradicted", False, chunks, contradictory, candidates, "the closest admitted source span appears to conflict with the claim polarity")
         if best is None:
             return ClaimSupportResult(claim, "not_verifiable", False, len(chunks), claim_sha256=claim_hash, message="no bounded source span was available")
+
+        source_span = chunks[best.evidence_index][best.start_offset:best.end_offset]
+        if (not best.exact_phrase and best.score >= 0.45 and best.token_coverage >= 0.35
+                and _has_uncovered_clause(claim, source_span)):
+            return self._result(
+                claim, claim_hash, "partially_supported", False, chunks, best, candidates,
+                "only part of this compound claim is supported by the selected source span; review the added clause or list item",
+            )
 
         if best.score >= 0.72 and best.token_coverage >= 0.62 and best.required_numbers_matched:
             status: ClaimSupportStatus = "supported"

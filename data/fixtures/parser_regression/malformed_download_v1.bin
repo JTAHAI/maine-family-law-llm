@@ -1,0 +1,1 @@
+This is a synthetic malformed download fixture. It must be quarantined by the parser regression runner and never parsed as authority.

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -33,7 +34,7 @@ def _run(args: list[str], *, check: bool = False) -> subprocess.CompletedProcess
 
 
 def test_cli_smoke_sources_ask_draft_and_doctor() -> None:
-    base = ["python", "-m", "maine_family_law_llm.cli"]
+    base = [sys.executable, "-m", "maine_family_law_llm.cli"]
     for args in (
         ["sources", "validate"],
         ["sources", "list"],
@@ -119,10 +120,10 @@ def test_local_scripts_exist_parse_and_doctor_json(tmp_path: Path) -> None:
     )
     disposable_dist = disposable_root / "dist" / "generated"
     disposable_dist.mkdir(parents=True)
-    clean = _run(["python", "scripts/clean-local-artifacts.py", "--repo-root", str(disposable_root)])
+    clean = _run([sys.executable, "scripts/clean-local-artifacts.py", "--repo-root", str(disposable_root)])
     assert clean.returncode == 0
     assert not (disposable_root / "dist").exists()
-    doctor = _run(["python", "scripts/doctor-local-repo.py", "--repo-root", str(disposable_root), "--json"])
+    doctor = _run([sys.executable, "scripts/doctor-local-repo.py", "--repo-root", str(disposable_root), "--json"])
     payload = json.loads(doctor.stdout)
     assert payload["status"] == "pass"
     assert payload["safe_to_push"] is True
@@ -133,7 +134,7 @@ def test_source_checkout_supports_plain_module_import_without_pythonpath() -> No
     env.pop("PYTHONPATH", None)
     completed = subprocess.run(
         [
-            "python",
+            sys.executable,
             "-c",
             "import maine_family_law_llm.api, maine_family_law_llm.cli; print('ok')",
         ],

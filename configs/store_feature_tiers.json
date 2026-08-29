@@ -1,0 +1,24 @@
+{
+  "schema_version": "store_feature_tiers_v1",
+  "policy": {
+    "runtime_downloads_allowed": false,
+    "network_required_for_activation": false,
+    "tier_change_requires_new_signed_package": true,
+    "user_data_migration_required": false,
+    "review_required": true
+  },
+  "tiers": {
+    "essential": {
+      "description": "Local core research, record review, bounded OCR, and native transcription with no full document-intelligence model payload.",
+      "maximum_package_bytes": 1073741824,
+      "excluded_archive_prefixes": ["store/docling/models/", "_internal/en_core_web_lg/", "_internal/torch/"],
+      "offline_capabilities": ["source_grounded_research", "record_review", "bounded_ocr", "native_transcription", "draft_review"]
+    },
+    "full": {
+      "description": "Offline complete document-intelligence edition with bundled Docling and privacy-analysis assets.",
+      "maximum_package_bytes": 2415919104,
+      "required_archive_prefixes": ["store/docling/models/", "_internal/en_core_web_lg/"],
+      "offline_capabilities": ["source_grounded_research", "record_review", "bounded_ocr", "native_transcription", "draft_review", "advanced_document_intelligence", "local_privacy_analysis"]
+    }
+  }
+}

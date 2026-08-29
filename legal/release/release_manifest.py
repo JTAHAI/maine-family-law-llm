@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from legal.release.source_tree import pruned_source_paths
+
 PACKAGING_EXCLUDE_DIRS = {
     ".git",
     ".pytest_cache",
@@ -55,6 +57,20 @@ PRIVATE_OR_RUNTIME_FILENAMES = {
     "id_ed25519",
 }
 
+# These directories contain public source code or deliberately inert parser
+# fixtures.  Their names overlap with runtime-state extensions/directories, so
+# a name-only scan would falsely report that source code or a malformed-input
+# fixture is private matter data.  Package assembly has its own exact archive
+# denylist; this source-tree audit must distinguish executable source from
+# generated user state.
+PUBLIC_SOURCE_DIRECTORY_PREFIXES = {
+    ("legal", "runtime"),
+}
+PUBLIC_FIXTURE_DIRECTORY_PREFIXES = {
+    ("data", "fixtures"),
+    ("tests", "fixtures"),
+}
+
 
 @dataclass(frozen=True)
 class ReleaseFinding:
@@ -81,16 +97,21 @@ class ReleaseManifest:
     def _root(self) -> Path:
         return Path(self.project_root).resolve()
 
+    @staticmethod
+    def _has_prefix(parts: tuple[str, ...], prefixes: set[tuple[str, ...]]) -> bool:
+        return any(parts[: len(prefix)] == prefix for prefix in prefixes)
+
     def scan_release_tree(self) -> list[ReleaseFinding]:
         root = self._root()
         findings: list[ReleaseFinding] = []
 
-        for path in root.rglob("*"):
+        for path in pruned_source_paths(root, self.exclude_dirs):
             if path == root:
                 continue
 
             rel = path.relative_to(root).as_posix()
-            parts = set(path.relative_to(root).parts)
+            relative_parts = path.relative_to(root).parts
+            parts = set(relative_parts)
 
             excluded_dirs = sorted(parts & self.exclude_dirs)
             generated_metadata_dirs = sorted(part for part in parts if part.endswith(".egg-info"))
@@ -100,6 +121,8 @@ class ReleaseManifest:
                 continue
 
             blocked_dirs = sorted(parts & self.deny_dirs)
+            if self._has_prefix(relative_parts, PUBLIC_SOURCE_DIRECTORY_PREFIXES):
+                blocked_dirs = [part for part in blocked_dirs if part != "runtime"]
             if blocked_dirs:
                 findings.append(
                     ReleaseFinding(path=rel, reason=f"blocked directory: {blocked_dirs[0]}")
@@ -107,11 +130,12 @@ class ReleaseManifest:
                 continue
 
             if path.is_file():
+                is_public_fixture = self._has_prefix(relative_parts, PUBLIC_FIXTURE_DIRECTORY_PREFIXES)
                 if path.name in self.deny_filenames:
                     findings.append(ReleaseFinding(path=rel, reason=f"blocked filename: {path.name}"))
                     continue
 
-                if path.suffix.lower() in self.deny_suffixes:
+                if path.suffix.lower() in self.deny_suffixes and not is_public_fixture:
                     findings.append(ReleaseFinding(path=rel, reason=f"blocked suffix: {path.suffix}"))
 
         return findings

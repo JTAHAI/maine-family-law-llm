@@ -324,6 +324,21 @@ def test_admitted_exact_citation_precedes_substring_false_positives() -> None:
     assert response["retrieved_sources"][0]["method"] == "admitted_exact_citation"
 
 
+def test_retrieval_diversity_defers_redundant_source_classes_without_hiding_exact_hits() -> None:
+    documents = [
+        RetrievalDocument(source_id="statute-a", document_id="statute-a", title="Statute A", text="custody best interest", citation="19-A M.R.S. § 1653", source_class="statute_section"),
+        RetrievalDocument(source_id="statute-b", document_id="statute-b", title="Statute B", text="custody best interest factors", citation="19-A M.R.S. § 1654", source_class="statute_section"),
+        RetrievalDocument(source_id="rule-a", document_id="rule-a", title="Rule A", text="custody best interest procedure", citation="M.R. Civ. P. 4", source_class="court_rule"),
+    ]
+    response = RetrievalPipeline(documents).retrieve("custody best interest", top_k=2)
+
+    assert len(response["retrieved_sources"]) == 2
+    assert {row["document"]["source_class"] for row in response["retrieved_sources"]} == {"statute_section", "court_rule"}
+    diversity = response["retrieval_stack"]["diversity_control"]
+    assert diversity["status"] == "applied"
+    assert diversity["review_required"] is True
+
+
 def test_pass25_triages_retrieval_failures_into_fix_tickets(tmp_path):
     data_root = _fixture_data_root(tmp_path)
     RetrievalIndexBuilder(data_root=data_root).build()

@@ -92,11 +92,130 @@ def transcribe_media(media_id: str, payload: dict[str, Any], request: Request, x
     return _invoke(_store().transcribe_media, media_id, payload, action="hearing_media_transcribe", endpoint="POST /api/hearing-media/media/{media_id}/transcribe")
 
 
+@router.post("/hearing-media/media/{media_id}/transcript-corrections", summary="Record an immutable transcript correction proposal")
+def correct_transcript_segment(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().correct_transcript_segment, media_id, payload, action="hearing_media_transcript_correction", endpoint="POST /api/hearing-media/media/{media_id}/transcript-corrections")
+
+
 @router.post("/hearing-media/media/{media_id}/speaker-review", summary="Review speaker labels in a transcript")
 def speaker_review(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
     _enforce_local_request(request)
     _require_role(x_user_role)
     return _invoke(_store().speaker_review, media_id, payload, action="hearing_media_speaker_review", endpoint="POST /api/hearing-media/media/{media_id}/speaker-review")
+
+
+@router.post("/hearing-media/media/{media_id}/keyframe-reviews", summary="Generate encrypted local video keyframes for review")
+def generate_keyframes(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().generate_keyframes, media_id, payload, action="hearing_media_keyframe_generation", endpoint="POST /api/hearing-media/media/{media_id}/keyframe-reviews")
+
+
+@router.post("/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/annotations", summary="Record a source-bound keyframe annotation")
+def annotate_keyframe(media_id: str, review_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().annotate_keyframe, media_id, review_id, payload, action="hearing_media_keyframe_annotation", endpoint="POST /api/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/annotations")
+
+
+@router.get("/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/frames/{frame_id}", summary="Open one encrypted local video keyframe")
+def keyframe_preview(media_id: str, review_id: str, frame_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().keyframe_preview, media_id, review_id, frame_id, action="hearing_media_keyframe_preview", endpoint="GET /api/hearing-media/media/{media_id}/keyframe-reviews/{review_id}/frames/{frame_id}")
+
+
+@router.post("/hearing-media/media/{media_id}/redaction-derivatives", summary="Create an encrypted local media redaction derivative")
+def create_media_redaction_derivative(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().create_media_redaction_derivative, media_id, payload, action="hearing_media_redaction_derivative", endpoint="POST /api/hearing-media/media/{media_id}/redaction-derivatives")
+
+
+@router.get("/hearing-media/media/{media_id}/redaction-derivatives/{derivative_id}", summary="Open one encrypted local media redaction derivative")
+def media_redaction_preview(media_id: str, derivative_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().media_redaction_preview, media_id, derivative_id, action="hearing_media_redaction_preview", endpoint="GET /api/hearing-media/media/{media_id}/redaction-derivatives/{derivative_id}")
+
+
+@router.post("/hearing-media/screenshot-conversations", summary="Reconstruct a source-bound screenshot conversation for review")
+def reconstruct_screenshot_conversation(payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().reconstruct_screenshot_conversation, payload, action="hearing_media_screenshot_reconstruction", endpoint="POST /api/hearing-media/screenshot-conversations")
+
+
+@router.get("/hearing-media/screenshot-conversations", summary="List source-bound screenshot conversation reconstructions")
+def screenshot_conversations(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().screenshot_conversations, action="hearing_media_screenshot_list", endpoint="GET /api/hearing-media/screenshot-conversations")
+
+
+@router.get("/hearing-media/screenshot-conversations/{conversation_id}/screenshots/{screenshot_id}", summary="Inspect one source-bound screenshot observation")
+def screenshot_observation(conversation_id: str, screenshot_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().screenshot_observation, conversation_id, screenshot_id, action="hearing_media_screenshot_source", endpoint="GET /api/hearing-media/screenshot-conversations/{conversation_id}/screenshots/{screenshot_id}")
+
+
+@router.post("/hearing-media/media/{media_id}/metadata-inspections", summary="Inspect local media and image metadata without authentication claims")
+def inspect_media_metadata(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().inspect_media_metadata, media_id, payload, action="hearing_media_metadata_inspection", endpoint="POST /api/hearing-media/media/{media_id}/metadata-inspections")
+
+
+@router.get("/hearing-media/media/{media_id}/metadata-inspections/{inspection_id}", summary="Inspect one source-bound media metadata receipt")
+def media_metadata_inspection(media_id: str, inspection_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().media_metadata_inspection, media_id, inspection_id, action="hearing_media_metadata_source", endpoint="GET /api/hearing-media/media/{media_id}/metadata-inspections/{inspection_id}")
+
+
+@router.post("/hearing-media/media/{media_id}/courtroom-sessions", summary="Create an offline courtroom-media review session")
+def create_courtroom_session(media_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().create_courtroom_session, media_id, payload, action="hearing_media_courtroom_session_create", endpoint="POST /api/hearing-media/media/{media_id}/courtroom-sessions")
+
+
+@router.get("/hearing-media/courtroom-sessions/{session_id}/source", summary="Inspect a courtroom-media session source binding")
+def courtroom_session_source(session_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().courtroom_session_source, session_id, action="hearing_media_courtroom_session_source", endpoint="GET /api/hearing-media/courtroom-sessions/{session_id}/source")
+
+
+@router.get("/hearing-media/courtroom-sessions/{session_id}/playback", summary="Open bounded offline courtroom-media playback")
+def courtroom_playback(session_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().courtroom_playback, session_id, action="hearing_media_courtroom_playback", endpoint="GET /api/hearing-media/courtroom-sessions/{session_id}/playback")
+
+
+@router.post("/hearing-media/courtroom-sessions/{session_id}/sync", summary="Synchronize a courtroom-media session to transcript segments")
+def courtroom_sync(session_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().courtroom_sync, session_id, payload, action="hearing_media_courtroom_sync", endpoint="POST /api/hearing-media/courtroom-sessions/{session_id}/sync")
+
+
+@router.post("/hearing-media/courtroom-sessions/{session_id}/private-notes", summary="Record a separately encrypted private courtroom-review note")
+def courtroom_private_note(session_id: str, payload: dict[str, Any], request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().add_courtroom_private_note, session_id, payload, action="hearing_media_courtroom_private_note", endpoint="POST /api/hearing-media/courtroom-sessions/{session_id}/private-notes")
+
+
+@router.get("/hearing-media/courtroom-sessions/{session_id}/private-notes", summary="Open separately encrypted private courtroom-review notes")
+def courtroom_private_notes(session_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role")):
+    _enforce_local_request(request)
+    _require_role(x_user_role)
+    return _invoke(_store().courtroom_private_notes, session_id, action="hearing_media_courtroom_private_notes", endpoint="GET /api/hearing-media/courtroom-sessions/{session_id}/private-notes")
 
 
 @router.post("/hearing-media/media/{media_id}/timeline/build", summary="Build a hearing timeline")

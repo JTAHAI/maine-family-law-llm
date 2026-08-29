@@ -33,7 +33,8 @@ def test_local_workbench_control_plane_is_encrypted_reviewable_and_local(tmp_pat
     assert model["receipt"]["event_hash"]
 
     route = service.route_model({"task": "summarize local evidence"})
-    assert route["selected_model"]["model_id"] == "compact_local"
+    assert route["selected_model"] is None
+    assert route["status"] == "cpu_fallback_or_review_required"
     assert route["network_used"] is False
 
     plan = service.propose_plan(

@@ -511,14 +511,94 @@ class PrivacySafeObservabilityStore:
         "timeout",
         "error",
         "self_test",
+        "telemetry_preference",
     }
     ALLOWED_METRICS = {"duration_ms", "count", "bytes", "queue_depth", "result_count", "error_count"}
     ALLOWED_LABELS = {"status", "component", "operation", "error_class", "mode"}
+    TELEMETRY_MODES = {"off", "local_metrics"}
 
     def __init__(self, case_root: str | Path) -> None:
         self.case_root = Path(case_root).resolve()
         self.root = self.case_root / ".mfl_work" / "observability"
         self.path = self.root / "metrics.jsonl"
+        self.preference_path = self.root / "telemetry-preference.json"
+
+    def preference(self) -> dict[str, Any]:
+        """Return the content-free local telemetry preference, defaulting off."""
+
+        default = {
+            "schema_version": "privacy_safe_telemetry_preference_v1",
+            "mode": "off",
+            "local_only": True,
+            "remote_exporters_enabled": False,
+            "private_payload_logging_enabled": False,
+            "review_required": True,
+            "configured": False,
+        }
+        if not self.preference_path.exists():
+            return default
+        if self.preference_path.is_symlink() or self.preference_path.stat().st_size > 16 * 1024:
+            raise ReleasePilotHardeningError("telemetry_preference_invalid", status_code=409)
+        try:
+            stored = json.loads(self.preference_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ReleasePilotHardeningError("telemetry_preference_invalid", status_code=409) from exc
+        if not isinstance(stored, dict) or str(stored.get("mode") or "") not in self.TELEMETRY_MODES:
+            raise ReleasePilotHardeningError("telemetry_preference_invalid", status_code=409)
+        preference = {**default, **{key: stored.get(key) for key in default if key in stored}}
+        preference["configured"] = True
+        return preference
+
+    def configure(self, *, mode: str, approved: bool) -> dict[str, Any]:
+        """Save an explicit local-only preference without accepting free text."""
+
+        requested = str(mode or "").strip().casefold()
+        if requested not in self.TELEMETRY_MODES:
+            raise ReleasePilotHardeningError("telemetry_mode_invalid", status_code=409)
+        if not approved:
+            raise ReleasePilotHardeningError("telemetry_preference_approval_required", status_code=409)
+        body = {
+            "schema_version": "privacy_safe_telemetry_preference_v1",
+            "mode": requested,
+            "local_only": True,
+            "remote_exporters_enabled": False,
+            "private_payload_logging_enabled": False,
+            "review_required": True,
+            "updated_at": _now_iso(),
+        }
+        body["receipt_sha256"] = _sha_bytes(_canonical_json(body))
+        with _OBSERVABILITY_LOCK:
+            self.root.mkdir(parents=True, exist_ok=True)
+            if self.root.is_symlink() or (self.preference_path.exists() and self.preference_path.is_symlink()):
+                raise ReleasePilotHardeningError("telemetry_preference_invalid", status_code=409)
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=".telemetry-preference-", suffix=".tmp", dir=self.root
+            )
+            temporary = Path(temporary_name)
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+                    handle.write(json.dumps(body, sort_keys=True, separators=(",", ":")))
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, self.preference_path)
+            finally:
+                if temporary.exists():
+                    temporary.unlink(missing_ok=True)
+        result = self.preference()
+        result["receipt_sha256"] = body["receipt_sha256"]
+        if requested == "local_metrics":
+            result["audit_record"] = self.record(
+                "telemetry_preference",
+                metrics={"count": 1},
+                labels={"component": "local_observability", "operation": "preference", "mode": requested, "status": "pass"},
+            )
+        else:
+            result["audit_record"] = {
+                "status": "not_recorded",
+                "reason": "telemetry_disabled",
+                "contains_user_text": False,
+            }
+        return result
 
     @staticmethod
     def _safe_label(value: Any) -> str:
@@ -552,6 +632,18 @@ class PrivacySafeObservabilityStore:
         return rows
 
     def record(self, event: str, *, metrics: dict[str, Any] | None = None, labels: dict[str, Any] | None = None) -> dict[str, Any]:
+        preference = self.preference()
+        if preference["mode"] != "local_metrics":
+            return {
+                "status": "not_recorded",
+                "reason": "telemetry_disabled",
+                "event": str(event or "").strip().casefold(),
+                "local_only": True,
+                "contains_user_text": False,
+                "contains_document_text": False,
+                "contains_paths": False,
+                "review_required": True,
+            }
         event = str(event or "").strip().casefold()
         if event not in self.ALLOWED_EVENTS:
             raise ReleasePilotHardeningError("observability_event_not_allowed", status_code=409)
@@ -622,6 +714,8 @@ class PrivacySafeObservabilityStore:
             "local_only": True,
             "remote_exporters_enabled": False,
             "private_payload_logging_enabled": False,
+            "telemetry_mode": self.preference()["mode"],
+            "review_required": True,
             "opentelemetry": _OTEL_BRIDGE.status(),
         }
 

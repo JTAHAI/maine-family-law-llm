@@ -1,0 +1,10 @@
+from pathlib import Path
+from fastapi.testclient import TestClient
+from legal.matter.post_filing_reconciliation import PostFilingReconciliationStore
+from maine_family_law_llm import api as api_module
+def records():return [{"evidence_id":"RECEIPT-001","source_hash":"a"*64,"title":"Fictional receipt"},{"evidence_id":"FILE-001","source_hash":"b"*64,"title":"Fictional filing"}]
+def payload():return {"reconciliation_id":"post_filing_001","reviewer_safe_id":"reviewer_001","receipt_source":{"record_id":"RECEIPT-001","source_hash":"a"*64},"submitted_items":[{"record_id":"FILE-001","source_hash":"b"*64,"submitted_filename":"fictional-filing.pdf"}],"docket_expectations":[{"expectation_id":"expectation_001","expected_filename":"fictional-filing.pdf","expected_hash":"b"*64}],"user_confirmed":True}
+def test_pass90_encrypted_source_bound_reconciliation(tmp_path:Path):
+ root=tmp_path/"m";root.mkdir();s=PostFilingReconciliationStore(root,encryption_key="fictional-test-key");r=s.create(payload(),records=records());assert r["decisions"][0]["status"]=="exact_match" and r["court_receipt_confirmed"] is False;assert "Fictional filing" not in s.path.read_text(encoding="utf-8");assert s.source("post_filing_001","FILE-001")["source"]["source_hash"]=="b"*64
+def test_pass90_api_scope_and_ui(monkeypatch,tmp_path:Path):
+ a,b=tmp_path/"a",tmp_path/"b";a.mkdir();b.mkdir();active={"root":a};monkeypatch.setattr(api_module,"active_case_root",lambda:active["root"]);monkeypatch.setattr(api_module,"load_case_search_records",lambda _:records());monkeypatch.setenv("MAINE_MATTER_STORE_KEY","fictional-test-key");c=TestClient(api_module.app);assert c.post("/api/post-filing-reconciliations",json=payload()).status_code==200;assert len(c.get("/api/post-filing-reconciliations/post_filing_001/sources/FILE-001").json()["source"]["source_token"])==64;active["root"]=b;assert c.get("/api/post-filing-reconciliations/post_filing_001").status_code==404;assert Path("src/maine_family_law_llm/api.py").read_bytes()==Path("maine_family_law_llm/api.py").read_bytes();assert "Post-filing receipt reconciliation" in Path("src/maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")

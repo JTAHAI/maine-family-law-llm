@@ -30,6 +30,41 @@ _OBSERVATION_MARKERS = (" observed ", " saw ", " received ", " attached ", " sho
 _FINDING_MARKERS = (" the court finds ", " found ", " ordered ", " it is ordered ", " judgment ", " decree ", " order entered ")
 _QUALIFICATION_MARKERS = (" however ", " but ", " except ", " unless ", " to the extent ", " according to ")
 _ALTERNATIVE_MARKERS = (" because ", " due to ", " since ", " after ", " while ", " during ")
+_CLAIM_REVIEW_STATUSES = {
+    "review_required",
+    "accepted_with_qualification",
+    "needs_more_context",
+    "needs_revision",
+    "unsupported",
+    "contradicted",
+    "not_material",
+}
+_CLAIM_CARD_KINDS = {
+    "supports",
+    "contradicts",
+    "qualifies",
+    "alternative_explanations",
+    "authenticity_reliability_caveat",
+    "unresolved",
+}
+_ATTACHMENT_COVERAGE_STATES = {
+    "alleged",
+    "referenced",
+    "expected",
+    "absent_in_selected_scope",
+    "not_yet_reviewed",
+    "located",
+}
+_FACT_GRAPH_NODE_KINDS = {"person", "event", "order", "assertion", "record", "source"}
+_FACT_GRAPH_STATES = {"unknown", "disputed", "observed", "alleged", "not_yet_reviewed"}
+_FACT_GRAPH_RELATIONSHIPS = {
+    "mentions", "supports", "contradicts", "qualifies", "relates_to", "describes", "supersedes",
+    "temporal_before", "temporal_after", "attachment_of", "reply_to", "duplicate_of", "derivative_of",
+}
+_ISSUE_PROOF_EVIDENCE_ROLES = {"supports", "contradicts", "qualifies", "missing_proof"}
+_ISSUE_PROOF_REVIEW_STATES = {"not_yet_reviewed", "review_required", "reviewed_with_qualification"}
+_RECORD_LINEAGE_RELATIONSHIPS = {"exact_duplicate", "changed_copy", "ocr_correction", "translation", "redaction", "export_derivative", "derived_copy"}
+_ENTITY_RESOLUTION_TYPES = {"person", "organization", "location", "other"}
 _DATE_TYPES = (
     "alleged event date",
     "message timestamp",
@@ -261,6 +296,18 @@ class EvidenceReviewStore:
             },
             "claims": {},
             "claims_history": {},
+            "attachment_coverage": {},
+            "attachment_coverage_history": {},
+            "fact_graph": {"nodes": {}, "edges": {}},
+            "fact_graph_history": [],
+            "issue_proof_matrix": {},
+            "issue_proof_matrix_history": {},
+            "change_digest_checkpoints": {},
+            "change_digest_history": {},
+            "record_lineage": {},
+            "record_lineage_history": {},
+            "entity_resolution": {},
+            "entity_resolution_history": {},
             "missing_records": {},
             "ledger": {},
             "ledger_history": {},
@@ -595,21 +642,65 @@ class EvidenceReviewStore:
                 "review_required": True,
             }
 
-    def create_event(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def _event_source_binding(
+        self,
+        payload: dict[str, Any],
+        records: Iterable[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Bind a manual timeline event to an inventory record, never caller-supplied provenance."""
+        source_record_id = _safe_text(payload.get("source_record_id") or "", limit=120)
+        requested_hash = _safe_text(payload.get("source_hash") or "", limit=64).lower()
+        if not source_record_id:
+            if requested_hash:
+                raise ValueError("source_rebind_record_required")
+            return {
+                "source_record_id": "",
+                "source_hash": "",
+                "source_block": {},
+                "source_binding_status": "unbound_review_required",
+            }
+
+        rows, _warnings = self._records(records)
+        source = next(
+            (row for row in rows if row["evidence_id"] == source_record_id),
+            None,
+        )
+        if source is None:
+            raise ValueError("source_record_not_found_in_active_matter")
+        actual_hash = str(source.get("source_hash") or "").lower()
+        if requested_hash and requested_hash != actual_hash:
+            raise ValueError("source_rebind_hash_mismatch")
+        if not actual_hash:
+            raise ValueError("source_rebind_hash_unavailable")
+        return {
+            "source_record_id": source["evidence_id"],
+            "source_hash": actual_hash,
+            "source_block": {
+                "record_id": source["evidence_id"],
+                "block_id": source.get("block_id") or "",
+                "page_number": source.get("page_number") or 0,
+                "span_start": source.get("span_start"),
+                "span_end": source.get("span_end"),
+            },
+            "source_binding_status": "bound_to_active_matter_record",
+        }
+
+    def create_event(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]] = ()
+    ) -> dict[str, Any]:
         with self._lock:
             state = self._load_state()
             timeline = dict(state.get("timeline") or self._default_state()["timeline"])
+            source_binding = self._event_source_binding(payload, records)
             event = {
-                "event_id": _safe_id("event", time.time_ns(), payload.get("event_label"), payload.get("source_record_id")),
+                "event_id": _safe_id("event", time.time_ns(), payload.get("event_label"), source_binding["source_record_id"]),
                 "event_label": _safe_text(payload.get("event_label") or payload.get("label") or "Untitled event", limit=240),
                 "classification": _safe_text(payload.get("classification") or "observed", limit=40),
                 "date_value": _safe_text(payload.get("date_value") or payload.get("date") or "unknown", limit=40),
                 "date_range": payload.get("date_range") or {"start": payload.get("date_value") or payload.get("date"), "end": payload.get("date_value") or payload.get("date")},
                 "date_precision": _safe_text(payload.get("date_precision") or "unknown", limit=40),
                 "date_type": _safe_text(payload.get("date_type") or "unknown/other", limit=40),
-                "source_record_id": _safe_text(payload.get("source_record_id") or "", limit=120),
-                "source_block": payload.get("source_block") or {},
-                "source_hash": _safe_text(payload.get("source_hash") or "", limit=64),
+                **source_binding,
                 "actor_refs": list(payload.get("actor_refs") or []),
                 "participant_refs": list(payload.get("participant_refs") or []),
                 "issue_tags": list(payload.get("issue_tags") or []),
@@ -630,7 +721,9 @@ class EvidenceReviewStore:
             self._save_state(state)
             return {"status": "pass", "event": event, "review_required": True}
 
-    def patch_event(self, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def patch_event(
+        self, event_id: str, payload: dict[str, Any], *, records: Iterable[dict[str, Any]] = ()
+    ) -> dict[str, Any]:
         with self._lock:
             state = self._load_state()
             timeline = dict(state.get("timeline") or self._default_state()["timeline"])
@@ -641,7 +734,7 @@ class EvidenceReviewStore:
                 before = dict(event)
                 correction = {
                     "corrected_at": _utc_now(),
-                    "previous": {k: before.get(k) for k in ("date_value", "date_range", "date_precision", "date_type", "event_label", "classification")},
+                    "previous": {k: before.get(k) for k in ("date_value", "date_range", "date_precision", "date_type", "event_label", "classification", "source_record_id", "source_hash", "source_block", "source_binding_status")},
                     "updated_by": _safe_text(payload.get("reviewer_name") or payload.get("reviewer") or "reviewer", limit=120),
                     "reason": _safe_text(payload.get("reason") or payload.get("notes") or "", limit=500),
                 }
@@ -649,6 +742,8 @@ class EvidenceReviewStore:
                 for key in ("event_label", "classification", "date_value", "date_range", "date_precision", "date_type", "notes", "issue_tags", "actor_refs", "participant_refs", "child_impact_tags", "reviewer_status"):
                     if key in payload:
                         event[key] = payload[key]
+                if "source_record_id" in payload or "source_hash" in payload:
+                    event.update(self._event_source_binding(payload, records))
                 event["review_required"] = True
                 events[index] = event
                 timeline["events"] = events
@@ -663,14 +758,36 @@ class EvidenceReviewStore:
     def get_event_history(self, event_id: str) -> dict[str, Any]:
         with self._lock:
             state = self._load_state()
+            timeline = dict(state.get("timeline") or self._default_state()["timeline"])
+            event = next(
+                (row for row in timeline.get("events", []) if str(row.get("event_id") or "") == str(event_id or "")),
+                None,
+            )
+            if event is None:
+                raise KeyError("event_not_found")
             history = [row for row in state.get("review_history", []) if row.get("entity_type") == "event" and row.get("entity_id") == event_id]
-            return {"status": "pass", "event_id": event_id, "history": history, "review_required": True}
+            return {
+                "status": "pass",
+                "event_id": event_id,
+                "event": event,
+                "history": history,
+                "source_drill_down_available": bool(event.get("source_record_id") and event.get("source_hash")),
+                "review_required": True,
+            }
 
     def create_claim(self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
         with self._lock:
             state = self._load_state()
-            selected_records, _warnings = self._records(records, payload.get("selected_record_ids") or [])
+            selected_ids = [str(item).strip() for item in (payload.get("selected_record_ids") or []) if str(item).strip()]
+            if not selected_ids:
+                raise ValueError("claim_source_record_required")
+            selected_records, _warnings = self._records(records, selected_ids)
+            selected_ids_found = {str(record.get("evidence_id") or "") for record in selected_records}
+            if any(item not in selected_ids_found for item in selected_ids):
+                raise ValueError("claim_source_record_not_found_in_active_matter")
             statement = _safe_text(payload.get("statement") or payload.get("claim") or "", limit=2000)
+            if not statement:
+                raise ValueError("claim_statement_required")
             claim = {
                 "claim_id": _safe_id("claim", time.time_ns(), statement, payload.get("scope")),
                 "statement": statement,
@@ -741,7 +858,9 @@ class EvidenceReviewStore:
                     "confidence_basis": "deterministic_rule",
                     "review_required": True,
                 }
-                lowered = f" {sentence.casefold()} "
+                # Normalize punctuation so a review signal such as "However,"
+                # is not silently missed merely because it starts a sentence.
+                lowered = f" {re.sub(r'[^a-z0-9]+', ' ', sentence.casefold())} "
                 if any(marker in lowered for marker in _NEGATION_MARKERS):
                     contradict_cards.append({**card_base, "relationship": "contradicts"})
                 elif any(marker in lowered for marker in _QUALIFICATION_MARKERS) or "only" in lowered or "limited to" in lowered:
@@ -765,6 +884,25 @@ class EvidenceReviewStore:
                 "match_explanation": "No selected record sentence directly matched the claim text.",
                 "review_required": True,
             })
+        if contradict_cards:
+            automated_disposition = "contradicted_or_disputed_review_required"
+        elif support_cards and (qualify_cards or alternative_cards or caveat_cards or unresolved_cards):
+            automated_disposition = "support_with_qualifications_review_required"
+        elif support_cards:
+            automated_disposition = "candidate_support_review_required"
+        else:
+            automated_disposition = "no_candidate_support_in_selected_records"
+        disposition_blockers = []
+        if contradict_cards:
+            disposition_blockers.append("contradicting_source_cards_present")
+        if qualify_cards or alternative_cards:
+            disposition_blockers.append("qualifying_or_alternative_context_present")
+        if caveat_cards:
+            disposition_blockers.append("source_reliability_review_required")
+        if unresolved_cards:
+            disposition_blockers.append("duplicate_or_unresolved_source_review_required")
+        if missing_cards:
+            disposition_blockers.append("selected_records_do_not_directly_match_claim")
         return {
             "supports": support_cards[:100],
             "contradicts": contradict_cards[:100],
@@ -774,6 +912,9 @@ class EvidenceReviewStore:
             "outside_scope": outside_cards[:100],
             "authenticity_reliability_caveat": caveat_cards[:100],
             "unresolved": unresolved_cards[:100],
+            "automated_disposition": automated_disposition,
+            "disposition_blockers": disposition_blockers,
+            "automated_disposition_notice": "This deterministic review aid does not determine whether a claim is true, legally sufficient, or filing ready.",
             "claim_history": claim.get("history", []),
         }
 
@@ -784,7 +925,10 @@ class EvidenceReviewStore:
             if not claim:
                 raise KeyError("claim_not_found")
             before = dict(claim)
-            claim["reviewer_status"] = _safe_text(payload.get("reviewer_status") or payload.get("decision") or "review_required", limit=80)
+            reviewer_status = _safe_text(payload.get("reviewer_status") or payload.get("decision") or "review_required", limit=80)
+            if reviewer_status not in _CLAIM_REVIEW_STATUSES:
+                raise ValueError("claim_reviewer_status_invalid")
+            claim["reviewer_status"] = reviewer_status
             claim["reviewer_notes"] = _safe_text(payload.get("reviewer_notes") or payload.get("notes") or "", limit=2000)
             claim["history"] = list(claim.get("history") or []) + [{
                 "reviewed_at": _utc_now(),
@@ -806,6 +950,804 @@ class EvidenceReviewStore:
             if not claim:
                 raise KeyError("claim_not_found")
             return {"status": "pass", "claim": claim, "history": list(state.get("claims_history", {}).get(claim_id) or []), "review_required": True}
+
+    def get_claim_source_card(self, claim_id: str, card_kind: str, card_index: int) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            claim = dict(state.get("claims", {}).get(claim_id) or {})
+            if not claim:
+                raise KeyError("claim_not_found")
+            if card_kind not in _CLAIM_CARD_KINDS:
+                raise ValueError("claim_source_card_kind_invalid")
+            cards = list(claim.get(card_kind) or [])
+            if card_index < 0 or card_index >= len(cards):
+                raise KeyError("claim_source_card_not_found")
+            card = dict(cards[card_index] or {})
+            record_id = _safe_text(card.get("record_id") or "", limit=120)
+            source_hash = _safe_text(card.get("source_hash") or "", limit=64).lower()
+            if not record_id or not source_hash:
+                raise ValueError("claim_source_card_unbound")
+            return {
+                "status": "pass",
+                "claim_id": claim_id,
+                "card_kind": card_kind,
+                "card_index": card_index,
+                "card": card,
+                "record_id": record_id,
+                "source_hash": source_hash,
+                "review_required": True,
+            }
+
+    def _attachment_binding(
+        self,
+        source_record_id: str,
+        source_hash: str,
+        records: Iterable[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return self._event_source_binding(
+            {"source_record_id": source_record_id, "source_hash": source_hash}, records
+        )
+
+    def create_attachment_coverage(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            attachment_id = _safe_text(payload.get("attachment_id") or "", limit=120)
+            attachment_label = _safe_text(payload.get("attachment_label") or payload.get("label") or "", limit=300)
+            coverage_state = _safe_text(payload.get("coverage_state") or "referenced", limit=80)
+            if not attachment_id or not attachment_label:
+                raise ValueError("attachment_id_and_label_required")
+            if coverage_state not in _ATTACHMENT_COVERAGE_STATES:
+                raise ValueError("attachment_coverage_state_invalid")
+            coverage = dict(state.get("attachment_coverage") or {})
+            if attachment_id in coverage:
+                raise ValueError("attachment_coverage_id_exists")
+            binding = self._attachment_binding(
+                _safe_text(payload.get("source_record_id") or "", limit=120),
+                _safe_text(payload.get("source_hash") or "", limit=64),
+                records,
+            )
+            if not binding.get("source_record_id"):
+                raise ValueError("attachment_source_record_required")
+            linked_record_id = _safe_text(payload.get("linked_record_id") or "", limit=120)
+            if linked_record_id:
+                linked = self._attachment_binding(linked_record_id, "", records)
+                if not linked.get("source_record_id"):
+                    raise ValueError("attachment_linked_record_required")
+            item = {
+                "attachment_id": attachment_id,
+                "attachment_label": attachment_label,
+                "coverage_state": coverage_state,
+                "coverage_scope": "selected_active_matter_records_only",
+                **binding,
+                "linked_record_id": linked_record_id,
+                "reviewer_status": "review_required",
+                "reviewer_notes": "",
+                "history": [],
+                "review_required": True,
+            }
+            entry = _history_entry(
+                action="create",
+                entity_type="attachment_coverage",
+                entity_id=attachment_id,
+                before=None,
+                after=item,
+                summary="Attachment coverage item recorded without inferring completeness.",
+            )
+            item["history"] = [entry]
+            coverage[attachment_id] = item
+            state["attachment_coverage"] = coverage
+            state.setdefault("attachment_coverage_history", {})[attachment_id] = list(item["history"])
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "attachment": item, "review_required": True}
+
+    def review_attachment_coverage(
+        self, attachment_id: str, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            coverage = dict(state.get("attachment_coverage") or {})
+            item = dict(coverage.get(attachment_id) or {})
+            if not item:
+                raise KeyError("attachment_coverage_not_found")
+            before = dict(item)
+            coverage_state = _safe_text(payload.get("coverage_state") or item.get("coverage_state") or "not_yet_reviewed", limit=80)
+            if coverage_state not in _ATTACHMENT_COVERAGE_STATES:
+                raise ValueError("attachment_coverage_state_invalid")
+            linked_record_id = _safe_text(payload.get("linked_record_id") or item.get("linked_record_id") or "", limit=120)
+            if coverage_state == "located" and not linked_record_id:
+                raise ValueError("located_attachment_record_required")
+            if linked_record_id:
+                self._attachment_binding(linked_record_id, "", records)
+            item["coverage_state"] = coverage_state
+            item["linked_record_id"] = linked_record_id
+            item["reviewer_status"] = "review_required"
+            item["reviewer_notes"] = _safe_text(payload.get("reviewer_notes") or payload.get("notes") or "", limit=2000)
+            entry = _history_entry(
+                action="review",
+                entity_type="attachment_coverage",
+                entity_id=attachment_id,
+                before=before,
+                after=item,
+                summary="Attachment coverage state reviewed; no completeness or legal conclusion inferred.",
+            )
+            item["history"] = list(item.get("history") or []) + [entry]
+            coverage[attachment_id] = item
+            state["attachment_coverage"] = coverage
+            state.setdefault("attachment_coverage_history", {})[attachment_id] = list(item["history"])
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "attachment": item, "review_required": True}
+
+    def attachment_coverage(self, attachment_id: str = "") -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            coverage = dict(state.get("attachment_coverage") or {})
+            if attachment_id:
+                item = dict(coverage.get(attachment_id) or {})
+                if not item:
+                    raise KeyError("attachment_coverage_not_found")
+                return {
+                    "status": "pass",
+                    "attachment": item,
+                    "history": list(state.get("attachment_coverage_history", {}).get(attachment_id) or []),
+                    "review_required": True,
+                }
+            rows = sorted(coverage.values(), key=lambda row: str(row.get("attachment_id") or ""))
+            states = {name: 0 for name in sorted(_ATTACHMENT_COVERAGE_STATES)}
+            for row in rows:
+                value = str(row.get("coverage_state") or "not_yet_reviewed")
+                states[value] = states.get(value, 0) + 1
+            return {
+                "status": "pass",
+                "attachments": rows,
+                "state_counts": states,
+                "notice": "An absent-in-scope item is not a finding that an attachment does not exist elsewhere.",
+                "review_required": True,
+            }
+
+    def _fact_graph_source_binding(
+        self, payload: dict[str, Any], records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        binding = self._event_source_binding(
+            {"source_record_id": payload.get("source_record_id"), "source_hash": payload.get("source_hash")}, records
+        )
+        if not binding.get("source_record_id"):
+            raise ValueError("fact_graph_source_record_required")
+        return binding
+
+    def create_fact_graph_node(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            graph = dict(state.get("fact_graph") or {})
+            nodes = dict(graph.get("nodes") or {})
+            node_id = _safe_text(payload.get("node_id") or "", limit=120)
+            node_kind = _safe_text(payload.get("node_kind") or "", limit=40)
+            label = _safe_text(payload.get("label") or "", limit=300)
+            fact_state = _safe_text(payload.get("fact_state") or "not_yet_reviewed", limit=80)
+            if not node_id or not label:
+                raise ValueError("fact_graph_node_id_and_label_required")
+            if node_id in nodes:
+                raise ValueError("fact_graph_node_id_exists")
+            if node_kind not in _FACT_GRAPH_NODE_KINDS:
+                raise ValueError("fact_graph_node_kind_invalid")
+            if fact_state not in _FACT_GRAPH_STATES:
+                raise ValueError("fact_graph_state_invalid")
+            node = {
+                "node_id": node_id,
+                "node_kind": node_kind,
+                "label": label,
+                "fact_state": fact_state,
+                **self._fact_graph_source_binding(payload, records),
+                "reviewer_status": "review_required",
+                "review_required": True,
+            }
+            entry = _history_entry(action="create", entity_type="fact_graph_node", entity_id=node_id, before=None, after=node, summary="Source-bound fact graph node recorded without inferring a finding.")
+            nodes[node_id] = node
+            graph["nodes"] = nodes
+            graph.setdefault("edges", {})
+            state["fact_graph"] = graph
+            state.setdefault("fact_graph_history", []).append(entry)
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "node": node, "review_required": True}
+
+    def create_fact_graph_edge(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            graph = dict(state.get("fact_graph") or {})
+            nodes = dict(graph.get("nodes") or {})
+            edges = dict(graph.get("edges") or {})
+            edge_id = _safe_text(payload.get("edge_id") or "", limit=120)
+            source_node_id = _safe_text(payload.get("source_node_id") or "", limit=120)
+            target_node_id = _safe_text(payload.get("target_node_id") or "", limit=120)
+            relationship = _safe_text(payload.get("relationship") or "", limit=80)
+            fact_state = _safe_text(payload.get("fact_state") or "not_yet_reviewed", limit=80)
+            if not edge_id or not source_node_id or not target_node_id:
+                raise ValueError("fact_graph_edge_ids_required")
+            if edge_id in edges:
+                raise ValueError("fact_graph_edge_id_exists")
+            if source_node_id not in nodes or target_node_id not in nodes:
+                raise ValueError("fact_graph_edge_node_not_found")
+            if relationship not in _FACT_GRAPH_RELATIONSHIPS:
+                raise ValueError("fact_graph_relationship_invalid")
+            if fact_state not in _FACT_GRAPH_STATES:
+                raise ValueError("fact_graph_state_invalid")
+            edge = {
+                "edge_id": edge_id,
+                "source_node_id": source_node_id,
+                "target_node_id": target_node_id,
+                "relationship": relationship,
+                "fact_state": fact_state,
+                **self._fact_graph_source_binding(payload, records),
+                "relationship_basis": _safe_text(payload.get("relationship_basis") or "reviewer_supplied", limit=120),
+                "relationship_note": _safe_text(payload.get("relationship_note") or "", limit=2_000),
+                "reviewer_status": "review_required",
+                "review_required": True,
+            }
+            entry = _history_entry(action="create", entity_type="fact_graph_edge", entity_id=edge_id, before=None, after=edge, summary="Source-bound graph relationship recorded without inferring a finding.")
+            edges[edge_id] = edge
+            graph["nodes"] = nodes
+            graph["edges"] = edges
+            state["fact_graph"] = graph
+            state.setdefault("fact_graph_history", []).append(entry)
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "edge": edge, "review_required": True}
+
+    def fact_graph(self) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            graph = dict(state.get("fact_graph") or {})
+            nodes = sorted(dict(graph.get("nodes") or {}).values(), key=lambda row: str(row.get("node_id") or ""))
+            edges = sorted(dict(graph.get("edges") or {}).values(), key=lambda row: str(row.get("edge_id") or ""))
+            state_counts = {name: 0 for name in sorted(_FACT_GRAPH_STATES)}
+            for row in [*nodes, *edges]:
+                value = str(row.get("fact_state") or "not_yet_reviewed")
+                state_counts[value] = state_counts.get(value, 0) + 1
+            return {
+                "status": "pass",
+                "nodes": nodes,
+                "edges": edges,
+                "state_counts": state_counts,
+                "history": list(state.get("fact_graph_history") or [])[-100:],
+                "notice": "Graph relationships are source-bound review records, not findings, legal conclusions, or a resolution of disputed facts.",
+                "review_required": True,
+            }
+
+    def fact_graph_source(self, entity_kind: str, entity_id: str) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            graph = dict(state.get("fact_graph") or {})
+            collection = dict(graph.get("nodes" if entity_kind == "nodes" else "edges") or {})
+            row = dict(collection.get(entity_id) or {})
+            if not row:
+                raise KeyError("fact_graph_entity_not_found")
+            return {"status": "pass", "entity": row, "review_required": True}
+
+    def create_issue_proof_item(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Record a review-only issue/proof row anchored to an active-matter record.
+
+        An authority string is deliberately preserved only as an unverified candidate.
+        This workbench is not an authority resolver and cannot turn a matrix row into
+        an element determination, a factual finding, or filing approval.
+        """
+        with self._lock:
+            state = self._load_state()
+            items = dict(state.get("issue_proof_matrix") or {})
+            item_id = _safe_text(payload.get("item_id") or "", limit=120)
+            issue_id = _safe_text(payload.get("issue_id") or "", limit=120)
+            issue_label = _safe_text(payload.get("issue_label") or "", limit=300)
+            proof_item_id = _safe_text(payload.get("proof_item_id") or "", limit=120)
+            proof_label = _safe_text(payload.get("proof_label") or "", limit=500)
+            evidence_role = _safe_text(payload.get("evidence_role") or "", limit=80)
+            review_state = _safe_text(payload.get("review_state") or "review_required", limit=80)
+            if not all((item_id, issue_id, issue_label, proof_item_id, proof_label)):
+                raise ValueError("issue_proof_required_fields_missing")
+            if item_id in items:
+                raise ValueError("issue_proof_item_id_exists")
+            if evidence_role not in _ISSUE_PROOF_EVIDENCE_ROLES:
+                raise ValueError("issue_proof_evidence_role_invalid")
+            if review_state not in _ISSUE_PROOF_REVIEW_STATES:
+                raise ValueError("issue_proof_review_state_invalid")
+            binding = self._event_source_binding(
+                {
+                    "source_record_id": payload.get("source_record_id"),
+                    "source_hash": payload.get("source_hash"),
+                },
+                records,
+            )
+            if not binding.get("source_record_id"):
+                raise ValueError("issue_proof_source_record_required")
+            authority_candidate = _safe_text(payload.get("authority_candidate") or "", limit=300)
+            item = {
+                "item_id": item_id,
+                "issue_id": issue_id,
+                "issue_label": issue_label,
+                "proof_item_id": proof_item_id,
+                "proof_label": proof_label,
+                "evidence_role": evidence_role,
+                "authority_candidate": authority_candidate,
+                "authority_candidate_status": "not_provided" if not authority_candidate else "unverified_candidate",
+                "authority_current_law_determined": False,
+                **binding,
+                "review_state": review_state,
+                "reviewer_status": "review_required",
+                "review_required": True,
+                "notice": "This matrix organizes source-bound proof review. It does not determine legal elements, facts, sufficiency, jurisdiction, or filing readiness.",
+            }
+            entry = _history_entry(
+                action="create",
+                entity_type="issue_proof_item",
+                entity_id=item_id,
+                before=None,
+                after=item,
+                summary="Source-bound issue-to-proof matrix row recorded for human review.",
+            )
+            item["history"] = [entry]
+            items[item_id] = item
+            state["issue_proof_matrix"] = items
+            state.setdefault("issue_proof_matrix_history", {})[item_id] = list(item["history"])
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "item": item, "review_required": True}
+
+    def review_issue_proof_item(
+        self, item_id: str, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            items = dict(state.get("issue_proof_matrix") or {})
+            item = dict(items.get(item_id) or {})
+            if not item:
+                raise KeyError("issue_proof_item_not_found")
+            before = dict(item)
+            review_state = _safe_text(payload.get("review_state") or "review_required", limit=80)
+            if review_state not in _ISSUE_PROOF_REVIEW_STATES:
+                raise ValueError("issue_proof_review_state_invalid")
+            binding = self._event_source_binding(
+                {
+                    "source_record_id": item.get("source_record_id"),
+                    "source_hash": item.get("source_hash"),
+                },
+                records,
+            )
+            item.update(binding)
+            item["review_state"] = review_state
+            item["reviewer_notes"] = _safe_text(payload.get("reviewer_notes") or "", limit=2000)
+            item["reviewer_status"] = "review_required"
+            item["review_required"] = True
+            entry = _history_entry(
+                action="review",
+                entity_type="issue_proof_item",
+                entity_id=item_id,
+                before=before,
+                after=item,
+                summary="Issue-to-proof matrix review state recorded without resolving proof sufficiency.",
+            )
+            item["history"] = list(item.get("history") or []) + [entry]
+            items[item_id] = item
+            state["issue_proof_matrix"] = items
+            state.setdefault("issue_proof_matrix_history", {})[item_id] = list(item["history"])
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "item": item, "review_required": True}
+
+    def issue_proof_matrix(self, item_id: str = "") -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            items = dict(state.get("issue_proof_matrix") or {})
+            if item_id:
+                item = dict(items.get(item_id) or {})
+                if not item:
+                    raise KeyError("issue_proof_item_not_found")
+                return {
+                    "status": "pass",
+                    "item": item,
+                    "history": list(state.get("issue_proof_matrix_history", {}).get(item_id) or []),
+                    "review_required": True,
+                }
+            rows = sorted(items.values(), key=lambda row: (str(row.get("issue_id") or ""), str(row.get("proof_item_id") or ""), str(row.get("item_id") or "")))
+            issue_rollup: dict[str, dict[str, Any]] = {}
+            for row in rows:
+                issue = issue_rollup.setdefault(
+                    str(row.get("issue_id") or ""),
+                    {"issue_id": row.get("issue_id"), "issue_label": row.get("issue_label"), "item_count": 0, "supports": 0, "contradicts": 0, "qualifies": 0, "missing_proof": 0, "unverified_authority_candidates": 0},
+                )
+                issue["item_count"] += 1
+                role = str(row.get("evidence_role") or "")
+                if role in issue:
+                    issue[role] += 1
+                if row.get("authority_candidate_status") == "unverified_candidate":
+                    issue["unverified_authority_candidates"] += 1
+            return {
+                "status": "pass",
+                "items": rows,
+                "issues": list(issue_rollup.values()),
+                "notice": "Proof, contradiction, missing-proof, and authority-candidate labels remain source-bound review aids. The matrix does not determine legal elements, facts, proof sufficiency, jurisdiction, or filing readiness.",
+                "review_required": True,
+            }
+
+    def issue_proof_matrix_source(self, item_id: str) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            item = dict((state.get("issue_proof_matrix") or {}).get(item_id) or {})
+            if not item:
+                raise KeyError("issue_proof_item_not_found")
+            return {"status": "pass", "item": item, "review_required": True}
+
+    def _change_digest_snapshot(
+        self, state: dict[str, Any], records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        rows, _warnings = self._records(records)
+        record_manifest = {
+            str(row.get("evidence_id") or ""): str(row.get("source_hash") or "").lower()
+            for row in rows
+            if str(row.get("evidence_id") or "") and str(row.get("source_hash") or "")
+        }
+        review_sections = (
+            "timeline",
+            "claims",
+            "attachment_coverage",
+            "fact_graph",
+            "issue_proof_matrix",
+            "missing_records",
+            "ledger",
+        )
+        review_section_hashes = {
+            section: _sha(state.get(section) or {}) for section in review_sections
+        }
+        contradiction_keys: list[dict[str, Any]] = []
+        for claim_id, claim in sorted((state.get("claims") or {}).items()):
+            for card_index, card in enumerate(claim.get("contradicts") or []):
+                contradiction_keys.append(
+                    {
+                        "key": _sha({"claim_id": claim_id, "record_id": card.get("record_id"), "source_hash": card.get("source_hash"), "source_span": card.get("source_span")}),
+                        "claim_id": claim_id,
+                        "record_id": card.get("record_id"),
+                        "source_hash": card.get("source_hash"),
+                        "card_index": card_index,
+                    }
+                )
+        calendar_review_items = [
+            {
+                "event_id": event.get("event_id"),
+                "date_value": event.get("date_value"),
+                "date_type": event.get("date_type"),
+                "source_record_id": event.get("source_record_id"),
+                "source_hash": event.get("source_hash"),
+            }
+            for event in (state.get("timeline") or {}).get("events") or []
+            if str(event.get("date_type") or "") in {"hearing date", "service date", "filing date"}
+        ]
+        return {
+            "record_manifest": record_manifest,
+            "review_section_hashes": review_section_hashes,
+            "candidate_contradictions": contradiction_keys,
+            "calendar_review_items": calendar_review_items,
+        }
+
+    def create_change_digest_checkpoint(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            checkpoints = dict(state.get("change_digest_checkpoints") or {})
+            checkpoint_id = _safe_text(payload.get("checkpoint_id") or "", limit=120)
+            checkpoint_label = _safe_text(payload.get("checkpoint_label") or "", limit=300)
+            if not checkpoint_id or not checkpoint_label:
+                raise ValueError("change_digest_checkpoint_id_and_label_required")
+            if checkpoint_id in checkpoints:
+                raise ValueError("change_digest_checkpoint_id_exists")
+            checkpoint = {
+                "checkpoint_id": checkpoint_id,
+                "checkpoint_label": checkpoint_label,
+                "snapshot": self._change_digest_snapshot(state, records),
+                "created_at": _utc_now(),
+                "review_required": True,
+                "notice": "A checkpoint is an operational comparison baseline. It does not approve work, determine whether a deadline applies, or resolve a factual or legal question.",
+            }
+            entry = _history_entry(
+                action="create",
+                entity_type="change_digest_checkpoint",
+                entity_id=checkpoint_id,
+                before=None,
+                after=checkpoint,
+                summary="Matter-change comparison checkpoint created from the active matter.",
+            )
+            checkpoint["history"] = [entry]
+            checkpoints[checkpoint_id] = checkpoint
+            state["change_digest_checkpoints"] = checkpoints
+            state.setdefault("change_digest_history", {})[checkpoint_id] = []
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "checkpoint": checkpoint, "review_required": True}
+
+    def matter_change_digest(
+        self, checkpoint_id: str, *, records: Iterable[dict[str, Any]], persist: bool = True
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            checkpoint = dict((state.get("change_digest_checkpoints") or {}).get(checkpoint_id) or {})
+            if not checkpoint:
+                raise KeyError("change_digest_checkpoint_not_found")
+            baseline = dict(checkpoint.get("snapshot") or {})
+            current = self._change_digest_snapshot(state, records)
+            baseline_records = dict(baseline.get("record_manifest") or {})
+            current_records = dict(current.get("record_manifest") or {})
+            new_records = [
+                {"record_id": record_id, "source_hash": source_hash, "review_required": True}
+                for record_id, source_hash in sorted(current_records.items())
+                if record_id not in baseline_records
+            ]
+            changed_records = [
+                {"record_id": record_id, "baseline_source_hash": source_hash, "current_source_hash": current_records[record_id], "review_required": True}
+                for record_id, source_hash in sorted(baseline_records.items())
+                if record_id in current_records and current_records[record_id] != source_hash
+            ]
+            unavailable_since_checkpoint = [
+                {"record_id": record_id, "baseline_source_hash": source_hash, "review_required": True}
+                for record_id, source_hash in sorted(baseline_records.items())
+                if record_id not in current_records
+            ]
+            review_section_changes = [
+                {"section": section, "baseline_hash": baseline_hash, "current_hash": current.get("review_section_hashes", {}).get(section), "review_required": True}
+                for section, baseline_hash in sorted((baseline.get("review_section_hashes") or {}).items())
+                if current.get("review_section_hashes", {}).get(section) != baseline_hash
+            ]
+            baseline_contradictions = {str(row.get("key") or "") for row in baseline.get("candidate_contradictions") or []}
+            new_candidate_contradictions = [
+                {**row, "review_required": True}
+                for row in current.get("candidate_contradictions") or []
+                if str(row.get("key") or "") not in baseline_contradictions
+            ]
+            baseline_calendar_keys = {
+                _sha({"event_id": row.get("event_id"), "source_hash": row.get("source_hash"), "date_value": row.get("date_value")})
+                for row in baseline.get("calendar_review_items") or []
+            }
+            new_calendar_review_items = [
+                {**row, "review_required": True, "notice": "Date metadata needs human review; this does not calculate or determine a deadline."}
+                for row in current.get("calendar_review_items") or []
+                if _sha({"event_id": row.get("event_id"), "source_hash": row.get("source_hash"), "date_value": row.get("date_value")}) not in baseline_calendar_keys
+            ]
+            stale_work = [
+                {"scope": "record", "record_id": row["record_id"], "reason": "record_changed_or_unavailable_since_checkpoint", "review_required": True}
+                for row in changed_records + unavailable_since_checkpoint
+            ] + [
+                {"scope": "review_work", "section": row["section"], "reason": "source_bound_review_work_changed_since_checkpoint", "review_required": True}
+                for row in review_section_changes
+            ]
+            digest = {
+                "digest_id": _safe_id("change-digest", checkpoint_id, _sha(current)),
+                "checkpoint_id": checkpoint_id,
+                "checkpoint_label": checkpoint.get("checkpoint_label"),
+                "generated_at": _utc_now(),
+                "new_records": new_records,
+                "changed_records": changed_records,
+                "unavailable_since_checkpoint": unavailable_since_checkpoint,
+                "review_section_changes": review_section_changes,
+                "new_candidate_contradictions": new_candidate_contradictions,
+                "new_calendar_review_items": new_calendar_review_items,
+                "stale_work": stale_work,
+                "notice": "This change digest compares active-matter records and review-work snapshots. It does not identify altered conclusions, resolve contradictions, calculate deadlines, determine legal effect, or approve work.",
+                "review_required": True,
+            }
+            if persist:
+                entry = _history_entry(
+                    action="generate",
+                    entity_type="matter_change_digest",
+                    entity_id=digest["digest_id"],
+                    before=None,
+                    after=digest,
+                    summary="Matter-change digest generated from a source-bound checkpoint.",
+                )
+                digest["history_entry"] = entry
+                state.setdefault("change_digest_history", {}).setdefault(checkpoint_id, []).append(digest)
+                state.setdefault("review_history", []).append(entry)
+                self._append_history_log(entry)
+                self._save_state(state)
+            return {"status": "pass", "digest": digest, "review_required": True}
+
+    def change_digest_checkpoints(self) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            checkpoints = sorted((state.get("change_digest_checkpoints") or {}).values(), key=lambda row: str(row.get("checkpoint_id") or ""))
+            return {"status": "pass", "checkpoints": checkpoints, "review_required": True}
+
+    def change_digest_record_source(
+        self, checkpoint_id: str, record_id: str, *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            checkpoint = dict((state.get("change_digest_checkpoints") or {}).get(checkpoint_id) or {})
+            if not checkpoint:
+                raise KeyError("change_digest_checkpoint_not_found")
+            baseline_manifest = (checkpoint.get("snapshot") or {}).get("record_manifest", {})
+            current_manifest = self._change_digest_snapshot(state, records).get("record_manifest", {})
+            if record_id not in baseline_manifest and record_id not in current_manifest:
+                raise KeyError("change_digest_record_not_found")
+            source_hash = str(current_manifest.get(record_id) or "").lower()
+            if not source_hash:
+                raise ValueError("change_digest_source_record_unavailable")
+            return {"status": "pass", "checkpoint_id": checkpoint_id, "record_id": record_id, "source_hash": source_hash, "review_required": True}
+
+    def _lineage_record_binding(
+        self, record_id: Any, supplied_hash: Any, records: Iterable[dict[str, Any]], *, field_name: str
+    ) -> dict[str, Any]:
+        binding = self._event_source_binding(
+            {"source_record_id": record_id, "source_hash": supplied_hash}, records
+        )
+        if not binding.get("source_record_id"):
+            raise ValueError(f"record_lineage_{field_name}_required")
+        return {
+            "record_id": binding["source_record_id"],
+            "source_hash": binding["source_hash"],
+            "source_block": binding.get("source_block") or {},
+        }
+
+    def create_record_lineage_link(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            links = dict(state.get("record_lineage") or {})
+            link_id = _safe_text(payload.get("link_id") or "", limit=120)
+            relationship = _safe_text(payload.get("relationship") or "", limit=80)
+            if not link_id:
+                raise ValueError("record_lineage_link_id_required")
+            if link_id in links:
+                raise ValueError("record_lineage_link_id_exists")
+            if relationship not in _RECORD_LINEAGE_RELATIONSHIPS:
+                raise ValueError("record_lineage_relationship_invalid")
+            original = self._lineage_record_binding(
+                payload.get("original_record_id"), payload.get("original_source_hash"), records, field_name="original_record"
+            )
+            derivative = self._lineage_record_binding(
+                payload.get("derivative_record_id"), payload.get("derivative_source_hash"), records, field_name="derivative_record"
+            )
+            if original["record_id"] == derivative["record_id"]:
+                raise ValueError("record_lineage_records_must_differ")
+            link = {
+                "link_id": link_id,
+                "relationship": relationship,
+                "original": original,
+                "derivative": derivative,
+                "reviewer_notes": _safe_text(payload.get("reviewer_notes") or "", limit=2000),
+                "reviewer_status": "review_required",
+                "review_required": True,
+                "notice": "This is a proposed source-provenance relationship. It does not decide authenticity, admissibility, completeness, legal effect, or which record controls.",
+            }
+            entry = _history_entry(
+                action="create", entity_type="record_lineage_link", entity_id=link_id,
+                before=None, after=link,
+                summary="Source-bound record lineage relationship recorded for human review.",
+            )
+            link["history"] = [entry]
+            links[link_id] = link
+            state["record_lineage"] = links
+            state.setdefault("record_lineage_history", {})[link_id] = list(link["history"])
+            state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry)
+            self._save_state(state)
+            return {"status": "pass", "link": link, "review_required": True}
+
+    def record_lineage(self, link_id: str = "") -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            links = dict(state.get("record_lineage") or {})
+            if link_id:
+                link = dict(links.get(link_id) or {})
+                if not link:
+                    raise KeyError("record_lineage_link_not_found")
+                return {"status": "pass", "link": link, "history": list(state.get("record_lineage_history", {}).get(link_id) or []), "review_required": True}
+            rows = sorted(links.values(), key=lambda row: str(row.get("link_id") or ""))
+            relationship_counts = {name: 0 for name in sorted(_RECORD_LINEAGE_RELATIONSHIPS)}
+            for row in rows:
+                relationship = str(row.get("relationship") or "")
+                if relationship in relationship_counts:
+                    relationship_counts[relationship] += 1
+            return {"status": "pass", "links": rows, "relationship_counts": relationship_counts, "notice": "Record lineage links are review-required provenance proposals, not determinations of authenticity, legal effect, or controlling text.", "review_required": True}
+
+    def record_lineage_source(self, link_id: str, side: str) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state()
+            link = dict((state.get("record_lineage") or {}).get(link_id) or {})
+            if not link:
+                raise KeyError("record_lineage_link_not_found")
+            if side not in {"original", "derivative"}:
+                raise ValueError("record_lineage_side_invalid")
+            binding = dict(link.get(side) or {})
+            if not binding.get("record_id") or not binding.get("source_hash"):
+                raise ValueError("record_lineage_source_unbound")
+            return {"status": "pass", "link_id": link_id, "side": side, "binding": binding, "review_required": True}
+
+    def create_entity_resolution_candidate(self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state(); candidates = dict(state.get("entity_resolution") or {})
+            candidate_id = _safe_text(payload.get("candidate_id") or "", limit=120)
+            entity_label = _safe_text(payload.get("entity_label") or "", limit=300)
+            entity_type = _safe_text(payload.get("entity_type") or "person", limit=80)
+            if not candidate_id or not entity_label:
+                raise ValueError("entity_resolution_candidate_id_and_label_required")
+            if candidate_id in candidates:
+                raise ValueError("entity_resolution_candidate_id_exists")
+            if entity_type not in _ENTITY_RESOLUTION_TYPES:
+                raise ValueError("entity_resolution_type_invalid")
+            left = self._lineage_record_binding(payload.get("left_record_id"), payload.get("left_source_hash"), records, field_name="left_record")
+            right = self._lineage_record_binding(payload.get("right_record_id"), payload.get("right_source_hash"), records, field_name="right_record")
+            if left["record_id"] == right["record_id"]:
+                raise ValueError("entity_resolution_records_must_differ")
+            candidate = {"candidate_id": candidate_id, "entity_label": entity_label, "entity_type": entity_type, "left": left, "right": right, "reviewer_notes": _safe_text(payload.get("reviewer_notes") or "", limit=2000), "resolution_status": "review_required", "merge_status": "not_merged", "review_required": True, "notice": "This is a source-bound possible-identity review item. It does not infer identity, alter original records, merge data, or make a factual finding until an explicit human confirmation is recorded."}
+            entry = _history_entry(action="create", entity_type="entity_resolution_candidate", entity_id=candidate_id, before=None, after=candidate, summary="Cross-document entity candidate recorded for explicit human review.")
+            candidate["history"] = [entry]; candidates[candidate_id] = candidate
+            state["entity_resolution"] = candidates; state.setdefault("entity_resolution_history", {})[candidate_id] = list(candidate["history"]); state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry); self._save_state(state)
+            return {"status": "pass", "candidate": candidate, "review_required": True}
+
+    def confirm_entity_resolution(self, candidate_id: str, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state(); candidates = dict(state.get("entity_resolution") or {}); candidate = dict(candidates.get(candidate_id) or {})
+            if not candidate: raise KeyError("entity_resolution_candidate_not_found")
+            if _safe_text(payload.get("confirmation") or "", limit=80) != "confirm_same_entity":
+                raise ValueError("entity_resolution_explicit_confirmation_required")
+            before = dict(candidate)
+            for side in ("left", "right"):
+                binding = dict(candidate.get(side) or {})
+                candidate[side] = self._lineage_record_binding(binding.get("record_id"), binding.get("source_hash"), records, field_name=f"{side}_record")
+            candidate["resolution_status"] = "human_confirmed_same_entity"
+            candidate["merge_status"] = "logical_merge_active"
+            candidate["canonical_entity_id"] = _safe_text(payload.get("canonical_entity_id") or candidate_id, limit=120)
+            candidate["reviewer_notes"] = _safe_text(payload.get("reviewer_notes") or "", limit=2000)
+            candidate["review_required"] = True
+            entry = _history_entry(action="confirm", entity_type="entity_resolution_candidate", entity_id=candidate_id, before=before, after=candidate, summary="Explicit human confirmation recorded; logical merge remains reversible and review-required.")
+            candidate["history"] = list(candidate.get("history") or []) + [entry]; candidates[candidate_id] = candidate
+            state["entity_resolution"] = candidates; state.setdefault("entity_resolution_history", {})[candidate_id] = list(candidate["history"]); state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry); self._save_state(state)
+            return {"status": "pass", "candidate": candidate, "review_required": True}
+
+    def revoke_entity_resolution(self, candidate_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state(); candidates = dict(state.get("entity_resolution") or {}); candidate = dict(candidates.get(candidate_id) or {})
+            if not candidate: raise KeyError("entity_resolution_candidate_not_found")
+            if candidate.get("merge_status") != "logical_merge_active": raise ValueError("entity_resolution_no_active_merge")
+            before = dict(candidate); candidate["resolution_status"] = "confirmation_revoked"; candidate["merge_status"] = "reversed"; candidate["reviewer_notes"] = _safe_text(payload.get("reviewer_notes") or "", limit=2000); candidate["review_required"] = True
+            entry = _history_entry(action="revoke", entity_type="entity_resolution_candidate", entity_id=candidate_id, before=before, after=candidate, summary="Logical merge revoked; source records were never altered.")
+            candidate["history"] = list(candidate.get("history") or []) + [entry]; candidates[candidate_id] = candidate
+            state["entity_resolution"] = candidates; state.setdefault("entity_resolution_history", {})[candidate_id] = list(candidate["history"]); state.setdefault("review_history", []).append(entry)
+            self._append_history_log(entry); self._save_state(state)
+            return {"status": "pass", "candidate": candidate, "review_required": True}
+
+    def entity_resolution(self, candidate_id: str = "") -> dict[str, Any]:
+        with self._lock:
+            state = self._load_state(); candidates = dict(state.get("entity_resolution") or {})
+            if candidate_id:
+                candidate = dict(candidates.get(candidate_id) or {})
+                if not candidate: raise KeyError("entity_resolution_candidate_not_found")
+                return {"status": "pass", "candidate": candidate, "history": list(state.get("entity_resolution_history", {}).get(candidate_id) or []), "review_required": True}
+            rows = sorted(candidates.values(), key=lambda row: str(row.get("candidate_id") or ""))
+            return {"status": "pass", "candidates": rows, "notice": "Possible identity matches need explicit human confirmation. Logical merges are reversible and never modify original records.", "review_required": True}
+
+    def entity_resolution_source(self, candidate_id: str, side: str) -> dict[str, Any]:
+        candidate = self.entity_resolution(candidate_id).get("candidate") or {}
+        if side not in {"left", "right"}: raise ValueError("entity_resolution_side_invalid")
+        binding = dict(candidate.get(side) or {})
+        if not binding.get("record_id") or not binding.get("source_hash"): raise ValueError("entity_resolution_source_unbound")
+        return {"status": "pass", "candidate_id": candidate_id, "side": side, "binding": binding, "review_required": True}
 
     def coverage(self, *, records: Iterable[dict[str, Any]], selected_record_ids: Iterable[str] | None = None) -> dict[str, Any]:
         with self._lock:
@@ -851,6 +1793,21 @@ class EvidenceReviewStore:
                 "review_history": state.get("review_history", [])[-100:],
                 "review_required": True,
             }
+
+    def matter_completeness(self, *, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
+        """Explain operational coverage without forecasting a case result."""
+        coverage = self.coverage(records=records)
+        with self._lock:
+            state = self._load_state()
+            dimensions = {
+                "record_inventory": {"observed": coverage["searchable_records"], "blocker": "no_searchable_records" if not coverage["searchable_records"] else ""},
+                "date_review": {"observed": len(coverage["records_by_date"]), "blocker": "undated_records_need_review" if coverage["undated_records"] else ""},
+                "source_integrity": {"observed": coverage["searchable_records"] - len(coverage["parser_ocr_failures"]), "blocker": "parser_or_ocr_review_required" if coverage["parser_ocr_failures"] else ""},
+                "missing_record_review": {"observed": len(state.get("missing_records") or {}), "blocker": "missing_record_items_open" if state.get("missing_records") else ""},
+                "issue_proof_review": {"observed": len(state.get("issue_proof_matrix") or {}), "blocker": "issue_proof_items_need_human_review" if state.get("issue_proof_matrix") else ""},
+            }
+            blockers = [row["blocker"] for row in dimensions.values() if row["blocker"]]
+            return {"status":"pass","dimensions":dimensions,"blockers":blockers,"notice":"Completeness dimensions describe observed record and review-work coverage only. They do not score a case, predict an outcome, assess legal sufficiency, or approve filing.","review_required":True}
 
     def create_missing_records(self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]) -> dict[str, Any]:
         with self._lock:

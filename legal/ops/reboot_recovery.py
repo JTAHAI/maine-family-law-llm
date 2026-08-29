@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from legal.data_boundaries.storage_layout import is_inside_project_repo
+from legal.release.source_tree import pruned_source_paths
 
 
 def _utc_now() -> str:
@@ -116,13 +117,27 @@ class RebootRecoveryAuditor:
             ".eggs",
             ".proofs",
         }
+        # Parser fixtures deliberately include malformed and textual sample inputs.  They
+        # are inert public test data, not operator pass logs, so exclude only these
+        # narrowly-scoped fixture directories rather than weakening the source-tree rule.
+        public_fixture_roots = {
+            ("data", "fixtures"),
+            ("tests", "fixtures"),
+        }
+
+        def _is_public_fixture(relative: Path) -> bool:
+            parts = relative.parts
+            return any(parts[: len(prefix)] == prefix for prefix in public_fixture_roots)
+
         txt_files = sorted(
-            path.relative_to(self.repo_root).as_posix()
-            for path in self.repo_root.rglob("*.txt")
-            if not path.relative_to(self.repo_root).as_posix().startswith("store/")
+            relative.as_posix()
+            for path in pruned_source_paths(self.repo_root, ignored_txt_parts)
+            if path.match("*.txt")
+            if not (relative := path.relative_to(self.repo_root)).as_posix().startswith("store/")
+            and not _is_public_fixture(relative)
             and not any(
                 part in ignored_txt_parts or part.endswith(".egg-info")
-                for part in path.relative_to(self.repo_root).parts
+                for part in relative.parts
             )
         )
         one_pass_log_only = txt_files == ["PASS_CHANGES.txt"]

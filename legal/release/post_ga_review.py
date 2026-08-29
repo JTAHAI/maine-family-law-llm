@@ -4,6 +4,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from legal.release.source_tree import pruned_source_paths
 from typing import Any
 
 from legal.evals.gold_pack import GoldEvalPackAuditor
@@ -106,7 +107,8 @@ class PostGARepoReviewer:
             if match:
                 pass_number = int(match.group(1))
         numbered_complete = pass_number >= 51
-        txt_files = [path for path in self.project_root.rglob("*.txt") if self._is_repo_file(path)]
+        ignored = {".git", ".pytest_cache", ".ruff_cache", "__pycache__", ".venv", "venv", "node_modules", "dist", "build", ".eggs"}
+        txt_files = [path for path in pruned_source_paths(self.project_root, ignored) if path.match("*.txt") and self._is_repo_file(path)]
         only_one_pass_txt = len([path for path in txt_files if "pass" in path.name.lower()]) == 1
         single_pass_log_present = pass_log.exists() and pass_log in txt_files
         fixture_detected = self._fixture_evidence_detected()

@@ -743,7 +743,7 @@ def rebuild_local_content_index(case_root: Path) -> dict[str, Any]:
         "parse_failures": parse_failures[:200],
         "fts5_index": INDEX_NAME,
         "cloud_calls_made": 0,
-        "network_boundary": "blocked_sockets_dns_http_by_design",
+        "network_boundary": "outbound_connections_dns_datagrams_blocked_accept_preserved",
         "ocr_candidates": len(ocr_candidates),
         "ocr_candidate_documents": inventory_metrics["ocr_candidate_documents"],
         "ocr_candidate_pages": inventory_metrics["ocr_candidate_pages"],
@@ -780,7 +780,13 @@ def _first_existing_executable(candidates: Iterable[str | Path]) -> str:
 
 
 def _bundled_tesseract_candidates() -> list[Path]:
-    root = Path(__file__).resolve().parents[2]
+    # Engine assets are beside the executable. Source modules can be loaded
+    # from _internal/src in a frozen build, so their parent is not the bundle.
+    root = (
+        Path(sys.executable).resolve().parent
+        if getattr(sys, "frozen", False)
+        else Path(__file__).resolve().parents[2]
+    )
     return [
         root / "store" / "tesseract" / "tesseract.exe",
         root / "tesseract" / "tesseract.exe",

@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from legal.agent_runtime.providers import (
+    FastInterchangeLocalClient,
     LocalModelError,
     OllamaLocalClient,
     OpenAICompatibleLocalClient,
@@ -21,8 +22,11 @@ class _LocalModelHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", "0"))
         payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
         self.server.seen_requests.append((self.path, payload))  # type: ignore[attr-defined]
+        self.server.seen_authorizations.append(self.headers.get("Authorization"))  # type: ignore[attr-defined]
 
-        if self.path == "/api/generate":
+        if self.path == "/v1/requests/prepare":
+            body = {"request_id": payload["request_id"], "status": "reserved"}
+        elif self.path == "/api/generate":
             body: dict[str, Any] = {
                 "model": payload["model"],
                 "response": "Ollama loopback answer [1]. Review required.",
@@ -44,6 +48,9 @@ class _LocalModelHandler(BaseHTTPRequestHandler):
                 ],
                 "usage": {"prompt_tokens": 18, "completion_tokens": 9},
             }
+            if "request_id" in payload:
+                body.update({key: payload[key] for key in ("request_id", "capability", "release_fingerprint")})
+                body["review_required"] = True
         elif self.path == "/oversized":
             raw = b"x" * 4096
             self.send_response(200)
@@ -71,6 +78,7 @@ class _LocalModelHandler(BaseHTTPRequestHandler):
 def local_model_server():
     server = ThreadingHTTPServer(("127.0.0.1", 0), _LocalModelHandler)
     server.seen_requests = []  # type: ignore[attr-defined]
+    server.seen_authorizations = []  # type: ignore[attr-defined]
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -124,3 +132,45 @@ def test_adapter_rejects_declared_oversized_response_before_read(local_model_ser
     with pytest.raises(LocalModelError, match="exceeded its size limit") as exc_info:
         client._http.post_json("/oversized", {"model": "test"})
     assert exc_info.value.code == "local_model_response_too_large"
+
+
+def test_fast_interchange_adapter_uses_the_closed_authenticated_worker_contract(local_model_server, tmp_path):
+    from test_fast_interchange_worker import _registry
+    endpoint = f"http://127.0.0.1:{local_model_server.server_port}"
+    client = FastInterchangeLocalClient(
+        model_name="family-evidence-small-r1",
+        endpoint=endpoint,
+        timeout_seconds=5,
+        worker_token="w" * 40,
+        registry=_registry(tmp_path), capability="evidence_review", allow_test_only=True,
+    )
+
+    result = client.generate_response("Use only the approved source context.")
+
+    assert result.provider_id == "fast_interchange_local"
+    assert result.model_id == "family-evidence-small-r1"
+    assert result.finish_reason == "stop"
+    path, payload = local_model_server.seen_requests[-1]
+    assert path == "/v1/chat/completions"
+    assert payload == {
+        "model": "family-evidence-small-r1",
+        "messages": [{"role": "user", "content": "Use only the approved source context."}],
+        "temperature": 0,
+        "top_p": 1,
+        "max_tokens": 1024,
+        "stream": False,
+        "request_id": client.request_id,
+        "capability": "evidence_review",
+        "release_fingerprint": "a" * 64,
+    }
+    assert local_model_server.seen_authorizations[-1] == "Bearer " + "w" * 40
+    assert not client.supports_explicit_release
+
+
+def test_fast_interchange_adapter_refuses_missing_secret_and_invalid_release_model_id(monkeypatch):
+    monkeypatch.delenv("MAINE_FAST_INTERCHANGE_WORKER_TOKEN", raising=False)
+    with pytest.raises(LocalModelError, match="token is not configured") as secret_error:
+        FastInterchangeLocalClient(model_name="family-evidence-small-r1")
+    assert secret_error.value.code == "fast_interchange_worker_token_required"
+    with pytest.raises(LocalModelError, match="release-model ID is invalid"):
+        FastInterchangeLocalClient(model_name="../unsafe", worker_token="w" * 40)

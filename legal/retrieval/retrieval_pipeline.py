@@ -31,6 +31,55 @@ class RetrievalPipeline:
             return [citation.to_dict() for citation in extract_citations(query)]
         return [resolution.to_dict() for resolution in self.authority_index.resolve_text(query)]
 
+    @staticmethod
+    def _diversify_results(results: Sequence[RetrievalResult], *, top_k: int) -> tuple[list[RetrievalResult], dict[str, Any]]:
+        """Keep exact hits while preventing repeated cards from one source class.
+
+        This is intentionally a presentation/ranking control, not a statement
+        that any source class is legally required for every question.
+        """
+        selected: list[RetrievalResult] = []
+        deferred: list[RetrievalResult] = []
+        seen_source_ids: set[str] = set()
+        seen_citations: set[str] = set()
+        seen_classes: set[str] = set()
+        for result in results:
+            document = result.document
+            source_id = str(document.source_id)
+            citation = str(document.citation or "").casefold()
+            source_class = str(document.source_class or "unknown").casefold()
+            if source_id in seen_source_ids:
+                continue
+            is_exact = result.method == "admitted_exact_citation"
+            duplicate_citation = bool(citation and citation in seen_citations)
+            duplicate_class = source_class in seen_classes
+            if not is_exact and (duplicate_citation or duplicate_class):
+                deferred.append(result)
+                continue
+            selected.append(result)
+            seen_source_ids.add(source_id)
+            if citation:
+                seen_citations.add(citation)
+            seen_classes.add(source_class)
+            if len(selected) >= top_k:
+                break
+        if len(selected) < top_k:
+            for result in deferred:
+                if result.source_id in seen_source_ids:
+                    continue
+                selected.append(result)
+                seen_source_ids.add(result.source_id)
+                if len(selected) >= top_k:
+                    break
+        selected = [result.with_rank(index + 1) for index, result in enumerate(selected)]
+        return selected, {
+            "status": "applied",
+            "distinct_source_classes": sorted(seen_classes),
+            "redundant_candidates_deferred": len(deferred),
+            "coverage_requirement": "not_inferred; source-class diversity is a retrieval aid only",
+            "review_required": True,
+        }
+
     def retrieve(
         self,
         query: str,
@@ -40,7 +89,8 @@ class RetrievalPipeline:
         include_text: bool = True,
     ) -> dict[str, Any]:
         search_documents = coerce_many(tuple(documents)) if documents is not None else self.documents
-        results: list[RetrievalResult] = self.hybrid_search.search(query, search_documents, top_k=top_k)
+        candidate_limit = max(top_k, min(max(top_k * 4, 12), 80))
+        results: list[RetrievalResult] = self.hybrid_search.search(query, search_documents, top_k=candidate_limit)
         citation_context = self._citation_resolution_context(query)
         if self.authority_index is not None and citation_context:
             by_source_id = {document.source_id: document for document in search_documents}
@@ -70,7 +120,7 @@ class RetrievalPipeline:
             ]
             exact_set = {result.source_id for result in exact_results}
             results = exact_results + [result for result in results if result.source_id not in exact_set]
-            results = [result.with_rank(index + 1) for index, result in enumerate(results[:top_k])]
+        results, diversity = self._diversify_results(results, top_k=top_k)
         return {
             "query": query,
             "retrieved_sources": [result.to_dict(include_text=include_text) for result in results],
@@ -85,6 +135,7 @@ class RetrievalPipeline:
                 "freshness_weighting": True,
                 "issue_posture_weighting": True,
                 "parent_child_chunk_aware": True,
+                "diversity_control": diversity,
             },
             "review_required": True,
         }

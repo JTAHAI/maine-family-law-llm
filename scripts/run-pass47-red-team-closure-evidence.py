@@ -15,7 +15,13 @@ from legal.security import LegalRedTeamRunner
 
 
 def build_report(*, output: Path | None = None) -> dict:
-    red_team_report_path = ROOT / "docs" / "sample-evidence" / "pass47_legal_red_team_report.json"
+    default_summary = ROOT / "docs" / "external-evidence" / "pass47_legal_red_team_engineering_closure_summary.json"
+    custom_output = output is not None and output.resolve() != default_summary.resolve()
+    red_team_report_path = (
+        output.with_name(output.stem + ".red-team.json")
+        if custom_output
+        else ROOT / "docs" / "sample-evidence" / "pass47_legal_red_team_report.json"
+    )
     report = LegalRedTeamRunner(project_root=ROOT).run(output_path=red_team_report_path).as_dict()
     required = set(report.get("required_categories") or [])
     categories = {row.get("category") for row in report.get("results") or []}
@@ -46,7 +52,7 @@ def build_report(*, output: Path | None = None) -> dict:
         "safe_case_count": sum(1 for row in report.get("results") or [] if row.get("safe")),
         "no_filing_ready_bypass": bool(report.get("no_filing_ready_bypass")),
         "blockers": sorted(set(blockers)),
-        "red_team_report_path": str(red_team_report_path.relative_to(ROOT)),
+        "red_team_report_path": red_team_report_path.name if custom_output else str(red_team_report_path.relative_to(ROOT)),
         "red_team_report": report,
     }
     if output:
