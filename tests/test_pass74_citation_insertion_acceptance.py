@@ -24,6 +24,21 @@ def _document() -> dict[str, str]:
     return {"document_id": "f" * 32, "current_revision_id": "e" * 32, "content": "Fictional Rule requires reviewer confirmation."}
 
 
+def _resolved_source() -> dict[str, object]:
+    """A fictional local resolver result; never a client-provided authority card."""
+    authority = _authority()
+    return {
+        "source_card": {
+            "source_hash": authority["source_hash"],
+            "citation": authority["citation"],
+            "title": "Fictional official source",
+            "source_span_preview": authority["exact_span"],
+            "source_span": {"pinpoint": authority["pinpoint"]},
+            "freshness_status": authority["freshness_status"],
+        }
+    }
+
+
 def test_pass74_creates_encrypted_hash_bound_proposal_without_mutating_draft(tmp_path: Path) -> None:
     root = tmp_path / "fictional-matter"; root.mkdir()
     store = CitationInsertionStore(root, encryption_key="fictional-test-key")
@@ -50,9 +65,24 @@ def test_pass74_refuses_unconfirmed_stale_and_unverified_pinpoints(tmp_path: Pat
             raise AssertionError(code)
 
 
+def test_pass74_does_not_duplicate_a_full_citation_used_as_the_source_locator(tmp_path: Path) -> None:
+    root = tmp_path / "fictional-matter"; root.mkdir()
+    receipt = CitationInsertionStore(root, encryption_key="fictional-test-key").create(
+        {
+            "reviewer_safe_id": "reviewer_001",
+            "selected_text": _document()["content"],
+            "authority": _authority() | {"pinpoint": "Fictional Maine Rule"},
+            "user_confirmed": True,
+        },
+        document=_document(),
+    )
+    assert receipt["proposed_content"].endswith(" (Fictional Maine Rule)")
+
+
 def test_pass74_canonical_api_creates_only_reviewable_revision_proposal(monkeypatch, tmp_path: Path) -> None:
     root = tmp_path / "fictional-matter"; root.mkdir()
     monkeypatch.setattr(api_module, "active_case_root", lambda: root)
+    monkeypatch.setattr(api_module, "inspect_source", lambda source_id: _resolved_source())
     monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-test-key")
     document = create_document(root, title="Fictional citation draft", content=_document()["content"], document_type="draft")
     client = TestClient(api_module.app)
@@ -64,6 +94,25 @@ def test_pass74_canonical_api_creates_only_reviewable_revision_proposal(monkeypa
     assert proposed.json()["original_preserved"] is True and proposed.json()["proposal"]["review_required"] is True
     current = client.get(f"/api/document-workspace/documents/{document['document_id']}").json()["document"]
     assert current["content"] == _document()["content"]
+
+
+def test_pass74_canonical_api_rejects_client_authority_tampering(monkeypatch, tmp_path: Path) -> None:
+    root = tmp_path / "fictional-matter"; root.mkdir()
+    monkeypatch.setattr(api_module, "active_case_root", lambda: root)
+    monkeypatch.setattr(api_module, "inspect_source", lambda source_id: _resolved_source())
+    monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-test-key")
+    document = create_document(root, title="Fictional citation draft", content=_document()["content"], document_type="draft")
+    result = TestClient(api_module.app).post(
+        f"/api/drafting/documents/{document['document_id']}/citation-insertions",
+        json={
+            "reviewer_safe_id": "reviewer_001",
+            "selected_text": _document()["content"],
+            "authority": _authority() | {"source_hash": "c" * 64, "pinpoint": "invented"},
+            "user_confirmed": True,
+        },
+    )
+    assert result.status_code == 409
+    assert result.json()["detail"] == "citation_insertion_authority_hash_mismatch"
 
 
 def test_pass74_ships_mirrored_production_citation_control() -> None:

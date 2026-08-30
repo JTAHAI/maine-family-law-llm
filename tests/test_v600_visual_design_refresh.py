@@ -28,11 +28,11 @@ def _contrast(first: str, second: str) -> float:
 
 
 def test_v600_release_identity() -> None:
-    assert VERSION == "8.0.0"
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert BUILD_NUMBER == 53
-    assert UI_PASS_MARKER == "v8.0.0-ga"
-    assert UI_VERSION == "8.0.0-ga-b53"
+    assert VERSION == "8.0.1"
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert BUILD_NUMBER == 54
+    assert UI_PASS_MARKER == "v8.0.1-ga"
+    assert UI_VERSION == "8.0.1-ga-b54"
 
 
 def test_v600_ui_mirrors_match() -> None:

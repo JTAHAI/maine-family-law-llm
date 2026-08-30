@@ -11,8 +11,8 @@ from maine_family_law_llm.runtime_resilience import runtime_health_snapshot
 
 
 def test_v500_build_26_keeps_store_version_stable() -> None:
-    assert BUILD_NUMBER == 53
-    assert PACKAGE_VERSION == "8.0.0.0"
+    assert BUILD_NUMBER == 54
+    assert PACKAGE_VERSION == "8.0.1.0"
 
 
 def test_source_preview_shell_and_right_edge_offline_tooltip_exist() -> None:

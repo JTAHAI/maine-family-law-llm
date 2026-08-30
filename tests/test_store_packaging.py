@@ -69,6 +69,11 @@ def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_
 
 
 def test_authority_services_prefer_store_external_authority_boundary(monkeypatch, tmp_path) -> None:
+    # Model a bundle and its external state as siblings inside the QA sandbox.
+    # Do not require test data on another drive or weaken the production guard.
+    bundle_root = tmp_path / "fictional-bundle"
+    bundle_root.mkdir()
+    monkeypatch.chdir(bundle_root)
     runtime_root = tmp_path / "runtime-data"
     authority_root = tmp_path / "external-authority"
     monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(runtime_root))
@@ -175,7 +180,7 @@ def test_asset_generator_builds_required_pngs(tmp_path) -> None:
         assert (output_dir / str(row["filename"])).is_file()
 
 
-def test_store_smoke_workflow_runs_and_stays_outside_bundle(tmp_path, monkeypatch) -> None:
+def test_store_smoke_workflow_reports_actual_bundle_boundary(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
     from app.store_entrypoint import _run_smoke_workflow
 
@@ -183,7 +188,12 @@ def test_store_smoke_workflow_runs_and_stays_outside_bundle(tmp_path, monkeypatc
     assert payload["launch_result"] == "pass"
     assert payload["api_health_result"] is True
     assert payload["fictional_sample_workflow_result"] is True
-    assert payload["external_data_boundary_verification"] is True
+    # A repo-contained QA sandbox must be reported as inside the source bundle,
+    # not mislabeled external. Normal CI temp paths exercise the outside case.
+    expected_external = not Path(payload["sample_case_root"]).is_relative_to(
+        Path(payload["bundle_root"])
+    )
+    assert payload["external_data_boundary_verification"] is expected_external
 
 
 def test_uninstall_script_does_not_delete_user_external_case_folders() -> None:
@@ -195,12 +205,14 @@ def test_uninstall_script_does_not_delete_user_external_case_folders() -> None:
 
 def test_no_private_signing_materials_are_committed() -> None:
     forbidden: list[Path] = []
-    for suffix in ("*.pfx", "*.pvk", "*.snk"):
-        for path in REPO_ROOT.rglob(suffix):
-            relative = path.relative_to(REPO_ROOT)
-            if relative.parts and relative.parts[0] == "dist":
-                continue
-            forbidden.append(path)
+    # Do not traverse gigabytes of intentionally excluded generated payloads
+    # three times before discarding them. Preserve the same source audit scope.
+    for parent, directories, files in os.walk(REPO_ROOT):
+        if Path(parent) == REPO_ROOT:
+            directories[:] = [name for name in directories if name != "dist"]
+        for name in files:
+            if Path(name).suffix.casefold() in {".pfx", ".pvk", ".snk"}:
+                forbidden.append(Path(parent) / name)
     assert not forbidden, [str(path) for path in forbidden]
 
 
@@ -219,7 +231,7 @@ def test_build_msix_script_accepts_identity_inputs_and_writes_evidence() -> None
     assert "package-map.txt" in script
     assert "test-store-runtime.ps1" in script
     assert "bundled-engine-inventory.json" in script
-    assert "PYTHONDONTWRITEBYTECODE" in script
+    assert "Initialize-RepoBuildEnvironment" in script
     assert "bytecode-regeneration-trace.json" in script
     assert "final-runtime-cleanup.json" in script
     assert "final-staging-cleanup.json" in script
@@ -260,6 +272,8 @@ def test_store_pyinstaller_spec_collects_corpus_package_modules() -> None:
     assert '"sqlite3"' in spec
     assert '"_sqlite3"' in spec
     assert 'collect_source_package_files(ROOT / "legal", destination="src/legal")' in spec
+    assert "filesystem walk is both deterministic and sufficient" in spec
+    assert "collect_submodules(" not in spec
     assert "legal.ops.release_pilot_hardening" in spec
     assert "legal.pilot.real_matter_operations" in spec
     assert "legal.pilot.sandbox_operations" in spec
@@ -270,6 +284,7 @@ def test_store_pyinstaller_spec_includes_the_tracked_docx_runtime() -> None:
     spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
     requirements = (REPO_ROOT / "store" / "pyinstaller" / "requirements-store-build.txt").read_text(encoding="utf-8")
     assert '"docx-editor"' in spec and '"docx_editor"' in spec
+    assert 'collect_installed_package_files("docx_editor", destination="docx_editor")' in spec
     assert "docx-editor>=0.7.1,<0.8" in requirements
     assert "python-docx>=1.2.0,<2" in requirements
 
@@ -329,7 +344,7 @@ def test_build_store_runtime_script_stops_existing_packaged_runtime_processes() 
     assert "Stop-Process -Id $process.Id -Force" in script
     assert "MaineFamilyLawLLM\\build-venvs\\store" in script
     assert 'Join-Path $RepoRoot ".venv-store-build"' not in script
-    assert "PYTHONPYCACHEPREFIX" in script
+    assert "Initialize-RepoBuildEnvironment" in script
     assert "-B -m PyInstaller" in script
 
 

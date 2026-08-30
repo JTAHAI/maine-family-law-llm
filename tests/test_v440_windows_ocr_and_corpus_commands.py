@@ -157,10 +157,10 @@ def test_pass_43_inventory_command_returns_real_counts_and_record_cards(monkeypa
 
 def test_pass_44_version_and_store_target_advance_three_pass_increment() -> None:
     identity = json.loads((ROOT / "store" / "msix" / "identity.example.json").read_text(encoding="utf-8"))
-    assert VERSION == "8.0.0"
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert identity["package_version"] == "8.0.0.0"
-    assert UI_PASS_MARKER == "v8.0.0-ga"
+    assert VERSION == "8.0.1"
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert identity["package_version"] == "8.0.1.0"
+    assert UI_PASS_MARKER == "v8.0.1-ga"
 
 
 def test_ocr_progress_payload_redacts_paths_and_reports_stall_state() -> None:

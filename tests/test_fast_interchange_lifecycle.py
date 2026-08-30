@@ -115,6 +115,25 @@ def test_owned_process_has_hard_deadline_even_when_backend_ignores_it(tmp_path):
         backend.close()
 
 
+def test_owned_process_memory_guard_terminates_over_budget_child(tmp_path):
+    registry = _registry(tmp_path)
+    release = _release(registry)
+    backend = IsolatedAdapterBackend(factory=SyntheticStuckBackend)
+    # An intentionally impossible synthetic policy proves the actual spawned
+    # child is stopped; it is not a measurement of the application's models.
+    backend._compatibility = {"max_resident_bytes": 1}
+    backend.set_cancellation(Event(), time.monotonic() + 20)
+    try:
+        with pytest.raises(FastInterchangeError, match="resident_memory_limit_exceeded"):
+            backend.activate(
+                root=registry.root, binding=registry.bindings[release.release_id], release=release
+            )
+        assert backend._process is None
+        assert backend.peak_resident_bytes > 1
+    finally:
+        backend.close()
+
+
 @pytest.fixture
 def worker(tmp_path):
     registry = _registry(tmp_path)

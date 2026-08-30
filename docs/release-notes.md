@@ -1,3 +1,11 @@
+## v8.0.1 — Maintenance and specialist integration safeguards
+
+- Product version: 8.0.1. Microsoft Store package target: 8.0.1.0.
+- Strengthens source references, worker memory limits, cancellation, authority/evidence traceability, and production navigation.
+- Keeps new build state under repository dist and runs complete regression in sequential processes with exact test accounting.
+- Research model weights remain excluded until their evaluations and production admission pass. No new admitted legal model or Enterprise approval is claimed.
+- Full details: [8.0.1 release notes](RELEASE_NOTES_v8.0.1.md).
+
 ## v8.0.0 — Local workbench expansion and interaction hardening
 
 - Product version: 8.0.0. Microsoft Store package target: 8.0.0.0.

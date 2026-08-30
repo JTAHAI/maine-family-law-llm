@@ -132,3 +132,5 @@ def test_pass79_mirrored_production_ui_exposes_actions():
     assert "Create source-bound matrix" in text
     assert "/api/drafting/argument-matrices" in text
     assert "Open private record" in text and "Open official source" in text
+    assert "argument-matrix-pinpoint-choice" in text
+    assert "The matrix will not select legal language for you." in text

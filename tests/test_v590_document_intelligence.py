@@ -135,7 +135,10 @@ def test_v590_docling_and_presidio_results_are_optional_layers(monkeypatch: pyte
             row["available"] = True
     monkeypatch.setattr(service, "document_intelligence_status", lambda: real_status)
 
+    observed_timeouts: dict[str, int] = {}
+
     def fake_worker(adapter: str, path: Path, *, timeout: int) -> dict:
+        observed_timeouts[adapter] = timeout
         if adapter == "docling":
             return {
                 "status": "pass",
@@ -154,6 +157,8 @@ def test_v590_docling_and_presidio_results_are_optional_layers(monkeypatch: pyte
     assert result["structured_document"]["blocks"][0]["block_id"].startswith("blk_")
     assert result["privacy_review"]["presidio_status"] == "pass"
     assert "presidio" in result["privacy_review"]["detectors"]
+    assert observed_timeouts["presidio"] == service.PRESIDIO_WORKER_TIMEOUT_SECONDS
+    assert service.PRESIDIO_WORKER_TIMEOUT_SECONDS >= 240
 
 
 def test_v590_refuses_outside_symlink_oversize_and_hash_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

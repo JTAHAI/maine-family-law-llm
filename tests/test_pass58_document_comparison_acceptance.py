@@ -105,4 +105,5 @@ def test_document_comparison_ui_and_api_assets_are_mirrored() -> None:
     assert source_ui == frozen_ui
     assert source_api == frozen_api
     assert b"/api/evidence/document-comparisons" in source_ui
+    assert b"documentComparisonDelegationBound" in source_ui
     assert b"DocumentComparisonStore" in source_api

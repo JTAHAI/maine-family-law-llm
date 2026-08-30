@@ -123,6 +123,7 @@ def _backend(*, prompt_tokens=3, output_tokens=None, eos=2):
         eos_token_id = eos
 
         def __call__(self, _prompt, **options):
+            state["prompt"] = _prompt
             state["tokenizer_options"] = options
             return {"input_ids": _Tensor([[1] * prompt_tokens])}
 
@@ -157,6 +158,22 @@ def test_backend_rejects_prompt_over_budget_without_truncation_or_generation():
         )
     assert state["tokenizer_options"]["truncation"] is False
     assert state["generated"] is False
+
+
+def test_backend_uses_the_hash_bound_fixed_role_prompt_framing():
+    backend, state = _backend()
+    result = backend.complete(
+        release=SimpleNamespace(model_id="fictional-model"),
+        messages=[
+            {"role": "system", "content": "fictional system boundary"},
+            {"role": "user", "content": "fictional question"},
+        ],
+    )
+    assert result["choices"][0]["finish_reason"] == "stop"
+    assert state["prompt"] == (
+        "fi-fixed-role-v1:[SYSTEM]\\nfictional system boundary\\n"
+        "fi-fixed-role-v1:[USER]\\nfictional question"
+    )
 
 
 @pytest.mark.parametrize("shape", [(1, 0), (0, 3), (2, 3), (3,), ()])
@@ -208,6 +225,12 @@ def test_backend_accepts_explicit_eos_and_preserves_fixed_generation(eos):
         messages=[{"role": "user", "content": "fictional"}],
     )
     assert result["choices"][0]["finish_reason"] == "stop"
-    assert state["generation_options"]["use_cache"] is False
+    assert state["generation_options"]["use_cache"] is True
+    assert state["generation_options"]["cache_implementation"] == "dynamic"
+    assert state["generation_options"]["return_dict_in_generate"] is False
+    assert "past_key_values" not in state["generation_options"]
     assert state["generation_options"]["do_sample"] is False
+    assert state["generation_options"]["temperature"] is None
+    assert state["generation_options"]["top_p"] is None
+    assert state["generation_options"]["top_k"] is None
     assert state["generation_options"]["max_new_tokens"] == 1024

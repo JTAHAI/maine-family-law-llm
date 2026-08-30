@@ -19,8 +19,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$env:PYTHONDONTWRITEBYTECODE = "1"
-$env:PYTHONPYCACHEPREFIX = Join-Path $env:TEMP "mfl-pycache-disabled"
+. (Join-Path $PSScriptRoot "store-build-workspace.ps1")
 
 function Resolve-SdkTool([string]$ToolName) {
   $path = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter $ToolName -ErrorAction SilentlyContinue |
@@ -77,7 +76,7 @@ function Resolve-SafeMutableDirectory([string]$PathText, [string]$Label, [string
   if ($fullPath.Equals($repoPath, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "$Label must not be the source repository."
   }
-  return $fullPath
+  return Resolve-RepoBuildDirectory $fullPath $RepoRootPath
 }
 
 function Ensure-DevCertificate([string]$PublisherName, [string]$TargetRoot, [string]$PasswordText) {
@@ -96,9 +95,16 @@ function Ensure-DevCertificate([string]$PublisherName, [string]$TargetRoot, [str
 
 if (-not $RepoRoot) { $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..")) }
 if (-not $OutputRoot) { $OutputRoot = Join-Path $RepoRoot "dist\store" }
-if (-not $PackagingRoot) { $PackagingRoot = "C:\mfl6" }
+if (-not $PackagingRoot) { $PackagingRoot = Join-Path $RepoRoot "dist\msix-stage" }
 $RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
+$OutputRoot = Resolve-RepoBuildDirectory $OutputRoot $RepoRoot
 $PackagingRoot = Resolve-SafeMutableDirectory $PackagingRoot "PackagingRoot" $RepoRoot
+Assert-SeparateBuildDirectories $OutputRoot $PackagingRoot
+$buildTemp = Resolve-RepoBuildDirectory (Join-Path $RepoRoot "dist\build-temp") $RepoRoot
+Assert-SeparateBuildDirectories $OutputRoot $buildTemp
+Assert-SeparateBuildDirectories $PackagingRoot $buildTemp
+Assert-StoreBuildDiskSpace $OutputRoot $(if ($FeatureTier -eq "full") { 12GB } else { 6GB })
+$null = Initialize-RepoBuildEnvironment $RepoRoot
 if (-not $IdentityConfigPath) { $IdentityConfigPath = Join-Path $RepoRoot "store\msix\identity.example.json" }
 $identityConfig = Get-Content -LiteralPath $IdentityConfigPath -Raw | ConvertFrom-Json
 if (-not $IdentityName) { $IdentityName = $identityConfig.identity_name }
@@ -117,7 +123,9 @@ $PackageVersion = Convert-ToPackageVersion $PackageVersion
 $runtimeRoot = Join-Path $OutputRoot "runtime"
 $msixRoot = Join-Path $OutputRoot "msix"
 $evidenceRoot = Join-Path $OutputRoot "evidence"
-$storeBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
+$storeBuildPython = Join-Path $RepoRoot "dist\build-env\store\Scripts\python.exe"
+$legacyBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
+if ($Offline -and -not (Test-Path -LiteralPath $storeBuildPython)) { $storeBuildPython = $legacyBuildPython }
 $storePython = if (Test-Path -LiteralPath $storeBuildPython) { $storeBuildPython } else { "python" }
 $hygiene = Join-Path $RepoRoot "scripts\store_payload_hygiene.py"
 $stageRoot = Join-Path $packagingRoot "stage"
@@ -142,18 +150,35 @@ $archiveAudit = Join-Path $evidenceRoot "sealed-msix-archive-audit.json"
 $sizeBudgetReport = Join-Path $evidenceRoot "package-size-budget.json"
 
 foreach ($path in @($packagingRoot, $msixRoot, $evidenceRoot)) {
+  $path = Resolve-RepoBuildDirectory $path $RepoRoot
   if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
 }
 New-Item -ItemType Directory -Force -Path $evidenceRoot, $shortOutRoot | Out-Null
 
 # All qualification occurs while runtime is mutable. The snapshots prove the exact
 # command that first introduced any bytecode residue.
-& (Join-Path $RepoRoot "scripts\build-store-runtime.ps1") -RepoRoot $RepoRoot -OutputRoot $OutputRoot -FeatureTier $FeatureTier -Offline:$Offline
+# A parent PowerShell process started with ``-ExecutionPolicy Bypass`` does not
+# reliably propagate that process-only setting when it invokes another script
+# through ``&`` on hosts with AllSigned policy.  Run the child explicitly with
+# the same ephemeral bypass so Store builds do not depend on mutating machine or
+# user execution policy.
+$runtimeBuildArguments = @(
+  "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+  (Join-Path $RepoRoot "scripts\build-store-runtime.ps1"),
+  "-RepoRoot", $RepoRoot, "-OutputRoot", $OutputRoot, "-FeatureTier", $FeatureTier
+)
+# The conditional argument-array form is the powershell.exe-safe equivalent of
+# passing -Offline:$Offline directly to build-store-runtime.ps1.
+if ($Offline) { $runtimeBuildArguments += "-Offline" }
+& powershell.exe @runtimeBuildArguments
+if ($LASTEXITCODE -ne 0) { throw "Frozen runtime build failed." }
+if (-not (Test-Path -LiteralPath $storeBuildPython)) { throw "Provisioned Store interpreter missing." }
+$storePython = $storeBuildPython
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_pyinstaller --command "PyInstaller frozen runtime build" --parent-command "build-store-runtime.ps1"
 & (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_frozen_runtime_smoke --command "test-store-runtime.ps1 frozen runtime smoke" --parent-command "build-msix.ps1"
 $inventoryPath = Join-Path $evidenceRoot "bundled-engine-inventory.json"
-& $storePython -B (Join-Path $RepoRoot "scripts\generate_bundled_engine_inventory.py") --runtime-root $runtimeRoot --output $inventoryPath
+& $storePython -B (Join-Path $RepoRoot "scripts\generate_bundled_engine_inventory.py") --runtime-root $runtimeRoot --output $inventoryPath --feature-tier $FeatureTier
 if (-not (Test-Path -LiteralPath $inventoryPath)) {
   $inventoryFallbackScriptPath = Join-Path $evidenceRoot "generate-bundled-engine-inventory-fallback.py"
   $inventoryFallback = @'
@@ -166,7 +191,8 @@ sys.path.insert(0, r'__REPO_ROOT__')
 from scripts.generate_bundled_engine_inventory import build_inventory
 runtime_root = Path(r'__RUNTIME_ROOT__')
 output_path = Path(r'__OUTPUT_PATH__')
-inventory = build_inventory(runtime_root)
+feature_tier = "__FEATURE_TIER__"
+inventory = build_inventory(runtime_root, feature_tier=feature_tier)
 payload = {
     "schema_version": "bundled_engine_inventory_v1",
     "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -175,7 +201,6 @@ payload = {
     "packages": inventory,
 }
 failures = []
-feature_tier = os.environ.get("MFL_STORE_FEATURE_TIER", "full").strip().lower()
 for row in inventory:
     if row["runtime_import_check"]["status"] != "pass":
         failures.append(f"{row['package_name']}: import check failed")
@@ -189,7 +214,7 @@ payload["feature_tier"] = feature_tier
 output_path.parent.mkdir(parents=True, exist_ok=True)
 output_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 '@
-  $inventoryFallback = $inventoryFallback.Replace('__REPO_ROOT__', $RepoRoot).Replace('__RUNTIME_ROOT__', $runtimeRoot).Replace('__OUTPUT_PATH__', $inventoryPath)
+  $inventoryFallback = $inventoryFallback.Replace('__REPO_ROOT__', $RepoRoot).Replace('__RUNTIME_ROOT__', $runtimeRoot).Replace('__OUTPUT_PATH__', $inventoryPath).Replace('__FEATURE_TIER__', $FeatureTier)
   Set-Content -LiteralPath $inventoryFallbackScriptPath -Value $inventoryFallback -Encoding UTF8
   & $storePython -B $inventoryFallbackScriptPath
 }
@@ -235,7 +260,7 @@ if (-not $Unsigned) {
   & $signTool sign /fd SHA256 /f $CertificatePfxPath /p $CertificatePassword $shortMsixPath | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "signtool failed while signing the MSIX package" }
 }
-Copy-Item -LiteralPath $shortMsixPath -Destination $msixPath -Force
+Move-Item -LiteralPath $shortMsixPath -Destination $msixPath -Force
 & $storePython -B $hygiene verify-archive --msix-path $msixPath --seal $sealPath --output $archiveAudit
 & $storePython -B (Join-Path $RepoRoot "scripts\analyze-msix-package-size.py") --package $msixPath --tier $FeatureTier --tier-config (Join-Path $RepoRoot "configs\store_feature_tiers.json") --output $sizeBudgetReport
 if ($LASTEXITCODE -ne 0) { throw "MSIX package-size tier budget validation failed." }

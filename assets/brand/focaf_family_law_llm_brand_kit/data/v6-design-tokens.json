@@ -1,6 +1,6 @@
 {
   "name": "Maine Family Law LLM v6 visual refresh",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "source": "configs/maine_v6_visual_design_policy.json",
   "tokens": {
     "atlantic_950": "#071d27",

@@ -35,3 +35,7 @@ def test_entity_resolution_rejects_foreign_or_same_record(monkeypatch, tmp_path:
 def test_entity_resolution_ui_is_mirrored():
     root=Path(__file__).resolve().parents[1]; src=(root/'src/maine_family_law_llm/ui/workbench.js').read_text(encoding='utf-8'); mirror=(root/'maine_family_law_llm/ui/workbench.js').read_text(encoding='utf-8')
     assert src==mirror and 'installEntityResolutionControl' in src and 'Revoke merge' in src
+    assert '/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidateId)}/${encodeURIComponent(side)}/source' in src
+    assert 'Inspect left source' in src and 'Inspect right source' in src
+    assert 'data-entity-resolution-action="confirm"' in src
+    assert 'entityResolutionDelegationBound' in src

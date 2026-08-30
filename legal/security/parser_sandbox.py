@@ -16,7 +16,20 @@ class ParserSandbox:
         if "legal.document_intelligence.worker" not in command and "--document-intelligence-worker" not in command:
             raise ParserSandboxError("parser_sandbox_command_not_allowed")
         clean = {k: str(v) for k, v in env.items() if k not in {"HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","http_proxy","https_proxy","all_proxy"}}
-        clean.update({"HTTP_PROXY":"", "HTTPS_PROXY":"", "ALL_PROXY":"", "NO_PROXY":"*", "no_proxy":"*", "PYTHONNOUSERSITE":"1"})
+        clean.update({"HTTP_PROXY":"", "HTTPS_PROXY":"", "ALL_PROXY":"", "NO_PROXY":"*", "no_proxy":"*"})
+        # Frozen Store workers load only the modules sealed into the executable.
+        # In a source checkout, however, ``sys.executable`` is the explicitly
+        # selected development interpreter and its dependencies may legitimately
+        # live in that interpreter's user site (as they do on the supported
+        # Windows test host).  Disabling the user site there made the isolated
+        # worker unable to import its renderer even though the parent could.
+        # An untrusted document cannot influence this import path; command and
+        # executable allow-lists, shell-free launch, offline environment, and
+        # output/time bounds remain enforced below.
+        if getattr(sys, "frozen", False):
+            clean["PYTHONNOUSERSITE"] = "1"
+        else:
+            clean.pop("PYTHONNOUSERSITE", None)
         kwargs: dict = {"capture_output":True, "text":True, "check":False, "timeout":max(1, self.timeout_seconds), "env":clean, "shell":False}
         if os.name == "nt": kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         else:

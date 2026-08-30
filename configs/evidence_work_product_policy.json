@@ -1,6 +1,6 @@
 {
   "schema_version": "evidence_work_product_policy_v1",
-  "product_version": "8.0.0",
+  "product_version": "8.0.1",
   "local_only": true,
   "review_required": true,
   "originals_immutable": true,

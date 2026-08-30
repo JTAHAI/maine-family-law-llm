@@ -131,7 +131,14 @@ class CitationInsertionStore:
         end = start + len(selected_text)
         if citation.casefold() in selected_text.casefold():
             raise IntakeWorkbenchError("citation_already_present", 409)
-        insertion = f" ({citation}, {pinpoint})"
+        # A direct statute-section source may use its full citation as the
+        # source-provided pinpoint. Preserve that exact locator once instead of
+        # producing a misleading duplicated parenthetical.
+        insertion = (
+            f" ({pinpoint})"
+            if pinpoint.casefold() == citation.casefold()
+            else f" ({citation}, {pinpoint})"
+        )
         proposed_content = content[:end] + insertion + content[end:]
         receipt_id = "citation_insert_" + _digest({"document": document_id, "revision": revision_id, "start": start, "source": source_hash, "citation": citation, "pinpoint": pinpoint})[:24]
 

@@ -544,7 +544,23 @@ def _record_compare(left: dict[str, Any], right: dict[str, Any]) -> dict[str, An
     }
 
 
-def start_runtime(executable: Path, port: int, *, localappdata: Path) -> subprocess.Popen[str]:
+def start_runtime(
+    executable: Path,
+    port: int,
+    *,
+    localappdata: Path,
+    authority_data_root: Path | None = None,
+    transfer_root: Path | None = None,
+) -> subprocess.Popen[str]:
+    """Start an isolated frozen runtime.
+
+    Qualification defaults to an empty authority root so its Local-only proof
+    cannot accidentally borrow a developer's external authority store.  A
+    focused source-bound workflow may opt in to a caller-supplied, separately
+    audited external root; it remains outside both the temporary profile and
+    the MSIX.
+    """
+
     environment = os.environ.copy()
     environment.pop("MAINE_MATTER_STORE_KEY", None)
     for key in list(environment):
@@ -555,10 +571,16 @@ def start_runtime(executable: Path, port: int, *, localappdata: Path) -> subproc
         {
             "LOCALAPPDATA": str(localappdata),
             "MAINE_FAMILY_LAW_DATA_ROOT": str(localappdata / "runtime"),
-            "MFL_AUTHORITY_DATA_ROOT": str(localappdata / "empty-authority"),
+            "MFL_AUTHORITY_DATA_ROOT": str(authority_data_root or (localappdata / "empty-authority")),
             "MFL_RUNTIME_STATE_ROOT": str(localappdata / "state"),
             "MFL_IDEMPOTENCY_STATE_ROOT": str(localappdata / "idempotency"),
             "MFL_VAULT_KEY_ROOT": str(localappdata / "vault"),
+            # Cross-device transfer is intentionally unavailable unless the
+            # user selects an external, user-carried destination.  The
+            # qualification harness supplies a disposable sibling directory
+            # only for the focused recovery proof; ordinary qualification
+            # keeps this unset and therefore fail-closed.
+            "MFL_TRANSFER_ROOT": str(transfer_root) if transfer_root is not None else "",
             "MFL_LOCAL_API_INSTANCE_ID": instance,
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONPYCACHEPREFIX": str(localappdata / "bytecode"),

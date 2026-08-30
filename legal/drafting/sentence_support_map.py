@@ -25,8 +25,13 @@ from legal.security.strict_json import strict_json_load_path
 _ID = re.compile(r"[a-z][a-z0-9_-]{2,79}\Z")
 _HASH = re.compile(r"[a-f0-9]{64}\Z")
 _SENTENCE = re.compile(r"[^\n.!?]+(?:[.!?]+|$)", re.MULTILINE)
+_SENTENCE_ABBREVIATION = re.compile(r"\b(?:M\.R\.S\.|M\.R\.|U\.S\.|No\.|Inc\.|Ltd\.)", re.IGNORECASE)
+_PROTECTED_PERIOD = "\uff0e"
 _TOKEN = re.compile(r"[a-z0-9]+")
-_LEGAL = re.compile(r"\b(?:\d+\s*(?:M\.R\.S\.|M\.R\.|Maine Rule)|statute|rule|jurisdiction|court must|the law)\b", re.IGNORECASE)
+_LEGAL = re.compile(
+    r"\b(?:\d+(?:-[A-Za-z0-9]+)?\s*(?:M\.R\.S\.|M\.R\.|Maine Rule)|statute|rule|jurisdiction|court must|the law)\b",
+    re.IGNORECASE,
+)
 _NEGATION = re.compile(r"\b(?:no|not|never|without|did not|does not|cannot|can't|failed to)\b", re.IGNORECASE)
 _QUALIFIER = re.compile(r"\b(?:unless|except|however|but|subject to|to the extent|may|might)\b", re.IGNORECASE)
 _STOP = frozenset({"a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in", "is", "it", "of", "on", "or", "that", "the", "to", "was", "were", "with"})
@@ -70,6 +75,44 @@ def _tokens(value: str) -> set[str]:
 def _similarity(left: str, right: str) -> float:
     tokens = _tokens(left)
     return len(tokens & _tokens(right)) / max(1, len(tokens))
+
+
+def _sentence_parts(value: str) -> list[tuple[str, int, int]]:
+    """Split text without treating common legal abbreviations as full stops.
+
+    The protected character is one code point, so offsets remain valid for the
+    original text.  This is deliberately a small, deterministic parser rather
+    than a language-model decision about sentence meaning.
+    """
+    protected = _SENTENCE_ABBREVIATION.sub(
+        lambda match: match.group(0).replace(".", _PROTECTED_PERIOD), value
+    )
+    return [
+        (match.group(0).replace(_PROTECTED_PERIOD, "."), match.start(), match.end())
+        for match in _SENTENCE.finditer(protected)
+        if match.group(0).strip()
+    ]
+
+
+def _matches_selected_authority_exactly(text: str, authority: Iterable[dict[str, Any]]) -> bool:
+    """Identify a substantive exact selected-authority sentence conservatively.
+
+    A source-bound draft can quote an official span without repeating a citation
+    in every sentence.  Treat that as a legal-review sentence only when at least
+    four substantive tokens have an 0.8-or-higher match to one selected exact
+    authority sentence.  Smaller or weaker overlaps remain factual/narrative so
+    a shared word such as "child" cannot relabel a private-record statement.
+    """
+    if len(_tokens(text)) < 4:
+        return False
+    for source in authority:
+        span = str(source.get("exact_span") or "")
+        if not span:
+            continue
+        candidates = [part for part, _, _ in _sentence_parts(span)] or [span]
+        if max(_similarity(text, candidate) for candidate in candidates) >= 0.8:
+            return True
+    return False
 
 
 class SentenceSupportMapStore:
@@ -180,13 +223,13 @@ class SentenceSupportMapStore:
         }
 
     def _sentence_row(self, sentence_id: str, text: str, start: int, end: int, records: list[dict[str, Any]], authority: list[dict[str, Any]]) -> dict[str, Any]:
-        legal = bool(_LEGAL.search(text))
+        legal = bool(_LEGAL.search(text)) or _matches_selected_authority_exactly(text, authority)
         support: list[dict[str, Any]] = []
         contradictions: list[dict[str, Any]] = []
         qualifications: list[dict[str, Any]] = []
         for record in records:
             record_text = str(record["text"])
-            spans = [" ".join(match.group(0).split()) for match in _SENTENCE.finditer(record_text)]
+            spans = [" ".join(part.split()) for part, _, _ in _sentence_parts(record_text)]
             spans = [span for span in spans if span] or [record_text]
             matched_span = max(spans, key=lambda span: _similarity(text, span))
             score = _similarity(text, matched_span)
@@ -203,16 +246,24 @@ class SentenceSupportMapStore:
         if legal:
             for source in authority:
                 span = str(source.get("exact_span") or "")
-                score = _similarity(text, span)
+                # A verified pinpoint can legitimately contain several sentences.
+                # Compare the draft sentence to its best exact sentence within that
+                # pinpoint, rather than diluting an otherwise exact match against
+                # the entire section.  The returned card remains source-bound to
+                # the selected authority and carries only the matched exact span.
+                source_spans = [" ".join(part.split()) for part, _, _ in _sentence_parts(span)] or [span]
+                matched_span = max(source_spans, key=lambda candidate: _similarity(text, candidate))
+                score = _similarity(text, matched_span)
+                bound_source = {**source, "exact_span": matched_span}
                 stale = str(source.get("freshness_status") or "").casefold() in {"stale", "stale_unknown", "superseded"}
                 if span and score >= 0.35 and not stale:
-                    support.append(self._source_card(source, relationship="legal_text_match", score=score, sentence=text))
+                    support.append(self._source_card(bound_source, relationship="legal_text_match", score=score, sentence=text))
                 elif span and score >= 0.35 and stale:
-                    qualifications.append(self._source_card(source, relationship="stale_authority_requires_review", score=score, sentence=text))
-                if span and score >= 0.35 and bool(_NEGATION.search(text)) != bool(_NEGATION.search(span)):
-                    contradictions.append(self._source_card(source, relationship="authority_polarity_conflict", score=score, sentence=text))
-                if span and score >= 0.35 and _QUALIFIER.search(span):
-                    qualifications.append(self._source_card(source, relationship="authority_qualification_candidate", score=score, sentence=text))
+                    qualifications.append(self._source_card(bound_source, relationship="stale_authority_requires_review", score=score, sentence=text))
+                if span and score >= 0.35 and bool(_NEGATION.search(text)) != bool(_NEGATION.search(matched_span)):
+                    contradictions.append(self._source_card(bound_source, relationship="authority_polarity_conflict", score=score, sentence=text))
+                if span and score >= 0.35 and _QUALIFIER.search(matched_span):
+                    qualifications.append(self._source_card(bound_source, relationship="authority_qualification_candidate", score=score, sentence=text))
         missing: list[str] = []
         if not support:
             missing.append("no_source_text_match_in_selected_scope")
@@ -238,10 +289,10 @@ class SentenceSupportMapStore:
         source_records = self._records(records)
         map_id = "sentence_map_" + _digest({"document_id": document_id, "revision_id": revision_id, "content": content, "authority": authority})[:24]
         sentences = []
-        for index, match in enumerate(_SENTENCE.finditer(content), start=1):
-            value = " ".join(match.group(0).split())
+        for index, (part, start, end) in enumerate(_sentence_parts(content), start=1):
+            value = " ".join(part.split())
             if value:
-                sentences.append(self._sentence_row(f"sentence_{index:03d}", value, match.start(), match.end(), source_records, authority))
+                sentences.append(self._sentence_row(f"sentence_{index:03d}", value, start, end, source_records, authority))
         if not sentences:
             raise IntakeWorkbenchError("document_sentences_required")
 

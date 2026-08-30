@@ -69,6 +69,24 @@ def test_pass83_canonical_api_checks_active_matter_trigger(monkeypatch, tmp_path
     assert client.get("/api/calendar/deadline-dependencies/deadline_001").status_code == 404
 
 
+def test_pass83_canonical_api_matches_normalized_uppercase_record_id(monkeypatch, tmp_path: Path):
+    matter = tmp_path / "matter"; matter.mkdir()
+    monkeypatch.setattr(api_module, "active_case_root", lambda: matter)
+    monkeypatch.setattr(api_module, "load_case_search_records", lambda _root: [{"evidence_id": "REC-DOCX", "source_hash": "a" * 64, "source_locator": "fictional-proof.docx"}])
+    monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-test-key")
+    store = CalendarReviewStore(matter, encryption_key="fictional-test-key")
+    store.add_events({"events": [{"event_id": "trigger_upper", "kind": "completed_service_candidate", "date_time": "2026-01-02T12:00:00", "time_zone": "America/New_York", "document_or_notice": "Fictional proof", "person_or_role": "fictional role", "method": "unknown", "source_ref": {"record_id": "REC-DOCX", "source_hash": "a" * 64, "page": 1}}]})
+    store.add_rules({"rules": [_rule()]})
+    client = TestClient(api_module.app)
+    created = client.post("/api/calendar/deadline-dependencies", json={"dependency_id": "deadline_upper", "rule_id": "rule_001", "trigger_event_id": "trigger_upper", "holidays": [], "user_confirmed": True})
+    assert created.status_code == 200
+    source = client.get("/api/calendar/deadline-dependencies/deadline_upper/trigger-source")
+    assert source.status_code == 200 and source.json()["source"]["source_hash"] == "a" * 64
+    assert source.json()["source"]["record_id"] == "rec-docx"
+    assert store.path.name == "calendar.json.enc"
+    assert b"Fictional proof" not in store.path.read_bytes()
+
+
 def test_pass83_production_ui_assets_are_mirrored_and_operable():
     assert Path("src/maine_family_law_llm/api.py").read_bytes() == Path("maine_family_law_llm/api.py").read_bytes()
     assert Path("src/maine_family_law_llm/ui/workbench.js").read_bytes() == Path("maine_family_law_llm/ui/workbench.js").read_bytes()

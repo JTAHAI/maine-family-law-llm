@@ -1190,6 +1190,14 @@ def run_local_ocr(
                     }
                 )
                 continue
+            # OCR subprocesses cannot always be interrupted in the middle of a
+            # page.  A cancellation that arrives while the local engine is
+            # working must still win at the state boundary: discard the
+            # uncommitted derivative and keep the original candidate pending
+            # for an explicit later retry.
+            if should_cancel and should_cancel():
+                cancelled = True
+                break
             native_text = str(candidate.get("text_content") or "").strip()
             merged_text = "\n\n".join(value for value in (native_text, result["text"]) if value).strip()
             candidate["text_content"] = merged_text

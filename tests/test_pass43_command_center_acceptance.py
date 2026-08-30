@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
+import shutil
+import subprocess
+
+import pytest
 
 from fastapi.testclient import TestClient
 
@@ -98,5 +103,32 @@ def test_command_center_health_ui_is_in_both_shipped_workbench_copies() -> None:
         "Matter health history",
         "data-command-center-inspect-record",
         "/command-center/records/${encodeURIComponent(recordId)}/source",
+        "open_matter_command_center",
     ):
         assert marker in src_ui
+
+
+def test_command_center_empty_snapshot_never_renders_current_or_green() -> None:
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is required to execute the production snapshot-state renderer")
+    source = (Path(__file__).resolve().parents[1] / "src/maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")
+    render = source.split("function renderMatterCommandCenter(payload) {", 1)[1]
+    state = render.split("const snapshotState = ", 1)[1].split(";", 1)[0]
+    warning = render.split("const warningMarkup = ", 1)[1].split(";", 1)[0]
+    javascript = "const escapeHtml = x => x; const results = [];" + "\n".join(
+        "{const snapshot = " + json.dumps(snapshot) + ";const payload = " + json.dumps(payload)
+        + ";const staleReasons = " + json.dumps(reasons)
+        + ";results.push({state:(" + state + "),markup:(" + warning + ")});}"
+        for snapshot, payload, reasons in (
+            (None, {}, []),
+            ({"snapshot_id": "fictional-current"}, {}, []),
+            ({"snapshot_id": "fictional-stale"}, {"stale_snapshot_detected": True}, ["matter_snapshot_source_changed"]),
+        )
+    ) + "console.log(JSON.stringify(results));"
+    completed = subprocess.run([node, "-e", javascript], check=True, capture_output=True, text=True, timeout=15)
+    empty, current, stale = json.loads(completed.stdout)
+    assert empty["state"] == "no snapshot frozen" and "status-ok" not in empty["markup"]
+    assert "No snapshot has been frozen" in empty["markup"]
+    assert current["state"] == "snapshot current" and "Human review is still required" in current["markup"]
+    assert stale["state"] == "stale snapshot detected" and "status-ok" not in stale["markup"]

@@ -69,3 +69,4 @@ def test_import_policy_ui_and_api_assets_are_mirrored() -> None:
     assert (root / "src" / "maine_family_law_llm" / "ui" / "workbench.js").read_bytes() == (root / "maine_family_law_llm" / "ui" / "workbench.js").read_bytes()
     assert (root / "src" / "maine_family_law_llm" / "api.py").read_bytes() == (root / "maine_family_law_llm" / "api.py").read_bytes()
     assert "/api/evidence/import-policy/profiles" in (root / "src" / "maine_family_law_llm" / "ui" / "workbench.js").read_text(encoding="utf-8")
+    assert "importPolicyDelegationBound" in (root / "src" / "maine_family_law_llm" / "ui" / "workbench.js").read_text(encoding="utf-8")

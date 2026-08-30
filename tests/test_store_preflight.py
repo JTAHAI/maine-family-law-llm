@@ -29,7 +29,10 @@ def preflight_report() -> dict[str, object]:
 
 
 def test_store_preflight_report_fail_closes_on_missing_qualification_evidence_and_wack(preflight_report: dict[str, object]) -> None:
-    assert preflight_report["manifest_audit"]["status"] == "pass"
+    # The retained 8.0.0 package must not satisfy the 8.0.1 release identity.
+    assert preflight_report["manifest_audit"]["status"] == "fail"
+    assert preflight_report["manifest_audit"]["issues"] == ["version_mismatch"]
+    assert preflight_report["manifest_audit"]["identity"]["Version"] == "8.0.0.0"
     # This is the retained candidate, not a newly qualified Store artifact.  It
     # must remain blocked when archive/signature proof is absent or fails.
     assert preflight_report["content_audit"]["status"] == "fail"

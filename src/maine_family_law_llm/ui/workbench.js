@@ -556,8 +556,14 @@
       section.className = 'rail-panel import-policy-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
       section.innerHTML = '<div class="rail-title">Import policy profile</div><p class="field-hint">Set stricter local import limits for this matter. A profile cannot relax the global privacy, quarantine, symlink, or local-OCR-review safeguards.</p><label>Profile ID</label><input id="import-policy-id" maxlength="120" placeholder="strict_documents_001"><label>Maximum file size (bytes)</label><input id="import-policy-bytes" type="number" min="1" max="262144000" value="262144000"><label>Allowed extensions (comma separated)</label><input id="import-policy-extensions" maxlength="2000" placeholder=".pdf, .docx, .txt"><button class="secondary" id="import-policy-create" type="button">Activate stricter profile</button><div aria-live="polite" class="status-strip" id="import-policy-result">No matter-specific import profile is active through this control.</div>';
       host.insertAdjacentElement('afterend', section);
-      const value = (selector) => String(section.querySelector(selector)?.value || '').trim(); const result = section.querySelector('#import-policy-result');
-      section.querySelector('#import-policy-create').addEventListener('click', async () => {
+      if (document.documentElement.dataset.importPolicyDelegationBound) return;
+      document.documentElement.dataset.importPolicyDelegationBound = 'true';
+      document.addEventListener('click', async (event) => {
+        const button = event.target instanceof Element ? event.target.closest('#import-policy-create') : null;
+        const root = button?.closest('.import-policy-control');
+        const result = root?.querySelector('#import-policy-result');
+        if (!button || !root || !result) return;
+        const value = (selector) => String(root.querySelector(selector)?.value || '').trim();
         const profile_id = value('#import-policy-id');
         if (!profile_id) { result.textContent = 'Enter a profile ID.'; return; }
         try {
@@ -869,17 +875,32 @@
       section.hidden = true;
       section.innerHTML = '<div class="rail-title">Batch metadata review</div><p class="field-hint">Apply reviewer-supplied sidecar labels and handling metadata to active-matter records. Originals and parser output are not changed.</p><label>Batch ID</label><input id="metadata-review-id" maxlength="120" placeholder="metadata_batch_001"><label>Record IDs (comma separated)</label><input id="metadata-review-records" maxlength="5000" placeholder="REC_LEFT, REC_RIGHT"><label>Labels (comma separated)</label><input id="metadata-review-labels" maxlength="4000" placeholder="reviewed, financial"><label>Document date</label><input id="metadata-review-date" placeholder="YYYY-MM-DD or unknown" value="unknown"><label>Custodian safe ID</label><input id="metadata-review-custodian" value="unknown"><label>Confidentiality</label><select id="metadata-review-confidentiality"><option value="review_required">Review required</option><option value="private_record">Private record</option><option value="restricted">Restricted</option><option value="unknown">Unknown</option></select><label>Document type</label><select id="metadata-review-document-type"><option value="unknown">Unknown</option><option value="pleading">Pleading</option><option value="order">Order</option><option value="affidavit">Affidavit</option><option value="correspondence">Correspondence</option><option value="financial_record">Financial record</option><option value="form">Form</option><option value="exhibit">Exhibit</option><option value="communication">Communication</option></select><button class="secondary" id="metadata-review-apply" type="button">Apply reviewed sidecar</button><div aria-live="polite" class="status-strip" id="metadata-review-result">No metadata batch has been applied.</div>';
       host.insertAdjacentElement('afterend', section);
-      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
-      const result = section.querySelector('#metadata-review-result');
-      section.querySelector('#metadata-review-apply').addEventListener('click', async () => {
+      if (document.documentElement.dataset.metadataReviewDelegationBound) return;
+      document.documentElement.dataset.metadataReviewDelegationBound = 'true';
+      document.addEventListener('click', async (event) => {
+        const button = event.target instanceof Element ? event.target.closest('#metadata-review-apply, [data-metadata-review-record]') : null;
+        const root = button?.closest('.metadata-review-control');
+        const result = root?.querySelector('#metadata-review-result');
+        if (!button || !root || !result) return;
+        const value = (selector) => String(root.querySelector(selector)?.value || '').trim();
         const batch_id = value('#metadata-review-id');
+        if (button.matches('[data-metadata-review-record]')) {
+          const recordId = String(button.dataset.metadataReviewRecord || '');
+          if (!batch_id || !recordId) { result.textContent = 'Load the metadata batch and select a source record.'; return; }
+          try {
+            const source = await fetchJson(`/api/evidence/metadata-review/batches/${encodeURIComponent(batch_id)}/source/${encodeURIComponent(recordId)}`);
+            const token = String(source?.source?.source_token || '');
+            if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('metadata_review_source_token_unavailable');
+            openRecordInspector({source_token: token}, 0, button);
+          } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata-review source could not be opened'}); }
+          return;
+        }
         const record_ids = value('#metadata-review-records').split(',').map((item) => item.trim()).filter(Boolean);
         if (!batch_id || !record_ids.length) { result.textContent = 'Enter a batch ID and at least one active-matter record ID.'; return; }
         try {
           const payload = await fetchJson('/api/evidence/metadata-review/batches', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({batch_id, record_ids, labels: value('#metadata-review-labels').split(',').map((item) => item.trim()).filter(Boolean), document_date: value('#metadata-review-date') || 'unknown', custodian_safe_id: value('#metadata-review-custodian') || 'unknown', confidentiality: value('#metadata-review-confidentiality'), document_type: value('#metadata-review-document-type')})});
           const batch = payload?.batch || {};
           result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(batch.notice || '')}<div class="row">${(batch.records || []).map((item) => `<button class="secondary compact-action" data-metadata-review-record="${escapeHtml(item.record_id || '')}" type="button">Inspect ${escapeHtml(item.record_id || 'source')}</button>`).join('')}</div>`;
-          result.querySelectorAll('[data-metadata-review-record]').forEach((button) => button.addEventListener('click', async () => { try { const source = await fetchJson(`/api/evidence/metadata-review/batches/${encodeURIComponent(batch_id)}/source/${encodeURIComponent(button.dataset.metadataReviewRecord)}`); const token = String(source?.source?.source_token || ''); if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('metadata_review_source_token_unavailable'); openRecordInspector({source_token: token}, 0, button); } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata-review source could not be opened'}); } }));
         } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Metadata batch could not be applied'}); }
       });
     }());
@@ -892,21 +913,25 @@
       section.hidden = true;
       section.innerHTML = '<div class="rail-title">Document comparison</div><p class="field-hint">Compare two active-matter records by admitted text extracts and metadata. Missing table, signature, or page-image inputs stay visible as review blockers.</p><label>Comparison ID</label><input id="document-comparison-id" maxlength="120" placeholder="comparison_001"><label>Left record ID</label><input id="document-comparison-left" maxlength="120" placeholder="Active-matter record"><label>Right record ID</label><input id="document-comparison-right" maxlength="120" placeholder="Different active-matter record"><button class="secondary" id="document-comparison-create" type="button">Create comparison receipt</button><div aria-live="polite" class="status-strip" id="document-comparison-result">No comparison has been created.</div>';
       host.insertAdjacentElement('afterend', section);
-      const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
-      const result = section.querySelector('#document-comparison-result');
-      const inspect = async (side, owner) => {
-        const comparisonId = value('#document-comparison-id');
-        try {
-          const payload = await fetchJson(`/api/evidence/document-comparisons/${encodeURIComponent(comparisonId)}/source/${encodeURIComponent(side)}`);
-          const token = String(payload?.source?.source_token || '');
-          if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('document_comparison_source_token_unavailable');
-          openRecordInspector({source_token: token}, 0, owner);
-        } catch (error) {
-          result.innerHTML = renderRecoverableError(error, {title: 'Comparison source could not be opened'});
-        }
-      };
-      section.querySelector('#document-comparison-create').addEventListener('click', async () => {
+      if (document.documentElement.dataset.documentComparisonDelegationBound) return;
+      document.documentElement.dataset.documentComparisonDelegationBound = 'true';
+      document.addEventListener('click', async (event) => {
+        const button = event.target instanceof Element ? event.target.closest('#document-comparison-create, [data-document-comparison-source]') : null;
+        const root = button?.closest('.document-comparison-control');
+        const result = root?.querySelector('#document-comparison-result');
+        if (!button || !root || !result) return;
+        const value = (selector) => String(root.querySelector(selector)?.value || '').trim();
         const comparison_id = value('#document-comparison-id');
+        if (button.matches('[data-document-comparison-source]')) {
+          try {
+            const side = String(button.dataset.documentComparisonSource || '');
+            const payload = await fetchJson(`/api/evidence/document-comparisons/${encodeURIComponent(comparison_id)}/source/${encodeURIComponent(side)}`);
+            const token = String(payload?.source?.source_token || '');
+            if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('document_comparison_source_token_unavailable');
+            openRecordInspector({source_token: token}, 0, button);
+          } catch (error) { result.innerHTML = renderRecoverableError(error, {title: 'Comparison source could not be opened'}); }
+          return;
+        }
         const left_record_id = value('#document-comparison-left');
         const right_record_id = value('#document-comparison-right');
         if (!comparison_id || !left_record_id || !right_record_id) {
@@ -922,7 +947,6 @@
             ['Page images', comparison?.page_images?.status],
           ].map(([label, status]) => `<li>${escapeHtml(label)}: ${escapeHtml(String(status || 'unavailable_requires_review').replaceAll('_', ' '))}</li>`).join('');
           result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(comparison.notice || '')}<ul>${rows}</ul><div class="row"><button class="secondary compact-action" data-document-comparison-source="left" type="button">Inspect left source</button><button class="secondary compact-action" data-document-comparison-source="right" type="button">Inspect right source</button></div>`;
-          result.querySelectorAll('[data-document-comparison-source]').forEach((button) => button.addEventListener('click', () => inspect(button.dataset.documentComparisonSource, button)));
         } catch (error) {
           result.innerHTML = renderRecoverableError(error, {title: 'Document comparison could not be created'});
         }
@@ -932,20 +956,112 @@
       const host = document.querySelector('.record-lineage-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
       if (!host || document.getElementById('entity-resolution-create')) return;
       const section = document.createElement('section'); section.className = 'rail-panel entity-resolution-control'; section.dataset.drawerPanel = 'evidence'; section.hidden = true;
-      section.innerHTML = '<div class="rail-title">Cross-document identity review</div><p class="field-hint">Record a possible identity match only from two active-matter sources. It remains review-required until a person explicitly confirms it; confirmation creates a reversible logical merge and never alters originals.</p><label>Candidate ID</label><input id="entity-resolution-id" maxlength="120" placeholder="entity_001"><label>Entity label</label><input id="entity-resolution-label" maxlength="300" placeholder="Fictional person label"><label>Left record ID</label><input id="entity-resolution-left" maxlength="120" placeholder="Active-matter record"><label>Right record ID</label><input id="entity-resolution-right" maxlength="120" placeholder="Different active-matter record"><label>Review note</label><input id="entity-resolution-notes" maxlength="2000" placeholder="Why this needs human review"><div class="row"><button class="secondary" id="entity-resolution-create" type="button">Record candidate</button><button class="secondary" id="entity-resolution-confirm" type="button">Explicitly confirm</button><button class="secondary" id="entity-resolution-revoke" type="button">Revoke merge</button></div><div aria-live="polite" class="status-strip" id="entity-resolution-result">No automatic identity resolution or data merge occurs.</div>';
+      section.innerHTML = '<div class="rail-title">Cross-document identity review</div><p class="field-hint">Record a possible identity match only from two active-matter sources. It remains review-required until a person explicitly confirms it; confirmation creates a reversible logical merge and never alters originals.</p><label>Candidate ID</label><input id="entity-resolution-id" maxlength="120" placeholder="entity_001"><label>Entity label</label><input id="entity-resolution-label" maxlength="300" placeholder="Fictional person label"><label>Left record ID</label><input id="entity-resolution-left" maxlength="120" placeholder="Active-matter record"><label>Right record ID</label><input id="entity-resolution-right" maxlength="120" placeholder="Different active-matter record"><label>Review note</label><input id="entity-resolution-notes" maxlength="2000" placeholder="Why this needs human review"><div class="row"><button class="secondary" data-entity-resolution-action="create" id="entity-resolution-create" type="button">Record candidate</button><button class="secondary" data-entity-resolution-action="confirm" id="entity-resolution-confirm" type="button">Explicitly confirm</button><button class="secondary" data-entity-resolution-action="revoke" id="entity-resolution-revoke" type="button">Revoke merge</button></div><div aria-live="polite" class="status-strip" id="entity-resolution-result">No automatic identity resolution or data merge occurs.</div>';
       host.insertAdjacentElement('afterend', section);
-      const value = (id) => String(section.querySelector(id)?.value || '').trim(); const result = section.querySelector('#entity-resolution-result');
-      const show = (payload) => { const item=payload?.candidate||{}; result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(item.notice || 'Candidate recorded.')}<p>Status: ${escapeHtml(String(item.resolution_status||'review_required').replaceAll('_',' '))} · Merge: ${escapeHtml(String(item.merge_status||'not_merged').replaceAll('_',' '))}</p>`; };
-      section.querySelector('#entity-resolution-create').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'), entity_label=value('#entity-resolution-label'), left_record_id=value('#entity-resolution-left'), right_record_id=value('#entity-resolution-right'); if(!candidate_id||!entity_label||!left_record_id||!right_record_id){result.textContent='Enter candidate, label, and two active-matter record IDs.'; return;} try{show(await fetchJson('/api/evidence/entity-resolution/candidates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id,entity_label,left_record_id,right_record_id,reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Identity candidate could not be recorded'});}});
-      section.querySelector('#entity-resolution-confirm').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'); if(!candidate_id){result.textContent='Enter an existing candidate ID.';return;} try{show(await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidate_id)}/confirm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation:'confirm_same_entity',reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Explicit confirmation could not be recorded'});}});
-      section.querySelector('#entity-resolution-revoke').addEventListener('click', async () => { const candidate_id=value('#entity-resolution-id'); if(!candidate_id){result.textContent='Enter an existing candidate ID.';return;} try{show(await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidate_id)}/revoke`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer_notes:value('#entity-resolution-notes')})}));}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Logical merge could not be revoked'});}});
+      let activeCandidateId = '';
+      const value = (root, id) => String(root.querySelector(id)?.value || '').trim();
+      const resultFor = (root) => root.querySelector('#entity-resolution-result');
+      const show = (root, payload) => {
+        const result = resultFor(root); if (!result) return;
+        const item = payload?.candidate || {};
+        activeCandidateId = String(item.candidate_id || value(root, '#entity-resolution-id') || activeCandidateId);
+        result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(item.notice || 'Candidate recorded.')}<p>Status: ${escapeHtml(String(item.resolution_status || 'review_required').replaceAll('_', ' '))} · Merge: ${escapeHtml(String(item.merge_status || 'not_merged').replaceAll('_', ' '))}</p><p><button class="text-link" data-entity-resolution-action="source" data-entity-resolution-source="left" type="button">Inspect left source</button> <button class="text-link" data-entity-resolution-action="source" data-entity-resolution-source="right" type="button">Inspect right source</button></p>`;
+      };
+      if (document.documentElement.dataset.entityResolutionDelegationBound) return;
+      document.documentElement.dataset.entityResolutionDelegationBound = 'true';
+      document.addEventListener('click', async (event) => {
+        const button = event.target instanceof Element ? event.target.closest('[data-entity-resolution-action]') : null;
+        const root = button?.closest('.entity-resolution-control');
+        const action = String(button?.dataset.entityResolutionAction || '');
+        const result = root ? resultFor(root) : null;
+        if (!button || !root || !result || !action) return;
+        const candidateId = value(root, '#entity-resolution-id') || activeCandidateId;
+        try {
+          if (action === 'create') {
+            const entity_label = value(root, '#entity-resolution-label');
+            const left_record_id = value(root, '#entity-resolution-left');
+            const right_record_id = value(root, '#entity-resolution-right');
+            if (!candidateId || !entity_label || !left_record_id || !right_record_id) { result.textContent = 'Enter candidate, label, and two active-matter record IDs.'; return; }
+            show(root, await fetchJson('/api/evidence/entity-resolution/candidates', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({candidate_id: candidateId, entity_label, left_record_id, right_record_id, reviewer_notes: value(root, '#entity-resolution-notes')})}));
+            return;
+          }
+          if (!candidateId) { result.textContent = 'Enter an existing candidate ID.'; return; }
+          if (action === 'confirm') {
+            show(root, await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidateId)}/confirm`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'confirm_same_entity', reviewer_notes: value(root, '#entity-resolution-notes')})}));
+            return;
+          }
+          if (action === 'revoke') {
+            show(root, await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidateId)}/revoke`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reviewer_notes: value(root, '#entity-resolution-notes')})}));
+            return;
+          }
+          if (action === 'source') {
+            const side = String(button.dataset.entityResolutionSource || '');
+            const payload = await fetchJson(`/api/evidence/entity-resolution/candidates/${encodeURIComponent(candidateId)}/${encodeURIComponent(side)}/source`);
+            const source = payload?.source || {}; const token = String(source.source_token || '');
+            if (!/^[a-f0-9]{64}$/i.test(token)) throw new Error('entity_resolution_source_token_unavailable');
+            openRecordInspector({source_token: token}, Number(source?.source_block?.page_number || 0), button);
+          }
+        } catch (error) {
+          const titles = {create: 'Identity candidate could not be recorded', confirm: 'Explicit confirmation could not be recorded', revoke: 'Logical merge could not be revoked', source: 'Identity-review source could not be opened'};
+          result.innerHTML = renderRecoverableError(error, {title: titles[action] || 'Identity-review action could not be completed'});
+        }
+      });
     }());
-    (function(){const h=document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]')||document.querySelector('.page-quality-control[data-drawer-panel="evidence"]');if(!h||document.getElementById('table-lineage-run'))return;const s=document.createElement('section');s.className='rail-panel table-lineage-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Table lineage review</div><p class="field-hint">Inspect source-bound extracted cells and page coordinates. Corrections are separate review records and never overwrite extraction.</p><label>Source SHA-256</label><input id="table-lineage-hash" maxlength="64"><label>Cells JSON</label><textarea id="table-lineage-cells">[]</textarea><button class="secondary" id="table-lineage-run" type="button">Inspect table lineage</button><div aria-live="polite" class="status-strip" id="table-lineage-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#table-lineage-result');s.querySelector('#table-lineage-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/table-lineage-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#table-lineage-hash').value.trim(),cells:JSON.parse(s.querySelector('#table-lineage-cells').value||'[]')})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml(p.cells.length)} cell(s).</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Table-lineage review could not run'});}});}());
-    (function(){const h=document.querySelector('.document-type-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('page-quality-run'))return;const s=document.createElement('section');s.className='rail-panel page-quality-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Page quality review</div><p class="field-hint">Review supplied OCR and parser metrics page by page. Flags do not replace page-image review.</p><label>Source SHA-256</label><input id="page-quality-hash" maxlength="64"><label>Page metrics JSON</label><textarea id="page-quality-pages">[]</textarea><button class="secondary" id="page-quality-run" type="button">Review page quality</button><div aria-live="polite" class="status-strip" id="page-quality-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#page-quality-result');s.querySelector('#page-quality-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/page-quality-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#page-quality-hash').value.trim(),pages:JSON.parse(s.querySelector('#page-quality-pages').value||'[]')})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml(p.review_page_count)} page(s) need review.</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Page-quality review could not run'});}});}());
-    (function(){const h=document.querySelector('.handwriting-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('document-type-review-run'))return;const s=document.createElement('section');s.className='rail-panel document-type-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Document type review</div><p class="field-hint">Generate review-only type candidates from an exact source hash and excerpt. Labels do not alter metadata or determine legal effect.</p><label>Source SHA-256</label><input id="document-type-review-hash" maxlength="64"><label>Excerpt</label><textarea id="document-type-review-text"></textarea><button class="secondary" id="document-type-review-run" type="button">Review candidates</button><div aria-live="polite" class="status-strip" id="document-type-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#document-type-review-result');s.querySelector('#document-type-review-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/document-type-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#document-type-review-hash').value.trim(),text_excerpt:s.querySelector('#document-type-review-text').value})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}<p>${escapeHtml((p.candidate_types||[]).join(', '))}</p>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Document-type review could not run'});}});}());
-    (function(){const h=document.querySelector('.scanner-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('handwriting-review-run'))return;const s=document.createElement('section');s.className='rail-panel handwriting-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Handwriting review</div><p class="field-hint">Route uncertain OCR or possible handwriting to a human transcription review. This does not recognize handwriting or create text.</p><label>Source SHA-256</label><input id="handwriting-review-hash" maxlength="64"><label><input id="handwriting-review-signal" type="checkbox"> Possible handwriting</label><button class="secondary" id="handwriting-review-run" type="button">Record review routing</button><div aria-live="polite" class="status-strip" id="handwriting-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#handwriting-review-result');s.querySelector('#handwriting-review-run').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/handwriting-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:s.querySelector('#handwriting-review-hash').value.trim(),handwriting_signal:s.querySelector('#handwriting-review-signal').checked})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Handwriting review could not be recorded'});}});}());
-    (function(){const h=document.querySelector('.watch-folder-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('scanner-review-plan'))return;const s=document.createElement('section');s.className='rail-panel scanner-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Scanner review plan</div><p class="field-hint">Create a review-only cleanup proposal from an immutable scan hash. No page is deleted, rotated, or OCR’d until separately approved.</p><label>Original SHA-256</label><input id="scanner-review-hash" maxlength="64"><label>Page count</label><input id="scanner-review-pages" type="number" min="1"><button class="secondary" id="scanner-review-plan" type="button">Create review plan</button><div aria-live="polite" class="status-strip" id="scanner-review-result"></div>';h.insertAdjacentElement('afterend',s);const r=s.querySelector('#scanner-review-result');s.querySelector('#scanner-review-plan').addEventListener('click',async()=>{try{const p=await fetchJson('/api/evidence/scanner-review/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({original_sha256:s.querySelector('#scanner-review-hash').value.trim(),page_count:Number(s.querySelector('#scanner-review-pages').value||0)})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice)}`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Scanner review plan could not be created'});}});}());
-    (function installWatchFolderControl(){const host=document.querySelector('.matter-completeness-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!host||document.getElementById('watch-folder-scan'))return;const s=document.createElement('section');s.className='rail-panel watch-folder-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Local folder review queue</div><p class="field-hint">Choose a local folder for one explicit candidate scan. Nothing watches, reads, copies, or imports files until you take a separate action.</p><label for="watch-folder-input">Local folder</label><input id="watch-folder-input" type="text" autocomplete="off"><button class="secondary" id="watch-folder-scan" type="button">Scan candidates</button><div aria-live="polite" class="status-strip" id="watch-folder-result">No scan has run.</div>';host.insertAdjacentElement('afterend',s);const i=s.querySelector('#watch-folder-input'),r=s.querySelector('#watch-folder-result');s.querySelector('#watch-folder-scan').addEventListener('click',async()=>{if(!i.value.trim()){r.textContent='Choose a local folder to scan.';return;}try{const p=await fetchJson('/api/evidence/watch-folder/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder:i.value.trim()})});r.innerHTML=`<strong>Review required.</strong> ${escapeHtml(p.notice||'')}<ul>${(p.candidates||[]).map(x=>`<li>${escapeHtml(x.display_name)} · ${escapeHtml(x.extension)} · ${escapeHtml(x.size_bytes)} bytes</li>`).join('')||'<li>No file candidates.</li>'}</ul>`;}catch(e){r.innerHTML=renderRecoverableError(e,{title:'Candidate scan could not run'});}});}());
+    (function(){const h=document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]')||document.querySelector('.page-quality-control[data-drawer-panel="evidence"]');if(!h||document.getElementById('table-lineage-run'))return;const s=document.createElement('section');s.className='rail-panel table-lineage-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Table lineage review</div><p class="field-hint">Inspect supplied extraction candidates against a hash-verified active-matter record. Values remain review inputs; corrections never overwrite the original extraction.</p><label>Source SHA-256</label><input id="table-lineage-hash" maxlength="64"><label>Cells JSON</label><textarea id="table-lineage-cells">[]</textarea><button class="secondary" id="table-lineage-run" type="button">Inspect table lineage</button><div aria-live="polite" class="status-strip" id="table-lineage-result"></div>';h.insertAdjacentElement('afterend',s);}());
+    (function bindTableLineageDelegation(){const root=document.documentElement;if(root.dataset.tableLineageDelegationBound==='true')return;root.dataset.tableLineageDelegationBound='true';document.addEventListener('click',async(event)=>{const button=event.target instanceof Element?event.target.closest('#table-lineage-run'):null;if(!button)return;event.preventDefault();event.stopImmediatePropagation();const section=button.closest('.table-lineage-control')||document;const hash=section.querySelector('#table-lineage-hash'),cells=section.querySelector('#table-lineage-cells'),result=section.querySelector('#table-lineage-result');if(!(hash instanceof HTMLInputElement)||!(cells instanceof HTMLTextAreaElement)||!result)return;const sourceHash=hash.value.trim();if(!sourceHash){result.textContent='Enter the SHA-256 of an indexed active-matter record.';return;}button.disabled=true;button.setAttribute('aria-busy','true');result.textContent='Reviewing supplied table extraction candidates locally…';try{const payload=await fetchJson('/api/evidence/table-lineage-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:sourceHash,cells:JSON.parse(cells.value||'[]')})});const sourceId=String(payload?.source_record?.evidence_id||'');result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(payload.notice||'')}<p>${escapeHtml(payload.cells?.length||0)} cell(s) · receipt: ${escapeHtml(payload.lineage_id||'recorded')}.</p>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source</button>`:''}`;}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Table-lineage review could not run'});}finally{button.disabled=false;button.removeAttribute('aria-busy');}},true);}());
+    (function(){const h=document.querySelector('.document-type-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('page-quality-run'))return;const s=document.createElement('section');s.className='rail-panel page-quality-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Page quality review</div><p class="field-hint">Review supplied OCR and parser metrics for a hash-verified active-matter source. Flags do not replace page-image review.</p><label>Source SHA-256</label><input id="page-quality-hash" maxlength="64"><label>Page metrics JSON</label><textarea id="page-quality-pages">[]</textarea><button class="secondary" id="page-quality-run" type="button">Review page quality</button><div aria-live="polite" class="status-strip" id="page-quality-result"></div>';h.insertAdjacentElement('afterend',s);}());
+    (function bindPageQualityDelegation(){const root=document.documentElement;if(root.dataset.pageQualityDelegationBound==='true')return;root.dataset.pageQualityDelegationBound='true';document.addEventListener('click',async(event)=>{const button=event.target instanceof Element?event.target.closest('#page-quality-run'):null;if(!button)return;event.preventDefault();event.stopImmediatePropagation();const section=button.closest('.page-quality-control')||document;const hash=section.querySelector('#page-quality-hash'),pages=section.querySelector('#page-quality-pages'),result=section.querySelector('#page-quality-result');if(!(hash instanceof HTMLInputElement)||!(pages instanceof HTMLTextAreaElement)||!result)return;const sourceHash=hash.value.trim();if(!sourceHash){result.textContent='Enter the SHA-256 of an indexed active-matter record.';return;}button.disabled=true;button.setAttribute('aria-busy','true');result.textContent='Reviewing source-bound page metrics locally…';try{const payload=await fetchJson('/api/evidence/page-quality-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:sourceHash,pages:JSON.parse(pages.value||'[]')})});const sourceId=String(payload?.source_record?.evidence_id||'');result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(payload.notice||'')}<p>${escapeHtml(payload.review_page_count||0)} page(s) need review · receipt: ${escapeHtml(payload.review_id||'recorded')}.</p>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source</button>`:''}`;}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Page-quality review could not run'});}finally{button.disabled=false;button.removeAttribute('aria-busy');}},true);}());
+    (function(){const h=document.querySelector('.handwriting-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('document-type-review-run'))return;const s=document.createElement('section');s.className='rail-panel document-type-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Document type review</div><p class="field-hint">Generate review-only type candidates from a hash-verified active-matter record. An optional exact excerpt must occur in that record; only its digest and length are retained.</p><label>Source SHA-256</label><input id="document-type-review-hash" maxlength="64"><label>Exact visible excerpt (optional)</label><textarea id="document-type-review-text" maxlength="2000"></textarea><button class="secondary" id="document-type-review-run" type="button">Review candidates</button><div aria-live="polite" class="status-strip" id="document-type-review-result"></div>';h.insertAdjacentElement('afterend',s);}());
+    (function bindDocumentTypeReviewDelegation(){const root=document.documentElement;if(root.dataset.documentTypeReviewDelegationBound==='true')return;root.dataset.documentTypeReviewDelegationBound='true';document.addEventListener('click',async(event)=>{const button=event.target instanceof Element?event.target.closest('#document-type-review-run'):null;if(!button)return;event.preventDefault();event.stopImmediatePropagation();const section=button.closest('.document-type-review-control')||document;const hash=section.querySelector('#document-type-review-hash'),excerpt=section.querySelector('#document-type-review-text'),result=section.querySelector('#document-type-review-result');if(!(hash instanceof HTMLInputElement)||!(excerpt instanceof HTMLTextAreaElement)||!result)return;const sourceHash=hash.value.trim();if(!sourceHash){result.textContent='Enter the SHA-256 of an indexed active-matter record.';return;}button.disabled=true;button.setAttribute('aria-busy','true');result.textContent='Reviewing a bounded source excerpt locally…';try{const payload=await fetchJson('/api/evidence/document-type-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:sourceHash,text_excerpt:excerpt.value})});const sourceId=String(payload?.source_record?.evidence_id||'');result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(payload.notice||'')}<p>Candidate labels: ${escapeHtml((payload.candidate_types||[]).join(', ')||'unknown')} · receipt: ${escapeHtml(payload.review_id||'recorded')}.</p>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source</button>`:''}`;}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Document-type review could not run'});}finally{button.disabled=false;button.removeAttribute('aria-busy');}},true);}());
+    (function(){const h=document.querySelector('.scanner-review-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('handwriting-review-run'))return;const s=document.createElement('section');s.className='rail-panel handwriting-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Handwriting review</div><p class="field-hint">Route uncertain OCR or possible handwriting from a hash-verified active-matter record to a human transcription review. This does not recognize handwriting or create text.</p><label>Source SHA-256</label><input id="handwriting-review-hash" maxlength="64"><label><input id="handwriting-review-signal" type="checkbox"> Possible handwriting</label><button class="secondary" id="handwriting-review-run" type="button">Record review routing</button><div aria-live="polite" class="status-strip" id="handwriting-review-result"></div>';h.insertAdjacentElement('afterend',s);}());
+    (function bindHandwritingReviewDelegation(){const root=document.documentElement;if(root.dataset.handwritingReviewDelegationBound==='true')return;root.dataset.handwritingReviewDelegationBound='true';document.addEventListener('click',async(event)=>{const button=event.target instanceof Element?event.target.closest('#handwriting-review-run'):null;if(!button)return;event.preventDefault();event.stopImmediatePropagation();const section=button.closest('.handwriting-review-control')||document;const hash=section.querySelector('#handwriting-review-hash'),signal=section.querySelector('#handwriting-review-signal'),result=section.querySelector('#handwriting-review-result');if(!(hash instanceof HTMLInputElement)||!(signal instanceof HTMLInputElement)||!result)return;const sourceHash=hash.value.trim();if(!sourceHash){result.textContent='Enter the SHA-256 of an indexed active-matter record.';return;}button.disabled=true;button.setAttribute('aria-busy','true');result.textContent='Recording a source-bound human transcription review route locally…';try{const payload=await fetchJson('/api/evidence/handwriting-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_hash:sourceHash,handwriting_signal:signal.checked})});const sourceId=String(payload?.source_record?.evidence_id||'');result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(payload.notice||'')}<p>Receipt: ${escapeHtml(payload.routing_id||'recorded')} · transcription remains human review.</p>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source</button>`:''}`;}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Handwriting review could not be recorded'});}finally{button.disabled=false;button.removeAttribute('aria-busy');}},true);}());
+    (function(){const h=document.querySelector('.watch-folder-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');if(!h||document.getElementById('scanner-review-plan'))return;const s=document.createElement('section');s.className='rail-panel scanner-review-control';s.dataset.drawerPanel='evidence';s.hidden=true;s.innerHTML='<div class="rail-title">Scanner review plan</div><p class="field-hint">Create a review-only cleanup proposal from a hash-verified active-matter scan. No page is deleted, rotated, or OCR’d until separately approved.</p><label>Original SHA-256</label><input id="scanner-review-hash" maxlength="64"><label>Page count</label><input id="scanner-review-pages" type="number" min="1"><button class="secondary" id="scanner-review-plan" type="button">Create review plan</button><div aria-live="polite" class="status-strip" id="scanner-review-result"></div>';h.insertAdjacentElement('afterend',s);}());
+    (function bindScannerReviewDelegation(){const root=document.documentElement;if(root.dataset.scannerReviewDelegationBound==='true')return;root.dataset.scannerReviewDelegationBound='true';document.addEventListener('click',async(event)=>{const button=event.target instanceof Element?event.target.closest('#scanner-review-plan'):null;if(!button)return;event.preventDefault();event.stopImmediatePropagation();const section=button.closest('.scanner-review-control')||document;const hash=section.querySelector('#scanner-review-hash'),pages=section.querySelector('#scanner-review-pages'),result=section.querySelector('#scanner-review-result');if(!(hash instanceof HTMLInputElement)||!(pages instanceof HTMLInputElement)||!result)return;const originalSha256=hash.value.trim(),pageCount=Number(pages.value||0);if(!originalSha256||pageCount<1){result.textContent='Enter the active-matter scan hash and a page count of at least one.';return;}button.disabled=true;button.setAttribute('aria-busy','true');result.textContent='Creating a source-bound review proposal locally…';try{const payload=await fetchJson('/api/evidence/scanner-review/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({original_sha256:originalSha256,page_count:pageCount})});const sourceId=String(payload?.source_record?.evidence_id||'');result.innerHTML=`<strong>Review required.</strong> ${escapeHtml(payload.notice||'')}<p>Receipt: ${escapeHtml(payload.plan_id||'recorded')} · original scan remains unchanged.</p>${sourceId?`<button class="secondary compact-action" data-specialized-source="${escapeHtml(sourceId)}" type="button">Inspect exact source</button>`:''}`;}catch(error){result.innerHTML=renderRecoverableError(error,{title:'Scanner review plan could not be created'});}finally{button.disabled=false;button.removeAttribute('aria-busy');}},true);}());
+    (function installWatchFolderControl() {
+      const root = document.documentElement;
+      if (root.dataset.watchFolderDelegationBound !== 'true') {
+        root.dataset.watchFolderDelegationBound = 'true';
+        document.addEventListener('click', async (event) => {
+          const target = event.target instanceof Element ? event.target.closest('#watch-folder-scan') : null;
+          if (!target) return;
+          const section = target.closest('.watch-folder-control') || document;
+          const input = section.querySelector('#watch-folder-input');
+          const result = section.querySelector('#watch-folder-result');
+          if (!(input instanceof HTMLInputElement) || !result) return;
+          const folder = input.value.trim();
+          if (!folder) {
+            result.textContent = 'Choose a local folder to scan.';
+            return;
+          }
+          target.disabled = true;
+          target.setAttribute('aria-busy', 'true');
+          result.textContent = 'Scanning candidate metadata locally…';
+          try {
+            const payload = await fetchJson('/api/evidence/watch-folder/scan', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({folder}),
+            });
+            const candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
+            result.innerHTML = `<strong>Review required.</strong> ${escapeHtml(payload.notice || '')}<ul>${candidates.map((item) => `<li>${escapeHtml(item.display_name)} · ${escapeHtml(item.extension)} · ${escapeHtml(item.size_bytes)} bytes</li>`).join('') || '<li>No file candidates.</li>'}</ul>`;
+          } catch (error) {
+            result.innerHTML = renderRecoverableError(error, {title: 'Candidate scan could not run'});
+          } finally {
+            target.disabled = false;
+            target.removeAttribute('aria-busy');
+          }
+        });
+      }
+      if (document.getElementById('watch-folder-scan')) return;
+      const host = document.querySelector('.matter-completeness-control[data-drawer-panel="evidence"]') || document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]');
+      if (!host) return;
+      const section = document.createElement('section');
+      section.className = 'rail-panel watch-folder-control';
+      section.dataset.drawerPanel = 'evidence';
+      section.hidden = true;
+      section.innerHTML = '<div class="rail-title">Local folder review queue</div><p class="field-hint">Choose a local folder for one explicit candidate scan. Nothing watches, reads, copies, or imports files until you take a separate action.</p><label for="watch-folder-input">Local folder</label><input id="watch-folder-input" type="text" autocomplete="off"><button class="secondary" id="watch-folder-scan" type="button">Scan candidates</button><div aria-live="polite" class="status-strip" id="watch-folder-result">No scan has run.</div>';
+      host.insertAdjacentElement('afterend', section);
+    }());
     (function installMatterCompletenessControl() {
       const host=document.querySelector('.entity-resolution-control[data-drawer-panel="evidence"]')||document.querySelector('.v5-evidence-summary[data-drawer-panel="evidence"]'); if(!host||document.getElementById('matter-completeness-refresh'))return;
       const section=document.createElement('section'); section.className='rail-panel matter-completeness-control'; section.dataset.drawerPanel='evidence'; section.hidden=true;
@@ -2904,7 +3020,7 @@
       ['advanced_table_extraction', 'Advanced table extraction', 'Create a CSV cell with an exact source locator.', 'Cell value', 'Source locator', 'Table ID', '2026-01-01', 'page 1, table 1, row 2, column 1', 'table_001', 'Every extracted cell keeps its source location.'],
       ['financial_document_intelligence', 'Financial document intelligence', 'Categorize a source-bound transaction and flag material values for review.', 'Amount', 'Category', 'Transaction ID', '1250.00', 'housing', 'transaction_001', 'This tool does not make valuation, ownership, support, or legal conclusions.'],
       ['semantic_order_comparison', 'Semantic order comparison', 'Compare one exact order term and expose material wording changes.', 'Earlier term', 'Later term', 'Term ID', 'Exchange at 5 PM', 'Exchange at 6 PM', 'term_001', 'The comparison does not decide which order is operative.'],
-      ['authority_update_center', 'Authority update center', 'Audit an official-source build candidate without activating or downloading it.', 'Build ID', 'Official source URL', 'Source ID', 'maine_2026_001', 'https://legislature.maine.gov/', 'title_19a', 'Activation and network updates remain separate, controlled operations.'],
+      ['authority_update_center', 'Authority-source candidate review (add-on)', 'Review a supplied candidate manifest in Add-on Studio. This is not the canonical Authority build lifecycle.', 'Build ID', 'Official source URL', 'Source ID', 'maine_2026_001', 'https://legislature.maine.gov/', 'title_19a', 'This add-on never activates a build or updates a source. Use Full Workbench, Evidence & tools, then Setup for the canonical local build lifecycle.'],
       ['guided_research_builder', 'Guided research builder', 'Turn a question and issue into a Maine-first source-class research plan.', 'Research question', 'Issue', 'Plan ID', 'What source governs this fictional issue?', 'parental rights', 'research_001', 'A research plan makes no current-law claim until exact sources are verified.'],
       ['evidence_annotation_studio', 'Evidence annotation', 'Attach a locator and review note to an exact record span.', 'Exact source text', 'Review note', 'Record ID', 'Fictional exact source text.', 'Verify this observation.', 'record_001', 'Annotations never modify the original record.'],
       ['local_automation_scheduler', 'Local automation scheduler', 'Schedule an allow-listed matter-health action while the app is running.', 'Schedule ID', 'Allowed task', 'Interval hours', 'schedule_001', 'matter_health', '24', 'Scheduled tasks run only while the app is active and have no external side effects.'],
@@ -4324,8 +4440,8 @@
     reviewerBundleExport?.addEventListener('click',exportReviewerBundle);reviewerBundleComment?.addEventListener('click',commentReviewerBundle);reviewerBundleAttest?.addEventListener('click',attestReviewerBundle);reviewerBundleReimport?.addEventListener('click',reimportReviewerBundle);reviewerBundleReconcile?.addEventListener('click',reconcileReviewerBundle);reviewerBundleSource?.addEventListener('click',()=>openSpecializedSourceRecord(reviewerBundleValue(reviewerBundleRecordId,reviewerBundleValue(lateReviewSourceId)),reviewerBundleSource));
 
     async function openSpecializedSourceRecord(recordId, owner=null) {
-      const safeId=intakeSafeId(recordId);
-      if(!safeId){showToast('Enter a valid source record safe ID first.');return;}
+      const safeId=String(recordId||'').trim();
+      if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(safeId)){showToast('Enter a valid source record safe ID first.');return;}
       try {
         const payload=await fetchJson(`/api/records/${encodeURIComponent(safeId)}/integrity`);
         const token=String(payload?.preview?.token||'');
@@ -4751,6 +4867,7 @@
       const excluded = Array.isArray(snapshot?.excluded_records) ? snapshot.excluded_records : [];
       const packets = Array.isArray(payload?.packet_list) ? payload.packet_list : [];
       const staleReasons = Array.isArray(payload?.stale_reasons) ? payload.stale_reasons : [];
+      const snapshotState = !snapshot?.snapshot_id ? 'no snapshot frozen' : (payload?.stale_snapshot_detected ? 'stale snapshot detected' : 'snapshot current');
       const health = payload?.health || {};
       const healthBlockers = Array.isArray(health?.blockers) ? health.blockers : [];
       const healthHistory = Array.isArray(payload?.health_history) ? payload.health_history : [];
@@ -4763,7 +4880,7 @@
       if (matterCommandCenterStatus) {
         const matterId = payload?.matter_id || matterCommandCenterMatterId() || 'matter';
         matterCommandCenterStatus.textContent = payload
-          ? `${matterId} · ${Number(coverage.record_count || included.length || 0).toLocaleString()} included records · ${Number(coverage.excluded_record_count || excluded.length || 0).toLocaleString()} excluded records · ${payload.stale_snapshot_detected ? 'stale snapshot detected' : 'snapshot current'}`
+          ? `${matterId} · ${Number(coverage.record_count || included.length || 0).toLocaleString()} included records · ${Number(coverage.excluded_record_count || excluded.length || 0).toLocaleString()} excluded records · ${snapshotState}`
           : 'Open a local matter to inspect coverage, snapshots, and packet history.';
       }
       if (matterCommandCenterCompareLeft) matterCommandCenterCompareLeft.innerHTML = `<option value="">Select packet</option>${matterCommandCenterPacketOptions(payload)}`;
@@ -4779,7 +4896,9 @@
         const packetMarkup = packets.slice().reverse().slice(0, 12).map((packet) => `<article class="matter-command-center-packet"><div><strong>${escapeHtml(packet.packet_id || '')}</strong><span class="badge ${packet.review_required ? 'warn' : 'good'}">${packet.review_required ? 'review required' : 'reviewed'}</span></div><small>Snapshot ${escapeHtml(packet.snapshot_id || '')} · ${escapeHtml(String(packet.variant || '').replaceAll('_', ' '))}</small><small>${escapeHtml(packet.generated_at || '')}</small></article>`).join('') || '<p class="muted">No packets have been built for this matter yet.</p>';
         const warningMarkup = staleReasons.length
           ? `<div class="matter-command-center-warning"><strong>Stale snapshot warning</strong><ul>${staleReasons.map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul></div>`
-          : '<div class="matter-command-center-warning status-ok">The current snapshot still matches the selected record set.</div>';
+          : snapshot?.snapshot_id
+            ? '<div class="matter-command-center-warning status-ok">The current snapshot still matches the selected record set. Human review is still required.</div>'
+            : '<div class="matter-command-center-warning">No snapshot has been frozen. Select a record scope and freeze a review snapshot before checking whether it is current.</div>';
         const healthMarkup = healthBlockers.length ? healthBlockers.map((blocker) => {
           const action = blocker?.corrective_action || {};
           const recordIds = Array.isArray(blocker?.record_ids) ? blocker.record_ids : [];
@@ -5186,10 +5305,10 @@
           : 'General Maine law';
 
       const modeLabel =
-        selectedLabel(searchMode) || 'Maine law';
+        selectedLabel(searchMode) || 'Both';
 
       document.querySelectorAll('[data-search-mode]').forEach((button) => {
-        const selected = button.dataset.searchMode === (searchMode?.value || 'maine_law');
+        const selected = button.dataset.searchMode === (searchMode?.value || 'both');
         button.classList.toggle('is-selected', selected);
         button.setAttribute('aria-checked', selected ? 'true' : 'false');
       });
@@ -5226,17 +5345,20 @@
 
       const authorityActive = Boolean(authorityTrustPayload?.active) && Number(authorityTrustPayload?.source_count || authorityTrustPayload?.count || 0) > 0;
       const authorityBlockers = Array.isArray(authorityTrustPayload?.blockers) ? authorityTrustPayload.blockers : [];
+      const sourceBoundDraftingAvailable = authorityTrustPayload?.source_bound_drafting_available === true;
       if (trustAuthorityStatus) trustAuthorityStatus.textContent = authorityActive
         ? `${Number(authorityTrustPayload?.source_count || authorityTrustPayload?.count || 0).toLocaleString()} official sources available`
         : authorityTrustPayload ? 'Official authority unavailable' : 'Checking local authority…';
       if (trustAuthorityDetail) trustAuthorityDetail.textContent = authorityActive
-        ? `Build ${authorityTrustPayload?.build_id || 'active'} · freshness and exact spans still require review.`
+        ? (sourceBoundDraftingAvailable
+          ? `Build ${authorityTrustPayload?.build_id || 'active'} · freshness and exact spans still require review.`
+          : `Build ${authorityTrustPayload?.build_id || 'active'} · direct exact-source drafting is unavailable until admitted spans and pinpoints are installed.`)
         : authorityTrustPayload ? `${authorityBlockers.length || 1} blocker${authorityBlockers.length === 1 ? '' : 's'} · current-law wording remains blocked.` : 'Freshness and verifier state will appear here.';
       const authorityLane = trustAuthorityStatus?.closest('.trust-lane');
       if (authorityLane) authorityLane.dataset.trustState = authorityTrustPayload ? (authorityActive ? 'available' : 'blocked') : 'checking';
 
       const answerBlockers = Array.isArray(lastPayload?.blockers) ? lastPayload.blockers : [];
-      const blockerCount = authorityActive ? answerBlockers.length : answerBlockers.length + 1;
+      const blockerCount = authorityActive ? answerBlockers.length + (sourceBoundDraftingAvailable ? 0 : 1) : answerBlockers.length + 1;
       if (trustReviewStatus) trustReviewStatus.textContent = 'Review required before reliance or export';
       if (trustReviewDetail) trustReviewDetail.textContent = blockerCount
         ? `${blockerCount} current blocker${blockerCount === 1 ? '' : 's'} · open the relevant source or review panel, correct the issue, then rerun.`
@@ -5465,7 +5587,7 @@
           <section class="answer-section"><h3>Indexed corpus inventory</h3>${renderParagraphBlocks(String(payload.answer || 'Inventory loaded.'))}</section>
           <section class="answer-section"><h3>Inventory breakdown</h3><p><strong>Top-level records:</strong> ${escapeHtml(summary.top_level_records || 0)} · <strong>Total index rows:</strong> ${escapeHtml(summary.records || 0)} · <strong>Searchable records:</strong> ${escapeHtml(summary.searchable_records || 0)}</p><p><strong>Source types:</strong> ${escapeHtml(sourceTypes || 'none')}</p><p><strong>Parser status:</strong> ${escapeHtml(parserStatuses || 'none')}</p><p><strong>OCR candidates:</strong> ${escapeHtml(summary.ocr_candidate_documents || 0)} document(s), ${escapeHtml(summary.ocr_candidate_pages || 0)} page(s)</p><p><button class="inline-source-link" data-open-evidence="records" type="button">Open first ${escapeHtml(payload.source_card_count || 0)} indexed record cards</button></p><p class="muted">This is an inventory of the selected private matter, not a Maine-law answer.</p></section>
         </div>`;
-        answer.querySelector('[data-open-evidence]')?.addEventListener('click', () => setDrawerOpen(true, 'evidence'));
+        answer.querySelector('[data-open-evidence]')?.addEventListener('click', () => openWorkbenchPanel('evidence'));
         return;
       }
       if (payload?.direct_record_search) {
@@ -5550,7 +5672,7 @@
           ${renderStructuredSection('When to get human help', structured.when_to_get_human_help)}
         </div>`;
         bindAnswerFollowUps(answer);
-        answer.querySelectorAll('[data-open-evidence]').forEach((button) => button.addEventListener('click', () => setDrawerOpen(true, 'evidence')));
+        answer.querySelectorAll('[data-open-evidence]').forEach((button) => button.addEventListener('click', () => openWorkbenchPanel('evidence')));
         answer.querySelectorAll('[data-open-printable]').forEach((button) => button.addEventListener('click', () => window.open(`/api/printables/${encodeURIComponent(button.dataset.openPrintable)}/open`, '_blank', 'noopener,noreferrer')));
         return;
       }
@@ -8424,7 +8546,21 @@
     function renderLocalAgentReceipt(payload) {
       const receipt = payload?.provenance_receipt || {};
       if (!receipt.receipt_sha256) return '';
-      return `<div class="local-agent-receipt"><strong>Hash-bound provenance receipt</strong><br>
+      const validation = payload?.output_validation || {};
+      const spans = Array.isArray(validation.source_spans) ? validation.source_spans : [];
+      const blockers = [...new Set([
+        ...(Array.isArray(validation.blockers) ? validation.blockers : []),
+        ...(Array.isArray(payload.blockers) ? payload.blockers : []),
+      ])];
+      const boundary = validation.status ? `<section class="local-agent-receipt" role="status">
+        <strong>${blockers.length ? 'Evidence Review withheld — review required' : 'Record quotations checked — review required'}</strong>
+        <p>${blockers.length ? 'The model response failed source checks. Your records were preserved. Open the source cards below, or retry with a narrower record selection.' : `${spans.length} quotation(s) match the selected record text. This does not verify factual claims or establish what happened.`}</p>
+        <details><summary>Source-check details</summary>
+          ${blockers.length ? `<ul>${blockers.map(code => `<li>${escapeHtml(code)}</li>`).join('')}</ul>` : ''}
+          <ul>${spans.map(span => `<li>Source [${escapeHtml(span.reference)}] · ${escapeHtml(span.status)} · approved-excerpt offsets ${escapeHtml(span.start_offset)}–${escapeHtml(span.end_offset)}</li>`).join('')}</ul>
+          <p>Legal claims are not verified. Human review remains required.</p>
+        </details></section>` : '';
+      return `${boundary}<div class="local-agent-receipt"><strong>Hash-bound provenance receipt</strong><br>
         Answer <code>${escapeHtml(String(receipt.answer_sha256 || '').slice(0, 20))}…</code> ·
         Context <code>${escapeHtml(String(receipt.context_manifest_sha256 || '').slice(0, 20))}…</code> ·
         Receipt <code>${escapeHtml(receipt.receipt_sha256)}</code><br>
@@ -8875,7 +9011,7 @@
           panel.dataset.inlineEvidenceExpanded = panel.dataset.inlineEvidenceExpanded === 'true' ? 'false' : 'true';
           applyInlineEvidenceView(panel);
         });
-        panel.querySelector('[data-inline-open-workspace]')?.addEventListener('click', () => setDrawerOpen(true, 'evidence'));
+        panel.querySelector('[data-inline-open-workspace]')?.addEventListener('click', () => openWorkbenchPanel('evidence'));
         applyInlineEvidenceView(panel);
       });
 
@@ -9297,7 +9433,11 @@
         : '';
       const wrapper = document.createElement('div');
       wrapper.className = `message ${role}`;
-      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><div class="message-speaker-meta">${draftAction}${localAgentAction}${authorityVerifyAction}${evidenceJump}<span>${formatLocalTime(at)}${role === 'assistant' ? ' <span class="message-verified" aria-label="Response complete">✓</span>' : ''}</span></div></div><div class="message-content">${content}</div></div>`;
+      const localModelBlocked = payload?.local_agent_result && payload.status !== 'completed_review_required';
+      const completion = role !== 'assistant' ? '' : localModelBlocked
+        ? ' <span class="badge warn" aria-label="Model response unavailable or withheld">Review blocked</span>'
+        : ' <span class="message-verified" aria-label="Response complete, not verified">✓</span>';
+      wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><div class="message-speaker-meta">${draftAction}${localAgentAction}${authorityVerifyAction}${evidenceJump}<span>${formatLocalTime(at)}${completion}</span></div></div><div class="message-content">${content}</div></div>`;
       transcript.appendChild(wrapper);
       if (role === 'assistant' && payload) bindInlineEvidenceActions(wrapper, payload);
       if (role === 'assistant' && payload) bindAnswerFollowUps(wrapper);
@@ -9441,7 +9581,7 @@
           response_depth: responseDepth?.value || 'standard',
           audience: audience?.value || 'parent',
           matter_context: context,
-          search_mode: searchMode?.value || 'maine_law',
+          search_mode: searchMode?.value || 'both',
           child_impact_lens: Boolean(childImpactLens?.checked),
           session_id: localSessionId,
           last_search_id: lastPayload?.search_id || ''
@@ -9470,7 +9610,7 @@
         renderSources(payload.citations || []);
         updateTrustStatus();
         if (payload.response_kind === 'source_card_followup') {
-          setDrawerOpen(true, 'evidence');
+          openWorkbenchPanel('evidence');
           const sourceFollowupToast = payload.failure_class === 'no_recent_search_result'
             ? 'I do not have a recent search result to open.'
             : 'Prior source cards opened. No new corpus search was run.';
@@ -9671,7 +9811,7 @@
     }
 
     async function browseAuthorityGapSources() {
-      setDrawerOpen(true, 'evidence', {userInitiated: true});
+      openWorkbenchPanel('evidence', {focusTarget: authoritySearch});
       if (sourceCards) sourceCards.textContent = 'Loading admitted authority source cards…';
       if (authorityGapBrowseButton) authorityGapBrowseButton.disabled = true;
       try {
@@ -11038,7 +11178,7 @@
       url.search = '';
       url.searchParams.set('role', audience.value);
       url.searchParams.set('style', answerStyle.value);
-      url.searchParams.set('mode', searchMode?.value || 'maine_law');
+      url.searchParams.set('mode', searchMode?.value || 'both');
       if (topicFilter.value && topicFilter.value !== 'all') {
         url.searchParams.set('topic', topicFilter.value);
       }
@@ -11046,11 +11186,10 @@
       showToast('Privacy-safe settings link copied. Questions, context, records, and local paths were not included.');
     });
     drawerRefreshCorpus?.addEventListener('click', async () => { await loadCorpusLibrary(); showToast('Corpus status refreshed.'); });
-    openAllStarters?.addEventListener('click', () => setDrawerOpen(true, 'starters'));
+    openAllStarters?.addEventListener('click', () => openWorkbenchPanel('starters'));
     quickNewCorpus?.addEventListener('click', () => {
       setWorkflowFocus('matter');
-      setDrawerOpen(true, 'setup');
-      window.setTimeout(() => corpusSelect?.focus({preventScroll: true}), 20);
+      openWorkbenchPanel('setup', {focusTarget: corpusSelect});
       showToast('Select an existing local corpus here, or use the desktop launcher to create one.');
     });
     quickOpenWorkspace?.addEventListener('click', () => openDocumentWorkspace());
@@ -11279,6 +11418,16 @@
       if (v8ViewMenu) v8ViewMenu.open = false;
     }
 
+    function openWorkbenchPanel(panel, {focusTarget = null} = {}) {
+      // Chat intentionally keeps all supporting cards collapsed. Any explicit
+      // navigation request therefore needs to promote the destination into a
+      // visible Workbench panel instead of merely changing hidden drawer state.
+      setV8View('workspace', {userInitiated: true, drawerPanel: panel});
+      if (focusTarget && typeof focusTarget.focus === 'function') {
+        window.requestAnimationFrame(() => focusTarget.focus({preventScroll: true}));
+      }
+    }
+
     focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
     toggleSideCardsButton?.addEventListener('click', () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true}));
     closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
@@ -11412,7 +11561,7 @@
     });
     searchMode?.addEventListener('change', syncContextBar);
     document.querySelectorAll('[data-search-mode]').forEach((button) => {
-      button.addEventListener('click', () => setSearchMode(button.dataset.searchMode || 'maine_law'));
+      button.addEventListener('click', () => setSearchMode(button.dataset.searchMode || 'both'));
       button.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault();
@@ -11486,8 +11635,9 @@
       {id: 'research_maine_law', group: 'Research', label: 'Research Maine law', hint: 'Use official and source-backed Maine-law material', aliases: 'statute rule court authority', run: () => setSearchMode('maine_law')},
       {id: 'search_my_records', group: 'Research', label: 'Search my records', hint: 'Search only the active private matter', aliases: 'documents case corpus files', run: () => setSearchMode('my_records')},
       {id: 'search_both_separately', group: 'Research', label: 'Search law and records separately', hint: 'Keep authority and matter facts in distinct lanes', aliases: 'both combined compare', run: () => setSearchMode('both')},
-      {id: 'choose_matter', group: 'Matter', label: 'Choose active matter', hint: 'Open the local corpus library', aliases: 'case family client corpus', run: () => setDrawerOpen(true, 'setup')},
-      {id: 'open_authority_library', group: 'Matter', label: 'Open Maine Authority Library', hint: 'Review official source counts and freshness', aliases: 'official law statutes rules forms opinions', run: () => { setDrawerOpen(true, 'setup'); window.setTimeout(() => authoritySearch?.focus({preventScroll: true}), 20); }},
+      {id: 'choose_matter', group: 'Matter', label: 'Choose active matter', hint: 'Open the Workbench local corpus library', aliases: 'case family client corpus workbench', run: () => openWorkbenchPanel('setup')},
+      {id: 'open_authority_library', group: 'Matter', label: 'Open Maine Authority Library', hint: 'Open Workbench official-source counts and freshness', aliases: 'official law statutes rules forms opinions workbench', run: () => openWorkbenchPanel('setup', {focusTarget: authoritySearch})},
+      {id: 'open_matter_command_center', group: 'Matter', label: 'Open whole-matter command center', hint: 'Review source-bound blockers, snapshots, packets, and corrective actions', aliases: 'command center coverage blockers snapshot packet whole matter', run: () => openMatterCommandCenter()},
       {id:'open_matter_intake',group:'Specialized workbenches',label:'Matter intake, posture & issue tree',hint:'Create or resume an encrypted review-required intake',aliases:'slice 21 procedural posture issue tree',run:()=>openMatterIntake()},
       {id:'open_orders_workspace',group:'Specialized workbenches',label:'Operative orders & supersession',hint:'Record exact terms and compare amendments',aliases:'slice 22 orders supersession operative',run:()=>openLateReview(lateReviewDefinitions.orders)},
       {id:'open_calendar_workspace',group:'Specialized workbenches',label:'Service, deadlines & hearings',hint:'Build source-bound deadline candidates',aliases:'slice 23 service notice calendar',run:()=>openLateReview(lateReviewDefinitions.calendar)},
@@ -11541,17 +11691,17 @@
       {id:'open_encrypted_backup',group:'Productivity Studio',label:'Encrypted automatic backup',hint:'Schedule, verify and safely rehearse restore',aliases:'backup restore recovery automatic',run:()=>openProductivityStudio('backup')},
       ...addonDefinitions.map((addon) => ({id:`open_addon_${addon.id}`,group:'Add-on Studio',label:addon.label,hint:addon.description,aliases:`addon local review ${addon.id.replaceAll('_', ' ')}`,run:()=>openAddonStudio(addon.id)})),
       {id: 'open_document_intelligence', group: 'Evidence', label: 'Open document intelligence', hint: 'Inspect OCR, privacy review, and preservation copies', aliases: 'ocr redact preserve compare duplicate', run: () => openDocumentIntelligence()},
-      {id: 'toggle_evidence_drawer', group: 'Evidence', label: 'Open Evidence & tools', hint: 'Sources, matter controls, review and starters', aliases: 'drawer proof audit', run: () => setDrawerOpen(true, 'evidence')},
+      {id: 'toggle_evidence_drawer', group: 'Evidence', label: 'Open Evidence & tools', hint: 'Open the Workbench evidence, matter, review, and starter controls', aliases: 'drawer proof audit workbench', run: () => openWorkbenchPanel('evidence')},
       {id: 'toggle_shortcut_cards', group: 'Workspace', label: 'Toggle shortcut cards', hint: 'Hide or show supporting cards and resize chat', aliases: 'side cards rail expand chat layout', run: () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true})},
-      {id: 'open_source_list', group: 'Evidence', label: 'Open source list', hint: 'Load available source cards and inspect the proof', aliases: 'citations authority evidence', run: async () => { setDrawerOpen(true, 'evidence'); await loadSources(); }},
-      {id: 'search_family_printables', group: 'Resources', label: 'Search family printables', hint: 'Search bundled local FOCAF printable page text', aliases: 'printables worksheets guides family resources', run: () => { setDrawerOpen(true, 'printables'); printableSearch?.focus(); }},
-      {id: 'browse_printables', group: 'Resources', label: 'Browse printables', hint: 'Open optional family resources and previews', aliases: 'focaf browse resources', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('family'); }},
-      {id: 'court_day_checklist', group: 'Resources', label: 'Court-day checklist', hint: 'Find court-day family printables', aliases: 'court hearing bag preparation', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('court day'); }},
-      {id: 'calm_communication_tools', group: 'Resources', label: 'Calm communication tools', hint: 'Find communication printables', aliases: 'calm message co parenting', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('calm communication'); }},
-      {id: 'child_routine_tools', group: 'Resources', label: 'Child routine tools', hint: 'Find routines and exchange printables', aliases: 'routine exchange medication child', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('child routine'); }},
-      {id: 'records_deadline_tools', group: 'Resources', label: 'Records and deadline tools', hint: 'Find record and date tracking printables', aliases: 'records dates deadlines tracker', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('records deadlines'); }},
-      {id: 'local_family_resources', group: 'Resources', label: 'Local family resources', hint: 'Search county and municipality printable sheets', aliases: 'portland cumberland york local resource', run: async () => { setDrawerOpen(true, 'printables'); await searchFamilyPrintables('Portland family resources'); }},
-      {id: 'open_review_handoff', group: 'Evidence', label: 'Open reviewer handoff', hint: 'Missing facts, follow-up questions and review notes', aliases: 'review audit missing information', run: () => setDrawerOpen(true, 'review')},
+      {id: 'open_source_list', group: 'Evidence', label: 'Open source list', hint: 'Open Workbench source cards and inspect the proof', aliases: 'citations authority evidence workbench', run: async () => { openWorkbenchPanel('evidence'); await loadSources(); }},
+      {id: 'search_family_printables', group: 'Resources', label: 'Search family printables', hint: 'Open Workbench printable-page search', aliases: 'printables worksheets guides family resources workbench', run: () => openWorkbenchPanel('printables', {focusTarget: printableSearch})},
+      {id: 'browse_printables', group: 'Resources', label: 'Browse printables', hint: 'Open Workbench family resource previews', aliases: 'focaf browse resources workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('family'); }},
+      {id: 'court_day_checklist', group: 'Resources', label: 'Court-day checklist', hint: 'Open Workbench court-day family printables', aliases: 'court hearing bag preparation workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('court day'); }},
+      {id: 'calm_communication_tools', group: 'Resources', label: 'Calm communication tools', hint: 'Open Workbench communication printables', aliases: 'calm message co parenting workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('calm communication'); }},
+      {id: 'child_routine_tools', group: 'Resources', label: 'Child routine tools', hint: 'Open Workbench routine and exchange printables', aliases: 'routine exchange medication child workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('child routine'); }},
+      {id: 'records_deadline_tools', group: 'Resources', label: 'Records and deadline tools', hint: 'Open Workbench record and date printables', aliases: 'records dates deadlines tracker workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('records deadlines'); }},
+      {id: 'local_family_resources', group: 'Resources', label: 'Local family resources', hint: 'Open Workbench local-resource printables', aliases: 'portland cumberland york local resource workbench', run: async () => { openWorkbenchPanel('printables'); await searchFamilyPrintables('Portland family resources'); }},
+      {id: 'open_review_handoff', group: 'Evidence', label: 'Open reviewer handoff', hint: 'Open Workbench missing facts, follow-up questions, and review notes', aliases: 'review audit missing information workbench', run: () => openWorkbenchPanel('review')},
       {id: 'open_privacy_information', group: 'Safety', label: 'Open privacy information', hint: 'Understand local storage, exports and external links', aliases: 'local only confidential security data', run: () => openOverlay(privacyOverlay)},
       {id: 'open_help', group: 'Help', label: 'Open help', hint: 'How to use the local workbench', aliases: 'tips support guide', run: () => openOverlay(helpOverlay)},
       {id: 'open_focaf_resources', group: 'Help', label: 'Open FOCAF family resources', hint: 'Optional external resource site; no matter details are sent', aliases: 'focaf family resources download library external', run: () => window.open('https://focaf.jtforme.com/', '_blank', 'noopener,noreferrer')},
@@ -11661,8 +11811,8 @@
             if (target.action === 'open_record' && /^[a-f0-9]{64}$/i.test(String(target.source_token || ''))) { openRecordInspector({source_token: target.source_token}, 0, commandPaletteButton); return; }
             if (target.action === 'open_draft') { openDocumentWorkspace(); return; }
             if (target.action === 'open_privacy') { openOverlay(privacyOverlay); return; }
-            if (target.action === 'open_source') { setDrawerOpen(true, 'evidence'); window.setTimeout(() => authoritySearch?.focus({preventScroll:true}), 20); return; }
-            setDrawerOpen(true, 'setup');
+            if (target.action === 'open_source') { openWorkbenchPanel('evidence', {focusTarget: authoritySearch}); return; }
+            openWorkbenchPanel('setup');
           },
         }));
         renderCommands(commandSearch.value);
@@ -12458,18 +12608,39 @@
       if (!host || document.getElementById('citation-insertion-create')) return;
       const section = document.createElement('section');
       section.className = 'document-review-card citation-insertion-control';
-      section.innerHTML = '<div class="document-review-heading"><div><span>Verified citation only</span><strong>Citation insertion assistant</strong></div><span class="badge warn">Review required</span></div><p>Insert only the citation and pinpoint supplied by a selected, hash-bound official source span. The assistant creates a proposed revision; it never silently changes your draft.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="citation-insertion-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="citation-insertion-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label>Exact draft text to cite<textarea id="citation-insertion-text" rows="3" maxlength="4000" placeholder="Paste exact text from the saved draft. If it occurs more than once, specify the occurrence below."></textarea></label><label>Occurrence number (zero-based)<input id="citation-insertion-occurrence" type="number" min="0" value="0"></label><div class="document-workspace-actions"><button class="secondary" id="citation-insertion-authority-check" type="button">Check source span and pinpoint</button><button class="primary-action" id="citation-insertion-create" type="button">Create citation proposal</button></div><label class="document-review-attestation"><input id="citation-insertion-confirm" type="checkbox"> I confirm the selected source span and will review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="citation-insertion-result">Open a saved draft, check an authority source with a verified pinpoint, then create a proposal.</div>';
+      section.innerHTML = '<div class="document-review-heading"><div><span>Verified citation only</span><strong>Citation insertion assistant</strong></div><span class="badge warn">Review required</span></div><p>Insert only the citation and pinpoint supplied by a selected, hash-bound official source span. The assistant creates a proposed revision; it never silently changes your draft.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="citation-insertion-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="citation-insertion-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label id="citation-insertion-pinpoint-choice" hidden>Verified pinpoint choice<select id="citation-insertion-pinpoint"></select></label><label>Exact draft text to cite<textarea id="citation-insertion-text" rows="3" maxlength="4000" placeholder="Paste exact text from the saved draft. If it occurs more than once, specify the occurrence below."></textarea></label><label>Occurrence number (zero-based)<input id="citation-insertion-occurrence" type="number" min="0" value="0"></label><div class="document-workspace-actions"><button class="secondary" id="citation-insertion-authority-check" type="button">Check source span and pinpoint</button><button class="primary-action" id="citation-insertion-create" type="button">Create citation proposal</button></div><label class="document-review-attestation"><input id="citation-insertion-confirm" type="checkbox"> I confirm the selected source span and will review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="citation-insertion-result">Open a saved draft, check an authority source with a verified pinpoint, then create a proposal.</div>';
       documentWorkspaceMeta.insertAdjacentElement('afterend', section);
       const result = section.querySelector('#citation-insertion-result'); let authority = null;
       const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
+      const pinpointChoice = section.querySelector('#citation-insertion-pinpoint-choice');
+      const pinpointSelect = section.querySelector('#citation-insertion-pinpoint');
+      const showAuthority = (candidate, sourceId) => {
+        authority = candidate || null;
+        if (!authority?.pinpoint || !authority?.exact_span) throw new Error('verified_pinpoint_unavailable');
+        result.innerHTML = '<strong>Verified citation source selected.</strong> ' + escapeHtml(authority.citation || sourceId) + ', ' + escapeHtml(authority.pinpoint) + '<p>Use remains review required; inspect the exact source span before committing the draft revision.</p>';
+      };
       section.querySelector('#citation-insertion-authority-check').addEventListener('click', async () => {
         const sourceId = value('#citation-insertion-authority'); if (!sourceId) { result.textContent = 'Enter an official source ID from a source card.'; return; }
         result.textContent = 'Checking the exact authority span and supplied pinpoint…';
         try {
-          const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId)); authority = payload?.candidate || null;
-          if (!authority?.pinpoint) throw new Error('verified_pinpoint_unavailable');
-          result.innerHTML = '<strong>Verified citation source selected.</strong> ' + escapeHtml(authority.citation || sourceId) + ', ' + escapeHtml(authority.pinpoint) + '<p>Use remains review required; inspect the exact source span before committing the draft revision.</p>';
-        } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'A source-provided pinpoint is required'}); }
+          const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId));
+          const candidates = Array.isArray(payload?.pinpoint_candidates) ? payload.pinpoint_candidates.filter((candidate) => candidate?.authority_id && candidate?.pinpoint && candidate?.exact_span) : [];
+          pinpointChoice.hidden = candidates.length <= 1;
+          if (candidates.length > 1) {
+            authority = null;
+            pinpointSelect.innerHTML = '<option value="">Choose the exact source span to cite</option>' + candidates.map((candidate) => '<option value="' + escapeHtml(candidate.authority_id) + '">' + escapeHtml((candidate.citation || sourceId) + ', ' + candidate.pinpoint) + '</option>').join('');
+            result.textContent = 'Choose one source-provided pinpoint. The assistant will not select legal language for you.';
+            pinpointSelect.onchange = () => {
+              const selected = candidates.find((candidate) => String(candidate.authority_id) === String(pinpointSelect.value || ''));
+              if (!selected) { authority = null; result.textContent = 'Choose one source-provided pinpoint before creating a proposal.'; return; }
+              try { showAuthority(selected, sourceId); } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'A source-provided pinpoint is required'}); }
+            };
+          } else {
+            pinpointSelect.innerHTML = '';
+            pinpointSelect.onchange = null;
+            showAuthority(candidates[0] || payload?.candidate || null, sourceId);
+          }
+        } catch (error) { authority = null; pinpointChoice.hidden = true; pinpointSelect.innerHTML = ''; pinpointSelect.onchange = null; result.innerHTML = renderRecoverableError(error, {title: 'A source-provided pinpoint is required'}); }
       });
       section.querySelector('#citation-insertion-create').addEventListener('click', async () => {
         const documentId = String(documentWorkspaceState.active?.document_id || ''); const reviewerSafeId = value('#citation-insertion-reviewer'); const selectedText = value('#citation-insertion-text');
@@ -12491,9 +12662,10 @@
       const host = documentWorkspaceMeta?.parentElement;
       if (!host || document.getElementById('quote-safe-create')) return;
       const section = document.createElement('section'); section.className = 'document-review-card quote-safe-drafting-control';
-      section.innerHTML = '<div class="document-review-heading"><div><span>Exact source language</span><strong>Quote-safe drafting</strong></div><span class="badge warn">Review required</span></div><p>Replace an exact saved-draft phrase only with text verified against a selected official source span. Fuzzy source matches are blocked; normalization-only matches need separate approval.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="quote-safe-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="quote-safe-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label>Exact saved-draft text to replace<textarea id="quote-safe-selected" rows="2" maxlength="4000"></textarea></label><label>Quote text from selected source span<textarea id="quote-safe-text" rows="3" maxlength="4000"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="quote-safe-authority-check" type="button">Check source span</button><button class="primary-action" id="quote-safe-create" type="button">Create quote proposal</button></div><label class="document-review-attestation"><input id="quote-safe-normalized" type="checkbox"> I approve a normalization-only match if spacing, case, or quote marks differ but the source words match.</label><label class="document-review-attestation"><input id="quote-safe-confirm" type="checkbox"> I will inspect the full source context and review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="quote-safe-result">Open a saved draft and check an official source before creating a quote proposal.</div>';
-      documentWorkspaceMeta.insertAdjacentElement('afterend', section); const result = section.querySelector('#quote-safe-result'); let authority = null; const value = (selector) => String(section.querySelector(selector)?.value || '').trim();
-      section.querySelector('#quote-safe-authority-check').addEventListener('click', async () => { const sourceId = value('#quote-safe-authority'); if (!sourceId) { result.textContent = 'Enter an official source ID.'; return; } try { result.textContent = 'Checking selected authority source span…'; const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId)); authority = payload?.candidate || null; if (!authority?.exact_span) throw new Error('exact_source_span_unavailable'); result.innerHTML = '<strong>Source span available for review.</strong> ' + escapeHtml(authority.citation || sourceId) + '<p>Only exact or explicitly approved normalization matches may become a quote proposal.</p>'; } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'An exact source span is required'}); } });
+      section.innerHTML = '<div class="document-review-heading"><div><span>Exact source language</span><strong>Quote-safe drafting</strong></div><span class="badge warn">Review required</span></div><p>Replace an exact saved-draft phrase only with text verified against a selected official source span. Fuzzy source matches are blocked; normalization-only matches need separate approval.</p><div class="document-workspace-fields"><label>Reviewer safe ID<input id="quote-safe-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Official authority source ID<input id="quote-safe-authority" maxlength="240" placeholder="Official source ID from a source card"></label></div><label id="quote-safe-pinpoint-choice" hidden>Verified source span<select id="quote-safe-pinpoint"></select></label><label>Exact saved-draft text to replace<textarea id="quote-safe-selected" rows="2" maxlength="4000"></textarea></label><label>Quote text from selected source span<textarea id="quote-safe-text" rows="3" maxlength="4000"></textarea></label><div class="document-workspace-actions"><button class="secondary" id="quote-safe-authority-check" type="button">Check source span</button><button class="primary-action" id="quote-safe-create" type="button">Create quote proposal</button></div><label class="document-review-attestation"><input id="quote-safe-normalized" type="checkbox"> I approve a normalization-only match if spacing, case, or quote marks differ but the source words match.</label><label class="document-review-attestation"><input id="quote-safe-confirm" type="checkbox"> I will inspect the full source context and review the proposed revision before committing it.</label><div aria-live="polite" class="document-workspace-status" id="quote-safe-result">Open a saved draft and check an official source before creating a quote proposal.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend', section); const result = section.querySelector('#quote-safe-result'); let authority = null; const value = (selector) => String(section.querySelector(selector)?.value || '').trim(); const pinpointChoice = section.querySelector('#quote-safe-pinpoint-choice'); const pinpointSelect = section.querySelector('#quote-safe-pinpoint');
+      const showAuthority = (candidate, sourceId) => { authority = candidate || null; if (!authority?.exact_span) throw new Error('exact_source_span_unavailable'); result.innerHTML = '<strong>Source span available for review.</strong> ' + escapeHtml(authority.citation || sourceId) + (authority.pinpoint ? ', ' + escapeHtml(authority.pinpoint) : '') + '<p>Only exact or explicitly approved normalization matches may become a quote proposal.</p>'; };
+      section.querySelector('#quote-safe-authority-check').addEventListener('click', async () => { const sourceId = value('#quote-safe-authority'); if (!sourceId) { result.textContent = 'Enter an official source ID.'; return; } try { result.textContent = 'Checking selected authority source span…'; const payload = await fetchJson('/api/drafting/outline-authority-candidate/' + encodeURIComponent(sourceId)); const candidates = Array.isArray(payload?.pinpoint_candidates) ? payload.pinpoint_candidates.filter((candidate) => candidate?.authority_id && candidate?.exact_span) : []; pinpointChoice.hidden = candidates.length <= 1; if (candidates.length > 1) { authority = null; pinpointSelect.innerHTML = '<option value="">Choose the exact source span to quote</option>' + candidates.map((candidate) => '<option value="' + escapeHtml(candidate.authority_id) + '">' + escapeHtml((candidate.citation || sourceId) + (candidate.pinpoint ? ', ' + candidate.pinpoint : '')) + '</option>').join(''); result.textContent = 'Choose one exact source span. The assistant will not choose source language for you.'; pinpointSelect.onchange = () => { const selected = candidates.find((candidate) => String(candidate.authority_id) === String(pinpointSelect.value || '')); if (!selected) { authority = null; result.textContent = 'Choose one exact source span before creating a quote proposal.'; return; } try { showAuthority(selected, sourceId); } catch (error) { authority = null; result.innerHTML = renderRecoverableError(error, {title: 'An exact source span is required'}); } }; } else { pinpointSelect.innerHTML = ''; pinpointSelect.onchange = null; showAuthority(candidates[0] || payload?.candidate || null, sourceId); } } catch (error) { authority = null; pinpointChoice.hidden = true; pinpointSelect.innerHTML = ''; pinpointSelect.onchange = null; result.innerHTML = renderRecoverableError(error, {title: 'An exact source span is required'}); } });
       section.querySelector('#quote-safe-create').addEventListener('click', async () => { const documentId = String(documentWorkspaceState.active?.document_id || ''); const reviewerSafeId = value('#quote-safe-reviewer'); const selectedText = value('#quote-safe-selected'); const quoteText = value('#quote-safe-text'); if (!documentId || !reviewerSafeId || !selectedText || !quoteText || !authority) { result.textContent = 'Open a saved draft, enter reviewer ID and both exact text fields, and check an official source span.'; return; } if (!section.querySelector('#quote-safe-confirm')?.checked) { result.textContent = 'Confirm the review boundary before creating a quote proposal.'; return; } try { result.textContent = 'Verifying quote text against the selected source span…'; const created = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/quote-receipts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer_safe_id:reviewerSafeId, selected_text:selectedText, quote_text:quoteText, authority, normalized_quote_approved:Boolean(section.querySelector('#quote-safe-normalized')?.checked), user_confirmed:true})}); const receipt = created?.receipt || {}; const proposed = await fetchJson('/api/drafting/documents/' + encodeURIComponent(documentId) + '/quote-receipts/' + encodeURIComponent(String(receipt.receipt_id || '')) + '/propose', {method:'POST'}); documentWorkspaceState.proposal = proposed?.proposal || null; if (documentWorkspaceState.proposal) { renderWorkspaceDiff(documentWorkspaceState.proposal); documentWorkspaceCommit.disabled=false; documentWorkspaceReject.disabled=false; } result.innerHTML = '<strong>Reviewable quote proposal created.</strong> Match status: ' + escapeHtml(receipt?.quote?.status || 'review required') + '.<p>The original remains preserved; review the normal line-by-line proposal and explicitly commit or reject it.</p><button class="secondary compact-action" data-quote-safe-source type="button">Open exact official source</button>'; result.querySelector('[data-quote-safe-source]')?.addEventListener('click', () => inspectSource(String(authority.source_id || ''), {pin:true})); } catch (error) { result.innerHTML = renderRecoverableError(error, {title:'Quote proposal could not be created'}); } });
     }());
     (function installDraftRequirementProfilesControl() {
@@ -12654,10 +12826,11 @@
     }());
     (function installArgumentCounterargumentMatrixControl() {
       const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('argument-matrix-create'))return;
-      const section=document.createElement('section');section.className='document-review-card argument-matrix-control';section.innerHTML='<div class="document-review-heading"><div><span>Competing positions</span><strong>Argument / counterargument matrix</strong></div><span class="badge warn">Review required</span></div><p>Compare reviewer-entered positions, selected sources, weaknesses, and missing proof. This does not decide facts, credibility, law, jurisdiction, or likely outcomes.</p><div class="document-workspace-fields"><label>Matrix safe ID<input id="argument-matrix-id" maxlength="80" placeholder="position_matrix_001"></label><label>Reviewer safe ID<input id="argument-matrix-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Issue label<input id="argument-matrix-issue" maxlength="300" placeholder="Fictional parenting-time issue"></label><label>Private record<select id="argument-matrix-evidence"><option value="">Load active-matter records</option></select></label><label>Official authority source ID<input id="argument-matrix-authority" maxlength="240" placeholder="Source ID from an official source card"></label></div><div class="document-workspace-actions"><button class="secondary" id="argument-matrix-records" type="button">Load records</button><button class="secondary" id="argument-matrix-authority-check" type="button">Check official source</button></div><div class="document-workspace-fields"><label>First position label<input id="argument-matrix-a-label" maxlength="300" placeholder="Position A"></label><label>Second position label<input id="argument-matrix-b-label" maxlength="300" placeholder="Position B"></label></div><label>First position statement<textarea id="argument-matrix-a-statement" rows="2" maxlength="4000"></textarea></label><label>First position weaknesses (one per line)<textarea id="argument-matrix-a-weaknesses" rows="2" maxlength="12000"></textarea></label><label>First position missing proof (one per line)<textarea id="argument-matrix-a-missing" rows="2" maxlength="12000"></textarea></label><label>Second position statement<textarea id="argument-matrix-b-statement" rows="2" maxlength="4000"></textarea></label><label>Second position weaknesses (one per line)<textarea id="argument-matrix-b-weaknesses" rows="2" maxlength="12000"></textarea></label><label>Second position missing proof (one per line)<textarea id="argument-matrix-b-missing" rows="2" maxlength="12000"></textarea></label><label class="document-review-attestation"><input id="argument-matrix-confirm" type="checkbox"> I confirm this is a local reviewer comparison, not an outcome prediction or filing determination.</label><div class="document-workspace-actions"><button class="primary-action" id="argument-matrix-create" type="button">Create source-bound matrix</button><button class="secondary" id="argument-matrix-load" type="button">Load matrix</button></div><div aria-live="polite" class="document-workspace-status" id="argument-matrix-result">Load a private record and/or check an official source, then compare two reviewer-entered positions.</div>';
-      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#argument-matrix-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),lines=(s)=>value(s).split(/\n/).map((x)=>x.trim()).filter(Boolean),select=section.querySelector('#argument-matrix-evidence');let authority=null;
+      const section=document.createElement('section');section.className='document-review-card argument-matrix-control';section.innerHTML='<div class="document-review-heading"><div><span>Competing positions</span><strong>Argument / counterargument matrix</strong></div><span class="badge warn">Review required</span></div><p>Compare reviewer-entered positions, selected sources, weaknesses, and missing proof. This does not decide facts, credibility, law, jurisdiction, or likely outcomes.</p><div class="document-workspace-fields"><label>Matrix safe ID<input id="argument-matrix-id" maxlength="80" placeholder="position_matrix_001"></label><label>Reviewer safe ID<input id="argument-matrix-reviewer" maxlength="80" placeholder="reviewer_001"></label><label>Issue label<input id="argument-matrix-issue" maxlength="300" placeholder="Fictional parenting-time issue"></label><label>Private record<select id="argument-matrix-evidence"><option value="">Load active-matter records</option></select></label><label>Official authority source ID<input id="argument-matrix-authority" maxlength="240" placeholder="Source ID from an official source card"></label><label id="argument-matrix-pinpoint-choice" hidden>Verified source span<select id="argument-matrix-pinpoint"></select></label></div><div class="document-workspace-actions"><button class="secondary" id="argument-matrix-records" type="button">Load records</button><button class="secondary" id="argument-matrix-authority-check" type="button">Check official source</button></div><div class="document-workspace-fields"><label>First position label<input id="argument-matrix-a-label" maxlength="300" placeholder="Position A"></label><label>Second position label<input id="argument-matrix-b-label" maxlength="300" placeholder="Position B"></label></div><label>First position statement<textarea id="argument-matrix-a-statement" rows="2" maxlength="4000"></textarea></label><label>First position weaknesses (one per line)<textarea id="argument-matrix-a-weaknesses" rows="2" maxlength="12000"></textarea></label><label>First position missing proof (one per line)<textarea id="argument-matrix-a-missing" rows="2" maxlength="12000"></textarea></label><label>Second position statement<textarea id="argument-matrix-b-statement" rows="2" maxlength="4000"></textarea></label><label>Second position weaknesses (one per line)<textarea id="argument-matrix-b-weaknesses" rows="2" maxlength="12000"></textarea></label><label>Second position missing proof (one per line)<textarea id="argument-matrix-b-missing" rows="2" maxlength="12000"></textarea></label><label class="document-review-attestation"><input id="argument-matrix-confirm" type="checkbox"> I confirm this is a local reviewer comparison, not an outcome prediction or filing determination.</label><div class="document-workspace-actions"><button class="primary-action" id="argument-matrix-create" type="button">Create source-bound matrix</button><button class="secondary" id="argument-matrix-load" type="button">Load matrix</button></div><div aria-live="polite" class="document-workspace-status" id="argument-matrix-result">Load a private record and/or check an official source, then compare two reviewer-entered positions.</div>';
+      documentWorkspaceMeta.insertAdjacentElement('afterend',section);const result=section.querySelector('#argument-matrix-result'),value=(s)=>String(section.querySelector(s)?.value||'').trim(),lines=(s)=>value(s).split(/\n/).map((x)=>x.trim()).filter(Boolean),select=section.querySelector('#argument-matrix-evidence'),pinpointChoice=section.querySelector('#argument-matrix-pinpoint-choice'),pinpointSelect=section.querySelector('#argument-matrix-pinpoint');let authority=null;
       const loadRecords=async()=>{try{result.textContent='Loading hash-bound records from the active matter…';const p=await fetchJson('/api/drafting/outline-evidence-candidates');const rows=Array.isArray(p?.candidates)?p.candidates:[];select.innerHTML='<option value="">Choose one active-matter record (optional if authority selected)</option>';rows.forEach((row)=>{const option=document.createElement('option');option.value=JSON.stringify(row);option.textContent=String(row.title||row.record_id||'record');select.append(option);});result.textContent=rows.length?'Choose a record and/or check an official source; both positions keep their source lanes visible.':'No hash-bound records are available. Import and index a fictional record first, or select an official source.';}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matter records could not be loaded'});}};
-      const checkAuthority=async()=>{const source=value('#argument-matrix-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking the official source, hash, freshness, and span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));authority=p?.candidate||null;if(!authority)throw new Error('argument_matrix_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||authority.source_id)+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server will resolve and hash-check it again when the matrix is saved.</p>';}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}};
+      const showAuthority=(candidate,source)=>{authority=candidate||null;if(!authority?.authority_id||!authority?.source_hash||!authority?.exact_span)throw new Error('argument_matrix_authority_unavailable');result.innerHTML='<strong>Official source selected for review.</strong> '+escapeHtml(authority.citation||source)+(authority.pinpoint?', '+escapeHtml(authority.pinpoint):'')+'<p>Freshness: '+escapeHtml(authority.freshness_status||'unknown')+'. The server will resolve and hash-check this exact source span again when the matrix is saved.</p>';};
+      const checkAuthority=async()=>{const source=value('#argument-matrix-authority');if(!source){result.textContent='Enter an official source ID from a source card.';return;}try{result.textContent='Checking the official source, hash, freshness, and span…';const p=await fetchJson('/api/drafting/outline-authority-candidate/'+encodeURIComponent(source));const candidates=Array.isArray(p?.pinpoint_candidates)?p.pinpoint_candidates.filter((candidate)=>candidate?.authority_id&&candidate?.source_hash&&candidate?.exact_span):[];pinpointChoice.hidden=candidates.length<=1;if(candidates.length>1){authority=null;pinpointSelect.innerHTML='<option value="">Choose the exact source span</option>'+candidates.map((candidate)=>'<option value="'+escapeHtml(candidate.authority_id)+'">'+escapeHtml((candidate.citation||source)+(candidate.pinpoint?', '+candidate.pinpoint:''))+'</option>').join('');result.textContent='Choose one exact source span. The matrix will not select legal language for you.';pinpointSelect.onchange=()=>{const selected=candidates.find((candidate)=>String(candidate.authority_id)===String(pinpointSelect.value||''));if(!selected){authority=null;result.textContent='Choose one exact source span before saving the matrix.';return;}try{showAuthority(selected,source);}catch(e){authority=null;result.innerHTML=renderRecoverableError(e,{title:'An exact official source span is required'});}};}else{pinpointSelect.innerHTML='';pinpointSelect.onchange=null;showAuthority(candidates[0]||p?.candidate||null,source);}}catch(e){authority=null;pinpointChoice.hidden=true;pinpointSelect.innerHTML='';pinpointSelect.onchange=null;result.innerHTML=renderRecoverableError(e,{title:'Official source could not be used'});}};
       const sourceButtons=(matrix)=>{const positions=Array.isArray(matrix?.positions)?matrix.positions:[];return positions.map((position)=>{const recordButtons=(position.supporting_evidence||[]).map((source)=>'<button class="secondary compact-action" data-argument-matrix-position="'+escapeHtml(position.position_id||'')+'" data-argument-matrix-lane="private_matter_record" data-argument-matrix-source="'+escapeHtml(source.record_id||'')+'" type="button">Open private record</button>').join('');const authorityButtons=(position.supporting_authority||[]).map((source)=>'<button class="secondary compact-action" data-argument-matrix-position="'+escapeHtml(position.position_id||'')+'" data-argument-matrix-lane="official_authority" data-argument-matrix-source="'+escapeHtml(source.authority_id||'')+'" data-argument-matrix-official="'+escapeHtml(source.source_id||'')+'" type="button">Open official source</button>').join('');return '<li><strong>'+escapeHtml(position.label||position.position_id||'Position')+'</strong><p>'+escapeHtml(position.statement||'')+'</p><p>Weaknesses: '+escapeHtml((position.weaknesses||[]).join(', ')||'none recorded')+'. Missing proof: '+escapeHtml((position.missing_proof||[]).join(', ')||'none recorded')+'.</p><div class="document-workspace-actions">'+recordButtons+authorityButtons+'</div></li>';}).join('');};
       const bindSources=(matrix)=>result.querySelectorAll('[data-argument-matrix-source]').forEach((button)=>button.addEventListener('click',async(event)=>{const lane=String(button.dataset.argumentMatrixLane||''),position=String(button.dataset.argumentMatrixPosition||''),source=String(button.dataset.argumentMatrixSource||''),matrixId=String(matrix?.matrix_id||'');try{if(lane==='official_authority'){await inspectSource(String(button.dataset.argumentMatrixOfficial||''),{pin:true,owner:event.currentTarget});return;}const p=await fetchJson('/api/drafting/argument-matrices/'+encodeURIComponent(matrixId)+'/positions/'+encodeURIComponent(position)+'/'+encodeURIComponent(lane)+'/'+encodeURIComponent(source)+'/source');const token=String(p?.source?.source_token||'');if(!/^[a-f0-9]{64}$/i.test(token))throw new Error('argument_matrix_record_token_unavailable');openRecordInspector({source_token:token},Number(p?.source?.page_number||0),event.currentTarget);}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Matrix source could not be opened'});}}));
       const render=(matrix)=>{result.innerHTML='<strong>Review required.</strong> '+escapeHtml(matrix?.issue_label||'Matrix')+' compares '+escapeHtml(String((matrix?.positions||[]).length))+' position(s).<p>'+escapeHtml(matrix?.notice||'No position predicts an outcome.')+'</p><ol>'+sourceButtons(matrix)+'</ol>';bindSources(matrix);};

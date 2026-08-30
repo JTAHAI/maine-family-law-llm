@@ -342,6 +342,331 @@ class EvidenceReviewStore:
         state.setdefault("review_history", []).append(entry)
         self._append_history_log(entry)
 
+    def create_scanner_review_plan(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Persist a source-bound, review-only scanner cleanup proposal.
+
+        The scanner workflow never changes an original.  Binding the proposal
+        to an indexed active-matter source prevents a caller from creating an
+        apparently local review receipt for a foreign or invented hash.
+        """
+        from legal.evidence.scanner_review import scanner_review_plan
+
+        plan = scanner_review_plan(**payload)
+        source_hash = str(plan["original_sha256"])
+        normalized, _warnings = self._records(records)
+        source = next(
+            (row for row in normalized if str(row.get("source_hash") or "").lower() == source_hash),
+            None,
+        )
+        if source is None:
+            raise KeyError("scanner_original_record_not_found")
+
+        plan_id = _safe_id(
+            "scan_review",
+            source_hash,
+            plan.get("page_count"),
+            plan.get("profile"),
+        )
+        receipt = {
+            "plan_id": plan_id,
+            "original_sha256": source_hash,
+            "page_count": int(plan["page_count"]),
+            "profile": dict(plan.get("profile") or {}),
+            "derivative_id": str(plan["derivative_id"]),
+            "source_record": {
+                "evidence_id": str(source["evidence_id"]),
+                "source_hash": source_hash,
+            },
+            "review_required": True,
+            "created_at": _utc_now(),
+        }
+        with self._lock:
+            state = self._load_state()
+            plans = state.setdefault("scanner_review_plans", {})
+            before = plans.get(plan_id) if isinstance(plans, dict) else None
+            if not isinstance(plans, dict):
+                plans = {}
+                state["scanner_review_plans"] = plans
+            plans[plan_id] = receipt
+            action = "scanner_review_plan_created" if before is None else "scanner_review_plan_reaffirmed"
+            history = _history_entry(
+                action=action,
+                entity_type="scanner_review_plan",
+                entity_id=plan_id,
+                before=before if isinstance(before, dict) else None,
+                after=receipt,
+                summary="Recorded a source-bound scanner cleanup proposal for human review.",
+            )
+            self._record_history(state, history)
+            self._save_state(state)
+
+        return {
+            **plan,
+            "plan_id": plan_id,
+            "source_record": receipt["source_record"],
+            "review_receipt": {"history_id": history["history_id"], "review_required": True},
+        }
+
+    def create_handwriting_review_routing(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Record a source-bound human-transcription routing decision.
+
+        The signal is deliberately conservative: it is not handwriting
+        recognition, a transcript, or a document-authenticity determination.
+        The active-matter source check prevents a caller from creating a
+        seemingly local receipt for a foreign or invented record hash.
+        """
+        from legal.evidence.handwriting_review import review_handwriting
+
+        routing = review_handwriting(**payload)
+        source_hash = str(routing["source_hash"])
+        normalized, _warnings = self._records(records)
+        source = next(
+            (row for row in normalized if str(row.get("source_hash") or "").lower() == source_hash),
+            None,
+        )
+        if source is None:
+            raise KeyError("handwriting_source_record_not_found")
+
+        routing_id = _safe_id(
+            "handwriting_review",
+            source_hash,
+            routing.get("ocr_confidence"),
+            routing.get("handwriting_signal"),
+        )
+        receipt = {
+            "routing_id": routing_id,
+            "source_record": {
+                "evidence_id": str(source["evidence_id"]),
+                "source_hash": source_hash,
+            },
+            "ocr_confidence": routing.get("ocr_confidence"),
+            "handwriting_signal": bool(routing.get("handwriting_signal")),
+            "transcription_status": str(routing["transcription_status"]),
+            "review_required": True,
+            "created_at": _utc_now(),
+        }
+        with self._lock:
+            state = self._load_state()
+            routings = state.setdefault("handwriting_review_routings", {})
+            before = routings.get(routing_id) if isinstance(routings, dict) else None
+            if not isinstance(routings, dict):
+                routings = {}
+                state["handwriting_review_routings"] = routings
+            routings[routing_id] = receipt
+            action = "handwriting_review_routed" if before is None else "handwriting_review_reaffirmed"
+            history = _history_entry(
+                action=action,
+                entity_type="handwriting_review_routing",
+                entity_id=routing_id,
+                before=before if isinstance(before, dict) else None,
+                after=receipt,
+                summary="Recorded a source-bound human transcription review routing.",
+            )
+            self._record_history(state, history)
+            self._save_state(state)
+
+        return {
+            **routing,
+            "routing_id": routing_id,
+            "source_record": receipt["source_record"],
+            "review_receipt": {"history_id": history["history_id"], "review_required": True},
+        }
+
+    def create_document_type_review(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Persist a bounded, source-bound document-type review candidate.
+
+        A caller may narrow review to an exact visible excerpt, but cannot
+        attach arbitrary text to a private record.  The receipt stores only
+        the selected source identity and excerpt digest; originals and record
+        metadata remain untouched.
+        """
+        from legal.evidence.document_type_review import classify_document
+
+        source_hash = str(payload.get("source_hash") or "").strip().lower()
+        # Preserve the public malformed-hash contract before testing whether a
+        # syntactically valid hash belongs to the active matter.
+        classify_document(source_hash=source_hash, text_excerpt="")
+        normalized, _warnings = self._records(records)
+        source = next(
+            (row for row in normalized if str(row.get("source_hash") or "").lower() == source_hash),
+            None,
+        )
+        if source is None:
+            raise KeyError("document_type_source_record_not_found")
+
+        source_text = str(source.get("text") or "").strip()
+        if not source_text:
+            raise ValueError("document_type_source_text_unavailable")
+        supplied_excerpt = _safe_text(payload.get("text_excerpt") or "", limit=2_000).strip()
+        if supplied_excerpt and supplied_excerpt.casefold() not in source_text.casefold():
+            raise ValueError("document_type_excerpt_not_in_source")
+        excerpt = supplied_excerpt or source_text[:2_000]
+        review = classify_document(source_hash=source_hash, text_excerpt=excerpt)
+        review_id = _safe_id("document_type_review", source_hash, _sha(excerpt))
+        receipt = {
+            "review_id": review_id,
+            "source_record": {
+                "evidence_id": str(source["evidence_id"]),
+                "source_hash": source_hash,
+            },
+            "excerpt_sha256": _sha(excerpt),
+            "excerpt_length": len(excerpt),
+            "candidate_types": list(review.get("candidate_types") or []),
+            "signals": list(review.get("signals") or []),
+            "review_required": True,
+            "created_at": _utc_now(),
+        }
+        with self._lock:
+            state = self._load_state()
+            reviews = state.setdefault("document_type_reviews", {})
+            before = reviews.get(review_id) if isinstance(reviews, dict) else None
+            if not isinstance(reviews, dict):
+                reviews = {}
+                state["document_type_reviews"] = reviews
+            reviews[review_id] = receipt
+            action = "document_type_review_created" if before is None else "document_type_review_reaffirmed"
+            history = _history_entry(
+                action=action,
+                entity_type="document_type_review",
+                entity_id=review_id,
+                before=before if isinstance(before, dict) else None,
+                after=receipt,
+                summary="Recorded source-bound document-type candidates for human review.",
+            )
+            self._record_history(state, history)
+            self._save_state(state)
+
+        return {
+            **review,
+            "review_id": review_id,
+            "source_record": receipt["source_record"],
+            "excerpt_sha256": receipt["excerpt_sha256"],
+            "excerpt_length": receipt["excerpt_length"],
+            "review_receipt": {"history_id": history["history_id"], "review_required": True},
+        }
+
+    def create_page_quality_review(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Record review-only page metrics for a current active-matter source."""
+        from legal.evidence.page_quality_review import page_quality_map
+
+        source_hash = str(payload.get("source_hash") or "").strip().lower()
+        # Validate malformed hashes before reporting a current-matter miss.
+        page_quality_map(source_hash=source_hash, pages=[])
+        normalized, _warnings = self._records(records)
+        source = next(
+            (row for row in normalized if str(row.get("source_hash") or "").lower() == source_hash),
+            None,
+        )
+        if source is None:
+            raise KeyError("page_quality_source_record_not_found")
+        review = page_quality_map(source_hash=source_hash, pages=list(payload.get("pages") or []))
+        page_count = max(1, int(source.get("page_count") or 1))
+        if any(int(row.get("page_number") or 0) > page_count for row in review["pages"]):
+            raise ValueError("page_quality_page_not_in_source")
+        review_id = _safe_id("page_quality_review", source_hash, _sha(review["pages"]))
+        receipt = {
+            "review_id": review_id,
+            "source_record": {"evidence_id": str(source["evidence_id"]), "source_hash": source_hash},
+            "page_count": page_count,
+            "metrics_sha256": _sha(review["pages"]),
+            "review_page_count": int(review["review_page_count"]),
+            "review_required": True,
+            "created_at": _utc_now(),
+        }
+        with self._lock:
+            state = self._load_state()
+            reviews = state.setdefault("page_quality_reviews", {})
+            before = reviews.get(review_id) if isinstance(reviews, dict) else None
+            if not isinstance(reviews, dict):
+                reviews = {}
+                state["page_quality_reviews"] = reviews
+            reviews[review_id] = receipt
+            action = "page_quality_review_created" if before is None else "page_quality_review_reaffirmed"
+            history = _history_entry(
+                action=action,
+                entity_type="page_quality_review",
+                entity_id=review_id,
+                before=before if isinstance(before, dict) else None,
+                after=receipt,
+                summary="Recorded source-bound page-quality metrics for human review.",
+            )
+            self._record_history(state, history)
+            self._save_state(state)
+        return {
+            **review,
+            "review_id": review_id,
+            "source_record": receipt["source_record"],
+            "review_receipt": {"history_id": history["history_id"], "review_required": True},
+        }
+
+    def create_table_lineage_review(
+        self, payload: dict[str, Any], *, records: Iterable[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Record a hash-only receipt for a supplied table-extraction review.
+
+        Cell text stays in the immediate review result and is never promoted to
+        the original record or persisted in the receipt.  The supplied values
+        are therefore review candidates, not authenticated parser facts.
+        """
+        from legal.evidence.table_lineage_review import table_lineage
+
+        source_hash = str(payload.get("source_hash") or "").strip().lower()
+        table_lineage(source_hash=source_hash, cells=[])
+        normalized, _warnings = self._records(records)
+        source = next(
+            (row for row in normalized if str(row.get("source_hash") or "").lower() == source_hash),
+            None,
+        )
+        if source is None:
+            raise KeyError("table_lineage_source_record_not_found")
+        review = table_lineage(source_hash=source_hash, cells=list(payload.get("cells") or []))
+        page_count = max(1, int(source.get("page_count") or 1))
+        if any(int(row.get("page_number") or 0) > page_count for row in review["cells"]):
+            raise ValueError("table_lineage_page_not_in_source")
+        lineage_id = _safe_id("table_lineage_review", source_hash, _sha(review["cells"]))
+        receipt = {
+            "lineage_id": lineage_id,
+            "source_record": {"evidence_id": str(source["evidence_id"]), "source_hash": source_hash},
+            "page_count": page_count,
+            "cell_count": len(review["cells"]),
+            "cells_sha256": _sha(review["cells"]),
+            "review_required": True,
+            "created_at": _utc_now(),
+        }
+        with self._lock:
+            state = self._load_state()
+            reviews = state.setdefault("table_lineage_reviews", {})
+            before = reviews.get(lineage_id) if isinstance(reviews, dict) else None
+            if not isinstance(reviews, dict):
+                reviews = {}
+                state["table_lineage_reviews"] = reviews
+            reviews[lineage_id] = receipt
+            action = "table_lineage_review_created" if before is None else "table_lineage_review_reaffirmed"
+            history = _history_entry(
+                action=action,
+                entity_type="table_lineage_review",
+                entity_id=lineage_id,
+                before=before if isinstance(before, dict) else None,
+                after=receipt,
+                summary="Recorded source-bound supplied table extraction for human review.",
+            )
+            self._record_history(state, history)
+            self._save_state(state)
+        return {
+            **review,
+            "lineage_id": lineage_id,
+            "source_record": receipt["source_record"],
+            "review_receipt": {"history_id": history["history_id"], "review_required": True},
+        }
+
     def _records(self, records: Iterable[dict[str, Any]], selected_record_ids: Iterable[str] | None = None) -> tuple[list[dict[str, Any]], list[str]]:
         rows = []
         warnings: list[str] = []
@@ -365,6 +690,7 @@ class EvidenceReviewStore:
                 "text": text[:500_000],
                 "text_sha256": _sha(text),
                 "page_number": max(0, int(raw.get("page_number") or 0)),
+                "page_count": max(1, int(raw.get("page_count") or raw.get("page_number") or 1)),
                 "span_start": int(raw.get("span_start") or 0) if raw.get("span_start") is not None else None,
                 "span_end": int(raw.get("span_end") or 0) if raw.get("span_end") is not None else None,
                 "block_id": _safe_text(raw.get("block_id"), limit=120),

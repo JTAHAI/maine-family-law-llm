@@ -1,5 +1,13 @@
 # Changelog
 
+## 8.0.1 - Reliability and specialist integration safeguards
+
+- Hardened source-bound specialist task instructions, reference validation, worker memory monitoring, and cancellation. Unadmitted model outputs remain blocked.
+- Improved authority, evidence review, drafting traceability, production navigation, and local privacy boundaries.
+- Confined new Windows build output and caches to repository dist and preserved existing user profiles during unattended runtime checks.
+- Added complete sequential regression batches with exact collection-to-result accounting.
+- Research adapters remain excluded from the Store package pending passing evaluation and production admission. This release does not claim new admitted Maine-law model weights or organizational Enterprise qualification.
+
 ## 8.0.0 - Enterprise-hardened Add-on Studio
 
 - Added twenty complete local-first verticals spanning native transcription, OCR correction, communications, evidence graphs, model admission, forms, tables, finance, order comparison, authority updates, research, annotation, scheduling, reviewer handoff, templates, entity review, notifications, courtroom bundles, voice drafting, and extension permissions.

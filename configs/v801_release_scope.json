@@ -1,0 +1,27 @@
+{
+  "schema_version": "v801_release_scope_v1",
+  "release": "8.0.1",
+  "package_version": "8.0.1.0",
+  "decision": "PACKAGE_CANDIDATE_PENDING_VERIFICATION",
+  "release_type": "maintenance",
+  "existing_feature_scope_reference": "configs/v800_release_scope.json",
+  "new_public_feature_ids": [],
+  "new_bundled_legal_model_ids": [],
+  "model_import_requires_production_admission": true,
+  "excluded_model_candidates": [
+    {
+      "id": "mfl-evidence-review-research-r0003",
+      "reason": "Research-only artifact; latest fresh evaluation reports 6/12; production admission and RC completion are false."
+    },
+    {
+      "id": "mfl-fast-interchange-workflow-r0004",
+      "reason": "Fictional workflow adapter candidate; no substantive legal evaluation or production admission."
+    }
+  ],
+  "storage_schema_change": false,
+  "automatic_downloads": false,
+  "review_required": true,
+  "attorney_approval_claimed": false,
+  "enterprise_organizational_validation_claimed": false,
+  "store_certification_claimed": false
+}

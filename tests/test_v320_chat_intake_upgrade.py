@@ -469,6 +469,59 @@ def test_local_ocr_processes_only_missing_pdf_pages_and_preserves_native_text(
     assert page2["parser_metadata"]["ocr_derived"] is True
 
 
+def test_local_ocr_cancellation_discards_inflight_derivative_and_keeps_candidate_pending(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A cancellation arriving during one OCR page must not publish that page."""
+    from maine_family_law_llm import local_corpus_index as indexer
+
+    case_root = tmp_path / "case"
+    index_root = case_root / "04_INDEXES"
+    index_root.mkdir(parents=True)
+    records = [
+        {
+            "evidence_id": "SCAN-1",
+            "title": "Fictional image-only scan",
+            "source_type": "pdf",
+            "source_locator": "scan.pdf",
+            "source_path": str(tmp_path / "scan.pdf"),
+            "page_count": 1,
+            "parser_status": "image_only_page",
+            "text_status": "not_available",
+            "ocr_status": "ocr_not_run",
+            "text_content": "",
+            "text_excerpt": "",
+            "parser_metadata": {"image_only_pages": 1},
+            "issue_lanes": [],
+        }
+    ]
+    (index_root / "private_search_index.json").write_text(json.dumps(records), encoding="utf-8")
+    monkeypatch.setattr(
+        indexer,
+        "local_ocr_choice",
+        lambda *_args, **_kwargs: {"status": "ready", "engine": {"tesseract": "test"}},
+    )
+    monkeypatch.setattr(
+        indexer,
+        "_ocr_one",
+        lambda *_args, **_kwargs: {
+            "text": "Fictional OCR text that must not be committed.",
+            "pages": [{"page_number": 1, "confidence": 90.0, "character_count": 49, "text": "Fictional OCR text that must not be committed."}],
+            "page_count": 1,
+            "confidence": 90.0,
+        },
+    )
+    checks = iter((False, True))
+
+    result = indexer.run_local_ocr(case_root, should_cancel=lambda: next(checks))
+
+    assert result["status"] == "cancelled"
+    assert result["completed"] == 0
+    assert result["remaining_candidate_documents"] == 1
+    updated = json.loads((index_root / "private_search_index.json").read_text(encoding="utf-8"))
+    assert updated == records
+
+
 def test_inventory_metrics_do_not_count_mixed_pdf_parent_as_all_ocr_pages() -> None:
     records = [
         {

@@ -10,3 +10,12 @@ def test_watch_scan_is_active_matter_bound_and_metadata_only(monkeypatch,tmp_pat
 
 def test_watch_api_is_mirrored():
  root=Path(__file__).resolve().parents[1];a=(root/'src/maine_family_law_llm/api.py').read_text(encoding='utf-8');b=(root/'maine_family_law_llm/api.py').read_text(encoding='utf-8');assert a==b and '/api/evidence/watch-folder/scan' in a
+
+def test_watch_folder_ui_uses_resilient_delegated_handler():
+ root=Path(__file__).resolve().parents[1]
+ source=(root/'src/maine_family_law_llm/ui/workbench.js').read_text(encoding='utf-8')
+ mirror=(root/'maine_family_law_llm/ui/workbench.js').read_text(encoding='utf-8')
+ assert source==mirror
+ assert "watchFolderDelegationBound" in source
+ assert "closest('#watch-folder-scan')" in source
+ assert "Scanning candidate metadata locally" in source

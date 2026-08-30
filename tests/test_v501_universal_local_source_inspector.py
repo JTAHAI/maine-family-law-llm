@@ -52,13 +52,13 @@ def _client(monkeypatch, case_root: Path, rows: list[dict]) -> TestClient:
 
 
 def test_v501_release_identity() -> None:
-    assert VERSION == "8.0.0"
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert BUILD_NUMBER == 53
-    assert UI_PASS_MARKER == "v8.0.0-ga"
-    assert UI_VERSION == "8.0.0-ga-b53"
+    assert VERSION == "8.0.1"
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert BUILD_NUMBER == 54
+    assert UI_PASS_MARKER == "v8.0.1-ga"
+    assert UI_VERSION == "8.0.1-ga-b54"
     identity = json.loads((Path(__file__).parents[1] / "store/msix/identity.example.json").read_text())
-    assert identity["package_version"] == "8.0.0.0"
+    assert identity["package_version"] == "8.0.1.0"
 
 
 def test_v501_ui_contains_universal_inspector_and_responsive_controls() -> None:

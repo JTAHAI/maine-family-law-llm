@@ -18,7 +18,7 @@
     "max_generations": 200,
     "max_source_rows": 250000
   },
-  "product_version": "8.0.0",
+  "product_version": "8.0.1",
   "review_rules": {
     "filing_ready_certification_allowed": false,
     "human_revalidation_required": true,

@@ -99,8 +99,11 @@ def test_offline_build_requires_preexisting_environment_without_mutating_output(
     shell = shutil.which("powershell") or shutil.which("pwsh")
     if not shell:
         pytest.skip("PowerShell required for Windows build-script execution")
-    output = tmp_path / "output"
-    output.mkdir()
+    # The production script now refuses external build output. Keep this
+    # negative fixture's mutable sentinel under the repository's ignored dist
+    # tree while its fake cached environment stays outside the repository.
+    output = ROOT / "dist" / "qa801" / "offline-build-fixtures" / tmp_path.name
+    output.mkdir(parents=True, exist_ok=True)
     sentinel = output / "preserve.txt"
     sentinel.write_text("existing output", encoding="utf-8")
     env = os.environ.copy()
@@ -109,12 +112,22 @@ def test_offline_build_requires_preexisting_environment_without_mutating_output(
     # never let a negative fixture start PyInstaller in the user's real venv.
     source = (ROOT / "scripts/build-store-runtime.ps1").read_text(encoding="utf-8")
     cache_line = next(line for line in source.splitlines() if line.startswith("$venvRoot = "))
+    legacy_cache_line = next(
+        line for line in source.splitlines() if line.startswith("$legacyVenvRoot = ")
+    )
     missing_cache = tmp_path / "missing-build-environment"
     fixture_script = tmp_path / "build-store-runtime.ps1"
     fixture_script.write_text(
-        source.replace(cache_line, "$venvRoot = '" + str(missing_cache).replace("'", "''") + "'"),
+        source.replace(
+            cache_line,
+            "$venvRoot = '" + str(missing_cache).replace("'", "''") + "'",
+        ).replace(
+            legacy_cache_line,
+            "$legacyVenvRoot = '" + str(missing_cache).replace("'", "''") + "'",
+        ),
         encoding="utf-8",
     )
+    shutil.copy2(ROOT / "scripts/store-build-workspace.ps1", tmp_path / "store-build-workspace.ps1")
     result = subprocess.run(
         [
             shell,

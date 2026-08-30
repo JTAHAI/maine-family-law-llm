@@ -5,7 +5,7 @@ import importlib.util
 import os
 import sys
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
 ROOT = Path(SPECPATH).resolve().parents[1]
 ICON_PATH = ROOT / "assets" / "brand" / "focaf_family_law_llm_brand_kit" / "assets" / "favicon" / "favicon.ico"
@@ -64,6 +64,19 @@ def collect_installed_package_files(package_name: str, *, destination: str) -> l
 
 
 def collect_runtime_submodules(package_name: str) -> list[str]:
+    """Discover importable Python files without importing heavyweight packages.
+
+    ``PyInstaller.utils.hooks.collect_submodules`` starts an isolated child
+    interpreter for each package.  On the full offline tier that means an
+    optional document-intelligence package can spend minutes importing model
+    stacks before the build reaches its first analysis pass.  A timeout there
+    produces an incomplete hidden-import list.  The Store build already
+    installs every dependency into a normal filesystem location, so a bounded
+    filesystem walk is both deterministic and sufficient for these dynamic
+    imports.  It never executes package code, discovers tests, or follows
+    bytecode/cache trees.
+    """
+
     def _include(module_name: str) -> bool:
         parts = module_name.split(".")
         if module_name.startswith("torch.testing._internal") or ".testing._internal." in module_name:
@@ -72,7 +85,26 @@ def collect_runtime_submodules(package_name: str) -> list[str]:
             return False
         return True
 
-    return collect_submodules(package_name, filter=_include)
+    specification = importlib.util.find_spec(package_name)
+    locations = getattr(specification, "submodule_search_locations", None) if specification else None
+    if not locations:
+        return [package_name] if _include(package_name) else []
+    modules: set[str] = {package_name}
+    for location in locations:
+        root = Path(location)
+        if not root.is_dir():
+            continue
+        for candidate in root.rglob("*.py"):
+            if "__pycache__" in candidate.parts:
+                continue
+            relative = candidate.relative_to(root).with_suffix("")
+            parts = list(relative.parts)
+            if parts and parts[-1] == "__init__":
+                parts.pop()
+            module_name = ".".join([package_name, *parts]) if parts else package_name
+            if _include(module_name):
+                modules.add(module_name)
+    return sorted(modules)
 
 
 datas = [
@@ -95,6 +127,12 @@ datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm", des
 datas += collect_source_package_files(ROOT / "legal", destination="src/legal")
 # Collect ui assets without __pycache__ directories
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm" / "ui", destination="maine_family_law_llm/ui")
+# ``docx-editor`` resolves its XML/comment templates relative to ``__file__``.
+# PyInstaller's bytecode archive makes the module importable but does not
+# materialize those package-relative files for the frozen executable.  Ship the
+# compact package tree explicitly so paragraph inspection and comment creation
+# do not fail only after a user imports a private DOCX.
+datas += collect_installed_package_files("docx_editor", destination="docx_editor")
 if FULL_DOCUMENT_INTELLIGENCE:
     datas += collect_installed_package_files("en_core_web_lg", destination="en_core_web_lg")
     # PEFT and Accelerate are lazily imported by the optional FAST INTERCHANGE
@@ -128,7 +166,7 @@ if FULL_DOCUMENT_INTELLIGENCE:
 # than through a conventional top-level application import. Include both
 # modules explicitly so frozen record-upload routes start without attempting an
 # installer or failing at first API launch.
-hiddenimports = ["sqlite3", "_sqlite3", "mailbox", "multipart", "multipart.multipart"]
+hiddenimports = ["sqlite3", "_sqlite3", "mailbox", "multipart", "multipart.multipart", "psutil"]
 hiddenimports += [
     "legal.security.privacy_fortress",
     "legal.ops.release_pilot_hardening",

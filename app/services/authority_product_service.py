@@ -42,6 +42,12 @@ _RETRIEVAL_FAST_TEXT_CACHE: dict[
     tuple[tuple[Any, str, str, str], ...],
 ] = {}
 _RETRIEVAL_PIPELINE_LOCK = threading.RLock()
+_DIRECT_AUTHORITY_KINDS = (
+    "statute_section",
+    "court_rule",
+    "court_form",
+    "law_court_opinion",
+)
 
 
 @dataclass(frozen=True)
@@ -81,6 +87,175 @@ class AuthorityProductService:
                 }
             )
         return payload
+
+    def direct_authority_coverage(self) -> dict[str, Any]:
+        """Report whether the admitted build can support exact source-bound drafting.
+
+        An index/reference card is useful for discovery, but it is not enough to
+        support an exact quote or a pinpoint citation.  This report deliberately
+        examines only parsed artifacts materialized in the active immutable build.
+        It does not refresh a source, infer a pinpoint, or decide current law.
+        """
+        active = self._active_product(verify_all=False)
+        counts = {kind: 0 for kind in _DIRECT_AUTHORITY_KINDS}
+        exact_source_ids: set[str] = set()
+        for row in self._iter_active_parsed_rows(active):
+            kind = str(row.get("authority_kind") or "")
+            if kind not in counts:
+                continue
+            counts[kind] += 1
+            text = str(row.get("text") or row.get("body") or row.get("instructions") or "")
+            span = row.get("source_span") if isinstance(row.get("source_span"), dict) else {}
+            start, end = span.get("start_offset"), span.get("end_offset")
+            if type(start) is int and type(end) is int and 0 <= start < end <= len(text):
+                exact_source_ids.add(str(row.get("record_id") or row.get("source_id") or ""))
+
+        pinpoint_sources: dict[str, int] = {}
+        citation_index = self._artifact_path(
+            active, role_contains="authority_layer:citation_index", required=False
+        )
+        if citation_index is not None:
+            rows = self._read_json(citation_index)
+            if isinstance(rows, list):
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+                    source_id = str(row.get("source_id") or "")
+                    span = metadata.get("source_span") if isinstance(metadata.get("source_span"), dict) else {}
+                    start, end = span.get("start_offset"), span.get("end_offset")
+                    if (
+                        source_id in exact_source_ids
+                        and str(metadata.get("pinpoint") or "").strip()
+                        and type(start) is int
+                        and type(end) is int
+                        and 0 <= start < end
+                    ):
+                        pinpoint_sources[source_id] = pinpoint_sources.get(source_id, 0) + 1
+
+        pinpoints = sum(pinpoint_sources.values())
+        unambiguous_sources = sum(1 for count in pinpoint_sources.values() if count == 1)
+
+        missing_kinds = [kind for kind, count in counts.items() if count == 0]
+        blockers: list[str] = []
+        if not exact_source_ids:
+            blockers.append("direct_exact_source_span_unavailable")
+        if not pinpoints:
+            blockers.append("source_provided_pinpoint_unavailable")
+        source_bound_drafting_available = bool(exact_source_ids) and unambiguous_sources > 0
+        return {
+            "status": "pass" if not blockers else "blocked",
+            "build_id": active.build_id,
+            "counts_by_kind": counts,
+            "missing_kinds": missing_kinds,
+            "direct_exact_source_count": len(exact_source_ids),
+            "source_provided_pinpoint_count": pinpoints,
+            "unambiguous_drafting_source_count": unambiguous_sources,
+            "source_bound_drafting_available": source_bound_drafting_available,
+            "blockers": blockers,
+            "review_required": True,
+            "current_law_determined": False,
+            "network_used": False,
+            "notice": (
+                "Direct source coverage is a local provenance capability check. It does not determine "
+                "current law, citation sufficiency, legal effect, or filing readiness."
+            ),
+        }
+
+    def drafting_source_candidates(self, source_id: str) -> dict[str, Any]:
+        """Return exact, source-admitted drafting choices for one direct authority.
+
+        A client receives no authority text, pinpoint, or hash that is not
+        already present in the active immutable build.  Multiple pinpoints stay
+        multiple: the caller must choose one by its opaque authority ID instead
+        of the service silently selecting legal language on the user's behalf.
+        """
+        source_id = str(source_id or "").strip()
+        if not source_id or len(source_id) > _MAX_SOURCE_ID_LENGTH:
+            return {"status": "blocked", "source_id": source_id, "blockers": ["source_id_invalid"], "review_required": True}
+        active = self._active_product(verify_all=False)
+        direct_rows = []
+        for row in self._iter_active_parsed_rows(active):
+            canonical_id = str(row.get("record_id") or row.get("source_id") or "")
+            if canonical_id != source_id or str(row.get("authority_kind") or "") not in _DIRECT_AUTHORITY_KINDS:
+                continue
+            text = str(row.get("text") or row.get("body") or row.get("instructions") or "")
+            direct_rows.append((row, text))
+        if not direct_rows:
+            return {
+                "status": "blocked",
+                "source_id": source_id,
+                "build_id": active.build_id,
+                "candidates": [],
+                "blockers": ["direct_authority_source_not_admitted"],
+                "review_required": True,
+            }
+
+        citation_index = self._artifact_path(
+            active, role_contains="authority_layer:citation_index", required=False
+        )
+        if citation_index is None:
+            return {
+                "status": "blocked",
+                "source_id": source_id,
+                "build_id": active.build_id,
+                "candidates": [],
+                "blockers": ["authority_pinpoint_index_unavailable"],
+                "review_required": True,
+            }
+        index_rows = self._read_json(citation_index)
+        if not isinstance(index_rows, list):
+            raise ValueError("authority citation index must be a JSON array")
+
+        candidates: list[dict[str, Any]] = []
+        seen: set[tuple[str, int, int, str]] = set()
+        for index_row in index_rows:
+            if not isinstance(index_row, dict) or str(index_row.get("source_id") or "") != source_id:
+                continue
+            metadata = index_row.get("metadata") if isinstance(index_row.get("metadata"), dict) else {}
+            pinpoint = str(metadata.get("pinpoint") or "").strip()
+            span = metadata.get("source_span") if isinstance(metadata.get("source_span"), dict) else {}
+            start, end = span.get("start_offset"), span.get("end_offset")
+            if not pinpoint or type(start) is not int or type(end) is not int or start < 0 or end <= start:
+                continue
+            for parsed_row, text in direct_rows:
+                if end > len(text):
+                    continue
+                source_hash = str(parsed_row.get("source_hash") or parsed_row.get("hash") or "").casefold()
+                citation = str(parsed_row.get("citation") or index_row.get("normalized_citation") or "").strip()
+                if not re.fullmatch(_SHA256_RE, source_hash) or not citation:
+                    continue
+                key = (source_hash, start, end, pinpoint)
+                if key in seen:
+                    continue
+                seen.add(key)
+                candidates.append(
+                    {
+                        "authority_id": "authority_" + hashlib.sha256(
+                            f"{source_id}:{source_hash}:{start}:{end}:{pinpoint}".encode("utf-8")
+                        ).hexdigest()[:16],
+                        "source_id": source_id,
+                        "source_hash": source_hash,
+                        "citation": citation[:500],
+                        "title": str(parsed_row.get("title") or source_id)[:500],
+                        "exact_span": text[start:end][:_MAX_SOURCE_TEXT_CHARS],
+                        "pinpoint": pinpoint[:240],
+                        "lane": "official_authority",
+                        "freshness_status": str(parsed_row.get("freshness_status") or "unknown")[:80],
+                        "source_span": {"start_offset": start, "end_offset": end},
+                    }
+                )
+        candidates.sort(key=lambda item: (str(item["pinpoint"]), str(item["authority_id"])))
+        return {
+            "status": "pass" if candidates else "blocked",
+            "source_id": source_id,
+            "build_id": active.build_id,
+            "candidates": candidates,
+            "blockers": [] if candidates else ["source_provided_pinpoint_unavailable"],
+            "review_required": True,
+            "current_law_determined": False,
+            "network_used": False,
+        }
 
     def authority_gap_review(self, *, issue: str = "") -> dict[str, Any]:
         """Review only active parsed-authority metadata for visible coverage gaps."""

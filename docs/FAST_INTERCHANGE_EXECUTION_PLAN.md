@@ -2,6 +2,16 @@
 
 ## Decision and scope
 
+Current 8.0.1 gate, 2026-08-30: **BLOCKED**. The historical r0003
+protocol/safety weights passed load/swap transport but failed all 14 held-out
+fictional specialist tasks. A new r0004 synthetic source-bound workflow candidate
+now passes those 14 checks through the verified snapshot and production backend,
+but it is unadmitted, not exposed in the app, and does not claim Maine-law
+knowledge. See [8.0.1 specialist status](RELEASE_8_0_1_SPECIALIST_STATUS.md) for
+the exact task matrix, resource/build repairs, evidence, and remaining admission
+work. All new generated work must stay under this repository's ignored `dist/`;
+read-only use of existing external inputs is distinct from creating new work there.
+
 Maine Family Law LLM will gain an optional, local-only FAST INTERCHANGE lane for a small shared base model with one active LoRA adapter at a time. The intended seven capabilities are:
 
 1. `intake_triage`
@@ -39,6 +49,94 @@ and its final regression evidence. The earlier native-picker limitation is
 superseded for this connection; real legal artifacts, distribution, target
 hardware, human evaluation, and exact frozen/installed qualification remain
 separate, unmet gates. Do not promote the old MSIX using new source evidence.
+
+Development-pack update, 2026-08-29: the external
+`mfl-fast-interchange-protocol-r0001` pack was verified with this application's
+own strict snapshot and PEFT backend. Its one shared Qwen3-0.6B base and seven
+separate adapters loaded, swapped one-at-a-time, cleared context, and produced
+distinct local neural forwards without an outbound request. The exact evidence
+is `dist/ga_today/evidence/08_fast_interchange_development_pack_cpu_v4.json`
+and the 221-test contract-suite JUnit report is
+`dist/ga_today/evidence/08_fast_interchange_contract_suite.xml`. This is a
+**development transport/runtime proof only**. The pack is still an external,
+unadmitted protocol-and-safety artifact—not a substantive Maine-law model,
+user-facing legal-answer proof, production admission, frozen-package proof, or
+Store/Enterprise certification. Do not copy it into the source repository or
+MSIX until its adapter provenance, redistribution decision, independent
+admission, and release evidence are complete.
+
+Completion follow-up, 2026-08-29: stricter bounded-completion runs recorded in
+`dist/ga_today/evidence/08_fast_interchange_development_pack_cpu_v5_completion.json`
+and `dist/ga_today/evidence/08_fast_interchange_development_pack_cpu_v6_completion_128.json`
+found that all seven r0001 adapters reached both the 32-token and 128-token
+ceilings without an end-of-sequence marker. The runtime correctly withheld
+every partial response; the pack is therefore **not a usable response-model
+release** even for development interaction. Repair requires a reproducible GPU
+retraining pass with explicit end-of-turn targets and completion tests,
+followed by a new immutable pack, artifact hashes, evaluation, and independent
+admission. The available CUDA training environment reported zero visible
+devices during this audit; do not relabel a CPU-only retry as a qualified
+training run.
+
+r0002 development result, 2026-08-29: the new external
+`mfl-fast-interchange-protocol-r0002` pack was trained only on 49
+company-owned synthetic protocol/safety rows per capability, with explicit
+end-of-turn labels.  The application's own strict PEFT backend verified its
+hashes, shared Qwen3-0.6B base, one-resident-adapter interchange, context
+clearing, identity binding, and bounded generation for all seven adapters on
+the RTX 3060.  Both the 32- and 128-token runs ended with the required
+`stop` result: `dist/ga_today/evidence/08_fast_interchange_development_pack_gpu_r0002_completion_32.json`
+and
+`dist/ga_today/evidence/08_fast_interchange_development_pack_gpu_r0002_completion_128.json`.
+This is a **runnable development protocol/safety transport proof only**.  It
+does not establish Maine-law knowledge, a user-facing answer, production
+admission, API/UI reachability, frozen-package inference, or any release
+readiness.  The production registry correctly rejects its
+`unadmitted_protocol_smoke` release state, including when test-only releases
+are otherwise permitted.  Keep the external pack out of the repository and
+MSIX until independently admitted after rights-cleared source data, held-out
+evaluation, human review, and package qualification.
+
+Clean-base rebuild follow-up, 2026-08-29: inspection of the external r0002
+adapter metadata found that PEFT had retained a Windows training-directory
+value in `base_model_name_or_path`. That means r0002 cannot be imported into
+the application or distributed, even as a development pack: it would disclose
+an out-of-scope build path. The project builder now canonicalizes that field
+to the public `Qwen/Qwen3-0.6B` identity, rejects host-path or proprietary
+metadata, inventories the Apache-2.0 license in the pack, and requires a new
+immutable release tag. A clean public-base rebuild must use the pinned
+official Qwen revision and create a **new** external tag (for example
+`protocol-r0003`). This repair changes no admission rule: a clean protocol
+pack remains development-only until rights-cleared Maine-law training data,
+held-out evaluation, independent admission, and human review exist.
+
+Clean r0003 transport proof, 2026-08-29: a new external
+`mfl-fast-interchange-protocol-r0003` pack was built from the seven inspected
+protocol/safety tensors and a newly acquired pinned public Qwen3-0.6B base.
+The r0002-to-r0003 derivation receipt preserves adapter hashes, while the
+published adapter metadata uses only the public model identity and no
+host-local path. The application's strict backend verified all seven slots on
+CPU for artifact snapshotting and distinct forwards, then on the RTX 3060
+using BF16 for one-resident-adapter swaps and bounded 128-token completions.
+Every completion ended with `stop`; context was cleared after each request.
+Evidence: `08_fast_interchange_r0003_cpu_forward_retry.json` and
+`08_fast_interchange_r0003_gpu_completion_128_policy_final.json`. The worker
+now overrides inherited base-model sampling fields so deterministic policy
+runs do not silently inherit advisory sampling defaults.
+
+This is a **development transport proof only**. r0003 retains
+`unadmitted_protocol_smoke`, has no Maine-law corpus, legal-quality
+evaluation, independent admission, or human release approval, and must remain
+rejected by every user-facing legal-answer and package-activation path.
+
+Current contract rerun, 2026-08-29: the application builder, artifact-registry,
+completion-boundary, model-pack, and loopback worker suite passed **98 tests,
+0 failures, 0 errors, 0 skipped** in 142.054 seconds. The r0002 GPU execution
+evidence remains a genuine seven-adapter local load/swap/bounded-generation
+proof, while the production registry continues to reject its
+`unadmitted_protocol_smoke` state. This is therefore operational development
+transport only—not an enabled Maine-law answer path. Evidence:
+`dist/ga_today/evidence/08_fast_interchange_r0002_operational_status_r12.json`.
 
 ## Non-negotiable boundaries
 

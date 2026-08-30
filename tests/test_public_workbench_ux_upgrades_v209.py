@@ -10,10 +10,11 @@ def _script_from(html: str) -> str:
 
 
 def test_public_workbench_has_welcome_focus_help_and_context_controls() -> None:
-    from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
+    from maine_family_law_llm.local_workbench_ui import read_workbench_asset, render_local_workbench_html
 
     html = render_local_workbench_html()
     script = _script_from(html)
+    workbench_script = read_workbench_asset("workbench.js")
 
     assert 'id="welcome-button"' in html
     assert 'id="copy-link-button"' in html
@@ -32,6 +33,8 @@ def test_public_workbench_has_welcome_focus_help_and_context_controls() -> None:
     assert 'data-search-mode="both"' in html
     assert 'data-search-mode="both" role="radio" type="button">Both</button>' in html
     assert '<input checked id="child-impact-lens" type="checkbox"/>' in html
+    assert "searchMode?.value || 'both'" in workbench_script
+    assert "searchMode?.value || 'maine_law'" not in workbench_script
     assert 'Copy query link' in html
     assert 'Focus mode' in html
     assert 'Help &amp; tips' in html
@@ -40,6 +43,31 @@ def test_public_workbench_has_welcome_focus_help_and_context_controls() -> None:
     assert "openOverlay(welcomeOverlay)" in script
     assert "document.body.dataset.focusMode" in script
     assert "currentQuestionOrFallback" in script
+
+
+def test_authority_addon_is_not_labeled_as_the_canonical_build_lifecycle() -> None:
+    from maine_family_law_llm.local_workbench_ui import read_workbench_asset
+
+    workbench_script = read_workbench_asset("workbench.js")
+
+    assert "Authority-source candidate review (add-on)" in workbench_script
+    assert "This is not the canonical Authority build lifecycle." in workbench_script
+    assert "Use Full Workbench, Evidence & tools, then Setup for the canonical local build lifecycle." in workbench_script
+    assert 'id="authority-build-activate"' in workbench_script
+    assert 'id="authority-build-rollback"' in workbench_script
+
+
+def test_chat_command_palette_opens_visible_workbench_destinations() -> None:
+    from maine_family_law_llm.local_workbench_ui import read_workbench_asset
+
+    workbench_script = read_workbench_asset("workbench.js")
+
+    assert "function openWorkbenchPanel(panel, {focusTarget = null} = {})" in workbench_script
+    assert "setV8View('workspace', {userInitiated: true, drawerPanel: panel})" in workbench_script
+    assert "run: () => openWorkbenchPanel('evidence')" in workbench_script
+    assert "run: async () => { openWorkbenchPanel('evidence'); await loadSources(); }" in workbench_script
+    assert "openWorkbenchPanel('printables', {focusTarget: printableSearch})" in workbench_script
+    assert "target.action === 'open_source') { openWorkbenchPanel('evidence', {focusTarget: authoritySearch}); return; }" in workbench_script
 
 
 def test_public_workbench_has_richer_answer_and_source_card_rendering() -> None:

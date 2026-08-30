@@ -136,3 +136,31 @@ def test_v630_command_center_page_and_navigation_exist() -> None:
     assert "data-command-center=\"visible\"" in page
     assert "data-full-record-coverage=\"visible\"" in page
     assert "data-exportable-packet=\"visible\"" in page
+
+
+def test_selected_parent_scope_is_current_until_its_sources_change(monkeypatch, tmp_path: Path) -> None:
+    case_root = tmp_path / "fictional-scoped-matter"
+    case_root.mkdir()
+    records = [*_records(), {
+        "evidence_id": "ORDER-1-P0001", "parent_evidence_id": "ORDER-1",
+        "title": "Fictional order page", "source_type": "pdf_page",
+        "source_hash": "a" * 64, "text": "Fictional selected page text.",
+    }]
+    client = _client(monkeypatch, case_root, records)
+    snapshot = client.post("/api/matters/M-SCOPED/review-snapshot", json={
+        "approved": True, "variant": "metadata_only", "selected_record_ids": ["ORDER-1"],
+    })
+    assert snapshot.status_code == 200
+    assert {row["evidence_id"] for row in snapshot.json()["included_records"]} == {"ORDER-1", "ORDER-1-P0001"}
+    current = client.get("/api/matters/M-SCOPED/command-center").json()
+    assert current["stale_snapshot_detected"] is False
+    assert current["stale_reasons"] == []
+    packet = client.post("/api/matters/M-SCOPED/evidence-packet", json={
+        "approved": True, "variant": "metadata_only", "selected_record_ids": ["ORDER-1"],
+        "snapshot_id": snapshot.json()["snapshot_id"],
+    })
+    assert packet.status_code == 200 and packet.json()["stale_snapshot_detected"] is False
+    records[-1]["source_hash"] = "c" * 64
+    changed = client.get("/api/matters/M-SCOPED/command-center").json()
+    assert changed["stale_snapshot_detected"] is True
+    assert "matter_snapshot_source_changed" in changed["stale_reasons"]

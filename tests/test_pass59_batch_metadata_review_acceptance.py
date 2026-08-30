@@ -82,4 +82,5 @@ def test_metadata_review_production_assets_are_mirrored() -> None:
     assert source_ui == mirror_ui
     assert source_api == mirror_api
     assert b"/api/evidence/metadata-review/batches" in source_ui
+    assert b"metadataReviewDelegationBound" in source_ui
     assert b"MetadataReviewStore" in source_api

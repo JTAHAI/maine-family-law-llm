@@ -32,6 +32,22 @@ def _authority(*, freshness: str = "fresh") -> list[dict[str, str]]:
     }]
 
 
+def _resolved_authority_source(source_id: str) -> dict[str, object]:
+    authority = _authority()[0]
+    assert source_id == authority["source_id"]
+    return {
+        "source_card": {
+            "source_id": authority["source_id"],
+            "source_hash": authority["source_hash"],
+            "citation": authority["citation"],
+            "title": authority["title"],
+            "source_span_preview": authority["exact_span"],
+            "source_span": {"pinpoint": "fixture section"},
+            "freshness_status": authority["freshness_status"],
+        }
+    }
+
+
 def _document() -> dict[str, str]:
     return {
         "document_id": "f" * 32,
@@ -76,6 +92,45 @@ def test_pass73_fails_closed_for_unconfirmed_and_stale_authority(tmp_path: Path)
     assert "legal_sentence_without_current_exact_authority_match" in legal["missing_context"]
 
 
+def test_pass73_matches_a_sentence_within_a_multisentence_verified_pinpoint(tmp_path: Path) -> None:
+    root = tmp_path / "fictional-matter"
+    root.mkdir()
+    authority = _authority()
+    authority[0]["exact_span"] = (
+        "19-A M.R.S. § 1653 fixture requires a fictional review. "
+        "A separate fictional sentence is part of the exact pinpoint."
+    )
+    store = SentenceSupportMapStore(root, encryption_key="fictional-test-key")
+    document = {
+        **_document(),
+        "content": "19-A M.R.S. § 1653 fixture requires a fictional review.",
+    }
+    mapped = store.create_map(
+        {"reviewer_safe_id": "reviewer_001", "selected_authority": authority, "user_confirmed": True},
+        document=document,
+        records=[],
+    )
+    legal = mapped["sentences"][0]
+    assert any(card["lane"] == "official_authority" for card in legal["supports"])
+    assert legal["supports"][0]["exact_source_span"] == document["content"]
+
+
+def test_pass73_recognizes_a_substantive_exact_selected_authority_sentence_without_a_citation_label(tmp_path: Path) -> None:
+    root = tmp_path / "fictional-matter"
+    root.mkdir()
+    authority = _authority()
+    authority[0]["exact_span"] = "Fictional confirmed provision governs review implementation."
+    document = {**_document(), "content": authority[0]["exact_span"]}
+    mapped = SentenceSupportMapStore(root, encryption_key="fictional-test-key").create_map(
+        {"reviewer_safe_id": "reviewer_001", "selected_authority": authority, "user_confirmed": True},
+        document=document,
+        records=[],
+    )
+    sentence = mapped["sentences"][0]
+    assert sentence["sentence_kind"] == "legal_or_procedural"
+    assert any(card["lane"] == "official_authority" for card in sentence["supports"])
+
+
 def test_pass73_canonical_api_binds_private_source_to_active_matter(monkeypatch, tmp_path: Path) -> None:
     matter_a = tmp_path / "fictional-matter-a"
     matter_b = tmp_path / "fictional-matter-b"
@@ -84,6 +139,7 @@ def test_pass73_canonical_api_binds_private_source_to_active_matter(monkeypatch,
     active = {"root": matter_a}
     monkeypatch.setattr(api_module, "active_case_root", lambda: active["root"])
     monkeypatch.setattr(api_module, "load_case_search_records", lambda _root: _records())
+    monkeypatch.setattr(api_module, "inspect_source", _resolved_authority_source)
     monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-test-key")
     document = create_document(
         matter_a,
@@ -97,13 +153,28 @@ def test_pass73_canonical_api_binds_private_source_to_active_matter(monkeypatch,
         json={"reviewer_safe_id": "reviewer_001", "selected_authority": _authority(), "user_confirmed": False},
     )
     assert denied.status_code == 409
+    forged = client.post(
+        f"/api/drafting/documents/{document['document_id']}/sentence-support-maps",
+        json={
+            "reviewer_safe_id": "reviewer_001",
+            "selected_authority": [{**_authority()[0], "source_hash": "c" * 64}],
+            "user_confirmed": True,
+        },
+    )
+    assert forged.status_code == 409
+    assert forged.json()["detail"] == "sentence_support_authority_hash_mismatch"
     created = client.post(
         f"/api/drafting/documents/{document['document_id']}/sentence-support-maps",
-        json={"reviewer_safe_id": "reviewer_001", "selected_authority": _authority(), "user_confirmed": True},
+        json={
+            "reviewer_safe_id": "reviewer_001",
+            "selected_authority": [{**_authority()[0], "citation": "Forged client citation"}],
+            "user_confirmed": True,
+        },
     )
     assert created.status_code == 200
     mapped = created.json()["map"]
     assert mapped["current_revision_match"] is True and mapped["stale_for_current_draft"] is False
+    assert mapped["sentences"][1]["supports"][0]["citation"] == "Fictional Maine Rule fixture"
     factual = mapped["sentences"][0]
     source = client.get(
         f"/api/drafting/documents/{document['document_id']}/sentence-support-maps/{mapped['map_id']}/sentences/{factual['sentence_id']}/supports/0/source"

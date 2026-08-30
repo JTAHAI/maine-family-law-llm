@@ -181,7 +181,7 @@ permalink: /features/
         <tr><td>61</td><td>Advanced table extraction</td><td>Cell-level source locators retained</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
         <tr><td>62</td><td>Financial-document intelligence</td><td>Review flags only; no valuation or ownership conclusion</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
         <tr><td>63</td><td>Semantic order comparison</td><td>Exposes wording changes; does not decide the operative order</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
-        <tr><td>64</td><td>Authority update center</td><td>Audits candidates without network update or activation</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
+        <tr><td>64</td><td>Authority-source candidate review (add-on)</td><td>Reviews a supplied candidate manifest; the canonical Authority lifecycle remains separate</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
         <tr><td>65</td><td>Guided legal-research builder</td><td>Maine-first plan; no unverified current-law claim</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
         <tr><td>66</td><td>Evidence annotation studio</td><td>Exact-span notes; original record unchanged</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>
         <tr><td>67</td><td>Local automation scheduler</td><td>Allow-listed tasks while the app is active</td><td><span class="tier tier--verified">Verified end to end</span></td></tr>

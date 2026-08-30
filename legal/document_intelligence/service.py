@@ -31,6 +31,11 @@ MAX_SOURCE_BYTES = 128 * 1024 * 1024
 MAX_TEXT_CHARS = 8_000_000
 ALLOWED_ANALYSIS_SUFFIXES = {".pdf", ".docx", ".pptx", ".txt", ".md", ".rtf", ".html", ".htm", ".csv", ".json"}
 PRESIDIO_MODEL_NAME = "en_core_web_lg"
+# The bundled large spaCy model can take more than three minutes to load on a
+# cold Windows file cache.  Keep the worker bounded, but leave enough room for
+# that one-time local initialization instead of immediately degrading a
+# user-approved privacy scan to the deterministic detector alone.
+PRESIDIO_WORKER_TIMEOUT_SECONDS = 240
 DOCLING_ARTIFACTS_RELATIVE_PATHS = (
     ("store", "docling", "models"),
     ("docling", "models"),
@@ -652,7 +657,7 @@ def analyze_document(
             with SecureTempBroker(case_root).workspace("presidio") as temporary:
                 text_path = temporary / "document.txt"
                 text_path.write_text(source_text, encoding="utf-8")
-                presidio_result = _run_worker("presidio", text_path, timeout=180)
+                presidio_result = _run_worker("presidio", text_path, timeout=PRESIDIO_WORKER_TIMEOUT_SECONDS)
         else:
             presidio_result = {"status": "unavailable", "adapter": "presidio", "review_required": True}
 
@@ -984,7 +989,7 @@ def create_redacted_copy(
             with SecureTempBroker(case_root).workspace("presidio-redaction") as temporary:
                 text_path = Path(temporary) / "document.txt"
                 text_path.write_text(source_text, encoding="utf-8")
-                presidio_result = _run_worker("presidio", text_path, timeout=180)
+                presidio_result = _run_worker("presidio", text_path, timeout=PRESIDIO_WORKER_TIMEOUT_SECONDS)
     privacy = merge_privacy_findings(deterministic, presidio_result)
     redacted_text, redaction_receipts = _apply_redactions(source_text, list(privacy.get("findings") or []))
     output_hash = hashlib.sha256(redacted_text.encode("utf-8")).hexdigest()

@@ -12,8 +12,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$env:PYTHONDONTWRITEBYTECODE = "1"
-$env:PYTHONPYCACHEPREFIX = Join-Path $env:TEMP "mfl-pycache-disabled"
+. (Join-Path $PSScriptRoot "store-build-workspace.ps1")
 
 function Resolve-Python([string]$Preferred) {
   if ($Preferred -and (Get-Command $Preferred -ErrorAction SilentlyContinue)) {
@@ -92,12 +91,21 @@ if (-not $RepoRoot) {
 if (-not $OutputRoot) {
   $OutputRoot = Join-Path $RepoRoot "dist\store"
 }
+$OutputRoot = Resolve-RepoBuildDirectory $OutputRoot $RepoRoot
+$buildTemp = Resolve-RepoBuildDirectory (Join-Path $RepoRoot "dist\build-temp") $RepoRoot
+Assert-SeparateBuildDirectories $OutputRoot $buildTemp
+Assert-StoreBuildDiskSpace $OutputRoot $(if ($FeatureTier -eq "full") { 12GB } else { 6GB })
+$null = Initialize-RepoBuildEnvironment $RepoRoot
 
 $basePython = Resolve-Python $PythonExe
-# Build dependencies are mutable runtime state and must never be created in a
-# source release.  Keeping this venv under LocalAppData lets the repository's
-# strict privacy/source-hygiene audits continue to pass after a Store build.
-$venvRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store"
+# New dependencies stay under ignored dist, never in the shipped source/payload.
+# Offline builds may consume an existing external environment read-only.
+$venvRoot = Resolve-RepoBuildDirectory (Join-Path $RepoRoot "dist\build-env\store") $RepoRoot
+Assert-SeparateBuildDirectories $OutputRoot $venvRoot
+$legacyVenvRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store"
+if ($Offline -and -not (Test-Path -LiteralPath (Join-Path $venvRoot "Scripts\python.exe"))) {
+  $venvRoot = $legacyVenvRoot
+}
 $venvPython = Join-Path $venvRoot "Scripts\python.exe"
 $requirementsPath = Join-Path $RepoRoot "store\pyinstaller\requirements-store-build.txt"
 $specPath = Join-Path $RepoRoot "store\pyinstaller\maine_family_law_llm.spec"
@@ -134,11 +142,12 @@ if ($Offline) {
 }
 
 foreach ($path in @($pyiDistRoot, $pyiWorkRoot, $runtimeRoot)) {
+  $path = Resolve-RepoBuildDirectory $path $RepoRoot
   if (Test-Path -LiteralPath $path) {
     Remove-Item -LiteralPath $path -Recurse -Force
   }
 }
-New-Item -ItemType Directory -Force -Path $runtimeRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $pyiDistRoot, $pyiWorkRoot | Out-Null
 
 $pyInstallerEnv = @{
   MFL_STORE_DEBUG_CONSOLE = $(if ($DebugConsole) { "1" } else { "0" })
@@ -154,7 +163,10 @@ $collectedRoot = Join-Path $pyiDistRoot "MaineFamilyLawLLM"
 if (-not (Test-Path -LiteralPath $collectedRoot)) {
   throw "PyInstaller did not produce the expected runtime folder at $collectedRoot"
 }
-Copy-Item -Path (Join-Path $collectedRoot "*") -Destination $runtimeRoot -Recurse -Force
+$collectedRoot = Resolve-RepoBuildDirectory $collectedRoot $RepoRoot
+# Both paths are validated children of the same repository. Rename the collected
+# runtime instead of retaining a second multi-gigabyte copy of identical bytes.
+Move-Item -LiteralPath $collectedRoot -Destination $runtimeRoot
 
 $tesseractSourceRoot = Resolve-TesseractRoot
 $tesseractRuntimeRoot = Join-Path $runtimeRoot "store\tesseract"
@@ -162,7 +174,7 @@ New-Item -ItemType Directory -Force -Path $tesseractRuntimeRoot | Out-Null
 Copy-Item -Path (Join-Path $tesseractSourceRoot "*") -Destination $tesseractRuntimeRoot -Recurse -Force
 
 # Native transcription is part of the essential offline product. Provisioning
-# happens only on the build machine into LocalAppData, verifies pinned hashes,
+# happens only in repository dist (old offline caches are read-only), verifies hashes,
 # and copies the admitted CPU runtime/model into the frozen payload. The app
 # itself never downloads an engine or model.
 $whisperRuntimeRoot = Join-Path $runtimeRoot "store\whisper"
@@ -172,7 +184,10 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $whisperRunt
 }
 
 if ($FeatureTier -eq "full") {
-  $doclingModelsSourceRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-cache\docling-models"
+  $doclingModelsSourceRoot = Resolve-RepoBuildDirectory (Join-Path $RepoRoot "dist\build-cache\docling-models") $RepoRoot
+  if ($Offline -and -not (Test-Path -LiteralPath $doclingModelsSourceRoot)) {
+    $doclingModelsSourceRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-cache\docling-models"
+  }
   $requiredDoclingModels = @(
     (Join-Path $doclingModelsSourceRoot "docling-project--docling-layout-heron"),
     (Join-Path $doclingModelsSourceRoot "docling-project--docling-models"),

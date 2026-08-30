@@ -5433,7 +5433,7 @@ if FastAPI is not None:
             record_id = str(source.get("record_id") or "")
             source_hash = str(source.get("source_hash") or "").casefold()
             case_root = active_case_root()
-            row = next((item for item in load_case_search_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "") == record_id), None) if case_root is not None else None
+            row = next((item for item in load_case_search_records(case_root) if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == record_id.casefold()), None) if case_root is not None else None
             if row is None or str(row.get("source_hash") or row.get("sha256") or "").casefold() != source_hash:
                 raise IntakeWorkbenchError("deadline_dependency_trigger_not_in_active_matter", 404)
             return store.calculate_dependency(payload)
@@ -5464,7 +5464,7 @@ if FastAPI is not None:
                 (
                     item
                     for item in load_case_search_records(case_root)
-                    if str(item.get("evidence_id") or item.get("source_id") or "") == record_id
+                    if str(item.get("evidence_id") or item.get("source_id") or "").casefold() == record_id.casefold()
                 ),
                 None,
             )
@@ -9309,29 +9309,69 @@ if FastAPI is not None:
 
     @app.post("/api/evidence/scanner-review/plan")
     def evidence_scanner_review_plan(payload: ScannerReviewRequest) -> dict[str, Any]:
-        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
-        try: return scanner_review_plan(**payload.model_dump())
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_scanner_review_plan(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
     @app.post("/api/evidence/handwriting-review")
     def evidence_handwriting_review(payload: HandwritingReviewRequest) -> dict[str, Any]:
-        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
-        try: return review_handwriting(**payload.model_dump())
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_handwriting_review_routing(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
     @app.post("/api/evidence/document-type-review")
     def evidence_document_type_review(payload: DocumentTypeReviewRequest) -> dict[str, Any]:
-        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
-        try: return classify_document(**payload.model_dump())
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_document_type_review(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
     @app.post("/api/evidence/page-quality-review")
     def evidence_page_quality_review(payload: PageQualityReviewRequest) -> dict[str, Any]:
-        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
-        try: return page_quality_map(**payload.model_dump())
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_page_quality_review(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
     @app.post("/api/evidence/table-lineage-review")
     def evidence_table_lineage_review(payload: TableLineageRequest) -> dict[str, Any]:
-        if active_case_root() is None: raise HTTPException(status_code=404, detail="active_matter_unavailable")
-        try: return table_lineage(**payload.model_dump())
-        except ValueError as exc: raise HTTPException(status_code=400, detail=str(exc)) from None
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        try:
+            return _review_store(case_root).create_table_lineage_review(
+                payload.model_dump(), records=_review_records(case_root)
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.post("/api/evidence/document-comparisons")
     def evidence_document_comparison_create(payload: DocumentComparisonCreateRequest) -> dict[str, Any]:
@@ -12858,21 +12898,80 @@ if FastAPI is not None:
         source_hash = str(card.get("source_hash") or card.get("hash") or "").casefold()
         if not re.fullmatch(r"[a-f0-9]{64}", source_hash):
             raise HTTPException(status_code=409, detail="authority_source_hash_unavailable")
+        candidate = {
+            "authority_id": f"authority_{hashlib.sha256(source_id.encode()).hexdigest()[:16]}",
+            "source_id": source_id,
+            "source_hash": source_hash,
+            "citation": str(card.get("citation") or card.get("citation_hint") or source_id)[:500],
+            "title": str(card.get("title") or source_id)[:500],
+            "exact_span": str(card.get("source_span_preview") or "")[:2_000],
+            "pinpoint": pinpoint,
+            "lane": "official_authority",
+            "freshness_status": str(card.get("freshness_status") or "unknown")[:80],
+        }
+        pinpoint_candidates: list[dict[str, Any]] = []
+        if str(card.get("authority_kind") or "") in {
+            "statute_section", "court_rule", "court_form", "law_court_opinion"
+        }:
+            try:
+                precise = AuthorityProductService().drafting_source_candidates(source_id)
+                pinpoint_candidates = list(precise.get("candidates") or [])
+                if len(pinpoint_candidates) == 1:
+                    candidate = dict(pinpoint_candidates[0])
+            except (FileNotFoundError, OSError, ValueError):
+                # The generic authority card remains useful for discovery/outline
+                # review. Exact drafting stays blocked unless an admitted precise
+                # candidate was actually available above.
+                pinpoint_candidates = []
         return {
             "status": "pass",
-            "candidate": {
-                "authority_id": f"authority_{hashlib.sha256(source_id.encode()).hexdigest()[:16]}",
-                "source_id": source_id,
-                "source_hash": source_hash,
-                "citation": str(card.get("citation") or card.get("citation_hint") or source_id)[:500],
-                "title": str(card.get("title") or source_id)[:500],
-                "exact_span": str(card.get("source_span_preview") or "")[:2_000],
-                "pinpoint": pinpoint,
-                "lane": "official_authority",
-                "freshness_status": str(card.get("freshness_status") or "unknown")[:80],
-            },
+            "candidate": candidate,
+            "pinpoint_candidates": pinpoint_candidates,
             "review_required": True,
         }
+
+    def _resolver_verified_drafting_authority(raw: Any, *, workflow: str) -> dict[str, Any]:
+        """Re-resolve an authority selected in the UI before a drafting store can use it.
+
+        Source cards are useful client-side selection aids, not an authority grant.  The
+        canonical API must replace all client-supplied citation, pinpoint, span, and
+        freshness fields with the locally resolved card so a direct API caller cannot
+        manufacture a seemingly source-bound proposal.
+        """
+        if not isinstance(raw, dict):
+            raise IntakeWorkbenchError(f"{workflow}_authority_required")
+        source_id = str(raw.get("source_id") or "").strip()
+        if not source_id:
+            raise IntakeWorkbenchError(f"{workflow}_authority_source_required")
+        resolved = drafting_outline_authority_candidate(source_id)
+        candidate = dict(resolved.get("candidate") or {})
+        precise_candidates = [
+            dict(item)
+            for item in list(resolved.get("pinpoint_candidates") or [])
+            if isinstance(item, dict)
+        ]
+        requested_authority_id = str(raw.get("authority_id") or "").strip()
+        if precise_candidates:
+            if requested_authority_id:
+                candidate = next(
+                    (
+                        item
+                        for item in precise_candidates
+                        if str(item.get("authority_id") or "") == requested_authority_id
+                    ),
+                    {},
+                )
+                if not candidate:
+                    raise IntakeWorkbenchError(f"{workflow}_authority_selection_invalid", 409)
+            elif len(precise_candidates) > 1:
+                raise IntakeWorkbenchError(f"{workflow}_authority_selection_required", 409)
+        if not candidate:
+            raise IntakeWorkbenchError(f"{workflow}_authority_not_found", 404)
+        supplied_hash = str(raw.get("source_hash") or "").strip().casefold()
+        verified_hash = str(candidate.get("source_hash") or "").strip().casefold()
+        if supplied_hash and supplied_hash != verified_hash:
+            raise IntakeWorkbenchError(f"{workflow}_authority_hash_mismatch", 409)
+        return candidate
 
     @app.post("/api/drafting/outlines")
     def drafting_outline_create(payload: DraftOutlineCreateRequest) -> dict[str, Any]:
@@ -12950,15 +13049,9 @@ if FastAPI is not None:
             for raw in list(position.get("supporting_authority") or []):
                 if not isinstance(raw, dict):
                     raise IntakeWorkbenchError("position_authority_invalid")
-                source_id = str(raw.get("source_id") or "").strip()
-                candidate = dict(drafting_outline_authority_candidate(source_id).get("candidate") or {})
-                supplied_hash = str(raw.get("source_hash") or "").strip().casefold()
-                verified_hash = str(candidate.get("source_hash") or "").strip().casefold()
-                if supplied_hash and supplied_hash != verified_hash:
-                    raise IntakeWorkbenchError("argument_matrix_authority_hash_mismatch", 409)
-                if not candidate:
-                    raise IntakeWorkbenchError("argument_matrix_authority_not_found", 404)
-                verified.append(candidate)
+                verified.append(
+                    _resolver_verified_drafting_authority(raw, workflow="argument_matrix")
+                )
             position["supporting_authority"] = verified
         return value
 
@@ -14381,8 +14474,13 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
             document = get_workspace_document(case_root, document_id)
+            value = payload.model_dump()
+            value["selected_authority"] = [
+                _resolver_verified_drafting_authority(item, workflow="sentence_support")
+                for item in list(value.get("selected_authority") or [])
+            ]
             result = _sentence_support_store(case_root).create_map(
-                payload.model_dump(), document=document, records=_review_records(case_root)
+                value, document=document, records=_review_records(case_root)
             )
             return _mark_sentence_map_revision({"status": "pass", "map": result, "review_required": True, "filing_ready": False}, document)
         except DocumentWorkspaceError as exc:
@@ -14457,7 +14555,11 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
             document = get_workspace_document(case_root, document_id)
-            receipt = _citation_insertion_store(case_root).create(payload.model_dump(), document=document)
+            value = payload.model_dump()
+            value["authority"] = _resolver_verified_drafting_authority(
+                value.get("authority"), workflow="citation_insertion"
+            )
+            receipt = _citation_insertion_store(case_root).create(value, document=document)
             return {"status": "pass", "receipt": receipt, "review_required": True, "filing_ready": False}
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
@@ -14513,7 +14615,11 @@ if FastAPI is not None:
             raise HTTPException(status_code=404, detail="active_matter_unavailable")
         try:
             document = get_workspace_document(case_root, document_id)
-            return {"status": "pass", "receipt": _quote_safe_store(case_root).create(payload.model_dump(), document=document), "review_required": True, "filing_ready": False}
+            value = payload.model_dump()
+            value["authority"] = _resolver_verified_drafting_authority(
+                value.get("authority"), workflow="quote_safe"
+            )
+            return {"status": "pass", "receipt": _quote_safe_store(case_root).create(value, document=document), "review_required": True, "filing_ready": False}
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except IntakeWorkbenchError as exc:

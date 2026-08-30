@@ -5,6 +5,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "store-build-workspace.ps1")
+$repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 
 $version = "1.9.2"
 $archiveUrl = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-x64.zip"
@@ -12,10 +14,17 @@ $modelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny
 $archiveSha256 = "49dcc16de826f20bd53d44f947a1ae49dfa81f86cad67a64d80820cb192d674a"
 $cliSha256 = "95e3c0b0e778ad9499eb0125f97c1dcf437dd9eb4ea77050b043574f93c2631d"
 $modelSha256 = "c77c5766f1cef09b6b7d47f21b546cbddd4157886b3b5d6d4f709e91e66c7c2b"
-$cacheRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-cache\whisper-cpp\v$version"
+$cacheRoot = Resolve-RepoBuildDirectory (Join-Path $repo "dist\build-cache\whisper-cpp\v$version") $repo
+$legacyCacheRoot = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-cache\whisper-cpp\v$version"
 $archive = Join-Path $cacheRoot "whisper-bin-x64.zip"
 $model = Join-Path $cacheRoot "ggml-tiny.en-q5_1.bin"
 $expanded = Join-Path $cacheRoot "bin"
+if (-not $Destination) { $Destination = Join-Path $cacheRoot "runtime" }
+$Destination = Resolve-RepoBuildDirectory $Destination $repo
+if ($Offline) {
+  if (-not (Test-Path -LiteralPath $archive)) { $archive = Join-Path $legacyCacheRoot "whisper-bin-x64.zip" }
+  if (-not (Test-Path -LiteralPath $model)) { $model = Join-Path $legacyCacheRoot "ggml-tiny.en-q5_1.bin" }
+}
 
 function Assert-Hash([string]$Path, [string]$Expected, [string]$Label) {
   if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { throw "$Label is missing: $Path" }

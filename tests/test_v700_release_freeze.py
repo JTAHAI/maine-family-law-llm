@@ -11,15 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_canonical_versions_and_about_surface_are_consistent() -> None:
-    assert VERSION == "8.0.0"
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert BUILD_NUMBER == 53
-    assert UI_VERSION == "8.0.0-ga-b53"
-    assert UI_FOOTER_LABEL == "v8.0.0"
-    assert 'version = "8.0.0"' in (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert VERSION == "8.0.1"
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert BUILD_NUMBER == 54
+    assert UI_VERSION == "8.0.1-ga-b54"
+    assert UI_FOOTER_LABEL == "v8.0.1"
+    assert 'version = "8.0.1"' in (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     html = render_local_workbench_html()
-    assert "8.0.0" in html
-    assert "8.0.0.0" in html
+    assert "8.0.1" in html
+    assert "8.0.1.0" in html
     assert "6.0.4-extended-hardening-full-source.zip" not in html
 
 
@@ -30,7 +30,7 @@ def test_store_identity_and_manifest_contract_are_unchanged_except_version() -> 
         "publisher": "CN=D75EE668-B409-45ED-87E5-E37AA5FE3868",
         "publisher_display_name": "TAHAI Web Services",
         "package_display_name": "Maine Family Law LLM",
-        "package_version": "8.0.0.0",
+        "package_version": "8.0.1.0",
     }
     manifest = (ROOT / "store/msix/AppxManifest.xml.in").read_text(encoding="utf-8")
     assert 'ProcessorArchitecture="x64"' in manifest

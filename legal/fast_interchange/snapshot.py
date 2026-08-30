@@ -153,6 +153,25 @@ def validate_safetensors(path: Path, *, maximum_bytes: int) -> None:
         raise SnapshotError("fast_interchange_tensor_coverage_invalid")
 
 
+def _read_model_json(path: Path) -> dict[str, Any]:
+    """Read a declared loader file without rejecting standard large tokenizers.
+
+    Qwen-class tokenizer vocabularies can contain more than 200,000 JSON tree
+    values while remaining a bounded, local 64 MiB loader asset.  Keep the
+    stricter default for every other model file, but allow no more than two
+    million primitive/container values for the one tokenizer format that
+    requires it.  Duplicate keys, non-finite values, invalid UTF-8, depth, and
+    byte limits remain enforced by ``strict_json_load_path``.
+    """
+
+    return strict_json_load_path(
+        path,
+        max_bytes=64 * 1024**2,
+        max_items=2_000_000 if path.name == "tokenizer.json" else 200_000,
+        require_object=True,
+    )
+
+
 def _release_snapshot(handles, verified, root, temporary) -> None:
     for handle in handles:
         handle.close()
@@ -165,8 +184,8 @@ def _release_snapshot(handles, verified, root, temporary) -> None:
 
 
 class VerifiedSnapshot:
-    def __init__(self):
-        self._temporary = tempfile.TemporaryDirectory(prefix="mfl-fi-model-snapshot-")
+    def __init__(self, *, directory: Path | None = None):
+        self._temporary = tempfile.TemporaryDirectory(prefix="mfl-fi-model-snapshot-", dir=directory)
         self.root = Path(self._temporary.name).resolve()
         self._verified: dict[str, tuple[str, int]] = {}
         self._handles: list[Any] = []
@@ -298,7 +317,7 @@ class VerifiedSnapshot:
             if path.suffix == ".safetensors":
                 validate_safetensors(path, maximum_bytes=maximum_bytes)
             if path.suffix == ".json":
-                value = strict_json_load_path(path, max_bytes=64 * 1024**2, require_object=True)
+                value = _read_model_json(path)
                 if (
                     value.get("auto_map")
                     or value.get("auto_mapping")

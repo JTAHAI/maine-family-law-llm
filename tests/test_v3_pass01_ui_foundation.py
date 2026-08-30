@@ -130,7 +130,7 @@ def test_v3_pass01_launcher_is_task_oriented_and_versioned() -> None:
 
     source = (ROOT / "app" / "launcher.py").read_text(encoding="utf-8")
 
-    assert VERSION == "8.0.0"
+    assert VERSION == "8.0.1"
     assert 'notebook.add(start_tab, text="Start here")' in source
     assert 'notebook.add(review_tab, text="Review & export")' in source
     assert 'notebook.add(support_tab, text="Support & tools")' in source
@@ -151,8 +151,8 @@ def test_v3_pass01_versions_are_consistent() -> None:
         identity_path = ROOT / "store" / "msix" / "identity.example.json"
     identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
-    assert VERSION == "8.0.0"
+    assert VERSION == "8.0.1"
     assert BUILD_NUMBER >= 24
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert 'version = "8.0.0"' in pyproject
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert f'version = "{VERSION}"' in pyproject
     assert identity["package_version"] == PACKAGE_VERSION

@@ -114,10 +114,16 @@ def pack_store(admitted, tmp_path):  # noqa: F811
 def upload(pack, path=None):
     path = path or pack["path"]
     store, scope, audit = (pack[key] for key in ("store", "scope", "audit"))
-    row = store.begin(scope=scope, total_bytes=path.stat().st_size, audit=audit)
+    total_bytes = path.stat().st_size
+    row = store.begin(scope=scope, total_bytes=total_bytes, audit=audit)
     offset = 0
     with path.open("rb") as handle:
-        while block := handle.read(CHUNK_BYTES):
+        # These structural packs are tiny. Do not allocate a full transfer block
+        # for a short file or perform another allocation merely to detect EOF.
+        while offset < total_bytes:
+            block = handle.read(min(CHUNK_BYTES, total_bytes - offset))
+            if not block:
+                raise AssertionError("Fictional model pack was truncated during upload")
             row = store.chunk(row["job_id"], scope=scope, offset=offset, data=block)
             offset += len(block)
     return row

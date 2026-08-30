@@ -526,13 +526,18 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--feature-tier",
+        choices=("essential", "full"),
+        default=str(os.environ.get("MFL_STORE_FEATURE_TIER") or "full").strip().lower(),
+    )
     args = parser.parse_args()
 
     runtime_root = Path(args.runtime_root)
     if not runtime_root.exists():
         raise SystemExit(f"Runtime root does not exist: {runtime_root}")
 
-    inventory = build_inventory(runtime_root)
+    inventory = build_inventory(runtime_root, feature_tier=args.feature_tier)
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -541,7 +546,7 @@ def main() -> int:
         "runtime_root": str(runtime_root),
         "package_count": len(inventory),
         "packages": inventory,
-        "feature_tier": str(os.environ.get("MFL_STORE_FEATURE_TIER") or "full").lower(),
+        "feature_tier": args.feature_tier,
     }
 
     failures = []

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import struct
 from copy import deepcopy
@@ -14,7 +15,12 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from test_fast_interchange_worker import _registry
 
 from legal.fast_interchange.admission import AdmissionAuthority, AdmissionError, canonical, digest
-from legal.fast_interchange.snapshot import SnapshotError, VerifiedSnapshot, validate_safetensors
+from legal.fast_interchange.snapshot import (
+    SnapshotError,
+    VerifiedSnapshot,
+    _read_model_json,
+    validate_safetensors,
+)
 from legal.fast_interchange.worker import ArtifactFile, FastInterchangeError, HotSwapRegistry
 
 
@@ -290,6 +296,18 @@ def test_loaded_snapshot_is_immutable_even_if_installed_original_changes(tmp_pat
     finally:
         snapshot.close()
     assert not root.exists()
+
+
+def test_standard_large_tokenizer_vocabulary_remains_strictly_bounded(tmp_path):
+    tokenizer = tmp_path / "tokenizer.json"
+    # More than the default strict JSON item limit, but below the dedicated
+    # tokenizer budget used by ordinary Qwen-class vocabularies.
+    tokenizer.write_text(
+        json.dumps({"model": {"vocab": {f"token_{index}": index for index in range(210_000)}}}),
+        encoding="utf-8",
+    )
+    value = _read_model_json(tokenizer)
+    assert len(value["model"]["vocab"]) == 210_000
 
 
 @pytest.mark.parametrize("fault", ["huge_header", "shape", "overlap", "extra", "trailing"])

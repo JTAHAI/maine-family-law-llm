@@ -292,8 +292,25 @@ class AuthorityLibraryService:
         return root
 
     def status(self) -> dict[str, Any]:
-        root = self.ensure_layout()
+        # Merely opening the workbench must not create an authority store.
+        # Ingest/update operations initialize their layout explicitly.
+        root = self._require_data_root()
         active = AuthorityProductVerifier(data_root=root, repo_root=self.repo_root).verify()
+        try:
+            direct_authority = AuthorityProductService(data_root=root).direct_authority_coverage()
+        except (FileNotFoundError, OSError, ValueError):
+            direct_authority = {
+                "status": "blocked",
+                "counts_by_kind": {},
+                "missing_kinds": [],
+                "direct_exact_source_count": 0,
+                "source_provided_pinpoint_count": 0,
+                "source_bound_drafting_available": False,
+                "blockers": ["direct_authority_coverage_unavailable"],
+                "review_required": True,
+                "current_law_determined": False,
+                "network_used": False,
+            }
         update_report = self._latest_update_report(root)
         source_rows = self._source_rows(root)
         counts = self._freshness_counts(source_rows)
@@ -325,6 +342,10 @@ class AuthorityLibraryService:
             "builds": builds[:5],
             "update_report_available": bool(update_report),
             "current_law_claims_supported": bool(counts.get("fresh")),
+            "direct_authority": direct_authority,
+            "source_bound_drafting_available": bool(
+                direct_authority.get("source_bound_drafting_available")
+            ),
         }
 
     @staticmethod

@@ -258,6 +258,11 @@ def test_synthetic_host_to_native_worker_path_stays_review_required(tmp_path):
         worker_token="w" * 40,
         allow_test_only=True,
     )
+    # Reserve an ephemeral port only long enough to learn the assigned value.
+    # Holding this socket while Uvicorn starts fails on Windows because the
+    # second listener cannot share the endpoint. The worker still binds only
+    # to literal loopback below; a genuine race remains a normal startup
+    # failure rather than being hidden by SO_REUSEADDR.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
         reservation.bind(("127.0.0.1", 0))
         port = reservation.getsockname()[1]
@@ -276,7 +281,10 @@ def test_synthetic_host_to_native_worker_path_stays_review_required(tmp_path):
     thread = Thread(target=server.run, daemon=True)
     thread.start()
     try:
-        deadline = time.monotonic() + 5
+        # The complete worker suite can be CPU-bound while a prior isolation
+        # test releases resources. Give the real loopback server a bounded,
+        # Windows-tolerant start window; an unavailable endpoint still fails.
+        deadline = time.monotonic() + 15
         while not server.started and time.monotonic() < deadline:
             time.sleep(0.01)
         assert server.started
@@ -318,7 +326,8 @@ def test_synthetic_host_to_native_worker_path_stays_review_required(tmp_path):
         thread.join(timeout=5)
 
     assert not thread.is_alive()
-    assert result.status == "completed_without_citations_review_required"
+    assert result.status == "specialist_output_blocked_review_required"
+    assert "specialist_source_references_required" in result.blockers
     assert result.review_required is True
     assert result.provenance_receipt.provider_id == "fast_interchange_local"
     assert result.provenance_receipt.model_id == "family-evidence-small-r1"

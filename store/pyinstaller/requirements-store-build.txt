@@ -19,6 +19,7 @@ Pillow==12.3.0
 # legal weights or adapters.  PEFT and its execution helper are required to
 # activate a separately admitted external LoRA pack without a runtime install.
 peft>=0.14,<1
+psutil>=6,<8
 accelerate>=1.0,<2
 safetensors>=0.4,<1
 docling>=2.114.0,<3

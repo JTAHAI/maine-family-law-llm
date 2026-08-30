@@ -46,6 +46,7 @@ _MAX_BODY_BYTES = 160 * 1024
 _MAX_PROMPT_TOKENS = 2048
 _MAX_COMPLETION_TOKENS = 1024
 _MAX_COMPLETION_CHARS = 120_000
+_FIXED_ROLE_PROMPT_TEMPLATE = "fi-fixed-role-v1:[{role}]\\n{content}"
 
 
 class FastInterchangeError(RuntimeError):
@@ -791,8 +792,17 @@ class HotSwapManager:
 class TransformersPeftAdapterBackend:
     """Optional local-files-only backend; imports ML packages only on use."""
 
-    def __init__(self, *, allow_cpu: bool = False, cuda_device: int = 0):
+    def __init__(
+        self, *, allow_cpu: bool = False, cuda_device: int = 0,
+        force_cpu: bool = False, cpu_threads: int | None = None,
+    ):
+        if cpu_threads is not None and (type(cpu_threads) is not int or not 1 <= cpu_threads <= 4):
+            raise FastInterchangeError("fast_interchange_cpu_thread_limit_invalid")
+        if force_cpu and not allow_cpu:
+            raise FastInterchangeError("fast_interchange_cpu_mode_not_authorized")
         self.allow_cpu = bool(allow_cpu)
+        self.force_cpu = bool(force_cpu)
+        self.cpu_threads = min(cpu_threads or 4, max(1, (os.cpu_count() or 1) - 1))
         self.cuda_device = int(cuda_device)
         self._torch: Any = None
         self._tokenizer: Any = None
@@ -853,13 +863,18 @@ class TransformersPeftAdapterBackend:
         torch, PeftModel, transformers = self._imports()
         if self._compatibility is None:
             raise FastInterchangeError("fast_interchange_runtime_policy_required")
-        if not torch.cuda.is_available() and self._compatibility.quantization != "fp32":
+        use_cuda = torch.cuda.is_available() and not self.force_cpu
+        if not use_cuda and self._compatibility.quantization != "fp32":
             raise FastInterchangeError("fast_interchange_cpu_dtype_not_supported")
         AutoModelForCausalLM, AutoTokenizer = transformers
         base_dir = _inside(root, binding.base_dir, "fast_interchange_base_unavailable")
         adapter_dir = _inside(root, binding.adapter_dir, "fast_interchange_adapter_unavailable")
         if self._model is None:
-            device = f"cuda:{self.cuda_device}" if torch.cuda.is_available() else "cpu"
+            device = f"cuda:{self.cuda_device}" if use_cuda else "cpu"
+            if not use_cuda:
+                # The production backend runs in an owned process, not the UI.
+                # Leave CPU capacity for interaction instead of oversubscribing.
+                torch.set_num_threads(self.cpu_threads)
             self._tokenizer = AutoTokenizer.from_pretrained(
                 str(base_dir), local_files_only=True, trust_remote_code=False
             )
@@ -904,7 +919,16 @@ class TransformersPeftAdapterBackend:
         if self._model is None or self._tokenizer is None or self._torch is None:
             raise FastInterchangeError("fast_interchange_backend_not_active")
         self._check_cancel()
-        prompt = "\n".join(f"[{item['role'].upper()}]\n{item['content']}" for item in messages)
+        # Keep the actual serialized prompt aligned with the immutable prompt
+        # template fingerprint verified during admission.  A compatibility hash
+        # is meaningless if inference uses a different wire format than the
+        # format an adapter was trained and evaluated against.
+        prompt = "\\n".join(
+            _FIXED_ROLE_PROMPT_TEMPLATE.format(
+                role=item["role"].upper(), content=item["content"]
+            )
+            for item in messages
+        )
         # Exact-context approval is invalid if tokenization silently drops text.
         encoded = self._tokenizer(prompt, return_tensors="pt", truncation=False)
         input_shape = getattr(encoded.get("input_ids"), "shape", ())
@@ -943,7 +967,20 @@ class TransformersPeftAdapterBackend:
                 **encoded,
                 **generation_options,
                 do_sample=False,
-                use_cache=False,
+                # A fresh dynamic cache belongs only to this generate call.
+                # Recomputing the entire source prompt for every token makes
+                # even a small model unusable on CPU. Never accept caller KV
+                # state, use a persistent/static cache, or return cache tensors.
+                use_cache=True,
+                cache_implementation="dynamic",
+                return_dict_in_generate=False,
+                # Override any advisory sampling fields stored in a public
+                # base model's GenerationConfig.  The worker's immutable
+                # contract is greedy/deterministic; leaving those inherited
+                # values present produces warnings and weakens audit clarity.
+                temperature=None,
+                top_p=None,
+                top_k=None,
                 max_new_tokens=output_limit,
             )
         self._check_cancel()

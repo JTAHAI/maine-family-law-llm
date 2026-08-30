@@ -444,11 +444,17 @@ class MatterCommandCenterStore:
         current = self._current_fingerprint(records)
         snapshot_fp = str(snapshot.get("full_record_coverage", {}).get("current_record_fingerprint") or "")
         current_ids = {str(row.get("evidence_id") or "") for row in snapshot.get("included_records") or [] if str(row.get("evidence_id") or "")}
-        active_ids = {
-            _safe_text(raw.get("evidence_id") or raw.get("source_id"), 256)
-            for raw in records
-            if isinstance(raw, dict) and _safe_text(raw.get("evidence_id") or raw.get("source_id"), 256)
-        }
+        # Compare the same explicit scope used to freeze the snapshot. Selecting
+        # a parent record also includes its derived pages; comparing that scoped
+        # set to every active-matter record made every partial snapshot stale
+        # immediately. The whole-matter fingerprint above still detects any
+        # source change, including records outside the selected export scope.
+        active_rows, _excluded, _warnings = self._record_rows(
+            records,
+            selected_record_ids=snapshot.get("selected_record_ids") or [],
+            variant=str(snapshot.get("variant") or "metadata_only"),
+        )
+        active_ids = {str(row["evidence_id"]) for row in active_rows}
         blockers: list[str] = []
         if current != snapshot_fp:
             blockers.append("matter_snapshot_source_changed")

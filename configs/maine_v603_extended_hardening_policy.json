@@ -1,7 +1,7 @@
 {
   "policy_name": "maine_v603_extended_hardening_policy",
-  "product_version": "8.0.0",
-  "package_version": "8.0.0.0",
+  "product_version": "8.0.1",
+  "package_version": "8.0.1.0",
   "ui_build": 51,
   "ui_track": "extended-hardening",
   "required_controls": [

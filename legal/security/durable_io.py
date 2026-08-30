@@ -8,15 +8,28 @@ pilot, and release evidence stores.
 from __future__ import annotations
 
 from contextlib import contextmanager
+import errno
 import os
 from pathlib import Path
 import shutil
 import stat
+import time
 from typing import Callable, Iterator
 
 
 class DurableIOError(OSError):
     """Raised when a local file operation cannot be completed safely."""
+
+
+# ``msvcrt.LK_LOCK`` asks the CRT to retry internally.  Under a short burst of
+# unrelated writer processes it can nevertheless return ``EDEADLK`` rather
+# than wait for the owner to release the one-byte sidecar lock.  Use the
+# non-blocking primitive below with an explicit, bounded retry budget instead.
+# That preserves cross-process serialization while making a real lock timeout
+# an honest failure instead of hanging a desktop workflow indefinitely.
+_WINDOWS_LOCK_TIMEOUT_SECONDS = 30.0
+_WINDOWS_LOCK_INITIAL_RETRY_SECONDS = 0.01
+_WINDOWS_LOCK_MAX_RETRY_SECONDS = 0.10
 
 
 def required_write_reserve_bytes() -> int:
@@ -171,7 +184,27 @@ def exclusive_file_lock(path: str | Path) -> Iterator[None]:
                 os.write(descriptor, b"0")
                 os.fsync(descriptor)
             os.lseek(descriptor, 0, os.SEEK_SET)
-            msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+            deadline = time.monotonic() + _WINDOWS_LOCK_TIMEOUT_SECONDS
+            retry_seconds = _WINDOWS_LOCK_INITIAL_RETRY_SECONDS
+            retry_errnos = {
+                errno.EACCES,
+                errno.EAGAIN,
+                getattr(errno, "EDEADLK", 35),
+                # Python on current Windows has reported this as Errno 36.
+                36,
+            }
+            while True:
+                try:
+                    msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError as exc:
+                    if exc.errno not in retry_errnos:
+                        raise DurableIOError("lock_acquire_failed") from exc
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise DurableIOError("lock_timeout") from exc
+                    time.sleep(min(retry_seconds, remaining))
+                    retry_seconds = min(_WINDOWS_LOCK_MAX_RETRY_SECONDS, retry_seconds * 2)
             try:
                 yield
             finally:

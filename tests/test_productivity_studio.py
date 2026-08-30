@@ -191,6 +191,31 @@ def test_productivity_state_is_encrypted_and_cross_matter_copy_fails_closed(matt
     assert exc.value.code == "cross_matter_access_denied"
 
 
+def test_productivity_routes_fail_closed_with_an_actionable_error_when_no_matter_is_active(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A missing matter must never turn a normal UI click into an unhandled 500."""
+
+    monkeypatch.setattr(api_module, "active_case_root", lambda: None)
+    with TestClient(enterprise_app) as client:
+        for response in (
+            client.get("/api/productivity", headers=HEADERS),
+            client.post(
+                "/api/productivity/recipes",
+                json={"recipe_id": "fictional_recipe", "label": "Fictional", "steps": ["inventory_records"]},
+                headers=HEADERS,
+            ),
+            client.get("/api/productivity/backups/fictional_backup/verify", headers=HEADERS),
+        ):
+            assert response.status_code == 409, response.text
+            assert response.json() == {
+                "detail": {
+                    "error": "active_case_unavailable",
+                    "message": "Select an active matter before opening Productivity Studio.",
+                }
+            }
+
+
 def test_productivity_routes_commands_and_shipped_ui_are_reachable() -> None:
     expected_features = {
         "capability_45_smart_matter_inbox", "capability_46_saved_workflow_recipes",

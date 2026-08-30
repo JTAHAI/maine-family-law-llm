@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from legal.production import AuthorityProductPublisher, AuthorityProductVerifier
+from legal.documents.workspace import create_document
 from legal.retrieval.index_builder import RetrievalIndexBuilder
 from legal.verifiers import SourceAuthorityIndex, extract_citations
 
@@ -78,10 +79,44 @@ def _fixture_data_root(tmp_path: Path) -> Path:
         },
     )
 
-    citation_index = _write_json(root / "authority_layer" / "citation_index.json", [])
+    citation_index = _write_json(
+        root / "authority_layer" / "citation_index.json",
+        [
+            {
+                "authority_status": "verified_official_maine",
+                "candidate_count": 1,
+                "candidate_rank": 1,
+                "kind": "maine_statute",
+                "normalized_citation": "19-A M.R.S. § 1653",
+                "source_id": "statute-19a-1653",
+                "metadata": {
+                    "source_span": {"start_offset": 0, "end_offset": 20},
+                    "pinpoint": "19-A M.R.S. § 1653",
+                    "pinpoint_type": "statute_section",
+                },
+            }
+        ],
+    )
     source_cards = root / "authority_layer" / "source_cards.jsonl"
     source_cards.parent.mkdir(parents=True, exist_ok=True)
-    source_cards.write_text("{}\n", encoding="utf-8")
+    source_cards.write_text(
+        json.dumps(
+            {
+                "source_id": "statute-19a-1653",
+                "hash": _sha(snapshot),
+                "title": "Best interest of child",
+                "citation": "19-A M.R.S. § 1653",
+                "source_class": "statute_section",
+                "authority_kind": "statute_section",
+                "jurisdiction": "maine",
+                "freshness_status": "fresh",
+                "source_span": {"start_offset": 0, "end_offset": 20},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     authority_graph = _write_json(root / "authority_layer" / "authority_graph.json", {})
     _write_json(
         root / "authority_layer" / "authority_layer_report.json",
@@ -137,6 +172,121 @@ def test_publish_and_verify_immutable_authority_generation(tmp_path: Path) -> No
     assert verified.status == "pass"
     assert verified.source_count == 1
     assert verified.artifact_count >= 6
+
+
+def test_active_product_reports_exact_source_bound_drafting_coverage(tmp_path: Path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from app.services import AuthorityLibraryService
+    from app.services.authority_product_service import AuthorityProductService
+    from maine_family_law_llm import api as desktop_api
+
+    data_root = _fixture_data_root(tmp_path)
+    assert AuthorityProductPublisher(data_root=data_root).publish(product_version="8.0.0").status == "pass"
+
+    coverage = AuthorityProductService(data_root=data_root).direct_authority_coverage()
+    assert coverage["status"] == "pass"
+    assert coverage["counts_by_kind"]["statute_section"] == 1
+    assert coverage["direct_exact_source_count"] == 1
+    assert coverage["source_provided_pinpoint_count"] == 1
+    assert coverage["source_bound_drafting_available"] is True
+    assert coverage["current_law_determined"] is False
+
+    choices = AuthorityProductService(data_root=data_root).drafting_source_candidates(
+        "statute-19a-1653"
+    )
+    assert choices["status"] == "pass"
+    assert len(choices["candidates"]) == 1
+    assert choices["candidates"][0]["exact_span"] == "Best interest factor"
+    assert choices["candidates"][0]["pinpoint"] == "19-A M.R.S. § 1653"
+
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(data_root))
+    resolved = TestClient(desktop_api.app).get(
+        "/api/drafting/outline-authority-candidate/statute-19a-1653"
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["candidate"]["authority_id"] == choices["candidates"][0]["authority_id"]
+    assert resolved.json()["candidate"]["exact_span"] == "Best interest factor"
+
+    status = AuthorityLibraryService(data_root=data_root).status()
+    assert status["direct_authority"] == coverage
+    assert status["source_bound_drafting_available"] is True
+
+
+def test_multiple_exact_pinpoints_require_a_reviewer_selection_before_citation_creation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The server never silently selects among multiple admitted source spans."""
+    from fastapi.testclient import TestClient
+
+    from maine_family_law_llm import api as desktop_api
+
+    data_root = _fixture_data_root(tmp_path)
+    _write_json(
+        data_root / "authority_layer" / "citation_index.json",
+        [
+            {
+                "authority_status": "verified_official_maine",
+                "candidate_count": 2,
+                "candidate_rank": 1,
+                "kind": "maine_statute",
+                "normalized_citation": "19-A M.R.S. § 1653",
+                "source_id": "statute-19a-1653",
+                "metadata": {
+                    "source_span": {"start_offset": 0, "end_offset": 4},
+                    "pinpoint": "19-A M.R.S. § 1653(A)",
+                },
+            },
+            {
+                "authority_status": "verified_official_maine",
+                "candidate_count": 2,
+                "candidate_rank": 2,
+                "kind": "maine_statute",
+                "normalized_citation": "19-A M.R.S. § 1653",
+                "source_id": "statute-19a-1653",
+                "metadata": {
+                    "source_span": {"start_offset": 5, "end_offset": 13},
+                    "pinpoint": "19-A M.R.S. § 1653(B)",
+                },
+            },
+        ],
+    )
+    assert AuthorityProductPublisher(data_root=data_root).publish(product_version="8.0.0").status == "pass"
+    matter = tmp_path / "fictional-matter"; matter.mkdir()
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(data_root))
+    monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-test-key")
+    monkeypatch.setattr(desktop_api, "active_case_root", lambda: matter)
+    document = create_document(
+        matter,
+        title="Fictional citation draft",
+        content="Fictional draft statement for review.",
+        document_type="draft",
+    )
+    client = TestClient(desktop_api.app)
+    resolved = client.get("/api/drafting/outline-authority-candidate/statute-19a-1653")
+    assert resolved.status_code == 200
+    payload = resolved.json()
+    assert payload["candidate"]["pinpoint"] == ""
+    assert len(payload["pinpoint_candidates"]) == 2
+    base = {
+        "reviewer_safe_id": "reviewer_001",
+        "selected_text": "Fictional draft statement for review.",
+        "authority": {"source_id": "statute-19a-1653"},
+        "user_confirmed": True,
+    }
+    required = client.post(
+        f"/api/drafting/documents/{document['document_id']}/citation-insertions", json=base
+    )
+    assert required.status_code == 409
+    assert required.json()["detail"] == "citation_insertion_authority_selection_required"
+    selected = dict(payload["pinpoint_candidates"][1])
+    created = client.post(
+        f"/api/drafting/documents/{document['document_id']}/citation-insertions",
+        json=base | {"authority": {"source_id": "statute-19a-1653", "authority_id": selected["authority_id"]}},
+    )
+    assert created.status_code == 200
+    assert created.json()["receipt"]["authority"]["pinpoint"] == selected["pinpoint"]
+    assert created.json()["receipt"]["review_required"] is True
 
 
 def test_active_generation_is_independent_of_mutable_workspace(tmp_path: Path) -> None:

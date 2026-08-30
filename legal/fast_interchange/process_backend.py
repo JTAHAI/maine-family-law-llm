@@ -70,6 +70,8 @@ class IsolatedAdapterBackend:
         factory=None,
         allow_cpu: bool = False,
         cuda_device: int = 0,
+        force_cpu: bool = False,
+        cpu_threads: int | None = None,
         cancellation_grace_seconds: float = 2.0,
     ):
         if factory is None:
@@ -78,6 +80,10 @@ class IsolatedAdapterBackend:
             factory = TransformersPeftAdapterBackend
         self._factory = factory
         self._options = {"allow_cpu": allow_cpu, "cuda_device": cuda_device}
+        if force_cpu:
+            self._options["force_cpu"] = True
+        if cpu_threads is not None:
+            self._options["cpu_threads"] = cpu_threads
         self._context = multiprocessing.get_context("spawn")
         self._process = None
         self._connection = None
@@ -86,9 +92,38 @@ class IsolatedAdapterBackend:
         self._deadline = 0.0
         self._grace = max(0.1, min(float(cancellation_grace_seconds), 5.0))
         self._compatibility = None
+        self.peak_resident_bytes = 0
 
     def configure(self, compatibility) -> None:
         self._compatibility = compatibility.model_dump()
+
+    def _check_resident_memory(self) -> None:
+        """Enforce the signed RSS budget in the parent, including owned children.
+
+        This is a polling guard, not an OS allocation quota. Missing monitoring
+        fails closed for admitted policies; synthetic no-policy fixtures differ.
+        """
+        if self._compatibility is None or self._process is None:
+            return
+        from .worker import FastInterchangeError
+
+        try:
+            import psutil
+
+            process = psutil.Process(self._process.pid)
+            resident = process.memory_info().rss
+            for child in process.children(recursive=True):
+                try:
+                    resident += child.memory_info().rss
+                except psutil.NoSuchProcess:
+                    continue
+        except Exception as exc:
+            self._stop()
+            raise FastInterchangeError("fast_interchange_memory_monitor_unavailable") from exc
+        self.peak_resident_bytes = max(self.peak_resident_bytes, resident)
+        if resident > self._compatibility["max_resident_bytes"]:
+            self._stop()
+            raise FastInterchangeError("fast_interchange_resident_memory_limit_exceeded")
 
     def set_cancellation(self, event: Event, deadline: float) -> None:
         self._cancel = event
@@ -96,10 +131,28 @@ class IsolatedAdapterBackend:
         if self._signal is not None:
             self._signal.clear()
 
+    def _check_startup_memory(self) -> None:
+        if self._compatibility is None:
+            return
+        from .worker import FastInterchangeError
+
+        try:
+            import psutil
+
+            available = psutil.virtual_memory().available
+        except Exception as exc:
+            raise FastInterchangeError("fast_interchange_memory_monitor_unavailable") from exc
+        # Keep one GiB outside the admitted worker budget for interaction/OS.
+        # Do not start paging a low-memory machine merely to discover it cannot
+        # accommodate the signed policy. No model or GUI process is terminated.
+        if available < self._compatibility["max_resident_bytes"] + 1024**3:
+            raise FastInterchangeError("fast_interchange_insufficient_available_memory")
+
     def _start(self) -> None:
         if self._process is not None and self._process.is_alive():
             return
         self._stop()
+        self._check_startup_memory()
         parent, child = self._context.Pipe()
         self._signal = self._context.Event()
         self._process = self._context.Process(
@@ -135,6 +188,8 @@ class IsolatedAdapterBackend:
         deadline = self._deadline if action in {"activate", "complete"} else time.monotonic() + 5
         cancel_started = None
         try:
+            if action != "close":
+                self._check_resident_memory()
             self._connection.send({"action": action, "arguments": arguments, "deadline": deadline})
             while True:
                 if (
@@ -151,6 +206,8 @@ class IsolatedAdapterBackend:
                     self._stop()
                     raise FastInterchangeError("fast_interchange_generation_timeout")
                 if self._connection.poll(0.025):
+                    if action != "close":
+                        self._check_resident_memory()
                     payload = self._connection.recv()
                     if cancel_started is not None:
                         # Termination removes residual Python/tensor references even
@@ -164,6 +221,8 @@ class IsolatedAdapterBackend:
                 if not self._process.is_alive():
                     self._stop()
                     raise FastInterchangeError("fast_interchange_backend_failed")
+                if action != "close":
+                    self._check_resident_memory()
         except (EOFError, BrokenPipeError, OSError) as exc:
             self._stop()
             raise FastInterchangeError("fast_interchange_backend_failed") from exc

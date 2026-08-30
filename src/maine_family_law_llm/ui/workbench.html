@@ -419,8 +419,8 @@
         <p class="record-inspector-note">Bind the frozen release candidate to the final shipment inventory, GA-definition controls, release-channel qualification, rollback evidence, and immutable distribution receipts. This application does not create Store approval or claim that GA shipped.</p>
         <button class="secondary" id="ga-shipment-readiness-refresh" type="button">Refresh Pass 51 status</button>
         <label>Shipment ID<input id="ga-shipment-readiness-id" maxlength="128" value="v5-19-0-ga1"/></label>
-        <label>Product version<input id="ga-shipment-readiness-version" maxlength="64" value="8.0.0"/></label>
-        <label>Source ZIP filename<input id="ga-shipment-readiness-source-name" maxlength="180" value="Maine-Family-Law-LLM-v8.0.0-ga-full-source.zip"/></label>
+        <label>Product version<input id="ga-shipment-readiness-version" maxlength="64" value="{{PRODUCT_VERSION}}"/></label>
+        <label>Source ZIP filename<input id="ga-shipment-readiness-source-name" maxlength="180" value="Maine-Family-Law-LLM-v{{PRODUCT_VERSION}}-ga-full-source.zip"/></label>
         <label>Source ZIP SHA-256<input id="ga-shipment-readiness-source-hash" maxlength="64" placeholder="64-character hash"/></label>
         <label>Pass 50 candidate ID<input id="ga-shipment-readiness-rc-id" maxlength="128" value="v5-18-0-rc1"/></label>
         <label>Pass 50 report SHA-256<input id="ga-shipment-readiness-rc-report-hash" maxlength="64" placeholder="64-character hash"/></label>
@@ -429,7 +429,7 @@
         <button class="secondary" id="ga-shipment-readiness-create" type="button">Create immutable shipment manifest</button>
         <hr/>
         <label>GA artifact type<select id="ga-shipment-readiness-artifact-type"><option value="clean_source_zip">Clean source ZIP</option><option value="external_legal_data_product_manifest">External legal data product manifest</option><option value="parsed_authority_build_manifest">Parsed authority build manifest</option><option value="retrieval_indexes_manifest">Retrieval indexes manifest</option><option value="gold_eval_pack_manifest">Gold eval pack manifest</option><option value="smoke_evidence_json">Smoke/evidence JSON</option><option value="release_metrics_json">Release metrics JSON</option><option value="security_governance_packet">Security/governance packet</option><option value="admin_guide">Admin guide</option><option value="user_guide">User guide</option><option value="attorney_reviewer_guide">Attorney reviewer guide</option><option value="incident_rollback_runbook">Incident/rollback runbook</option><option value="source_update_runbook">Source update runbook</option><option value="model_update_runbook">Model update runbook</option></select></label>
-        <label>Artifact version<input id="ga-shipment-readiness-artifact-version" maxlength="64" value="8.0.0"/></label>
+        <label>Artifact version<input id="ga-shipment-readiness-artifact-version" maxlength="64" value="{{PRODUCT_VERSION}}"/></label>
         <label>Opaque reference or URI<input id="ga-shipment-readiness-artifact-reference" maxlength="512" placeholder="artifact-ref-v1 or urn:sha256:…"/></label>
         <label>Artifact SHA-256<input id="ga-shipment-readiness-artifact-hash" maxlength="64" placeholder="64-character hash"/></label>
         <label class="document-intelligence-option"><input checked id="ga-shipment-readiness-artifact-external" type="checkbox"/> Artifact remains outside the source repository.</label>

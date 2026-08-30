@@ -82,14 +82,14 @@ def _client_for(monkeypatch, case_root: Path, rows: list[dict]) -> TestClient:
 
 def test_v450_version_and_store_package_advance() -> None:
     """Version constants must reflect the current release while retaining v4.5 drill-down behavior."""
-    assert VERSION == "8.0.0"
-    assert PACKAGE_VERSION == "8.0.0.0"
-    assert BUILD_NUMBER == 53
-    assert UI_PASS_MARKER == "v8.0.0-ga"
+    assert VERSION == "8.0.1"
+    assert PACKAGE_VERSION == "8.0.1.0"
+    assert BUILD_NUMBER == 54
+    assert UI_PASS_MARKER == "v8.0.1-ga"
     identity = json.loads(
         (Path(__file__).parents[1] / "store" / "msix" / "identity.example.json").read_text(encoding="utf-8")
     )
-    assert identity["package_version"] == "8.0.0.0"
+    assert identity["package_version"] == "8.0.1.0"
 
 
 # ---------------------------------------------------------------------------

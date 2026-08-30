@@ -309,6 +309,11 @@ def authority_host(bound_host, tmp_path, monkeypatch):
     root = _fixture_data_root(tmp_path)
     published = AuthorityProductPublisher(data_root=root).publish(product_version="8.0.0")
     assert published.status == "pass"
+    # Keep fictional data repo-local while retaining the external-to-bundle
+    # rule: model the bundle and its authority state as distinct QA siblings.
+    bundle = tmp_path / "fictional-bundle"
+    bundle.mkdir()
+    monkeypatch.chdir(bundle)
     monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(root))
     refs = api._local_agent_context_service().references_from_cards(
         [

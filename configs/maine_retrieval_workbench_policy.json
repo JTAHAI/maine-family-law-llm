@@ -1,6 +1,6 @@
 {
   "schema_version": "maine_retrieval_workbench_policy_v1",
-  "product_version": "8.0.0",
+  "product_version": "8.0.1",
   "default_mode": "embedded_local",
   "lexical_backend": "sqlite_fts5",
   "semantic_backends": ["sqlite_vec_optional", "deterministic_hash_dense_fallback"],

@@ -6,6 +6,8 @@ import json
 import os
 import shutil
 import stat
+import sys
+import time
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -79,14 +81,23 @@ class StagedFile:
     destination_sha256: str
 
 
-def _copy_tree(source_root: Path, destination_root: Path, *, destination_prefix: str = "") -> list[StagedFile]:
+def _copy_tree(
+    source_root: Path,
+    destination_root: Path,
+    *,
+    destination_prefix: str = "",
+    progress_every: int = 250,
+) -> list[StagedFile]:
     source_root = source_root.resolve()
     destination_root.mkdir(parents=True, exist_ok=True)
     staged: list[StagedFile] = []
     seen_destinations: dict[str, str] = {}
     seen_nfcs: dict[str, str] = {}
+    source_files = sorted(p for p in source_root.rglob("*") if p.is_file())
+    total_files = len(source_files)
+    started_at = time.monotonic()
 
-    for source_path in sorted(p for p in source_root.rglob("*") if p.is_file()):
+    for index, source_path in enumerate(source_files, start=1):
         if _is_reparse_or_symlink(source_path) or not _is_regular_file(source_path):
             raise RuntimeError(f"Unsupported non-regular file in source tree: {source_path}")
         try:
@@ -137,6 +148,15 @@ def _copy_tree(source_root: Path, destination_root: Path, *, destination_prefix:
                 destination_sha256=destination_sha256,
             )
         )
+        if progress_every and (index == total_files or index % progress_every == 0):
+            elapsed_seconds = round(time.monotonic() - started_at, 1)
+            prefix = f"{destination_prefix}/" if destination_prefix else ""
+            print(
+                f"MSIX staging: {prefix}{index}/{total_files} files verified and copied "
+                f"({elapsed_seconds}s elapsed)",
+                file=sys.stderr,
+                flush=True,
+            )
     return staged
 
 
@@ -146,6 +166,12 @@ def main() -> int:
     parser.add_argument("--assets-root", required=True)
     parser.add_argument("--stage-root", required=True)
     parser.add_argument("--manifest-output", required=True)
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=250,
+        help="Emit a verified-copy progress update every N files; use 0 to disable.",
+    )
     args = parser.parse_args()
 
     runtime_root = Path(args.runtime_root)
@@ -157,8 +183,15 @@ def main() -> int:
     package_root.mkdir(parents=True, exist_ok=True)
 
     staged_files: list[StagedFile] = []
-    staged_files.extend(_copy_tree(runtime_root, package_root))
-    staged_files.extend(_copy_tree(assets_root, package_root, destination_prefix="Assets"))
+    staged_files.extend(_copy_tree(runtime_root, package_root, progress_every=args.progress_every))
+    staged_files.extend(
+        _copy_tree(
+            assets_root,
+            package_root,
+            destination_prefix="Assets",
+            progress_every=args.progress_every,
+        )
+    )
 
     payload = {
         "schema_version": "msix_staging_manifest_v1",
