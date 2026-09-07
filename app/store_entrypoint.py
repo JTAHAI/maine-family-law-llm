@@ -122,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--smoke-json", default="")
+    parser.add_argument("--fast-interchange-worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--document-intelligence-worker",
         nargs=2,
@@ -133,10 +134,19 @@ def main(argv: list[str] | None = None) -> int:
 
     # Unattended qualification and service workers must fail with an exit code,
     # never a modal dialog that interrupts the user's desktop or hangs CI.
-    unattended = bool(args.serve_local_api or args.smoke_test or args.document_intelligence_worker)
+    unattended = bool(
+        args.serve_local_api
+        or args.smoke_test
+        or args.document_intelligence_worker
+        or args.fast_interchange_worker
+    )
     context = None
     try:
         context = configure_runtime_environment(build_runtime_context(mode="store"))
+        if args.fast_interchange_worker:
+            from legal.fast_interchange.worker import main as fast_interchange_worker_main
+
+            return fast_interchange_worker_main()
         if args.document_intelligence_worker:
             from legal.document_intelligence.worker import main as document_worker_main
 

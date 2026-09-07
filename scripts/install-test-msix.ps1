@@ -1,11 +1,13 @@
 param(
   [string]$RepoRoot = "",
   [string]$PackagePath = "",
-  [string]$CertificatePath = ""
+  [string]$CertificatePath = "",
+  [switch]$IsolatedTestEnvironment
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if (-not $IsolatedTestEnvironment) { throw "Installation qualification requires an explicitly isolated Windows user, Sandbox, or disposable VM. The real Store installation must not be changed." }
 
 function Test-IsAdministrator {
   $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -17,13 +19,10 @@ if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
 if (-not $PackagePath) {
-  $PackagePath = Join-Path $RepoRoot "dist\release\v7.0.0\msix\MaineFamilyLawLLM_7.0.0.0_x64.msix"
+  throw "An explicit exact candidate -PackagePath is required; no historical package is selected automatically."
 }
-if (-not $CertificatePath) {
-  $certHint = Join-Path $RepoRoot "dist\store\msix\dev-certificate-path.txt"
-  if (Test-Path -LiteralPath $certHint) {
-    $CertificatePath = (Get-Content -Path $certHint -Raw).Trim()
-  }
+if (-not (Test-Path -LiteralPath $PackagePath -PathType Leaf)) {
+  throw "The exact candidate package does not exist."
 }
 
 if ($CertificatePath -and (Test-Path -LiteralPath $CertificatePath)) {

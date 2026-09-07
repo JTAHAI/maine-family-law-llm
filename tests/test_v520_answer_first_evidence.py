@@ -66,7 +66,9 @@ def test_source_preview_becomes_large_centered_modal_when_pinned() -> None:
     js = read_workbench_asset("workbench.js")
     assert "sourcePreviewFlyout.setAttribute('aria-modal', sourcePreviewPinned ? 'true' : 'false')" in js
     assert "document.body.classList.toggle('source-preview-open', sourcePreviewPinned)" in js
-    assert "event.key === 'Tab' && sourcePreviewPinned" in js
+    assert "openOverlay(sourcePreviewFlyout)" in js
+    assert "const activeOverlay = activeManagedOverlay();" in js
+    assert "const focusable = overlayFocusableElements(activeOverlay);" in js
 
 
 def test_help_copy_describes_inline_evidence_as_primary_path() -> None:

@@ -325,7 +325,9 @@ def render_legacy_answer(contract: dict[str, Any]) -> str:
     appendices or duplicate generic sections in the chat UI.
     """
 
-    if contract.get("response_kind") in {"local_search_results", "source_card_followup", "ui_command"}:
+    if contract.get("response_kind") in {
+        "local_search_results", "source_card_followup", "ui_command", "local_help_fast_path",
+    }:
         return str(contract.get("what_this_means") or "").strip() or "No result was returned."
 
     style = str(contract.get("answer_style") or "plain_language")
@@ -566,7 +568,9 @@ def build_family_answer_contract(
     elif not meaning:
         meaning = "The available sources did not establish a substantive answer."
 
-    if response_kind in {"local_search_results", "source_card_followup", "ui_command"}:
+    if response_kind in {
+        "local_search_results", "source_card_followup", "ui_command", "local_help_fast_path",
+    }:
         now, next_steps, gather, missing, child_impact, human_help = [], [], [], [], [], []
 
     suggested_questions = _clean_lines(follow_up_questions)

@@ -52,7 +52,8 @@ class LocalAgentSourceReference(BaseModel):
 
 class LocalAgentContextService:
     def __init__(
-        self, *, authority: AuthorityProductService, record_loader: Callable[[str], dict[str, Any]]
+        self, *, record_loader: Callable[[str], dict[str, Any]],
+        authority: AuthorityProductService | None = None,
     ):
         self.authority = authority
         self.record_loader = record_loader
@@ -61,10 +62,14 @@ class LocalAgentContextService:
         if not ids:
             return {}
         try:
-            active = self.authority._active_product(verify_all=True)
-            manifest_hash = self.authority._sha256_file(active.manifest_path)
+            # Private-record contexts must not initialize an unrelated authority
+            # store. Resolve it only for legal references, retaining every trust
+            # and freshness boundary when that lane is actually requested.
+            authority = self.authority if self.authority is not None else AuthorityProductService()
+            active = authority._active_product(verify_all=True)
+            manifest_hash = authority._sha256_file(active.manifest_path)
             matches: dict[str, list[dict[str, Any]]] = {source_id: [] for source_id in ids}
-            for raw in self.authority._iter_active_parsed_rows(active):
+            for raw in authority._iter_active_parsed_rows(active):
                 names = {str(raw.get("record_id") or ""), str(raw.get("source_id") or "")}
                 for source_id in ids & names:
                     matches[source_id].append(raw)

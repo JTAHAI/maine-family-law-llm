@@ -191,7 +191,7 @@ class ProductionPromotionGateAuditor:
             )
 
         networked = NetworkedSourceGateAuditor(self.repo_root, self.data_root).audit().as_dict()
-        if networked.get("status") != "pass" or networked.get("production_legal_ready") is not True:
+        if networked.get("status") != "pass" or networked.get("networked_source_ready") is not True:
             blockers.append("networked_source_gate_not_passed")
             findings.append(
                 ProductionPromotionFinding(

@@ -1,0 +1,117 @@
+{
+  "schema_version": "release_feature_truth_v1",
+  "release": {
+    "product_version": "8.0.2",
+    "package_version": "8.0.2.0",
+    "release_scope": "configs/v802_release_scope.json",
+    "status": "pending_current_package_verification",
+    "review_required": true,
+    "local_only": true
+  },
+  "evidence": {
+    "full_regression": {
+      "status": "pass_for_prior_source_snapshot",
+      "path": "dist/qa801/ga-specialists-20260902/full-regression-final-r2/summary.json",
+      "source_snapshot_sha256": "4e4f486a96f737540004243777ed9c3d254931c8dd302a994283e7715373b297",
+      "current_tree_bound": false
+    },
+    "frozen_runtime": {
+      "status": "source_smoke_only",
+      "current_package_bound": false
+    },
+    "msix": {
+      "status": "not_built_for_current_scope",
+      "current_package_sha256": ""
+    }
+  },
+  "legacy_reachable_feature_ids": [
+    "slice_21_matter_intake",
+    "slice_22_operative_order",
+    "slice_23_service_notice_deadlines",
+    "slice_24_docket_mrecs",
+    "slice_25_discovery_disclosure",
+    "slice_26_exhibit_binder",
+    "slice_27_witness_statements",
+    "slice_28_hearing_preparation",
+    "slice_29_appellate_preservation",
+    "slice_30_uccjea_review",
+    "slice_31_icwa_review",
+    "slice_32_guardianship_adoption_probate",
+    "slice_33_protection_safety_resources",
+    "slice_34_parenting_schedule_logistics",
+    "slice_35_mediation_negotiation",
+    "slice_36_property_debt_valuation",
+    "slice_37_modification_circumstances",
+    "slice_38_foaa_requests",
+    "slice_39_filing_mrecs_readiness",
+    "slice_40_image_evidence",
+    "slice_41_email_integrity",
+    "slice_42_reviewer_handoff",
+    "slice_43_language_access",
+    "slice_44_resource_navigator",
+    "capability_45_smart_matter_inbox",
+    "capability_46_saved_workflow_recipes",
+    "capability_47_local_media_transcription",
+    "capability_48_calendar_interoperability",
+    "capability_49_hardware_optimizer",
+    "capability_50_research_pinboard",
+    "capability_51_redaction_studio",
+    "capability_52_matter_next_actions",
+    "capability_53_courtroom_presentation",
+    "capability_54_encrypted_automatic_backup",
+    "capability_55_native_whisper_transcription",
+    "capability_56_ocr_correction_studio",
+    "capability_57_universal_communications_importer",
+    "capability_58_evidence_relationship_graph",
+    "capability_59_local_model_manager",
+    "capability_60_court_form_autofill",
+    "capability_61_advanced_table_extraction",
+    "capability_62_financial_document_intelligence",
+    "capability_63_semantic_order_comparison",
+    "capability_64_authority_update_center",
+    "capability_65_guided_legal_research_builder",
+    "capability_66_evidence_annotation_studio",
+    "capability_67_local_automation_scheduler",
+    "capability_68_secure_reviewer_collaboration",
+    "capability_69_matter_template_library",
+    "capability_70_conflict_entity_resolver",
+    "capability_71_desktop_notification_center",
+    "capability_72_courtroom_bundle_exporter",
+    "capability_73_voice_drafting_commands",
+    "capability_74_extension_sdk_permission_center"
+  ],
+  "current_store_claim_feature_ids": [],
+  "feature_status": "legacy_reachable_pending_current_package_verification",
+  "required_feature_evidence": [
+    "canonical_api_route_and_matter_scope",
+    "production_desktop_ui_entry_and_meaningful_action",
+    "source_or_artifact_drilldown",
+    "visible_review_required_status",
+    "focused_and_adversarial_tests",
+    "current_frozen_runtime_reachability",
+    "exact_msix_asset_and_privacy_qualification"
+  ],
+  "unavailable_features": [
+    {
+      "id": "mfl-evidence-review-research-r0013",
+      "status": "blocked",
+      "reason": "Frozen unfamiliar-wording quality gate did not pass; the candidate is not production-admitted."
+    },
+    {
+      "id": "mfl-drafting-research-r0003",
+      "status": "blocked",
+      "reason": "Frozen quality gate did not pass; the candidate is not production-admitted."
+    },
+    {
+      "id": "mfl-fast-interchange-workflow-r0004",
+      "status": "blocked",
+      "reason": "Fictional workflow adapter; no substantive legal evaluation or production admission."
+    }
+  ],
+  "release_blockers": [
+    "current_source_regression_required",
+    "exact_frozen_runtime_qualification_required",
+    "exact_msix_build_and_private_data_audit_required",
+    "isolated_install_offline_upgrade_and_wack_qualification_required"
+  ]
+}

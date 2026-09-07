@@ -5,6 +5,8 @@
   "decision": "PACKAGE_CANDIDATE_PENDING_VERIFICATION",
   "release_type": "maintenance",
   "existing_feature_scope_reference": "configs/v800_release_scope.json",
+  "canonical_feature_truth_manifest": "configs/release_feature_truth.json",
+  "public_feature_claims_status": "pending_current_package_verification",
   "new_public_feature_ids": [],
   "new_bundled_legal_model_ids": [],
   "model_import_requires_production_admission": true,
@@ -16,6 +18,14 @@
     {
       "id": "mfl-fast-interchange-workflow-r0004",
       "reason": "Fictional workflow adapter candidate; no substantive legal evaluation or production admission."
+    },
+    {
+      "id": "mfl-evidence-review-research-r0013",
+      "reason": "Frozen unfamiliar-wording quality gate did not pass; production admission remains false."
+    },
+    {
+      "id": "mfl-drafting-research-r0003",
+      "reason": "Frozen quality gate did not pass; production admission remains false."
     }
   ],
   "storage_schema_change": false,

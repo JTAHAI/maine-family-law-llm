@@ -21,10 +21,10 @@ def build_evidence() -> dict:
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and str(path).startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
     endpoint_report = EndpointInventory().compare_to_registered(registered, surface="production")
-    openapi_report = OpenAPICompletionAuditor().audit(app.openapi()).as_dict()
+    openapi_report = OpenAPICompletionAuditor().audit(app.openapi(), surface="production").as_dict()
     ui_report = UICompletionAuditor(ROOT / "app/web/pages").audit().as_dict()
     policy = APICompletionPolicy().evidence().as_dict()
     status = "pass" if endpoint_report["status"] == openapi_report["status"] == ui_report["status"] == "pass" else "fail"

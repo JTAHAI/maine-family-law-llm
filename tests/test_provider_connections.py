@@ -491,7 +491,7 @@ def test_provider_api_endpoints_are_registered() -> None:
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and str(path).startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
     report = EndpointInventory().compare_to_registered(registered)
     assert report["status"] == "pass", report

@@ -1,3 +1,12 @@
+## v8.0.2 — Chat and Windows packaging reliability
+
+- Product version: 8.0.2. Microsoft Store package target: 8.0.2.0.
+- Keeps private-record chat usable when the optional official-authority collection is unavailable; authority references still require full source validation.
+- Preserves Both-source and Child Impact Lens defaults, collapsible views, keyboard access, and review-required source inspection.
+- Runs one frozen-runtime smoke per package build and removes its owned fictional profile afterward.
+- New research specialist models remain excluded. Installation, WACK, legal-quality and Enterprise qualification are not inferred from a successful build.
+- Full details: [8.0.2 release notes](RELEASE_NOTES_v8.0.2.md).
+
 ## v8.0.1 — Maintenance and specialist integration safeguards
 
 - Product version: 8.0.1. Microsoft Store package target: 8.0.1.0.

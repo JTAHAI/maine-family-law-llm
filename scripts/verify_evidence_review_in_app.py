@@ -1,9 +1,17 @@
-"""Real r0003 inference in the production workbench, isolated fictional QA only.
+"""Real Evidence Review or Drafting inference in the production workbench.
 
 The sole test seam is operator registry selection: an ephemeral TEST key signs
 a DEVELOPMENT grant. Production admission is deliberately not created. All
 routes, record tokens, context approval, auditing and UI assets are unchanged.
-No real matters, training jobs, GPU devices, or source pack files are modified.
+No real matters, training jobs, GPU state, or source pack files are modified.
+
+The default verification path requires an independently reproducible local
+research-quality result.  ``--bounded-fictional-research`` is narrower: it is
+only for a known-unqualified Evidence Review candidate running against the
+script's built-in fictional records.  It proves that the production host
+withholds every unverified model word and reconstructs only exact record
+excerpts.  It never turns a failed quality result into a user, legal, client
+matter, package, or production admission.
 """
 from __future__ import annotations
 
@@ -13,6 +21,7 @@ import json
 import os
 import secrets
 import socket
+import sys
 import tempfile
 import threading
 import time
@@ -23,6 +32,8 @@ from importlib.metadata import version
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def save(path, value):
@@ -36,8 +47,102 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def test_registry(pack, out):
+def require_fixed_worker_port(port=8105):
+    """Use the exact production UI endpoint; never silently test a different port."""
+    with socket.socket() as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError as exc:
+            raise RuntimeError("fast_interchange_worker_port_unavailable") from exc
+    return port
+
+
+def _quality_disclosure(
+    quality: dict,
+    manifest: dict,
+    release,
+    *,
+    capability: str,
+    bounded_fictional_research: bool,
+    pack_manifest_path: Path | None = None,
+) -> dict:
+    """Describe the exact test boundary without creating an admission.
+
+    A false quality gate is never accepted by the normal E2E path.  The
+    optional bounded path exists solely to regression-test the host's
+    deterministic Evidence Review output filter with a real, unqualified
+    candidate.  It is intentionally unavailable to Drafting and refuses any
+    pack that claims legal or production use.
+    """
+
+    if not bounded_fictional_research:
+        from scripts.run_mfl_specialist_regression import MINIMUM_FROZEN_CASES
+        from scripts.summarize_mfl_specialist_quality import require_quality_evidence, sha256_file
+
+        if pack_manifest_path is None:
+            raise ValueError("specialist_pack_manifest_path_required")
+        require_quality_evidence(
+            quality,
+            capability=capability,
+            pack_manifest_sha256=sha256_file(pack_manifest_path),
+            release_fingerprint=release.release_fingerprint,
+            minimum_cases=MINIMUM_FROZEN_CASES[capability],
+        )
+        if (
+            quality.get("decision") != "LOCAL_RESEARCH_QUALITY_PASS"
+            or quality.get("attorney_reviewed") is not False
+            or quality.get("production_admitted") is not False
+        ):
+            raise ValueError("specialist_quality_report_required")
+        mode = "fictional_UI_test_only"
+    else:
+        # This is deliberately a one-capability output-filter regression.  It
+        # cannot be expanded to a fluent Drafting test or to a candidate that
+        # represents itself as having legal, client-matter, or product status.
+        if (
+            capability != "evidence_review"
+            or release.capability != "evidence_review"
+            or manifest.get("scope")
+            != "fictional_evidence_handling_research_only_not_substantive_legal_knowledge"
+            or manifest.get("product_admission")
+            != "not_supplied; use only explicit offline research diagnostics"
+            or manifest.get("production_admitted") is not False
+            or manifest.get("attorney_reviewed") is not False
+            or quality.get("quality_gate_passed") is not False
+            or quality.get("legal_use_approved") is not False
+            or quality.get("runnable_research_only") is not True
+        ):
+            raise ValueError("bounded_fictional_research_profile_required")
+        mode = "bounded_fictional_research_verifier_only"
+
+    return {
+        "scope": mode,
+        "model_id": release.model_id,
+        "capability": capability,
+        "attorney_approval": False,
+        "production_admission": False,
+        "legal_use_approved": False,
+        "quality_gate_passed": quality.get("quality_gate_passed") is True,
+        "runnable_research_only": quality.get("runnable_research_only") is True,
+        "raw_model_narrative_visible": False,
+        "client_matter_use": False,
+        "package_qualification": False,
+        "diagnostic_attempts": int(quality.get("adapter_case_attempts") or 0),
+        "diagnostic_semantic_passes": int(quality.get("aggregate_semantic_passes") or 0),
+        "quality_observed_at": str(quality.get("observed_at") or "not_supplied"),
+    }
+
+
+def test_registry(
+    pack,
+    out,
+    quality_report=None,
+    *,
+    capability="evidence_review",
+    bounded_fictional_research=False,
+):
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     from legal.fast_interchange.admission import AdmissionAuthority, canonical, digest
     from legal.fast_interchange.worker import HotSwapRegistry
     from legal.security.strict_json import strict_json_load_path
@@ -46,16 +151,23 @@ def test_registry(pack, out):
         return strict_json_load_path(pack / name, max_bytes=2 * 1024**2, require_object=True)
 
     manifest, releases, artifacts = read("pack-manifest.json"), read("releases.json"), read("artifacts.json")
-    if (manifest.get("capabilities") != ["evidence_review"] or manifest.get("production_admitted") is not False
+    capabilities = manifest.get("capabilities")
+    if (not isinstance(capabilities, list) or capability not in capabilities
+            or any(item not in {"evidence_review", "drafting"} for item in capabilities)
+            or manifest.get("production_admitted") is not False
             or digest(releases) != manifest["release_registry_sha256"]
             or digest(artifacts) != manifest["artifact_registry_sha256"]):
         raise ValueError("evidence_pack_contract_or_digest_invalid")
-    if len(releases["releases"]) != 1:
-        raise ValueError("evidence_single_model_required")
+    matching = [item for item in releases["releases"] if item.get("capability") == capability]
+    if len(matching) != 1 or len(releases["releases"]) not in {1, 2}:
+        raise ValueError("specialist_pack_capability_mismatch")
     # Derived in memory ONLY. Never edit or promote the source release registry.
-    releases["releases"][0]["admission"] = "admitted_for_dev"
+    matching[0]["admission"] = "admitted_for_dev"
     registry = HotSwapRegistry.from_dicts(root=pack, releases=releases, artifacts=artifacts)
-    release = next(iter(registry.releases.values()))
+    selected = [item for item in registry.releases.values() if item.capability == capability]
+    if len(selected) != 1:
+        raise ValueError("specialist_pack_capability_mismatch")
+    release = selected[0]
     now = datetime.now(UTC)
     past, future = (now - timedelta(minutes=1)).isoformat(), (now + timedelta(hours=2)).isoformat()
     key = Ed25519PrivateKey.generate()
@@ -65,8 +177,15 @@ def test_registry(pack, out):
             "not_before": past, "expires_at": future, "test_only": True}},
         "revoked_key_ids": [], "revoked_release_ids": [], "approved_download_origins": []}
     save(out / "test-trust.json", trust)
-    disclosure = {"scope": "fictional_UI_test_only", "attorney_approval": False,
-                  "production_admission": False, "prior_quality": "6/12 source-project cases passed"}
+    quality = quality_report or {}
+    disclosure = _quality_disclosure(
+        quality,
+        manifest,
+        release,
+        capability=capability,
+        bounded_fictional_research=bounded_fictional_research,
+        pack_manifest_path=pack / "pack-manifest.json",
+    )
     save(out / "test-scope.json", disclosure)
     grant = {"release_id": release.release_id, "model_id": release.model_id,
         "capability": release.capability, "release_fingerprint": release.release_fingerprint,
@@ -133,6 +252,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pack-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--quality-report", type=Path, required=True)
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
+    parser.add_argument(
+        "--capability",
+        choices=("evidence_review", "drafting"),
+        default="evidence_review",
+    )
+    parser.add_argument(
+        "--bounded-fictional-research",
+        action="store_true",
+        help=(
+            "Run only the Evidence Review verifier-mediated fictional-data harness for an "
+            "otherwise unqualified research pack; never enables client, legal, package, or "
+            "production use."
+        ),
+    )
     args = parser.parse_args()
     out = args.output.resolve()
     if not out.is_relative_to((ROOT / "dist").resolve()) or out.exists():
@@ -151,24 +286,71 @@ def main():
     os.environ["MFL_AUTHORITY_DATA_ROOT"] = str(ROOT.parent / "MFL-unconfigured-authority-read-only")
     os.environ["MFL_CASE_LIBRARY_PATH"] = str(out / "case-library.json")
     os.environ["HF_HUB_OFFLINE"] = os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    if args.device == "cpu":
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    elif args.device == "cuda":
+        # The desktop host can inherit a restrictive CUDA_VISIBLE_DEVICES
+        # setting.  This isolated QA command is explicitly requesting the
+        # machine's locally installed CUDA runtime, so expose it before the
+        # runtime capability probe imports Torch.  The probe maps the driver
+        # inventory to Torch's own index by UUID; do not pass a Windows device
+        # number through as though it were a Torch index.
+        os.environ.pop("CUDA_VISIBLE_DEVICES", None)
     os.environ["MAINE_FAST_INTERCHANGE_WORKER_TOKEN"] = secrets.token_hex(32)
     os.environ["MFL_RUNTIME_MODE"] = "store"
     for key in tuple(os.environ):
         if key.startswith("MFL_FAST_INTERCHANGE_"):
             os.environ.pop(key)
-    registry, release = test_registry(args.pack_root.resolve(strict=True), out)
+    quality_report = None
+    if args.quality_report is not None:
+        from legal.security.strict_json import strict_json_load_path
+        quality_report = strict_json_load_path(
+            args.quality_report.resolve(strict=True), max_bytes=2 * 1024**2,
+            require_object=True,
+        )
+    registry, release = test_registry(
+        args.pack_root.resolve(strict=True), out, quality_report=quality_report,
+        capability=args.capability,
+        bounded_fictional_research=args.bounded_fictional_research,
+    )
     seed_matter(out)
     from legal.fast_interchange import host
+    from legal.fast_interchange.hardware import assess_specialist_hardware, installed_torch_runtime
+    from legal.fast_interchange.host import release_identity
+    from legal.model_orchestration.hardware import profile_hardware
+
     host.load_operator_registry = lambda: registry  # explicit isolated test-key seam
-    from legal.fast_interchange.worker import HotSwapManager, create_worker_app
-    from legal.fast_interchange.process_backend import IsolatedAdapterBackend
     import uvicorn
+
+    from legal.fast_interchange.process_backend import IsolatedAdapterBackend
+    from legal.fast_interchange.worker import HotSwapManager, create_worker_app
     from maine_family_law_llm.api import app
 
-    backend = IsolatedAdapterBackend(allow_cpu=True, force_cpu=True, cpu_threads=4)
+    identity = release_identity(registry, release)
+    readiness = assess_specialist_hardware(
+        profile_hardware(out).as_dict(),
+        identity.get("compatibility") or {},
+        runtime=installed_torch_runtime(),
+    )
+    if readiness["blockers"]:
+        raise RuntimeError("fast_interchange_hardware_not_ready")
+    accelerator = (
+        readiness.get("execution_accelerator")
+        or readiness.get("recommended_accelerator")
+        or {}
+    )
+    if args.device == "cuda" and accelerator.get("kind") != "gpu":
+        raise RuntimeError("fast_interchange_cuda_runtime_not_ready")
+    force_cpu = args.device == "cpu" or accelerator.get("kind") == "cpu"
+    cuda_device = int(accelerator.get("index") or 0)
+    backend = IsolatedAdapterBackend(
+        allow_cpu=True,
+        force_cpu=force_cpu,
+        cuda_device=cuda_device,
+        cpu_threads=4,
+    )
     manager = HotSwapManager(registry=registry, backend=backend)
-    port, worker_port = free_port(), free_port()
+    port, worker_port = free_port(), require_fixed_worker_port()
     worker = create_worker_app(manager=manager, registry=registry, worker_token=os.environ["MAINE_FAST_INTERCHANGE_WORKER_TOKEN"])
     worker_server = uvicorn.Server(uvicorn.Config(worker, host="127.0.0.1", port=worker_port, log_level="warning"))
     worker_thread = threading.Thread(target=worker_server.run, daemon=True)
@@ -192,10 +374,18 @@ def main():
                 return Response(raw, status_code=response.status_code, headers=dict(response.headers), media_type=response.media_type)
             return response
     app.add_middleware(EvidenceRecorder)
-    descriptor = {"level": "production_source_UI_and_API_real_weights_ephemeral_development_test_key",
+    descriptor = {"level": "production_UI_canonical_API_real_weights_ephemeral_development_test_key",
         "url": f"http://127.0.0.1:{port}", "worker_endpoint": f"http://127.0.0.1:{worker_port}",
-        "model": release.model_id, "capability": "evidence_review", "device": "cpu", "cpu_threads": 4,
-        "frozen_app": "not_tested", "production_admitted": False, "fictional_only": True}
+        "model": release.model_id, "capability": args.capability,
+        "device_requested": args.device,
+        "device_selected": "cpu" if force_cpu else f"cuda:{cuda_device}",
+        "hardware_readiness": readiness,
+        "cpu_threads": 4,
+        "frozen_app": "not_tested", "production_admitted": False, "fictional_only": True,
+        "test_mode": (
+            "bounded_fictional_research_verifier_only"
+            if args.bounded_fictional_research else "fictional_UI_test_only"
+        )}
     save(out / "launch.json", descriptor)
     print(json.dumps(descriptor), flush=True)
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))

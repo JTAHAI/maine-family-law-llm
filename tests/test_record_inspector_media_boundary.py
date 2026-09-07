@@ -87,6 +87,7 @@ const localRequestHeaders=()=>headers;
 const makeSafeLocalError=({code,message})=>Object.assign(new Error(message||code),{safeCode:code});
 const recordToken=b=>/^[a-f0-9]{64}$/i.test(b?.source_token||'')?b.source_token:'';
 const closeSourcePreview=()=>{},showToast=()=>{},trackRecentWorkRecord=()=>{};
+const openOverlay=e=>{e.hidden=false},closeOverlay=e=>{e.hidden=true};
 const renderRecordInspector=(p,url='')=>{recordInspectorState=p;rendered.push({p,url})};
 const payload={token,open_url:'/api/records/open/'+token+'?page=1',preview_url:'/api/records/preview/'+token+'?page=1',page:1,source_hash:hash,
     source_hash_verified:true,viewer_kind:'image',size_bytes:bytes.length};

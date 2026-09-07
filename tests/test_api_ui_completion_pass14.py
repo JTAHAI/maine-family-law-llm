@@ -9,7 +9,7 @@ def test_pass14_required_api_endpoints_are_registered():
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and path.startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and path.startswith("/api"):
                 registered.add((method, path))
 
     report = EndpointInventory().compare_to_registered(registered)

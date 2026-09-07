@@ -6,6 +6,8 @@ param(
   [switch]$Offline,
   [switch]$SkipRuntimeSmoke,
   [switch]$DebugConsole,
+  [string]$SpecialistPackRoot = "",
+  [string]$SpecialistTrustPath = "",
   [ValidateSet("essential", "full")]
   [string]$FeatureTier = "essential"
 )
@@ -56,6 +58,65 @@ function Resolve-TesseractRoot {
     }
   }
   throw "Bundled Tesseract source was not found on this build machine."
+}
+
+function Copy-TesseractRuntime([string]$SourceRoot, [string]$DestinationRoot) {
+  # The installed Tesseract directory also contains training, classifier, and
+  # maintenance executables. They are not needed to OCR a user's document and
+  # must not become hidden product functionality or dead package weight.
+  # Copy only the executable, native runtime libraries, English/orientation
+  # language data, and the tiny runtime configuration files used by OCRmyPDF.
+  New-Item -ItemType Directory -Force -Path $DestinationRoot | Out-Null
+
+  $requiredRootFiles = @("tesseract.exe")
+  foreach ($name in $requiredRootFiles) {
+    $source = Join-Path $SourceRoot $name
+    if (-not (Test-Path -LiteralPath $source)) {
+      throw "Required Tesseract runtime file is missing: $name"
+    }
+    Copy-Item -LiteralPath $source -Destination (Join-Path $DestinationRoot $name) -Force
+  }
+  Get-ChildItem -LiteralPath $SourceRoot -File -Filter "*.dll" | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $DestinationRoot $_.Name) -Force
+  }
+
+  $sourceData = Join-Path $SourceRoot "tessdata"
+  $destinationData = Join-Path $DestinationRoot "tessdata"
+  New-Item -ItemType Directory -Force -Path $destinationData | Out-Null
+  foreach ($name in @("eng.traineddata", "osd.traineddata", "eng.user-patterns", "eng.user-words", "pdf.ttf")) {
+    $source = Join-Path $sourceData $name
+    if (Test-Path -LiteralPath $source) {
+      Copy-Item -LiteralPath $source -Destination (Join-Path $destinationData $name) -Force
+    }
+  }
+  foreach ($directory in @("configs", "tessconfigs")) {
+    $source = Join-Path $sourceData $directory
+    if (-not (Test-Path -LiteralPath $source)) {
+      throw "Required Tesseract runtime configuration directory is missing: $directory"
+    }
+    Copy-Item -LiteralPath $source -Destination (Join-Path $destinationData $directory) -Recurse -Force
+  }
+
+  foreach ($required in @(
+    "tesseract.exe",
+    "tessdata\\eng.traineddata",
+    "tessdata\\osd.traineddata",
+    "tessdata\\configs\\pdf",
+    "tessdata\\configs\\hocr"
+  )) {
+    if (-not (Test-Path -LiteralPath (Join-Path $DestinationRoot $required))) {
+      throw "Tesseract runtime staging is incomplete: $required"
+    }
+  }
+  $forbidden = @(
+    "lstmtraining.exe", "lstmeval.exe", "mftraining.exe", "cntraining.exe",
+    "text2image.exe", "classifier_tester.exe", "tesseract-uninstall.exe"
+  )
+  foreach ($name in $forbidden) {
+    if (Test-Path -LiteralPath (Join-Path $DestinationRoot $name)) {
+      throw "Tesseract runtime staging included a forbidden development tool: $name"
+    }
+  }
 }
 
 function Ensure-SpacyModel([string]$PythonPath) {
@@ -112,6 +173,7 @@ $specPath = Join-Path $RepoRoot "store\pyinstaller\maine_family_law_llm.spec"
 $pyiDistRoot = Join-Path $OutputRoot "pyinstaller"
 $pyiWorkRoot = Join-Path $OutputRoot "build"
 $runtimeRoot = Join-Path $OutputRoot "runtime"
+$specialistValidationPath = Join-Path $buildTemp "bundled-specialist-validation.json"
 
 Stop-StoreRuntimeProcesses $runtimeRoot
 
@@ -141,6 +203,33 @@ if ($Offline) {
   }
 }
 
+& $venvPython -B (Join-Path $RepoRoot "scripts\check-dependency-security.py") --include-build --strict-optional
+if ($LASTEXITCODE -ne 0) { throw "Store dependency security floors failed; no runtime was built." }
+
+if ($SpecialistPackRoot) {
+  if ($FeatureTier -ne "full") {
+    throw "Bundled specialists require -FeatureTier full."
+  }
+  $SpecialistPackRoot = [System.IO.Path]::GetFullPath($SpecialistPackRoot)
+  if (-not (Test-Path -LiteralPath $SpecialistPackRoot -PathType Container)) {
+    throw "Bundled specialist pack root was not found."
+  }
+  if (-not $SpecialistTrustPath) {
+    $SpecialistTrustPath = Join-Path $RepoRoot "configs\fast_interchange_admission_trust.json"
+  }
+  $SpecialistTrustPath = [System.IO.Path]::GetFullPath($SpecialistTrustPath)
+  if (-not (Test-Path -LiteralPath $SpecialistTrustPath -PathType Leaf)) {
+    throw "Bundled specialist trust configuration was not found."
+  }
+  $specialistStateRoot = Join-Path $buildTemp "bundled-specialist-validation-state"
+  & $venvPython -B (Join-Path $RepoRoot "scripts\validate_bundled_mfl_specialists.py") `
+    --pack $SpecialistPackRoot --trust $SpecialistTrustPath `
+    --state-root $specialistStateRoot --output $specialistValidationPath
+  if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $specialistValidationPath)) {
+    throw "Bundled specialist release validation failed. No model weights were packaged."
+  }
+}
+
 foreach ($path in @($pyiDistRoot, $pyiWorkRoot, $runtimeRoot)) {
   $path = Resolve-RepoBuildDirectory $path $RepoRoot
   if (Test-Path -LiteralPath $path) {
@@ -152,6 +241,8 @@ New-Item -ItemType Directory -Force -Path $pyiDistRoot, $pyiWorkRoot | Out-Null
 $pyInstallerEnv = @{
   MFL_STORE_DEBUG_CONSOLE = $(if ($DebugConsole) { "1" } else { "0" })
   MFL_STORE_FEATURE_TIER = $FeatureTier
+  MFL_STORE_BUNDLED_SPECIALIST_PACK_ROOT = $SpecialistPackRoot
+  MFL_STORE_BUNDLED_SPECIALIST_VALIDATION = $(if ($SpecialistPackRoot) { $specialistValidationPath } else { "" })
 }
 foreach ($pair in $pyInstallerEnv.GetEnumerator()) {
   [System.Environment]::SetEnvironmentVariable($pair.Key, $pair.Value, "Process")
@@ -168,10 +259,21 @@ $collectedRoot = Resolve-RepoBuildDirectory $collectedRoot $RepoRoot
 # runtime instead of retaining a second multi-gigabyte copy of identical bytes.
 Move-Item -LiteralPath $collectedRoot -Destination $runtimeRoot
 
+# PyInstaller hook data can include third-party test fixtures after the spec's
+# data filter runs. Remove only exact test/cache residue from this newly
+# created, repository-local runtime; write a receipt before any package audit
+# can treat the payload as qualified.
+$evidenceRoot = Join-Path $OutputRoot "evidence"
+New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+& $venvPython -B (Join-Path $RepoRoot "scripts\prune_store_runtime_residue.py") `
+  --runtime-root $runtimeRoot `
+  --receipt (Join-Path $evidenceRoot "store-runtime-residue-prune.json") `
+  --apply
+if ($LASTEXITCODE -ne 0) { throw "Store runtime residue pruning failed; do not package this runtime." }
+
 $tesseractSourceRoot = Resolve-TesseractRoot
 $tesseractRuntimeRoot = Join-Path $runtimeRoot "store\tesseract"
-New-Item -ItemType Directory -Force -Path $tesseractRuntimeRoot | Out-Null
-Copy-Item -Path (Join-Path $tesseractSourceRoot "*") -Destination $tesseractRuntimeRoot -Recurse -Force
+Copy-TesseractRuntime -SourceRoot $tesseractSourceRoot -DestinationRoot $tesseractRuntimeRoot
 
 # Native transcription is part of the essential offline product. Provisioning
 # happens only in repository dist (old offline caches are read-only), verifies hashes,
@@ -220,7 +322,6 @@ if (-not (Test-Path -LiteralPath $runtimeExe)) {
 # later MSIX step can seal an unusable payload.
 if (-not $SkipRuntimeSmoke) {
   $smokeScript = Join-Path $PSScriptRoot "test-store-runtime.ps1"
-  $evidenceRoot = Join-Path $OutputRoot "evidence"
   & powershell -NoProfile -ExecutionPolicy Bypass -File $smokeScript -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
   if ($LASTEXITCODE -ne 0) {
     throw "Frozen Store runtime smoke failed. Do not package this build; inspect $evidenceRoot."

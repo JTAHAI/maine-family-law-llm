@@ -15,7 +15,13 @@ PRIVATE = r"D:\fictional-private\record.txt contains fictional confidential text
 
 
 @pytest.mark.parametrize(
-    "mode", ["--smoke-test", "--serve-local-api", "--document-intelligence-worker"]
+    "mode",
+    [
+        "--smoke-test",
+        "--serve-local-api",
+        "--document-intelligence-worker",
+        "--fast-interchange-worker",
+    ],
 )
 @pytest.mark.parametrize("failure_point", ["context", "configure", "operation"])
 def test_unattended_failures_never_open_desktop_dialogs(
@@ -40,8 +46,10 @@ def test_unattended_failures_never_open_desktop_dialogs(
     else:
         monkeypatch.setattr(entry, "run_local_service", fail)
         monkeypatch.setattr(entry, "_run_smoke_workflow", fail)
-        from legal.document_intelligence import worker
-
+        if mode == "--fast-interchange-worker":
+            from legal.fast_interchange import worker
+        else:
+            from legal.document_intelligence import worker
         monkeypatch.setattr(worker, "main", fail)
     output = tmp_path / "smoke.json"
     args = [mode]
@@ -57,6 +65,18 @@ def test_unattended_failures_never_open_desktop_dialogs(
         assert result["launch_result"] == "fail"
         assert result["error_code"] == "runtime_start_failed"
         assert PRIVATE not in str(result)
+
+
+def test_frozen_entrypoint_dispatches_fast_interchange_without_interactive_ui(monkeypatch):
+    calls = []
+    monkeypatch.setattr(entry, "build_runtime_context", lambda **_kw: object())
+    monkeypatch.setattr(entry, "configure_runtime_environment", lambda context: context)
+    monkeypatch.setattr(entry.tk, "Tk", lambda: pytest.fail("desktop dialog"))
+    from legal.fast_interchange import worker
+
+    monkeypatch.setattr(worker, "main", lambda: calls.append("worker") or 0)
+    assert entry.main(["--fast-interchange-worker"]) == 0
+    assert calls == ["worker"]
 
 
 def test_failed_logging_does_not_mask_unattended_failure(monkeypatch, tmp_path: Path) -> None:
@@ -167,3 +187,10 @@ def test_offline_build_and_isolated_smoke_are_wired_through_canonical_scripts() 
     assert '"mfl-frozen-smoke-"' in smoke and "-WindowStyle Hidden" in smoke
     assert "$env:LOCALAPPDATA = $priorLocalAppData" in smoke
     assert "build-store-runtime.ps1" not in smoke
+
+def test_store_build_checks_security_floors_before_packaging():
+    script = (ROOT / "scripts/build-store-runtime.ps1").read_text(encoding="utf-8")
+    assert "check-dependency-security.py" in script
+    assert "--include-build --strict-optional" in script
+    assert "Store dependency security floors failed; no runtime was built." in script
+    assert script.index("check-dependency-security.py") < script.index("-m PyInstaller")

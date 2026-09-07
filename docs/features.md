@@ -1,15 +1,15 @@
 ---
 layout: default
-title: v8 Feature Catalog
-description: Complete verified capability catalog for the Maine Family Law LLM v8 local-first workbench.
+title: v8 Source Capability Catalog
+description: Historical source capability catalog for the Maine Family Law LLM v8 local-first workbench.
 permalink: /features/
 ---
 
 <section class="page-hero">
   <div class="shell">
-    <div class="eyebrow">Current source release · v8.0.0</div>
-    <h1>The complete v8 capability catalog.</h1>
-    <p class="lead">The v8 source contains 16 verified core workflows, 24 verified specialized workbenches, 10 Matter Productivity Studio capabilities, and 20 verified Add-on Studio verticals. Each public capability has a production UI, protected local API, source drill-down, review boundary, and focused tests.</p>
+    <div class="eyebrow">Historical source catalog · current package revalidation pending</div>
+    <h1>The v8 source capability catalog.</h1>
+    <p class="lead">This page records prior source acceptance. It is not current Store listing copy: the canonical release ledger requires a current source regression, exact frozen runtime, and exact MSIX qualification before a capability is claimed for a package.</p>
   </div>
 </section>
 
@@ -17,7 +17,7 @@ permalink: /features/
   <div class="tier-legend" aria-label="Feature readiness legend">
     <span class="tier tier--verified">Verified end to end</span>
     <span>Production path and tests are proven.</span>
-    <span>70 public workflows currently meet this evidence tier in the current source.</span>
+    <span>Use the current release ledger to determine which workflows are eligible for a package claim.</span>
   </div>
 
   <h2>Verified end-to-end core</h2>

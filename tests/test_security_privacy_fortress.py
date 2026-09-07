@@ -15,6 +15,9 @@ from maine_family_law_llm import api as api_module
 def _make_matter_store(tmp_path: Path) -> tuple[Path, Path, MatterStore, Path]:
     project_root = tmp_path / "repo"
     project_root.mkdir()
+    # Keep repository-local QA isolated from the real source root above dist.
+    (project_root / "pyproject.toml").write_text("[project]\nname='fictional-qa'\n")
+    (project_root / "legal").mkdir()
     matter_root = tmp_path / "matter-store"
     store = MatterStore(matter_root, project_root=project_root, encryption_key="unit-test-encryption-key")
     matter = Matter(matter_id="matter-privacy-1", tenant_id="tenant-a", title="Secure matter")

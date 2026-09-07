@@ -376,7 +376,7 @@ def test_eval_api_and_ui_surface_the_review_studio(monkeypatch, tmp_path: Path) 
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and path.startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and path.startswith("/api"):
                 registered.add((method, path))
     endpoints = EndpointInventory().compare_to_registered(registered)
     assert endpoints["status"] == "pass"

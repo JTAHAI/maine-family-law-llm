@@ -15,6 +15,22 @@ FEATURE_TIER = os.environ.get("MFL_STORE_FEATURE_TIER", "essential").strip().low
 if FEATURE_TIER not in {"essential", "full"}:
     raise ValueError(f"unsupported MFL_STORE_FEATURE_TIER: {FEATURE_TIER}")
 FULL_DOCUMENT_INTELLIGENCE = FEATURE_TIER == "full"
+BUNDLED_SPECIALIST_ROOT_TEXT = os.environ.get(
+    "MFL_STORE_BUNDLED_SPECIALIST_PACK_ROOT", ""
+).strip()
+BUNDLED_SPECIALIST_VALIDATION_TEXT = os.environ.get(
+    "MFL_STORE_BUNDLED_SPECIALIST_VALIDATION", ""
+).strip()
+if BUNDLED_SPECIALIST_ROOT_TEXT and not FULL_DOCUMENT_INTELLIGENCE:
+    raise ValueError("bundled specialists require the full Store feature tier")
+BUNDLED_SPECIALIST_ROOT = (
+    Path(BUNDLED_SPECIALIST_ROOT_TEXT).resolve() if BUNDLED_SPECIALIST_ROOT_TEXT else None
+)
+BUNDLED_SPECIALIST_VALIDATION = (
+    Path(BUNDLED_SPECIALIST_VALIDATION_TEXT).resolve()
+    if BUNDLED_SPECIALIST_VALIDATION_TEXT
+    else None
+)
 
 STORE_DOCS = (
     "README_FOR_NONTECHNICAL_USERS.html",
@@ -56,6 +72,30 @@ def collect_installed_package_files(package_name: str, *, destination: str) -> l
     results: list[tuple[str, str]] = []
     for path in root.rglob("*"):
         if not path.is_file() or "__pycache__" in path.parts or path.suffix.lower() == ".pyc":
+            continue
+        relative_parent = path.relative_to(root).parent
+        target = str(Path(destination) / relative_parent).replace("\\", "/")
+        results.append((str(path), target))
+    return results
+
+
+def collect_verified_specialist_files(
+    root: Path, *, destination: str
+) -> list[tuple[str, str]]:
+    """Collect only a pack already accepted by the release validator."""
+
+    if not root.is_dir():
+        raise ValueError("bundled specialist root is not a directory")
+    if BUNDLED_SPECIALIST_VALIDATION is None or not BUNDLED_SPECIALIST_VALIDATION.is_file():
+        raise ValueError("bundled specialist validation receipt is required")
+    required = {"releases.json", "artifacts.json", "admission.json", "pack-manifest.json"}
+    if not required.issubset({path.name for path in root.iterdir() if path.is_file()}):
+        raise ValueError("bundled specialist pack is incomplete")
+    results: list[tuple[str, str]] = []
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("bundled specialist links are forbidden")
+        if not path.is_file():
             continue
         relative_parent = path.relative_to(root).parent
         target = str(Path(destination) / relative_parent).replace("\\", "/")
@@ -107,6 +147,26 @@ def collect_runtime_submodules(package_name: str) -> list[str]:
     return sorted(modules)
 
 
+def include_runtime_data(source: str, destination: str) -> bool:
+    """Keep test and cache trees out of the sealed application payload.
+
+    Several full-tier dependencies ship their own test fixtures as package
+    data.  They are neither executable product assets nor support material,
+    and retaining them would make the package audit fail.  Check both the
+    source and destination parts so a collector cannot hide a test tree under
+    a neutral source root.
+    """
+    for candidate in (Path(source), Path(destination)):
+        parts = candidate.parts
+        if "__pycache__" in parts or any(
+            part == "tests" or part.startswith("test") for part in parts
+        ):
+            return False
+        if candidate.suffix.lower() in {".pyc", ".pyo"}:
+            return False
+    return True
+
+
 datas = [
     (str(ROOT / "assets"), "assets"),
     (str(ROOT / "data"), "data"),
@@ -127,6 +187,11 @@ datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm", des
 datas += collect_source_package_files(ROOT / "legal", destination="src/legal")
 # Collect ui assets without __pycache__ directories
 datas += collect_source_package_files(ROOT / "src" / "maine_family_law_llm" / "ui", destination="maine_family_law_llm/ui")
+if BUNDLED_SPECIALIST_ROOT is not None:
+    datas += collect_verified_specialist_files(
+        BUNDLED_SPECIALIST_ROOT, destination="store/fast-interchange"
+    )
+    datas.append((str(BUNDLED_SPECIALIST_VALIDATION), "store"))
 # ``docx-editor`` resolves its XML/comment templates relative to ``__file__``.
 # PyInstaller's bytecode archive makes the module importable but does not
 # materialize those package-relative files for the frozen executable.  Ship the
@@ -155,12 +220,17 @@ for package_name in ("fastapi", "uvicorn", "httpx", "python-multipart", "pypdf",
 if FULL_DOCUMENT_INTELLIGENCE:
     for package_name in ("docling", "docling-slim", "docling-core", "docling-ibm-models", "docling-parse", "rapidocr", "presidio-analyzer", "tldextract", "ocrmypdf", "spacy", "sqlite-vec", "qdrant-client", "pikepdf", "fpdf2", "uharfbuzz"):
         datas += copy_metadata(package_name)
-    # FAST INTERCHANGE is an optional, external-artifact lane.  Its full-tier
-    # worker must be able to load an independently admitted LoRA adapter with
-    # no installer/download at run time.  These packages contain runtime code
-    # only; legal weights, adapters, registries, and secrets remain external.
+    # FAST INTERCHANGE can use an independently admitted external pack or an
+    # optional release-validated built-in pair. These packages provide the
+    # loader runtime; the build refuses unvalidated weights and all secrets.
     for package_name in ("peft", "accelerate", "safetensors"):
         datas += copy_metadata(package_name)
+
+# ``collect_data_files`` returns package-owned test fixtures too.  Filter only
+# those non-runtime data paths after all collectors have contributed, before
+# PyInstaller seals the collection.  No user matter, authority, model, or
+# build-cache path is permitted here.
+datas = [(source, destination) for source, destination in datas if include_runtime_data(source, destination)]
 
 # python-multipart is discovered by FastAPI at route-registration time rather
 # than through a conventional top-level application import. Include both
@@ -191,7 +261,11 @@ if FULL_DOCUMENT_INTELLIGENCE:
         hiddenimports += collect_runtime_submodules(package_name)
 hiddenimports = sorted(set(hiddenimports))
 
-excluded_packages = ["pytest", "tests", "tkinter.test", "unittest.test"]
+excluded_packages = [
+    "pytest", "tests", "tkinter.test", "unittest.test",
+    "spacy.tests", "thinc.tests", "thinc.extra.tests",
+    "torch.fx.passes.tests", "torch.testing._internal",
+]
 if not FULL_DOCUMENT_INTELLIGENCE:
     excluded_packages += [
         "torch",

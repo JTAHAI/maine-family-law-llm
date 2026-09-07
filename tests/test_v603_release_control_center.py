@@ -180,7 +180,7 @@ def test_release_control_center_endpoint_inventory_includes_status_route() -> No
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and path.startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and path.startswith("/api"):
                 registered.add((method, path))
 
     inventory = EndpointInventory().compare_to_registered(registered)

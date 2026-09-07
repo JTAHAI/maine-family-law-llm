@@ -44,7 +44,8 @@ def test_recovery_filter_and_accessibility_controls_are_shipped() -> None:
     assert "requestAbortReason = 'service_disconnected'" in js
     assert "Local service disconnected. Your draft was restored." in js
     assert "chatPanel?.setAttribute('aria-busy', 'true')" in js
-    assert "!node.closest('[hidden]')" in js
+    assert "node.closest('[hidden], [inert], [aria-hidden=\"true\"]')" in js
+    assert "node.tabIndex >= 0 && renderedInteractionTarget(node)" in js
     assert ".connection-banner" in css
     assert 'body.v6-workbench[data-motion="reduced"]' in css
     assert 'body.v6-workbench[data-screen-reader-mode="true"]' in css

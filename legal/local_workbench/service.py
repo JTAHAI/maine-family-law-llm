@@ -41,6 +41,15 @@ _CONNECTOR_KINDS = frozenset({"calendar", "email", "files", "scanner", "drive", 
 _HANDOFF_ROLES = frozenset({"owner", "reviewer", "viewer", "advisor"})
 _ARTIFACT_SUFFIXES = frozenset({".gguf", ".onnx", ".bin", ".safetensors"})
 _PERFORMANCE_MODES = frozenset({"battery_saver", "balanced", "performance"})
+_STARTING_PATHS = frozenset(
+    {
+        "understand_situation",
+        "organize_records",
+        "prepare_for_court",
+        "prepare_a_draft",
+        "safety_support",
+    }
+)
 _RELEASE_EVIDENCE_STATUSES = frozenset({"pass", "blocked", "review_required"})
 _RELEASE_CONTROLS = frozenset(
     {
@@ -165,6 +174,9 @@ class LocalWorkbenchService:
                 "keyboard_first": True,
                 "screen_reader_mode": False,
                 "voice_enabled": False,
+                # Local navigation preference only; never a legal conclusion,
+                # matter fact, safety finding, or filing state.
+                "starting_path": "understand_situation",
             },
             "privacy": {
                 "network_mode": "local_only",
@@ -669,17 +681,20 @@ class LocalWorkbenchService:
             "keyboard_first",
             "screen_reader_mode",
             "voice_enabled",
+            "starting_path",
         }
         if not isinstance(patch, dict) or set(patch) - allowed:
             raise LocalWorkbenchError("preferences_invalid")
         with exclusive_file_lock(self.lock_path):
             state = self._read()
             for key, value in patch.items():
-                state["preferences"][key] = (
-                    bool(value)
-                    if key in {"keyboard_first", "screen_reader_mode", "voice_enabled"}
-                    else _text(value, key, limit=64)
-                )
+                if key in {"keyboard_first", "screen_reader_mode", "voice_enabled"}:
+                    state["preferences"][key] = bool(value)
+                    continue
+                normalized = _text(value, key, limit=64)
+                if key == "starting_path" and normalized not in _STARTING_PATHS:
+                    raise LocalWorkbenchError("starting_path_invalid")
+                state["preferences"][key] = normalized
             event = self._event(
                 state,
                 "preferences_updated",

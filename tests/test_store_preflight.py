@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import zipfile
 from pathlib import Path
 
 import pytest
 from maine_family_law_llm import store_preflight as preflight_module
 
 from maine_family_law_llm.store_preflight import (
-    DEFAULT_EVIDENCE_ROOT,
-    DEFAULT_MSIX_PATH,
-    DEFAULT_WACK_RESULT,
     build_preflight_report,
     main,
 )
@@ -19,22 +18,38 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(scope="module")
-def preflight_report() -> dict[str, object]:
+def preflight_inputs(tmp_path_factory):
+    # Small explicit negative fixture, not an ignored multi-GB historic build.
+    root = tmp_path_factory.mktemp("preflight-inputs")
+    candidate = root / "fictional-old-candidate.msix"
+    identity = json.loads((REPO_ROOT / "store/msix/identity.example.json").read_text())
+    identity["package_version"] = "8.0.0.0"
+    manifest = (REPO_ROOT / "store/msix/AppxManifest.xml.in").read_text()
+    for name, value in identity.items():
+        manifest = manifest.replace(f"__{name.upper()}__", value)
+    with zipfile.ZipFile(candidate, "w") as archive:
+        archive.writestr("AppxManifest.xml", manifest)
+    evidence = root / "evidence"
+    evidence.mkdir()
+    wack = root / "wack.json"
+    wack.write_text(json.dumps({"status": "blocked", "reason": "synthetic_not_run"}))
+    return candidate, evidence, wack
+
+
+@pytest.fixture(scope="module")
+def preflight_report(preflight_inputs) -> dict[str, object]:
     return build_preflight_report(
         REPO_ROOT,
-        DEFAULT_MSIX_PATH,
-        DEFAULT_EVIDENCE_ROOT,
-        DEFAULT_WACK_RESULT,
+        *preflight_inputs,
     )
 
 
-def test_store_preflight_report_fail_closes_on_missing_qualification_evidence_and_wack(preflight_report: dict[str, object]) -> None:
-    # The retained 8.0.0 package must not satisfy the 8.0.1 release identity.
+def test_store_preflight_report_fail_closes_on_missing_qualification_evidence_and_wack(preflight_report: dict[str, object], preflight_inputs) -> None:
+    # A synthetic old package must not satisfy the current release identity.
     assert preflight_report["manifest_audit"]["status"] == "fail"
     assert preflight_report["manifest_audit"]["issues"] == ["version_mismatch"]
     assert preflight_report["manifest_audit"]["identity"]["Version"] == "8.0.0.0"
-    # This is the retained candidate, not a newly qualified Store artifact.  It
-    # must remain blocked when archive/signature proof is absent or fails.
+    # Missing payload and qualification evidence must remain blockers.
     assert preflight_report["content_audit"]["status"] == "fail"
     assert preflight_report["content_audit"]["issues"]
     assert preflight_report["evidence_audit"]["status"] == "fail"
@@ -42,10 +57,10 @@ def test_store_preflight_report_fail_closes_on_missing_qualification_evidence_an
     assert preflight_report["wack"]["status"] == "blocked"
     assert preflight_report["final_readiness_state"] == "BLOCKED"
     assert len(str(preflight_report["package"]["sha256"])) == 64
-    assert preflight_report["package"]["path"] == str(DEFAULT_MSIX_PATH.resolve())
+    assert preflight_report["package"]["path"] == str(preflight_inputs[0].resolve())
 
 
-def test_store_preflight_cli_writes_expected_evidence(tmp_path, preflight_report: dict[str, object]) -> None:
+def test_store_preflight_cli_writes_expected_evidence(tmp_path, preflight_report: dict[str, object], preflight_inputs) -> None:
     json_path = tmp_path / "store-preflight.json"
     txt_path = tmp_path / "store-preflight.txt"
     exit_code = main(
@@ -53,11 +68,11 @@ def test_store_preflight_cli_writes_expected_evidence(tmp_path, preflight_report
             "--repo-root",
             str(REPO_ROOT),
             "--msix-path",
-            str(DEFAULT_MSIX_PATH),
+            str(preflight_inputs[0]),
             "--evidence-root",
-            str(DEFAULT_EVIDENCE_ROOT),
+            str(preflight_inputs[1]),
             "--wack-result",
-            str(DEFAULT_WACK_RESULT),
+            str(preflight_inputs[2]),
             "--output-json",
             str(json_path),
             "--output-txt",
@@ -138,3 +153,49 @@ def test_unreadable_wack_result_fails_closed(tmp_path, payload):
     parsed = preflight_module._parse_wack_result(result, candidate_msix_path=tmp_path / "candidate.msix")
     assert parsed["status"] == "blocked"
     assert parsed["validation_issues"] == ["result_unreadable"]
+
+
+def _archive_fixture(tmp_path, extra=()):
+    candidate = tmp_path / "synthetic.msix"
+    with zipfile.ZipFile(candidate, "w") as archive:
+        for name in sorted(preflight_module.REQUIRED_TOP_LEVEL_FILES):
+            archive.writestr(name, "synthetic-structure-only")
+        archive.writestr("LICENSE", "fictional")
+        for name in extra:
+            archive.writestr(name, "fictional")
+    return candidate
+
+
+def test_unsigned_store_archive_does_not_require_private_signing_certificate(tmp_path, monkeypatch):
+    def unexpected_tool(_name):
+        raise AssertionError("Unsigned Store submission must not invoke signtool")
+
+    monkeypatch.setattr(preflight_module, "_find_sdk_tool", unexpected_tool)
+    report = preflight_module.audit_archive(_archive_fixture(tmp_path))
+    assert report["status"] == "pass"
+    assert report["signature_state"] == "unsigned_store_signing_pending"
+    assert report["signing_scope"] == "microsoft_store_submission_not_sideload_installation"
+
+
+@pytest.mark.parametrize("outcome", ["unavailable", "invalid", "untrusted", "valid"])
+def test_present_signature_requires_successful_verification(tmp_path, monkeypatch, outcome):
+    monkeypatch.setattr(
+        preflight_module, "_find_sdk_tool",
+        lambda _name: None if outcome == "unavailable" else "fictional-signtool",
+    )
+    monkeypatch.setattr(
+        preflight_module.subprocess, "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(
+            args, 0 if outcome == "valid" else 1,
+            "not trusted" if outcome == "untrusted" else "", "",
+        ),
+    )
+    report = preflight_module.audit_archive(_archive_fixture(tmp_path, ["AppxSignature.p7x"]))
+    assert report["status"] == ("pass" if outcome == "valid" else "fail")
+
+
+@pytest.mark.parametrize("entry", ["/outside.txt", "\\outside.txt", "../outside.txt", "C:/outside.txt"])
+def test_archive_checks_original_path_before_normalization(tmp_path, entry):
+    report = preflight_module.audit_archive(_archive_fixture(tmp_path, [entry]))
+    assert report["status"] == "fail"
+    assert "path_traversal_or_ads" in report["issues"]

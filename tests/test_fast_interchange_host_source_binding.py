@@ -554,4 +554,4 @@ def test_production_ui_posts_references_and_single_use_approval_not_source_prose
             and "source_cards: localAgentSourceCards" not in local_flow
         )
         assert "Exact source text supplied to the model" in local_flow
-        assert "citations: result.citations || []" in local_flow
+        assert "citations: localAgentCitationsWithVerifierSpans(result)" in local_flow

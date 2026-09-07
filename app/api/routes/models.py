@@ -9,6 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from app.api.security import review_response
 from legal.model_orchestration import AdaptiveRuntimePlanner, ModelControlCenter
 from legal.security.local_request_firewall import evaluate_local_request
+from maine_family_law_llm.prose_sentinel import prepare_training_admission
 from maine_family_law_llm.runtime_kernel import ACTIVE_STATUSES, get_runtime_kernel
 
 router = APIRouter(tags=["models"])
@@ -119,6 +120,37 @@ def validate_model(
     result = _center().validate_model(model_id)
     return review_response(
         "POST /api/models/{model_id}/validate", "validate_model", _sanitize_payload(result)
+    )
+
+
+@router.post("/models/{model_id}/sentinel-admission", summary="Create a non-executing Sentinel training admission packet")
+def sentinel_training_admission(
+    model_id: str,
+    payload: dict,
+    request: Request,
+    x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+):
+    """Hash source cards for human review before a separate local model workflow.
+
+    This route does not validate, admit, train, start, or modify a model.  It
+    exposes the same source-anchor-only boundary through the model-management
+    API so model operators do not have to treat Sentinel as an unrelated UI
+    feature.
+    """
+
+    _enforce_local_request(request)
+    _require_role(x_user_role, admin_only=True)
+    source_cards = payload.get("source_cards", [])
+    if not isinstance(source_cards, list):
+        raise HTTPException(status_code=422, detail="sentinel_source_cards_must_be_a_list")
+    try:
+        result = prepare_training_admission(model_id=model_id, source_cards=source_cards)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="invalid_sentinel_training_admission") from exc
+    return review_response(
+        "POST /api/models/{model_id}/sentinel-admission",
+        "sentinel_training_admission",
+        _sanitize_payload(result),
     )
 
 

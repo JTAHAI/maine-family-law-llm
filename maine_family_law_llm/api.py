@@ -21,6 +21,7 @@ from difflib import SequenceMatcher
 from email import policy
 from email.parser import BytesParser
 from typing import Any, Callable, Iterable
+from app.api.release_boundary import official_authority_required
 
 from legal.product.family_justice_workbench_v205 import build_workbench_packet
 from legal.drafting.findings_engine import Rule52BestInterestFindingsEngine
@@ -53,6 +54,8 @@ from legal.matter.compliance_log import ComplianceLogStore
 from legal.runtime.hardware_benchmark import HardwareBenchmarkStore
 from legal.runtime.model_admission_benchmark import ModelAdmissionBenchmarkStore
 from legal.runtime.warm_model_pool import WarmModelPoolStore
+from legal.model_orchestration.hardware import profile_hardware
+from legal.fast_interchange.hardware import assess_specialist_hardware, installed_torch_runtime
 from legal.runtime.context_cache import ContextCacheStore
 from legal.runtime.speculative_retrieval import SpeculativeRetrievalStore
 from legal.runtime.context_budget import ContextBudgetStore
@@ -111,6 +114,7 @@ from legal.product.favorites import FavoritesStore
 from legal.product.user_labels import UserLabelsStore
 from legal.product.daily_matter_brief import DailyMatterBriefStore
 from app.services import AuthorityLibraryService, AuthorityProductService
+from app.runtime_support import bundle_root
 from legal.security.prompt_injection import PromptInjectionScanner
 from legal.security.local_request_firewall import DEFAULT_MAX_BODY_BYTES, evaluate_local_request
 from legal.security.local_api_abuse_guard import LocalApiAbuseGuard
@@ -298,7 +302,7 @@ from .intake_understanding import (
     concise_intake_label,
     parse_intake,
 )
-from .local_workbench_ui import render_local_workbench_html, ui_asset_root
+from .local_workbench_ui import render_local_workbench_html, render_public_workbench_html, ui_asset_root
 from .ocr_prerequisites import install_local_ocr_prerequisites, ocr_prerequisite_status
 from .safety import classify_prompt
 from .sources import get_source, load_seed_manifest
@@ -310,6 +314,7 @@ from .runtime_kernel import ACTIVE_STATUSES, get_runtime_kernel
 from .local_agent_bridge import (
     build_host_context_and_receipt,
 )
+from .prose_sentinel import prepare_training_admission, sentinel_status
 
 try:
     from fastapi import FastAPI, HTTPException, Request
@@ -344,6 +349,10 @@ except Exception:  # pragma: no cover - lets CLI import without API extras
 if FastAPI is not None:
     # These contracts require the optional API extra. Keep CLI import model/API
     # empty, but do not hide real integration errors once that extra is present.
+    from app.services.fast_interchange_worker_service import (
+        ManagedWorkerError,
+        managed_fast_interchange_worker,
+    )
     from app.services.local_agent_context_service import (
         LocalAgentApprovalStore, LocalAgentAuditStore, LocalAgentContextError,
         LocalAgentContextService, LocalAgentSourceReference, digest as local_agent_digest,
@@ -368,6 +377,13 @@ class AskRequest(BaseModel):
     session_id: str = ""
     last_search_id: str = ""
     input_integrity: dict[str, Any] | None = None
+
+
+class SentinelTrainingAdmissionRequest(BaseModel):
+    """A source-card-only preflight for a separately controlled local model workflow."""
+
+    model_id: str = Field(min_length=1, max_length=96)
+    source_cards: list[dict[str, Any]] = Field(default_factory=list, max_length=32)
 
 
 class ConversationContextCompactionRequest(BaseModel):
@@ -1639,6 +1655,14 @@ class LocalAgentCancelRequest(BaseModel):
     model_config = {"extra": "forbid"}
     matter_id: str = Field(min_length=1, max_length=64)
     run_id: str = Field(pattern=r"^[a-f0-9]{32}$")
+
+
+class LocalAgentWorkerControlRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    matter_id: str = Field(min_length=1, max_length=64)
+    model_id: str = Field(pattern=r"^[a-z][a-z0-9_-]{2,79}$")
+    capability: str = Field(pattern=r"^(evidence_review|drafting)$")
+    user_confirmed: StrictBool = False
 
 
 class LocalWorkbenchModelRequest(BaseModel):
@@ -2965,8 +2989,10 @@ if FastAPI is not None:
         (
             "import_records",
             (
-                r"\bhow (?:do|can) i (?:import|add|upload) (?:my )?(?:records|documents|files)\b",
-                r"\bwhere (?:do|can) i (?:import|add|upload) (?:my )?(?:records|documents|files)\b",
+                r"\bhow (?:do|can) i (?:import|add|upload) "
+                r"(?:(?:my|a|the) )?(?:records?|documents?|files?|pdf|docx)\b",
+                r"\bwhere (?:do|can) i (?:import|add|upload) "
+                r"(?:(?:my|a|the) )?(?:records?|documents?|files?|pdf|docx)\b",
             ),
             "setup",
             "Open matter setup",
@@ -3018,7 +3044,13 @@ if FastAPI is not None:
         if not normalized or len(normalized) > 180:
             return None
         for route_id, patterns, panel, action_label, answer in _FAST_LOCAL_HELP_RULES:
-            if not any(re.search(pattern, normalized) for pattern in patterns):
+            # A product-help phrase inside a mixed legal/factual request must
+            # not suppress the rest of that request or bypass source review.
+            if not any(re.fullmatch(
+                rf"(?:please )?(?:{pattern})"
+                r"(?: (?:for local review|in this app|in the app|here|please))?",
+                normalized,
+            ) for pattern in patterns):
                 continue
             return {
                 "question": payload.question,
@@ -3065,6 +3097,8 @@ if FastAPI is not None:
             "prepare": bool(re.search(r"\bhearing|packet|exhibit|filing package\b", text)),
         }
         candidates = [name for name, matched in signals.items() if matched]
+        if response_kind == "local_help_fast_path":
+            candidates = ["navigate"]
         primary = candidates[0] if len(candidates) == 1 else ("explain" if not candidates else "mixed")
         ambiguity = len(candidates) > 1
         return {
@@ -3210,7 +3244,7 @@ if FastAPI is not None:
         """Adapt the admitted external authority product to the public answer contract."""
 
         def development_fixture_fallback() -> RetrievalResponse | None:
-            if str(os.environ.get("MFL_RUNTIME_MODE") or "source").strip().lower() == "store":
+            if official_authority_required():
                 return None
             response = retrieve_fixture_sources(expand_query_for_library(query), limit=limit)
             return RetrievalResponse(
@@ -3981,7 +4015,7 @@ if FastAPI is not None:
                 "detail": "internal_server_error",
                 "message": "The local workbench could not complete this request.",
                 "request_id": request_id,
-                "recovery_hint": "Restart START_LOCAL_CHAT.ps1, refresh the browser, and retry. If this persists, include the request ID in the issue report.",
+                "recovery_hint": "Close and reopen Maine Family Law LLM, then retry. If this persists, open Help and include only the safe request ID in your support report.",
             },
         )
 
@@ -3992,6 +4026,27 @@ if FastAPI is not None:
     @app.get("/workbench", response_class=HTMLResponse)
     def workbench() -> str:
         return render_local_workbench_html()
+
+    @app.get("/public", response_class=HTMLResponse)
+    def public_workbench() -> str:
+        """Render the v9 Public Edition visual shell on the local service."""
+
+        return render_public_workbench_html()
+
+    @app.get("/api/sentinel/status")
+    def sentinel_local_status() -> dict[str, Any]:
+        """Return the local, non-executing Sentinel boundary."""
+
+        return sentinel_status()
+
+    @app.post("/api/sentinel/training-admission")
+    def sentinel_training_admission(payload: SentinelTrainingAdmissionRequest) -> dict[str, Any]:
+        """Create a review-required source-anchor packet; never start training."""
+
+        try:
+            return prepare_training_admission(model_id=payload.model_id, source_cards=payload.source_cards)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid_sentinel_training_admission") from exc
 
     @app.post("/api/chat")
     def api_chat(payload: AskRequest) -> dict[str, Any]:
@@ -4370,7 +4425,7 @@ if FastAPI is not None:
             raise LocalAgentContextError("local_agent_record_unavailable") from exc
 
     def _local_agent_context_service() -> LocalAgentContextService:
-        return LocalAgentContextService(authority=AuthorityProductService(), record_loader=_local_agent_record_source)
+        return LocalAgentContextService(record_loader=_local_agent_record_source)
 
     def _local_agent_scope(payload: LocalAgentPreviewRequest, request: Request) -> tuple[dict[str, str], Path]:
         identity = _require_local_dashboard_identity(request)
@@ -4408,6 +4463,23 @@ if FastAPI is not None:
             ) from exc
         return LocalAgentRuntime(client)
 
+    def _local_agent_hardware_readiness(runtime: LocalAgentRuntime) -> dict[str, Any]:
+        if runtime.client.provider_id != "fast_interchange_local":
+            return {
+                "schema_version": "fast_interchange_hardware_readiness_v1",
+                "status": "not_evaluated_non_fast_interchange_provider",
+                "blockers": [],
+                "review_required": True,
+                "network_used": False,
+            }
+        binding = dict(getattr(runtime.client, "model_binding", {}) or {})
+        compatibility = dict(binding.get("compatibility") or {})
+        return assess_specialist_hardware(
+            profile_hardware(Path(__file__).resolve().parents[2]).as_dict(),
+            compatibility,
+            runtime=installed_torch_runtime(),
+        )
+
     @app.post("/api/local-agent/preview")
     def local_agent_preview(payload: LocalAgentPreviewRequest, request: Request) -> dict[str, Any]:
         scope, root = _local_agent_scope(payload, request)
@@ -4422,9 +4494,14 @@ if FastAPI is not None:
                 run_id=payload.run_id,
             )
             binding = _local_agent_binding(payload, scope, runtime)
+            hardware_readiness = _local_agent_hardware_readiness(runtime)
             audit = _local_agent_audit_store(root).record("preview", scope=scope, binding_sha256=local_agent_digest(binding))
             token = _local_agent_approvals.issue(binding, manifest.to_dict())
-            if hasattr(runtime.client, "model_binding") and callable(getattr(runtime.client, "cancel", None)):
+            if (
+                not hardware_readiness["blockers"]
+                and hasattr(runtime.client, "model_binding")
+                and callable(getattr(runtime.client, "cancel", None))
+            ):
                 _local_agent_runs.register(payload.run_id, scope, runtime.client)
         except LocalAgentContextError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
@@ -4452,7 +4529,12 @@ if FastAPI is not None:
             "source_cards": cards,
             "review_required": True,
             "model_admission": getattr(runtime.client, "model_binding", {}),
-            "cancellation_supported": hasattr(runtime.client, "model_binding") and callable(getattr(runtime.client, "cancel", None)),
+            "hardware_readiness": hardware_readiness,
+            "cancellation_supported": bool(
+                not hardware_readiness["blockers"]
+                and hasattr(runtime.client, "model_binding")
+                and callable(getattr(runtime.client, "cancel", None))
+            ),
         }
 
     @app.post("/api/local-agent/cancel")
@@ -4468,6 +4550,75 @@ if FastAPI is not None:
             raise HTTPException(status_code=503, detail=exc.code) from exc
         return {**result, "run_id": payload.run_id, "audit_receipt": audit, "review_required": True}
 
+    @app.get("/api/local-agent/worker/status")
+    def local_agent_worker_status(matter_id: str, request: Request) -> dict[str, Any]:
+        _local_agent_scope(
+            LocalAgentWorkerControlRequest(
+                matter_id=matter_id,
+                model_id="evidence-review-status",
+                capability="evidence_review",
+                user_confirmed=False,
+            ),
+            request,
+        )
+        return managed_fast_interchange_worker.public_status()
+
+    @app.post("/api/local-agent/worker/start")
+    def local_agent_worker_start(
+        payload: LocalAgentWorkerControlRequest, request: Request
+    ) -> dict[str, Any]:
+        scope, root = _local_agent_scope(payload, request)
+        if scope["role"] != "admin" or payload.user_confirmed is not True:
+            raise HTTPException(status_code=403, detail="fast_interchange_local_admin_confirmation_required")
+        audit_store = _local_agent_audit_store(root)
+        binding_sha256 = local_agent_digest(
+            {"model_id": payload.model_id, "capability": payload.capability}
+        )
+        audit_store.record(
+            "worker_start_requested",
+            scope=scope,
+            binding_sha256=binding_sha256,
+        )
+        try:
+            result = managed_fast_interchange_worker.start(
+                model_id=payload.model_id,
+                capability=payload.capability,
+                repo_root=bundle_root(),
+            )
+            audit = audit_store.record(
+                "worker_started",
+                scope=scope,
+                binding_sha256=binding_sha256,
+            )
+        except ManagedWorkerError as exc:
+            audit_store.record(
+                "worker_start_blocked",
+                scope=scope,
+                binding_sha256=binding_sha256,
+            )
+            raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+        except Exception:
+            # A worker without a durable matter audit is not an accepted state.
+            managed_fast_interchange_worker.stop()
+            raise
+        return {**result, "audit_receipt": audit}
+
+    @app.post("/api/local-agent/worker/stop")
+    def local_agent_worker_stop(
+        payload: LocalAgentWorkerControlRequest, request: Request
+    ) -> dict[str, Any]:
+        scope, root = _local_agent_scope(payload, request)
+        if scope["role"] != "admin" or payload.user_confirmed is not True:
+            raise HTTPException(status_code=403, detail="fast_interchange_local_admin_confirmation_required")
+        audit = _local_agent_audit_store(root).record(
+            "worker_stopped",
+            scope=scope,
+            binding_sha256=local_agent_digest(
+                {"model_id": payload.model_id, "capability": payload.capability}
+            ),
+        )
+        return {**managed_fast_interchange_worker.stop(), "audit_receipt": audit}
+
     @app.post("/api/local-agent/run")
     def local_agent_run(payload: LocalAgentExecuteRequest, request: Request) -> dict[str, Any]:
         scope, root = _local_agent_scope(payload, request)
@@ -4480,6 +4631,16 @@ if FastAPI is not None:
                 },
             )
         runtime = _local_agent_runtime_from_request(payload)
+        hardware_readiness = _local_agent_hardware_readiness(runtime)
+        if hardware_readiness["blockers"]:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "fast_interchange_hardware_not_ready",
+                    "hardware_readiness": hardware_readiness,
+                    "review_required": True,
+                },
+            )
         controlled_run = False
         try:
             sources, cards = _local_agent_context_service().resolve(payload.source_refs)
@@ -5116,6 +5277,14 @@ if FastAPI is not None:
 
     @app.get("/sources")
     def sources() -> list[dict[str, Any]]:
+        if official_authority_required():
+            try:
+                payload = AuthorityProductService().list_sources(limit=200)
+                if payload.get("status") == "pass":
+                    return list(payload.get("sources") or [])
+            except Exception:
+                pass
+            raise HTTPException(status_code=503, detail="official_authority_product_unavailable")
         library = AuthorityLibraryService()
         if library.data_root is not None:
             sources_payload = library.list_sources(limit=200)
@@ -14710,8 +14879,8 @@ if FastAPI is not None:
         source_id = str(source_id or "").strip()[:240]
         if not source_id:
             raise HTTPException(status_code=400, detail="source_id_required")
-        product = AuthorityProductService()
         try:
+            product = AuthorityProductService()
             if start_offset is not None and end_offset is not None:
                 payload = product.get_source_span(
                     source_id,
@@ -14724,6 +14893,10 @@ if FastAPI is not None:
                 return payload
         except Exception:
             pass
+        if official_authority_required():
+            # Source IDs in the authority lane cannot resolve through a seed
+            # manifest or a same-named private record after admission fails.
+            raise HTTPException(status_code=404, detail="admitted_authority_source_unavailable")
         library = AuthorityLibraryService()
         if library.data_root is not None:
             payload = library.get_source(source_id)

@@ -85,11 +85,11 @@ class NetworkedSourceGateReport:
 
 
 class NetworkedSourceGateAuditor:
-    """Audit external networked authority evidence after collection/ingestion.
+    """Check external authority metadata prerequisites, not legal approval.
 
-    This gate is intentionally stricter than local fixture/source tests. It should fail until
-    C:\\dev\\ME_FM_LLM_data contains real official-source manifests, parsed stores, retrieval
-    indexes, attorney-reviewed eval evidence, and measured release metrics.
+    Counts and review labels in a manifest are declarations, not authenticated
+    evidence of live retrieval, attorney review, or release-quality evaluation.
+    A metadata pass must never independently set production legal readiness.
     """
 
     def __init__(self, repo_root: str | Path = ".", data_root: str | Path | None = None) -> None:
@@ -374,7 +374,7 @@ class NetworkedSourceGateAuditor:
         return NetworkedSourceGateReport(
             status="pass" if ready else "fail",
             networked_source_ready=ready,
-            production_legal_ready=ready,
+            production_legal_ready=False,
             repo_root=str(self.repo_root),
             data_root=str(self.data_root),
             generated_at=_utc_now(),
@@ -396,8 +396,10 @@ class NetworkedSourceGateAuditor:
                 "python scripts\\run-networked-source-gate.py --data-root C:\\dev\\ME_FM_LLM_data",
             ],
             interpretation=(
-                "Pass means the external data root has enough non-fixture official-source evidence to start real legal validation. "
-                "Fail is expected before networked collection, attorney review, and real metrics are completed."
+                "Pass means the declared external metadata satisfies inventory prerequisites. "
+                "This does not establish artifact integrity, current official authority, "
+                "actual attorney review, measured legal quality, or production legal readiness. "
+                "Independent evidence validation and release approval remain required."
             ),
         )
 

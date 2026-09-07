@@ -2,6 +2,12 @@
 
 Audit date: 2026-08-12
 
+> Current package-claim status (2026-09-04): this is historical source and
+> frozen-runtime evidence, not a claim for the current 8.0.1 package. The
+> canonical release ledger is configs/release_feature_truth.json; it currently
+> marks Store feature claims pending current-source, exact-runtime, and exact-MSIX
+> qualification. Do not use this document alone for Store copy or release claims.
+
 ## Decision
 
 All 24 specialized workbenches now have an evidence-backed `verified_end_to_end` status in the current v8 source and full-tier frozen runtime. They are publicly reachable from the shipped command palette and complete this path:

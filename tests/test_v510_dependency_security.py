@@ -11,7 +11,7 @@ def test_version_comparison_handles_stable_and_prerelease():
 def test_safe_core_and_api_versions_pass():
     report = audit_dependency_floors(
         {
-            "pypdf": "6.15.0",
+            "pypdf": "6.16.1",
             "pypdfium2": "5.12.1",
             "cryptography": "50.0.0",
             "python-docx": "1.2.0",
@@ -60,7 +60,7 @@ def test_known_vulnerable_pdf_and_api_versions_are_blocked():
 
 def test_optional_build_packages_can_be_strictly_checked():
     versions = {
-        "pypdf": "6.15.0",
+        "pypdf": "6.16.1",
         "pypdfium2": "5.12.1",
         "cryptography": "50.0.0",
         "python-docx": "1.2.0",
@@ -77,3 +77,14 @@ def test_optional_build_packages_can_be_strictly_checked():
         strict_optional=True,
     )
     assert report.status == "pass"
+
+
+def test_pdf_iteration_vulnerabilities_are_blocked():
+    for version in ("6.15.0", "6.16.0"):
+        report = audit_dependency_floors({"pypdf": version}, include_api=False)
+        finding = next(item for item in report.findings if item.distribution == "pypdf")
+        assert finding.status == "blocked"
+        assert finding.minimum == "6.16.1"
+        assert set(finding.advisory_ids) >= {
+            "CVE-2026-84309", "CVE-2026-84310", "CVE-2026-84311",
+        }

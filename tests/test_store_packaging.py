@@ -53,6 +53,10 @@ def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_
     monkeypatch.setenv("MFL_CASE_LIBRARY_PATH", str(tmp_path / "source-case-library.json"))
     monkeypatch.setenv("MFL_LOCAL_API_STATE_PATH", str(tmp_path / "source-api.json"))
     monkeypatch.setenv("MFL_RUNTIME_LOG_DIR", str(tmp_path / "source-logs"))
+    monkeypatch.delenv("MFL_FAST_INTERCHANGE_PACK_ROOT", raising=False)
+    monkeypatch.delenv("MFL_FAST_INTERCHANGE_ADMISSION_TRUST", raising=False)
+    monkeypatch.delenv("MFL_FAST_INTERCHANGE_STATE_ROOT", raising=False)
+    monkeypatch.delenv("MFL_FAST_INTERCHANGE_BUNDLED_PACK_ROOT", raising=False)
     from app.runtime_support import build_runtime_context, configure_runtime_environment
 
     context = configure_runtime_environment(build_runtime_context(mode="store"))
@@ -66,6 +70,43 @@ def test_store_runtime_redirects_mutable_state_to_localappdata(monkeypatch, tmp_
     assert context.logs_root == context.writable_root / "logs"
     assert os.environ["MAINE_FAMILY_LAW_DATA_ROOT"] == str(context.runtime_data_root)
     assert os.environ["MFL_AUTHORITY_DATA_ROOT"] == str(authority_root)
+    assert os.environ["MFL_FAST_INTERCHANGE_PACK_ROOT"] == str(
+        context.runtime_data_root / "fast-interchange" / "model-packs"
+    )
+    assert os.environ["MFL_FAST_INTERCHANGE_ADMISSION_TRUST"] == str(
+        context.bundle_root / "configs" / "fast_interchange_admission_trust.json"
+    )
+    assert os.environ["MFL_FAST_INTERCHANGE_STATE_ROOT"] == str(
+        context.writable_root / "state" / "fast-interchange"
+    )
+    assert Path(os.environ["MFL_FAST_INTERCHANGE_PACK_ROOT"]).is_dir()
+    assert Path(os.environ["MFL_FAST_INTERCHANGE_STATE_ROOT"]).is_dir()
+
+
+def test_store_runtime_discovers_optional_bundled_specialist_without_copying_it(
+    monkeypatch, tmp_path
+) -> None:
+    from app import runtime_support
+    from unittest.mock import patch
+
+    bundle = tmp_path / "bundle"
+    bundled_pack = bundle / "store" / "fast-interchange"
+    bundled_pack.mkdir(parents=True)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "profile"))
+    monkeypatch.delenv("MFL_FAST_INTERCHANGE_BUNDLED_PACK_ROOT", raising=False)
+    monkeypatch.setattr(runtime_support, "bundle_root", lambda: bundle)
+
+    # Store bootstrap deliberately mutates process-wide environment settings.
+    # Restore every setting, not just the three used by this assertion: leaked
+    # Store/authority paths made subsequent source-chat tests order-dependent.
+    before = dict(os.environ)
+    with patch.dict(os.environ):
+        context = runtime_support.configure_runtime_environment(
+            runtime_support.build_runtime_context(mode="store")
+        )
+        assert os.environ["MFL_FAST_INTERCHANGE_BUNDLED_PACK_ROOT"] == str(bundled_pack)
+        assert context.runtime_data_root not in bundled_pack.parents
+    assert dict(os.environ) == before
 
 
 def test_authority_services_prefer_store_external_authority_boundary(monkeypatch, tmp_path) -> None:
@@ -301,7 +342,27 @@ def test_full_store_tier_bundles_fast_interchange_adapter_runtime() -> None:
         'for package_name in ("peft", "accelerate", "safetensors"):\n'
         '        datas += collect_installed_package_files(package_name, destination=package_name)'
     ) in spec
-    assert "legal weights, adapters, registries, and secrets remain external" in spec
+    assert "optional release-validated built-in pair" in spec
+    assert "MFL_STORE_BUNDLED_SPECIALIST_PACK_ROOT" in spec
+    assert "bundled specialists require the full Store feature tier" in spec
+
+
+def test_store_build_accepts_only_explicit_validated_full_tier_specialist_pack() -> None:
+    runtime = (REPO_ROOT / "scripts" / "build-store-runtime.ps1").read_text(
+        encoding="utf-8"
+    )
+    msix = (REPO_ROOT / "scripts" / "build-msix.ps1").read_text(encoding="utf-8")
+    for marker in (
+        "SpecialistPackRoot",
+        "SpecialistTrustPath",
+        "validate_bundled_mfl_specialists.py",
+        "Bundled specialists require -FeatureTier full.",
+        "No model weights were packaged",
+    ):
+        assert marker in runtime
+    assert 'MFL_STORE_BUNDLED_SPECIALIST_PACK_ROOT = $SpecialistPackRoot' in runtime
+    assert "SpecialistPackRoot" in msix
+    assert "SpecialistTrustPath" in msix
 
 
 def test_fast_interchange_package_runtime_audit_requires_importable_modules(tmp_path: Path) -> None:
@@ -346,6 +407,28 @@ def test_build_store_runtime_script_stops_existing_packaged_runtime_processes() 
     assert 'Join-Path $RepoRoot ".venv-store-build"' not in script
     assert "Initialize-RepoBuildEnvironment" in script
     assert "-B -m PyInstaller" in script
+
+
+def test_store_runtime_stages_only_essential_tesseract_ocr_payload() -> None:
+    script = (REPO_ROOT / "scripts" / "build-store-runtime.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "function Copy-TesseractRuntime" in script
+    assert '"eng.traineddata", "osd.traineddata"' in script
+    assert '"configs", "tessconfigs"' in script
+    assert 'Copy-TesseractRuntime -SourceRoot $tesseractSourceRoot -DestinationRoot $tesseractRuntimeRoot' in script
+    assert 'Copy-Item -Path (Join-Path $tesseractSourceRoot "*") -Destination $tesseractRuntimeRoot -Recurse -Force' not in script
+    for forbidden_tool in (
+        "lstmtraining.exe",
+        "lstmeval.exe",
+        "mftraining.exe",
+        "cntraining.exe",
+        "text2image.exe",
+        "classifier_tester.exe",
+        "tesseract-uninstall.exe",
+    ):
+        assert forbidden_tool in script
 
 
 def test_frozen_smoke_accepts_only_grounded_or_explicit_fail_closed_authority() -> None:
@@ -409,19 +492,107 @@ def test_store_package_audit_allows_only_scoped_public_model_weights(tmp_path) -
     assert "private-model.safetensors" in audit["blocked_files"]
 
 
+def test_store_package_audit_allows_only_validated_specialist_weight_prefix(tmp_path) -> None:
+    from scripts.audit_store_package import (
+        SPECIALIST_PREFIX,
+        audit_stage,
+        package_manifest,
+        specialist_tree_identity,
+    )
+
+    admitted = (
+        tmp_path
+        / "_internal"
+        / "store"
+        / "fast-interchange"
+        / "adapters"
+        / "evidence"
+        / "adapter_model.safetensors"
+    )
+    admitted.parent.mkdir(parents=True)
+    admitted.write_bytes(b"fictional admitted model fixture")
+    rows = [
+        row
+        for row in package_manifest(tmp_path)
+        if str(row["path"]).startswith(SPECIALIST_PREFIX)
+    ]
+    tree_sha256, file_count, total_bytes = specialist_tree_identity(rows)
+    receipt = tmp_path / "_internal" / "store" / "bundled-specialist-validation.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "status": "pass",
+                "capabilities": ["drafting", "evidence_review"],
+                "production_signed_admission": True,
+                "attorney_reviewed_evaluation": True,
+                "redistribution_permitted": True,
+                "runtime_versions_matched": True,
+                "cpu_fallback_runtime_compatible": True,
+                "cpu_fallback_qualified": False,
+                "review_required": True,
+                "tree_sha256": tree_sha256,
+                "file_count": file_count,
+                "total_bytes": total_bytes,
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert audit_stage(tmp_path, [])["status"] == "pass"
+
+    wrong_prefix = tmp_path / "store" / "fast-interchange" / "unvalidated.safetensors"
+    wrong_prefix.parent.mkdir(parents=True)
+    wrong_prefix.write_bytes(b"fictional unvalidated model fixture")
+    audit = audit_stage(tmp_path, [])
+    assert audit["status"] == "fail"
+    assert "store/fast-interchange/unvalidated.safetensors" in audit["blocked_files"]
+
+
+def test_store_package_audit_rejects_specialist_tree_without_matching_receipt(tmp_path) -> None:
+    from scripts.audit_store_package import audit_stage
+
+    weight = (
+        tmp_path
+        / "_internal"
+        / "store"
+        / "fast-interchange"
+        / "adapters"
+        / "drafting"
+        / "adapter_model.safetensors"
+    )
+    weight.parent.mkdir(parents=True)
+    weight.write_bytes(b"fictional unreceipted weight")
+    audit = audit_stage(tmp_path, [])
+    assert audit["status"] == "fail"
+    assert audit["bundled_specialist_validation_failures"] == [
+        "bundled_specialist_validation_receipt_missing"
+    ]
+
+
 def test_store_package_audit_returns_nonzero_when_audit_fails() -> None:
     script = (REPO_ROOT / "scripts" / "audit_store_package.py").read_text(encoding="utf-8")
     assert 'return 0 if audit["status"] == "pass" else 2' in script
 
 
+def test_store_package_audit_publishes_receipts_atomically(tmp_path) -> None:
+    from scripts.audit_store_package import write_text_atomic
+
+    receipt = tmp_path / "private-data-audit.json"
+    write_text_atomic(receipt, '{"status":"pass"}\n')
+    assert receipt.read_text(encoding="utf-8") == '{"status":"pass"}\n'
+    assert not receipt.with_suffix(".json.tmp").exists()
+
+
 def test_store_pyinstaller_spec_filters_package_test_submodules() -> None:
     spec = (REPO_ROOT / "store" / "pyinstaller" / "maine_family_law_llm.spec").read_text(encoding="utf-8")
     assert "collect_runtime_submodules" in spec
+    assert "include_runtime_data" in spec
     assert "runtime shim" in spec
     assert 'collect_runtime_submodules("maine_family_law_llm")' not in spec
     assert '"app", "legal", "maine_family_law_llm", "fastapi"' not in spec
     assert "module_name.startswith(\"torch.testing._internal\")" in spec
     assert "part == \"tests\"" in spec
+    assert "spacy.tests" in spec
+    assert "torch.fx.passes.tests" in spec
     assert '"presidio_analyzer", "tldextract", "docling"' in spec
     assert "presidio_anonymizer" not in spec
     assert "collect_data_files(package_name)" in spec
@@ -450,8 +621,11 @@ def test_build_msix_script_normalizes_package_versions_without_leading_zero_segm
     assert '$normalizedParts += $value.ToString()' in script
     assert '2.5.29.37={text}1.3.6.1.5.5.7.3.3' in script
     assert '2.5.29.19={text}' in script
-    assert "TAHAIWebServices.MaineFamilyLawLLM" in script
-    assert "D75EE668-B409-45ED-87E5-E37AA5FE3868" in script
+    identity = json.loads((REPO_ROOT / "store/msix/identity.example.json").read_text())
+    assert identity["identity_name"] == "TAHAIWebServices.MaineFamilyLawLLM"
+    assert identity["publisher"] == "CN=D75EE668-B409-45ED-87E5-E37AA5FE3868"
+    assert "$IdentityName = $identityConfig.identity_name" in script
+    assert "$Publisher = $identityConfig.publisher" in script
     assert "Package version revision must be zero" in script
 
 

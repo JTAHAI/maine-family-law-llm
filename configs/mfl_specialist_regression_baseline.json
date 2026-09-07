@@ -1,0 +1,186 @@
+{
+  "schema_version": "mfl_specialist_regression_baseline_v1",
+  "fixtures": {
+    "mfl_evidence_post_training_r0010_v1.json": {
+      "case_ids": [
+        "r10-new-01-metadata-without-text",
+        "r10-new-02-ordinary-record",
+        "r10-new-03-private-inline",
+        "r10-new-04-hostile-separate",
+        "r10-new-05-complete-condition",
+        "r10-new-06-three-date-roles",
+        "r10-new-07-limited-search",
+        "r10-new-08-allegation-no-finding",
+        "r10-new-09-child-impact-question",
+        "r10-new-10-derived-copy",
+        "r10-new-11-narrow-revision",
+        "r10-new-12-single-clock",
+        "r10-new-13-two-uncalibrated-clocks",
+        "r10-new-14-missing-enclosure",
+        "r10-new-15-unknown-unit",
+        "r10-new-16-question-premise"
+      ],
+      "sha256": "25181fcdde8f1c19a07617b96108dcf33d783ed9eb04f9a85e6f5b6c1dfce61d"
+    },
+    "mfl_evidence_post_training_r0007_v1.json": {
+      "case_ids": [
+        "r0007-post-attachment-limit",
+        "r0007-post-private-redaction",
+        "r0007-post-conditional-quote",
+        "r0007-post-date-roles",
+        "r0007-post-search-scope",
+        "r0007-post-hostile-embed",
+        "r0007-post-allegation-pair",
+        "r0007-post-child-impact",
+        "r0007-post-provenance",
+        "r0007-post-unsupported-amount",
+        "r0007-post-clock-conflict",
+        "r0007-post-complete-boundary"
+      ],
+      "sha256": "ec661ff96dc3d604fd7ee1ed08110cead782afe338ce10b63f6c5e1c71577624"
+    },
+    "mfl_evidence_out_of_template_v1.json": {
+      "case_ids": [
+        "oot-arrival-wording",
+        "oot-attachment-filename",
+        "oot-allegation-quoted-statement",
+        "oot-timezone-comparison",
+        "oot-redact-different-identifier",
+        "oot-conditional-wording",
+        "oot-double-copy",
+        "oot-no-record-with-question-facts",
+        "oot-event-versus-entry",
+        "oot-scope-of-search",
+        "oot-original-and-amendment",
+        "oot-injected-verdict"
+      ],
+      "sha256": "3c51aad45b313d469f52fab5177734f7c8f425e75fb9604c05a767fd4e494c95"
+    },
+    "mfl_evidence_fresh_wording_v2.json": {
+      "case_ids": [
+        "fresh2-competing-recollections",
+        "fresh2-referenced-annex",
+        "fresh2-claim-not-adjudication",
+        "fresh2-clock-basis",
+        "fresh2-private-reference",
+        "fresh2-contingent-offer",
+        "fresh2-duplicate-export",
+        "fresh2-absent-upload",
+        "fresh2-retrospective-entry",
+        "fresh2-limited-folder-search",
+        "fresh2-unattributed-revision",
+        "fresh2-embedded-credibility-demand"
+      ],
+      "sha256": "6b614c9201bf219b8728f610c6991ad9fbecd3bcc71a85391a808c788dd50d64"
+    },
+    "mfl_evidence_post_training_r0009_v1.json": {
+      "case_ids": [
+        "r9-new-01-empty-records",
+        "r9-new-02-middle-secret",
+        "r9-new-03-unclassified-private",
+        "r9-new-04-condition",
+        "r9-new-05-date-roles",
+        "r9-new-06-search-boundary",
+        "r9-new-07-hostile-middle",
+        "r9-new-08-allegation",
+        "r9-new-09-child-question",
+        "r9-new-10-duplicates",
+        "r9-new-11-narrow-amendment",
+        "r9-new-12-clock-roles",
+        "r9-new-13-missing-attachment",
+        "r9-new-14-disagreement",
+        "r9-new-15-source-two-private",
+        "r9-new-16-question-premise"
+      ],
+      "sha256": "f7bcd3f1683f477125ab020897200ddf18f404e96bde19db1bdd4f5acae0eab7"
+    },
+    "mfl_evidence_fresh_wording_v3_corrective_r0004.json": {
+      "case_ids": [
+        "fresh3-conditional-calendar",
+        "fresh3-entry-versus-event-date",
+        "fresh3-no-attached-record",
+        "fresh3-identical-export",
+        "fresh3-private-token",
+        "fresh3-allegation-no-finding",
+        "fresh3-limited-drive-search",
+        "fresh3-unknown-unit",
+        "fresh3-message-and-metadata",
+        "fresh3-unsigned-draft",
+        "fresh3-child-impact-question",
+        "fresh3-vague-recollection"
+      ],
+      "sha256": "5da1a18b6a52bcee0048dc59df24cc37dc782650a20a47fb597f9142ebfc7f00"
+    },
+    "mfl_evidence_post_training_r0008_v1.json": {
+      "case_ids": [
+        "r0008-post-no-source-metadata",
+        "r0008-post-private-token",
+        "r0008-post-condition",
+        "r0008-post-date-roles",
+        "r0008-post-limited-search",
+        "r0008-post-hostile-embed",
+        "r0008-post-allegation-no-finding",
+        "r0008-post-child-impact",
+        "r0008-post-amendment-provenance",
+        "r0008-post-clock-roles",
+        "r0008-post-unsupported-amount",
+        "r0008-post-complete-boundary"
+      ],
+      "sha256": "21a5c2a2f53ebe2d9be21a7755370c4b8432178ca91a7121f6d91ba88b843104"
+    },
+    "mfl_drafting_out_of_template_v1.json": {
+      "case_ids": [
+        "draft-allegation",
+        "draft-time-conflict",
+        "draft-exchange-place",
+        "draft-unseen-file",
+        "draft-unaccepted-proposal",
+        "draft-no-sources",
+        "draft-redact",
+        "draft-no-deadline",
+        "draft-injection",
+        "draft-reversed-date"
+      ],
+      "sha256": "3d2b1c91634d1e83a31e397d5146bcf66ef0bada198bcbaab2ddec779cfdd1ac"
+    },
+    "mfl_evidence_fresh_wording_v4_corrective_r0005.json": {
+      "case_ids": [
+        "fresh4-no-exhibit",
+        "fresh4-private-label",
+        "fresh4-verbatim-source",
+        "fresh4-entry-and-event",
+        "fresh4-scope-limited-search",
+        "fresh4-untrusted-command",
+        "fresh4-child-impact-question",
+        "fresh4-conflicting-times",
+        "fresh4-duplicate-export",
+        "fresh4-unknown-unit",
+        "fresh4-allegation-and-extract",
+        "fresh4-unsigned-proposal"
+      ],
+      "sha256": "80a19035edd175f00acbfb1d4a2640a26eef924423a8eca930c28f11f94d8a22"
+    },
+    "mfl_drafting_fresh_wording_v2.json": {
+      "case_ids": [
+        "draft-fresh2-empty-enclosure",
+        "draft-fresh2-contingent-transport",
+        "draft-fresh2-backfilled-entry",
+        "draft-fresh2-duplicate-report",
+        "draft-fresh2-incomplete-attachment",
+        "draft-fresh2-location-disagreement",
+        "draft-fresh2-disputed-expense",
+        "draft-fresh2-private-reference",
+        "draft-fresh2-pasted-command",
+        "draft-fresh2-unstated-response-period",
+        "draft-fresh2-unresolved-complaint",
+        "draft-fresh2-limited-folder-search"
+      ],
+      "sha256": "057ae2364d9872454926b4ab7430ec26f58f81b42a4c051c6c7b9a58479596b4"
+    }
+  },
+  "evaluators": {
+    "evaluate_mfl_evidence_research_v2.py": "1a23952a91b393ac2f1a4b964b4172a697018684b9e20628b3ff1a48964de594",
+    "evaluate_mfl_practical_research_v2.py": "793bab32836502740d122b414774a51a667b1110a519393dfd82cadc49854e00"
+  },
+  "basis": "Previously consulted fictional regression suites; not a blind holdout or attorney review."
+}

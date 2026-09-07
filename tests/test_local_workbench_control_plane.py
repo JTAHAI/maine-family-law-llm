@@ -61,6 +61,13 @@ def test_local_workbench_control_plane_is_encrypted_reviewable_and_local(tmp_pat
     assert preferences["preferences"]["motion"] == "reduced"
     assert preferences["preferences"]["screen_reader_mode"] is True
 
+    starting_path = service.set_preferences({"starting_path": "organize_records"})
+    assert starting_path["preferences"]["starting_path"] == "organize_records"
+    assert starting_path["receipt"]["action"] == "preferences_updated"
+    assert b"organize_records" not in (tmp_path / "90_LOCAL_WORKBENCH" / "state.json.enc").read_bytes()
+    with pytest.raises(LocalWorkbenchError, match="starting_path_invalid"):
+        service.set_preferences({"starting_path": "choose_my_outcome"})
+
     privacy = service.set_privacy({"network_mode": "local_only", "telemetry": "off"})
     assert privacy["privacy"]["network_mode"] == "local_only"
     assert privacy["network_used"] is False
@@ -314,6 +321,20 @@ def test_local_workbench_control_plane_api_is_local_and_reviewable(monkeypatch, 
     assert preferences.status_code == 200
     assert preferences.json()["preferences"]["motion"] == "reduced"
 
+    starting_path = client.put(
+        "/api/local-workbench/preferences",
+        json={"preferences": {"starting_path": "prepare_for_court"}},
+    )
+    assert starting_path.status_code == 200
+    assert starting_path.json()["preferences"]["starting_path"] == "prepare_for_court"
+    assert starting_path.json()["receipt"]["action"] == "preferences_updated"
+    invalid_starting_path = client.put(
+        "/api/local-workbench/preferences",
+        json={"preferences": {"starting_path": "decide_custody"}},
+    )
+    assert invalid_starting_path.status_code == 400
+    assert invalid_starting_path.json()["detail"] == "starting_path_invalid"
+
     work_item = client.post(
         "/api/local-workbench/work-items",
         json={
@@ -371,3 +392,38 @@ def test_local_workbench_control_center_ui_is_present_and_mirrored():
     assert ".local-workbench-card h3" in styles
     for filename in ("workbench.html", "workbench.js", "workbench.css"):
         assert (source_root / filename).read_bytes() == (mirror_root / filename).read_bytes()
+
+
+def test_calm_start_is_production_ui_and_uses_the_canonical_encrypted_preference_route():
+    from maine_family_law_llm.local_workbench_ui import read_workbench_asset, render_local_workbench_html
+
+    html = render_local_workbench_html()
+    script = read_workbench_asset("workbench.js")
+    styles = read_workbench_asset("workbench.css")
+
+    assert 'id="chat-matter-button"' in html
+    assert 'id="chat-matter-status"' in html
+    assert 'id="chat-matter-detail"' in html
+    assert 'id="starting-path-status"' in html
+    assert 'id="next-safe-action-card"' in html
+    assert 'id="next-safe-action-primary"' in html
+    assert 'id="next-safe-action-alternative-one"' in html
+    assert 'id="next-safe-action-alternative-two"' in html
+    assert 'data-starting-path="organize_records"' in html
+    assert 'data-starting-path="safety_support"' in html
+    assert "function chooseStartingPath(startingPath)" in script
+    assert "function activeMatterContext()" in script
+    assert "function renderNextSafeAction()" in script
+    assert "function runNextSafeAction(action)" in script
+    assert "const activeCaseId = String(corpusLibraryPayload?.active_case_id || '');" in script
+    assert "canonical activation route confirms it" in script
+    assert "openWorkbenchPanel('review')" in script
+    assert "'/api/local-workbench/preferences'" in script
+    assert "nothing was sent or changed in a matter" in script
+    assert "chatMatterButton?.addEventListener('click', () => openWorkbenchPanel('setup'))" in script
+    assert 'data-v8-view="chat"] .v5-control-bar { display: none !important; }' in styles
+    assert ".starting-path-actions button.is-selected" in styles
+    assert ".next-safe-action-card" in styles
+    assert ".chat-matter-summary" in styles
+    assert 'data-v8-view="chat"] .v5-workbench.v9-legal-ops-shell { height: 100dvh;' in styles
+    assert 'data-v8-view="chat"] .chat-panel.panel { min-height: 0; height: 100%;' in styles

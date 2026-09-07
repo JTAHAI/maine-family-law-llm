@@ -21,11 +21,11 @@ def test_pass02_version_and_msix_build_are_incremented() -> None:
         identity_path = ROOT / "store" / "msix" / "identity.example.json"
     identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
-    assert VERSION == "8.0.1"
-    assert BUILD_NUMBER == 54
-    assert PACKAGE_VERSION == "8.0.1.0"
-    assert identity["package_version"] == "8.0.1.0"
-    assert UI_PASS_MARKER == "v8.0.1-ga"
+    assert VERSION == "8.0.2"
+    assert BUILD_NUMBER == 55
+    assert PACKAGE_VERSION == "8.0.2.0"
+    assert identity["package_version"] == "8.0.2.0"
+    assert UI_PASS_MARKER == "v8.0.2-ga"
     assert UI_VERSION.endswith(f"-b{BUILD_NUMBER}")
 
 

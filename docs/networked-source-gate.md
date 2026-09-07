@@ -1,6 +1,7 @@
 # Networked Source Gate
 
-This gate is the line between local fixture/source testing and real legal validation.
+This gate checks metadata prerequisites for subsequent evidence validation. It
+does not certify current law, model quality, attorney review, or release readiness.
 
 Run it after collecting official resources into the external data root:
 
@@ -14,4 +15,10 @@ python scripts\build-retrieval-indexes.py --data-root C:\dev\ME_FM_LLM_data
 python scripts\run-networked-source-gate.py --data-root C:\dev\ME_FM_LLM_data
 ```
 
-A pass means the external data root has non-fixture official-source evidence, parsed authority records, retrieval manifests, attorney-reviewed eval evidence, and release metrics. A fail is expected before live collection and attorney review are complete.
+A pass means the external manifests declare the required source classes, parsed
+counts, indexes, review counts, and metric names, with no recognized fixture
+marker. Those declarations alone do not authenticate the underlying artifacts
+or the people who reviewed them. `production_legal_ready` therefore remains
+false even on a metadata pass. Current-source/hash verification, independently
+reviewed evaluation evidence, and the separate production release gates remain
+required. A unit-test fixture passing this gate is never legal-use evidence.

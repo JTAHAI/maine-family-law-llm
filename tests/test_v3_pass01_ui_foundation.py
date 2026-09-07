@@ -46,7 +46,8 @@ def test_v3_pass01_uses_split_local_ui_assets() -> None:
     assert "setDrawerOpen" in js
     assert "drawerReturnFocus" in js
     assert "closeDrawerButton?.focus({preventScroll: true})" in js
-    assert "returnTarget.focus({preventScroll: true})" in js
+    assert "const destination = overlayReturnTarget(returnTarget);" in js
+    assert "destination.focus({preventScroll: true})" in js
     assert "sessionStorage.getItem('mfl-welcome-dismissed')" not in js
 
 
@@ -130,7 +131,7 @@ def test_v3_pass01_launcher_is_task_oriented_and_versioned() -> None:
 
     source = (ROOT / "app" / "launcher.py").read_text(encoding="utf-8")
 
-    assert VERSION == "8.0.1"
+    assert VERSION == "8.0.2"
     assert 'notebook.add(start_tab, text="Start here")' in source
     assert 'notebook.add(review_tab, text="Review & export")' in source
     assert 'notebook.add(support_tab, text="Support & tools")' in source
@@ -151,8 +152,8 @@ def test_v3_pass01_versions_are_consistent() -> None:
         identity_path = ROOT / "store" / "msix" / "identity.example.json"
     identity = json.loads(identity_path.read_text(encoding="utf-8"))
 
-    assert VERSION == "8.0.1"
+    assert VERSION == "8.0.2"
     assert BUILD_NUMBER >= 24
-    assert PACKAGE_VERSION == "8.0.1.0"
+    assert PACKAGE_VERSION == "8.0.2.0"
     assert f'version = "{VERSION}"' in pyproject
     assert identity["package_version"] == PACKAGE_VERSION

@@ -13,6 +13,8 @@ param(
   [switch]$UseDevIdentity,
   [switch]$Unsigned,
   [switch]$Offline,
+  [string]$SpecialistPackRoot = "",
+  [string]$SpecialistTrustPath = "",
   [ValidateSet("essential", "full")]
   [string]$FeatureTier = "essential"
 )
@@ -20,6 +22,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "store-build-workspace.ps1")
+
+# Store distribution is signed by Microsoft. Never mint a development private
+# key for the production identity or silently label it production signing.
+if (-not $Unsigned -and -not $CertificatePfxPath -and -not $UseDevIdentity) {
+  throw "Choose -Unsigned for Microsoft Store submission, an approved -CertificatePfxPath, or explicit -UseDevIdentity for isolated QA."
+}
 
 function Resolve-SdkTool([string]$ToolName) {
   $path = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter $ToolName -ErrorAction SilentlyContinue |
@@ -113,10 +121,13 @@ if (-not $PublisherDisplayName) { $PublisherDisplayName = $identityConfig.publis
 if (-not $PackageDisplayName) { $PackageDisplayName = $identityConfig.package_display_name }
 if (-not $PackageVersion) { $PackageVersion = $identityConfig.package_version }
 if ($UseDevIdentity) {
-  if (-not $IdentityName) { $IdentityName = "TAHAIWebServices.MaineFamilyLawLLM" }
-  if (-not $Publisher) { $Publisher = "CN=D75EE668-B409-45ED-87E5-E37AA5FE3868" }
-  if (-not $PublisherDisplayName) { $PublisherDisplayName = "TAHAI Web Services" }
-  if (-not $PackageDisplayName) { $PackageDisplayName = "Maine Family Law LLM" }
+  # Deliberately override the configured Store identity. Previously these
+  # defaults ran after config hydration and silently kept the real identity.
+  # A QA certificate/package must never replace the user's Store installation.
+  $IdentityName = "MaineFamilyLawLLM.LocalQA"
+  $Publisher = "CN=MaineFamilyLawLLM-LocalQA"
+  $PublisherDisplayName = "Maine Family Law LLM Local QA"
+  $PackageDisplayName = "Maine Family Law LLM (Local QA)"
 }
 $PackageVersion = Convert-ToPackageVersion $PackageVersion
 
@@ -165,17 +176,25 @@ New-Item -ItemType Directory -Force -Path $evidenceRoot, $shortOutRoot | Out-Nul
 $runtimeBuildArguments = @(
   "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
   (Join-Path $RepoRoot "scripts\build-store-runtime.ps1"),
-  "-RepoRoot", $RepoRoot, "-OutputRoot", $OutputRoot, "-FeatureTier", $FeatureTier
+  "-RepoRoot", $RepoRoot, "-OutputRoot", $OutputRoot, "-FeatureTier", $FeatureTier,
+  "-SkipRuntimeSmoke"
 )
 # The conditional argument-array form is the powershell.exe-safe equivalent of
 # passing -Offline:$Offline directly to build-store-runtime.ps1.
 if ($Offline) { $runtimeBuildArguments += "-Offline" }
+if ($SpecialistPackRoot) {
+  $runtimeBuildArguments += @("-SpecialistPackRoot", $SpecialistPackRoot)
+}
+if ($SpecialistTrustPath) {
+  $runtimeBuildArguments += @("-SpecialistTrustPath", $SpecialistTrustPath)
+}
 & powershell.exe @runtimeBuildArguments
 if ($LASTEXITCODE -ne 0) { throw "Frozen runtime build failed." }
 if (-not (Test-Path -LiteralPath $storeBuildPython)) { throw "Provisioned Store interpreter missing." }
 $storePython = $storeBuildPython
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_pyinstaller --command "PyInstaller frozen runtime build" --parent-command "build-store-runtime.ps1"
-& (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
+if ($LASTEXITCODE -ne 0) { throw "Frozen runtime qualification failed; no MSIX may be sealed." }
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_frozen_runtime_smoke --command "test-store-runtime.ps1 frozen runtime smoke" --parent-command "build-msix.ps1"
 $inventoryPath = Join-Path $evidenceRoot "bundled-engine-inventory.json"
 & $storePython -B (Join-Path $RepoRoot "scripts\generate_bundled_engine_inventory.py") --runtime-root $runtimeRoot --output $inventoryPath --feature-tier $FeatureTier

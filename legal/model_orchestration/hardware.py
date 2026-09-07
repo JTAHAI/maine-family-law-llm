@@ -4,6 +4,7 @@ import ctypes
 import os
 import platform
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -75,6 +76,56 @@ def _gpu_hint() -> str:
     return ""
 
 
+def _nvidia_inventory() -> tuple[dict[str, Any], ...]:
+    """Read driver-published capacity without loading a model or using a shell."""
+
+    executable = shutil.which("nvidia-smi")
+    if not executable:
+        return ()
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    try:
+        result = subprocess.run(
+            [
+                executable,
+                "--query-gpu=index,uuid,name,memory.total,memory.free,compute_cap",
+                "--format=csv,noheader,nounits",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            creationflags=creationflags,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ()
+    rows: list[dict[str, Any]] = []
+    for line in result.stdout.splitlines():
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) != 6:
+            continue
+        try:
+            index = int(parts[0])
+            total_mib = int(parts[3])
+            free_mib = int(parts[4])
+            capability = float(parts[5])
+        except ValueError:
+            continue
+        if index < 0 or total_mib <= 0 or not 0 <= free_mib <= total_mib:
+            continue
+        rows.append(
+            {
+                "index": index,
+                "uuid": parts[1][:96],
+                "name": parts[2][:160],
+                "total_vram_bytes": total_mib * 1024**2,
+                "available_vram_bytes": free_mib * 1024**2,
+                "compute_capability": capability,
+                "source": "local_driver",
+            }
+        )
+    return tuple(rows)
+
+
 def _instruction_sets() -> tuple[str, ...]:
     hints: list[str] = []
     processor = (platform.processor() or "").lower()
@@ -100,6 +151,8 @@ class HardwareProfile:
     gpu_hint: str = ""
     gpu_name: str = ""
     vram_bytes: int = 0
+    available_vram_bytes: int = 0
+    gpu_compute_capability: float = 0.0
     current_operating_mode: str = "local_only"
     instruction_sets: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
@@ -121,6 +174,8 @@ class HardwareProfile:
             "gpu_hint": self.gpu_hint,
             "gpu_name": self.gpu_name,
             "vram_bytes": self.vram_bytes,
+            "available_vram_bytes": self.available_vram_bytes,
+            "gpu_compute_capability": self.gpu_compute_capability,
             "current_operating_mode": self.current_operating_mode,
             "instruction_sets": list(self.instruction_sets),
             "warnings": list(self.warnings),
@@ -153,7 +208,23 @@ def profile_hardware(root: str | Path) -> HardwareProfile:
     if disk_free and disk_free < 10 * 1024**3:
         warnings.append("low_disk_space")
     gpu_hint = _gpu_hint()
-    if not gpu_hint:
+    gpus = _nvidia_inventory()
+    best_gpu = max(
+        gpus,
+        key=lambda row: (
+            row["compute_capability"],
+            row["available_vram_bytes"],
+            row["total_vram_bytes"],
+        ),
+    ) if gpus else None
+    configured_vram = int(os.environ.get("MFL_VRAM_BYTES", "0") or 0)
+    configured_name = os.environ.get("MFL_GPU_NAME", "").strip()
+    vram_bytes = configured_vram or int((best_gpu or {}).get("total_vram_bytes") or 0)
+    available_vram_bytes = int((best_gpu or {}).get("available_vram_bytes") or vram_bytes)
+    gpu_name = configured_name or str((best_gpu or {}).get("name") or "")
+    if not gpu_hint and gpus:
+        gpu_hint = "local_nvidia_driver"
+    if not gpu_hint and not vram_bytes:
         warnings.append("no_gpu_hint_detected")
 
     recommended_concurrency = 1 if available_memory and available_memory < 8 * 1024**3 else max(1, min(4, cpu_count // 2 or 1))
@@ -170,8 +241,10 @@ def profile_hardware(root: str | Path) -> HardwareProfile:
         available_memory_bytes=available_memory,
         disk_free_bytes=disk_free,
         gpu_hint=gpu_hint,
-        gpu_name=os.environ.get("MFL_GPU_NAME", "").strip(),
-        vram_bytes=int(os.environ.get("MFL_VRAM_BYTES", "0") or 0),
+        gpu_name=gpu_name,
+        vram_bytes=vram_bytes,
+        available_vram_bytes=available_vram_bytes,
+        gpu_compute_capability=float((best_gpu or {}).get("compute_capability") or 0.0),
         current_operating_mode="local_only",
         instruction_sets=instruction_sets,
         warnings=tuple(sorted(set(warnings))),
@@ -182,5 +255,6 @@ def profile_hardware(root: str | Path) -> HardwareProfile:
             "platform": platform.platform(),
             "processor": platform.processor() or "",
             "python": platform.python_version(),
+            "gpus": list(gpus),
         },
     )

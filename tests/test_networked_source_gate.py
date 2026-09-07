@@ -1,9 +1,23 @@
 from pathlib import Path
 import json
+import shutil
+
+import pytest
 
 from legal.ops import NetworkedSourceGateAuditor, run_networked_source_gate
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def isolated_source_identity(tmp_path, monkeypatch):
+    """Keep fake authority outside its fake source repo, even in repo-local QA."""
+    source = tmp_path / "source-project"
+    (source / "configs").mkdir(parents=True)
+    (source / "legal").mkdir()
+    (source / "pyproject.toml").write_text("[project]\nname = 'fictional-source-qa'\n", encoding="utf-8")
+    shutil.copy2(ROOT / "configs/maine_networked_source_gate_policy.json", source / "configs")
+    monkeypatch.setattr(__import__(__name__, fromlist=["ROOT"]), "ROOT", source)
 
 
 def write_json(path: Path, obj):
@@ -60,13 +74,14 @@ def test_networked_source_gate_fails_cleanly_before_external_data_exists(tmp_pat
     assert report["production_legal_ready"] is False
 
 
-def test_networked_source_gate_passes_for_non_fixture_external_evidence(tmp_path):
+def test_networked_source_gate_metadata_pass_is_not_legal_approval(tmp_path):
     data_root = tmp_path / "ME_FM_LLM_data"
     seed_networked_data_root(data_root)
     report = NetworkedSourceGateAuditor(ROOT, data_root).audit().as_dict()
     assert report["status"] == "pass"
     assert report["networked_source_ready"] is True
-    assert report["production_legal_ready"] is True
+    assert report["production_legal_ready"] is False
+    assert "not establish" in report["interpretation"]
     assert report["source_class_counts"]["court_forms_index"] == 1
     assert report["gold_eval_rows_total"] == 10
 
@@ -112,9 +127,11 @@ def seed_networked_data_root_with_actual_manifest_names(data_root: Path):
         data_root / "embedding_store" / "index_manifest.json",
         {
             "outputs": {
-                "bm25_documents": str(data_root / "embedding_store" / "bm25" / "documents.jsonl"),
-                "vector_embeddings": str(data_root / "embedding_store" / "vector" / "vectors.jsonl"),
-                "hybrid_documents": str(data_root / "embedding_store" / "hybrid" / "retrieval_documents.jsonl"),
+                # Portable manifest values keep incidental pytest directory
+                # names out of the fixture-marker policy under test.
+                "bm25_documents": "embedding_store/bm25/documents.jsonl",
+                "vector_embeddings": "embedding_store/vector/vectors.jsonl",
+                "hybrid_documents": "embedding_store/hybrid/retrieval_documents.jsonl",
             }
         },
     )
@@ -143,6 +160,7 @@ def test_networked_source_gate_accepts_actual_source_classes_and_legacy_manifest
     seed_networked_data_root_with_actual_manifest_names(data_root)
     report = NetworkedSourceGateAuditor(ROOT, data_root).audit().as_dict()
     assert report["status"] == "pass"
+    assert report["production_legal_ready"] is False
     assert report["source_class_counts"]["statute_title_pdf"] == 1
     assert report["source_class_counts"]["court_rules_index"] == 1
     assert report["source_class_counts"]["court_policy_index"] == 1

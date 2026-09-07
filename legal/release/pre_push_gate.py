@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -66,43 +65,11 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _remove_bytecode_artifacts(project_root: Path) -> None:
-    ignored_parts = {".venv", "venv", "env", "node_modules"}
-    artifact_names = (
-        "__pycache__",
-        ".pytest_cache",
-        ".ruff_cache",
-        ".mfl_work",
-        ".local_tmp",
-        ".proofs",
-    )
-    for artifact_name in artifact_names:
-        paths = sorted(
-            project_root.rglob(artifact_name),
-            key=lambda item: len(item.parts),
-            reverse=True,
-        )
-        for path in paths:
-            if ".git" in path.parts or any(part in ignored_parts for part in path.parts):
-                continue
-            shutil.rmtree(path, ignore_errors=True)
-    for path in sorted(
-        project_root.rglob("*.pyc"),
-        key=lambda item: len(item.parts),
-        reverse=True,
-    ):
-        if ".git" in path.parts or any(part in ignored_parts for part in path.parts):
-            continue
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
-
-
 def _doctor_check(project_root: Path) -> PrePushCheck:
     result = subprocess.run(
         [
             sys.executable,
+            "-B",
             "scripts/doctor-local-repo.py",
             "--repo-root",
             str(project_root),
@@ -351,8 +318,8 @@ def _ci_guardrail_check(project_root: Path) -> PrePushCheck:
 
 
 def run_pre_push_gate(project_root: str | Path = ".") -> PrePushGateReport:
+    """Inspect source without cleaning, rewriting, or deleting user artifacts."""
     root = Path(project_root).resolve()
-    _remove_bytecode_artifacts(root)
     checks_list: list[PrePushCheck] = []
     for check in (
         _doctor_check,
@@ -362,9 +329,7 @@ def run_pre_push_gate(project_root: str | Path = ".") -> PrePushGateReport:
         _safe_push_wrapper_check,
         _ci_guardrail_check,
     ):
-        _remove_bytecode_artifacts(root)
         checks_list.append(check(root))
-    _remove_bytecode_artifacts(root)
     checks = tuple(checks_list)
     blockers = tuple(blocker for check in checks for blocker in check.blockers)
     status = "pass" if not blockers and all(check.status == "pass" for check in checks) else "fail"

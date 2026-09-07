@@ -64,7 +64,8 @@ def test_local_errors_are_safe_recoverable_and_do_not_render_raw_response_text()
     ):
         assert marker in js
     assert "const preview = text.replace" not in js
-    assert "Your matter, draft, and original records were preserved." in js
+    assert "This error handler did not delete or roll back records." in js
+    assert "This message is not a rollback receipt." in js
 
 
 def test_authority_failure_updates_visible_blocker_without_javascript_scope_error() -> None:

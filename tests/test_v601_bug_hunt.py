@@ -151,6 +151,10 @@ sys.meta_path.insert(0, Block())
 import maine_family_law_llm.api as api
 assert api.FastAPI is None
 assert api.StrictBool is bool
+assert "legal.fast_interchange.worker" not in sys.modules
+from legal.fast_interchange import FastInterchangeFleet
+from legal.fast_interchange.hardware import assess_specialist_hardware
+assert callable(assess_specialist_hardware)
 print("fallback-import-pass")
 '''
     result = subprocess.run(

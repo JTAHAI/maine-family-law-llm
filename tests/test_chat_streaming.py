@@ -139,6 +139,44 @@ def test_fast_product_help_is_explicit_and_never_substitutes_for_legal_research(
     assert legal_response.json()["response_kind"] != "local_help_fast_path"
 
 
+@pytest.mark.parametrize("question", [
+    "How do I import a document?",
+    "How can I upload a file for local review?",
+    "Please how do I add my documents in this app?",
+    "Where can I import a PDF?",
+])
+def test_singular_import_help_is_useful_without_matter_or_law_sources(question):
+    from fastapi.testclient import TestClient
+    from maine_family_law_llm import api
+
+    result = TestClient(api.app).post(
+        "/ask", json={"question": question, "search_mode": "both"},
+    ).json()
+    assert result["response_kind"] == "local_help_fast_path"
+    assert result["metadata"]["fast_path"]["route_id"] == "import_records"
+    assert result["metadata"]["answer_intent"]["primary_intent"] == "navigate"
+    assert result["metadata"]["clarification_minimizer"]["required"] is False
+    assert result["review_required"] is True
+    assert len(result["answer"].split()) < 100
+    assert "Open Workspace" in result["answer"]
+    assert "cited source" not in result["answer"]
+    assert result["structured_answer"]["next_three_steps"] == []
+    assert result["structured_answer"]["child_impact_lens"] == []
+
+
+@pytest.mark.parametrize("question", [
+    "How do I import my records and what is the appeal deadline?",
+    "How do I import a document and can I file it in court?",
+    "What does review required mean under Maine law?",
+])
+def test_product_help_cannot_swallow_a_substantive_followup(question):
+    from fastapi.testclient import TestClient
+    from maine_family_law_llm import api
+
+    result = TestClient(api.app).post("/ask", json={"question": question}).json()
+    assert result.get("response_kind") != "local_help_fast_path"
+
+
 def test_progressive_response_keeps_one_finalized_citation_basis() -> None:
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient

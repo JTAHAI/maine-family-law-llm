@@ -6,7 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
+import os
+import stat
 from pathlib import Path
 
 FORBIDDEN_DIR_NAMES = {
@@ -117,7 +118,10 @@ def _is_approved_public_pdf(repo_root: Path, path: Path) -> bool:
                 str(row.get("original_filename") or ""): str(row.get("source_hash") or "").lower()
                 for row in payload.get("documents", [])
             }.get(within.name, "")
-            return bool(expected) and path.read_bytes()[:5] == b"%PDF-" and _sha256(path).lower() == expected
+            return (
+                bool(expected) and path.read_bytes()[:5] == b"%PDF-"
+                and _sha256(path).lower() == expected
+            )
         except (OSError, json.JSONDecodeError):
             return False
     return False
@@ -169,24 +173,31 @@ def _is_under_ignored_path(rel: Path) -> bool:
     return any(part == ".git" for part in rel.parts)
 
 
-def _remove_transient_cache_artifacts(repo_root: Path) -> None:
-    """Remove bytecode/test caches that can be regenerated during local test runs."""
+def _is_link_or_reparse(path: Path) -> bool:
+    metadata = path.lstat()
+    return stat.S_ISLNK(metadata.st_mode) or bool(
+        getattr(metadata, "st_file_attributes", 0) & 0x400
+    )
+
+
+def _inspection_paths(repo_root: Path):
+    """Read-only walk; report quarantined roots without traversing their data."""
     transient_dir_names = {"__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache"}
-    for name in transient_dir_names:
-        paths = sorted(repo_root.rglob(name), key=lambda item: len(item.parts), reverse=True)
-        for path in paths:
-            rel = path.relative_to(repo_root)
-            if _is_under_ignored_path(rel) or any(part in VENV_DIR_NAMES for part in rel.parts):
+    for directory, dirnames, filenames in os.walk(repo_root, followlinks=False):
+        current = Path(directory)
+        descend = []
+        for name in dirnames:
+            if name == ".git" or name in transient_dir_names:
                 continue
-            shutil.rmtree(path, ignore_errors=True)
-    for path in sorted(repo_root.rglob("*.py[co]"), key=lambda item: len(item.parts), reverse=True):
-        rel = path.relative_to(repo_root)
-        if _is_under_ignored_path(rel) or any(part in VENV_DIR_NAMES for part in rel.parts):
-            continue
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
+            path = current / name
+            yield path
+            if (name not in FORBIDDEN_DIR_NAMES and name not in VENV_DIR_NAMES
+                    and not name.endswith(".egg-info") and not _is_link_or_reparse(path)):
+                descend.append(name)
+        dirnames[:] = descend
+        for name in filenames:
+            if Path(name).suffix.lower() not in {".pyc", ".pyo"}:
+                yield current / name
 
 
 def _scan_tests_contamination(repo_root: Path) -> list[str]:
@@ -217,11 +228,13 @@ def _scan_tests_contamination(repo_root: Path) -> list[str]:
 
 def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
     repo_root = repo_root.resolve()
-    _remove_transient_cache_artifacts(repo_root)
     forbidden: list[str] = []
-    for path in repo_root.rglob("*"):
+    for path in _inspection_paths(repo_root):
         rel = path.relative_to(repo_root)
         if _is_under_ignored_path(rel):
+            continue
+        if _is_link_or_reparse(path):
+            forbidden.append(rel.as_posix())
             continue
         if allow_venv and any(part in VENV_DIR_NAMES for part in rel.parts):
             continue
@@ -273,12 +286,13 @@ def scan(repo_root: Path, *, allow_venv: bool = False) -> dict[str, object]:
         "safe_to_push": status == "pass",
         "failure_class": "none" if not forbidden else "repo_contamination_detected",
         "strict_by_default": True,
+        "read_only": True,
         "venv_allowed": allow_venv,
         "forbidden_paths": forbidden,
         "required_public_repo_files": sorted(REQUIRED_PUBLIC_REPO_FILES),
         "recovery_hint": (
-            "Run REPAIR_LOCAL_REPO.ps1 -IncludeVenv or python scripts/clean-local-artifacts.py "
-            "--repo-root <repo> --include-venv, then re-run the doctor."
+            "Review the reported paths and audit a source-only staging tree. "
+            "Do not delete models, runtime state, or build outputs to make this check pass."
             if forbidden
             else ""
         ),

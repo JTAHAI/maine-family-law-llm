@@ -7,12 +7,14 @@ output as legal authority, evidence, or filing-ready work product.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from hashlib import sha256
 import json
 import re
 from typing import Any, Iterable
+
+from legal.security.protected_spans import model_context_projection
 
 SCHEMA_VERSION = "local_agent_contract_v1"
 CONTEXT_MANIFEST_SCHEMA = "local_agent_context_manifest_v1"
@@ -178,6 +180,8 @@ class ContextManifestBuilder:
         warnings: list[str] = []
         truncated = False
         for raw in sources:
+            projected_text, projected_metadata = model_context_projection(raw.text, raw.metadata)
+            raw = replace(raw, text=projected_text, metadata=projected_metadata)
             normalized = raw.normalized()
             digest = sha256_text(normalized.text)
             dedupe_key = (normalized.lane, normalized.source_id, digest)

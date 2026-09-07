@@ -16,14 +16,14 @@ def _registered_routes() -> set[tuple[str, str]]:
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and str(path).startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
     return registered
 
 
 def test_pass39_openapi_documents_required_api_surface():
-    inventory_report = EndpointInventory().compare_to_registered(_registered_routes())
-    openapi_report = OpenAPICompletionAuditor().audit(app.openapi()).as_dict()
+    inventory_report = EndpointInventory().compare_to_registered(_registered_routes(), surface="production")
+    openapi_report = OpenAPICompletionAuditor().audit(app.openapi(), surface="production").as_dict()
     policy = APICompletionPolicy().evidence().as_dict()
 
     assert inventory_report["status"] == "pass", inventory_report
@@ -36,14 +36,15 @@ def test_pass39_openapi_documents_required_api_surface():
 def test_pass39_protected_api_routes_require_role_and_tenant_and_emit_audit_headers():
     client = TestClient(app)
 
-    denied = client.post("/api/query", json={"query": "custody"})
+    # Exercise a retained, read-only production endpoint, not the retired
+    # caller-supplied authority demonstration that previously returned fake cards.
+    denied = client.get("/api/deliberation/presets")
     assert denied.status_code == 403
     assert denied.headers["X-MFLL-RBAC"] == "enforced"
     assert denied.headers["X-MFLL-Audit-Event-Id"]
 
-    allowed = client.post(
-        "/api/query",
-        json={"query": "custody"},
+    allowed = client.get(
+        "/api/deliberation/presets",
         headers={"X-User-Role": "attorney", "X-Tenant-Id": "tenant-test"},
     )
     body = allowed.json()
@@ -53,8 +54,8 @@ def test_pass39_protected_api_routes_require_role_and_tenant_and_emit_audit_head
     assert body["review_required"] is True
     assert body["rbac"]["enforced"] is True
     assert body["audit_event"]["audit_status"] == "emitted"
-    assert body["source_cards"]
-    assert body["drilldown"]["answer_to_claim_to_citation_to_source_text_to_verifier_result"] is True
+    assert body["presets"]
+    assert client.post("/api/query", json={"query": "custody"}).status_code == 404
 
 
 def test_pass39_health_route_remains_unauthenticated_but_audited():

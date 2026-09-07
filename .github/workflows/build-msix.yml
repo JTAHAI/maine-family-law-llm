@@ -14,41 +14,45 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Prepare repository-local test environment
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/ci/temp, dist/ci/cache | Out-Null
+          "TEMP=$PWD/dist/ci/temp" >> $env:GITHUB_ENV
+          "TMP=$PWD/dist/ci/temp" >> $env:GITHUB_ENV
+          "PIP_CACHE_DIR=$PWD/dist/ci/cache" >> $env:GITHUB_ENV
+          "PYTHONDONTWRITEBYTECODE=1" >> $env:GITHUB_ENV
+
+      - name: Install test dependencies before collection
+        shell: pwsh
+        run: |
+          python -m pip install -e ".[api,dev]" "python-multipart>=0.0.20,<0.1"
+          if ($LASTEXITCODE -ne 0) { throw "Test dependency installation failed." }
+
       - name: Run targeted tests
         shell: pwsh
         run: |
-          python -m pytest -q tests/test_local_workbench_live_ui_v183.py tests/test_appeals_routing_runtime_v184.py tests/test_brand_kit_ui_assets_v185.py tests/test_classic_desktop_ui_v186.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_installer_launchers.py tests/test_store_packaging.py
+          python -m pytest -q tests/test_local_workbench_live_ui_v183.py tests/test_appeals_routing_runtime_v184.py tests/test_brand_kit_ui_assets_v185.py tests/test_classic_desktop_ui_v186.py tests/test_chat_library_v187_input_clear_and_routing.py tests/test_installer_launchers.py tests/test_store_packaging.py tests/test_ga_gateway_closure.py --basetemp=dist/ci/pytest --junitxml=dist/ci/targeted-tests.xml
+          if ($LASTEXITCODE -ne 0) { throw "Targeted tests failed." }
 
-      - name: Build frozen runtime
+      # The canonical builder freezes, smokes and audits the same runtime before
+      # sealing it. Do not freeze a second candidate after its verification.
+      - name: Build unsigned Store candidate once
         shell: pwsh
         run: |
-          ./scripts/build-store-runtime.ps1 -RepoRoot $PWD
+          ./scripts/build-msix.ps1 -RepoRoot $PWD -IdentityConfigPath store/msix/identity.example.json -Unsigned
 
-      - name: Run frozen runtime smoke
+      - name: Record qualification boundary
         shell: pwsh
         run: |
-          ./scripts/test-store-runtime.ps1 -RepoRoot $PWD
-
-      - name: Build Store-ready MSIX
-        shell: pwsh
-        run: |
-          ./scripts/build-msix.ps1 -RepoRoot $PWD -IdentityConfigPath store/msix/identity.example.json
-
-      - name: Install Store-ready MSIX
-        shell: pwsh
-        run: |
-          ./scripts/install-test-msix.ps1 -RepoRoot $PWD
-
-      - name: Uninstall Store-ready MSIX
-        if: always()
-        shell: pwsh
-        run: |
-          ./scripts/uninstall-test-msix.ps1
+          @{ status = 'NOT_EVALUATED'; clean_install = 'not_run'; installed_offline = 'not_run'; wack = 'not_run'; reason = 'Unsigned Store candidate; isolated signed installation qualification is a separate required step.' } | ConvertTo-Json | Set-Content -LiteralPath dist/store/evidence/ci-installation-status.json
 
       - name: Upload Store artifacts
         uses: actions/upload-artifact@v4
         with:
           name: maine-family-law-llm-msix
           path: |
-            dist/store/msix/**
-            dist/store/evidence/**
+            dist/store/msix/*.msix
+            dist/store/evidence/*.json
+            dist/store/evidence/*.txt
+            dist/ci/targeted-tests.xml

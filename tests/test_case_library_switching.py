@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import inspect
 
+from fastapi.testclient import TestClient
+
 from corpus_builder_support import build_fixture_case
 from maine_family_law_llm import api
 from maine_family_law_llm.case_library import active_case_root, list_registered_case_roots, register_case_root, set_active_case_root
@@ -50,6 +52,24 @@ def test_browser_workbench_exposes_corpus_library_switcher() -> None:
     assert "/api/corpus-library" in html
     assert "/api/activate-corpus" in html
     assert "General Maine law workbench only" in html
+
+
+def test_corpus_library_public_context_exposes_counts_without_local_paths(tmp_path, monkeypatch) -> None:
+    registry_path = tmp_path / "case_library.json"
+    monkeypatch.setenv("MFL_CASE_LIBRARY_PATH", str(registry_path))
+    built = build_fixture_case(tmp_path / "matter_context", case_name="Fictional Matter Context")
+    set_active_case_root(built["case_root"])
+
+    payload = TestClient(api.app).get("/api/corpus-library").json()
+
+    assert payload["active_case_id"]
+    assert payload["active_case_label"] == "Fictional Matter Context"
+    assert len(payload["cases"]) == 1
+    active = payload["cases"][0]
+    assert active["case_id"] == payload["active_case_id"]
+    assert isinstance(active["indexed_records"], int)
+    assert "case_root" not in active
+    assert str(built["case_root"].resolve()) not in str(payload)
 
 
 def test_launcher_source_mentions_installed_corpus_library_controls() -> None:

@@ -133,7 +133,8 @@ class AdaptiveRuntimePlanner:
                     reasons.append("model_context_limit_exceeded")
                 else:
                     model_context = model.context_limit_tokens
-            if model.min_vram_bytes and model.min_vram_bytes > self.profile.vram_bytes:
+            available_vram = self.profile.available_vram_bytes or self.profile.vram_bytes
+            if model.min_vram_bytes and model.min_vram_bytes > available_vram:
                 reasons.append("insufficient_vram")
             peak = estimate_peak_memory(model, model_context)
             if peak > self.budget.memory_budget_bytes:

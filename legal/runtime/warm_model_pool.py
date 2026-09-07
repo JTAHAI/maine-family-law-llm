@@ -25,6 +25,7 @@ from legal.security.strict_json import strict_json_load_path
 _ID = re.compile(r"[a-z][a-z0-9_-]{2,79}\Z")
 _THERMAL_STATES = frozenset({"unknown", "normal", "elevated", "critical"})
 _LOW_MEMORY_BYTES = 4 * 1024**3
+_MODEL_OS_RESERVE_BYTES = 1024**3
 
 
 def _now() -> str:
@@ -133,6 +134,74 @@ class WarmModelPoolStore:
             "thermal_measurement": "operator_reported" if thermal != "unknown" else "not_measured",
         }
 
+    def _hardware_fit(self, model: dict[str, Any]) -> dict[str, Any]:
+        """Check declared requirements immediately before a warm-up model load."""
+
+        profile = profile_hardware(self.root).as_dict()
+        available_memory = int(profile.get("available_memory_bytes") or 0)
+        available_vram = int(
+            profile.get("available_vram_bytes") or profile.get("vram_bytes") or 0
+        )
+        gpus = [row for row in (profile.get("details") or {}).get("gpus", []) if isinstance(row, dict)]
+        required_memory = max(
+            0,
+            int(
+                model.get("max_resident_bytes")
+                or model.get("estimated_peak_memory_bytes")
+                or model.get("min_ram_bytes")
+                or 0
+            ),
+        )
+        required_vram = max(0, int(model.get("min_vram_bytes") or 0))
+        quantization = str(model.get("quantization") or "").strip().casefold()
+        blockers: list[str] = []
+        if required_memory and available_memory < required_memory + _MODEL_OS_RESERVE_BYTES:
+            blockers.append("insufficient_available_memory_for_specialist")
+        # The current worker intentionally refuses BF16/FP16 on CPU.  Do not
+        # let a warm-up be the first time a person discovers that requirement.
+        minimum_compute = 8.0 if quantization == "bf16" else 6.0
+        compatible_gpus = [
+            gpu
+            for gpu in gpus
+            if float(gpu.get("compute_capability") or 0) >= minimum_compute
+        ] if quantization in {"bf16", "fp16"} else gpus
+        if quantization in {"bf16", "fp16"} and not compatible_gpus:
+            blockers.append("compatible_gpu_required_for_specialist_precision")
+        if required_vram and not any(
+            int(gpu.get("available_vram_bytes") or 0) >= required_vram
+            for gpu in compatible_gpus
+        ):
+            blockers.append("insufficient_available_vram_for_specialist")
+        recommended_gpu = max(
+            compatible_gpus,
+            key=lambda gpu: (
+                int(gpu.get("available_vram_bytes") or 0),
+                float(gpu.get("compute_capability") or 0),
+            ),
+            default=None,
+        )
+        return {
+            "status": "ready" if not blockers else "fallback_review_required",
+            "blockers": blockers,
+            "required_memory_bytes": required_memory,
+            "required_vram_bytes": required_vram,
+            "available_memory_bytes": available_memory,
+            "available_vram_bytes": available_vram,
+            "recommended_gpu": (
+                {
+                    "index": recommended_gpu.get("index"),
+                    "name": str(recommended_gpu.get("name") or "")[:160],
+                    "compute_capability": recommended_gpu.get("compute_capability"),
+                    "available_vram_bytes": recommended_gpu.get("available_vram_bytes"),
+                }
+                if recommended_gpu
+                else None
+            ),
+            "quantization": quantization or "unspecified",
+            "fallback": "deterministic_host_with_human_review",
+            "review_required": True,
+        }
+
     @staticmethod
     def _public(worker: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -208,6 +277,24 @@ class WarmModelPoolStore:
                     "local_only": True,
                     "network_used": False,
                 }
+            hardware_fit = self._hardware_fit(model)
+            if hardware_fit["blockers"]:
+                event = self._event(
+                    state,
+                    "warm_refused_incompatible_hardware",
+                    model_id,
+                    {"task": task, "hardware_fit": hardware_fit},
+                )
+                self._write(state)
+                return {
+                    "status": "not_warmed_incompatible_hardware_review_required",
+                    "model_id": model_id,
+                    "hardware_fit": hardware_fit,
+                    "receipt": self._public_event(event),
+                    "review_required": True,
+                    "local_only": True,
+                    "network_used": False,
+                }
             if worker is None or not bool(getattr(worker, "supports_explicit_release", False)):
                 event = self._event(
                     state,
@@ -270,6 +357,7 @@ class WarmModelPoolStore:
             "status": "warm_review_required",
             "worker": self._public(record),
             "pressure": pressure,
+            "hardware_fit": hardware_fit,
             "receipt": self._public_event(event),
             "review_required": True,
             "local_only": True,

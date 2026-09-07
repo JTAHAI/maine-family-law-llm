@@ -24,6 +24,9 @@ from pydantic import BaseModel, Field
 from starlette.routing import Match
 
 from app.api.main import app as enterprise_app
+from app.api.local_gateway import LocalGatewayProtection
+from app.api.release_boundary import unsafe_legacy_path as _unsafe_legacy_path
+from app.api.release_boundary import production_request_active
 from app.api.security import audit_event, rbac_envelope
 from legal.api_stability import ApiStabilityProgram
 from legal.evals.claim_support_metrics import ClaimSupportMetricRunner, REQUIRED_CLAIM_STATUS_LABELS
@@ -45,6 +48,7 @@ from legal.production.signed_authority_updates import (
     AuthorityUpdateChannel,
     AuthorityUpdateError,
 )
+from legal.release.feature_truth import FeatureTruthError, feature_truth_inventory
 from legal.security.local_encryption import vault_security_status
 from maine_family_law_llm.api import app as local_app
 from maine_family_law_llm.feature_tiers import feature_tier_status
@@ -53,11 +57,10 @@ from maine_family_law_llm.runtime_kernel import DurableJobKernel, get_runtime_ke
 from maine_family_law_llm.version import VERSION
 
 
-# Specialized workbenches accepted through the local service, canonical API,
-# matter-scoped encrypted store, shipped UI, source drill-down, review boundary,
-# and focused synthetic acceptance suite. Frozen/package reachability is
-# reported separately by the release evidence run.
-ACCEPTED_FEATURE_IDS = (
+# Legacy workbenches remain reachable for local review and migration. Their
+# presence here must never be used as a Store or package-verification claim;
+# current public claim eligibility comes only from release_feature_truth.json.
+LEGACY_REACHABLE_FEATURE_IDS = (
     "slice_21_matter_intake",
     "slice_22_operative_order",
     "slice_23_service_notice_deadlines",
@@ -113,6 +116,10 @@ ACCEPTED_FEATURE_IDS = (
     "capability_73_voice_drafting_commands",
     "capability_74_extension_sdk_permission_center",
 )
+
+# Public compatibility export retained for downstream code that used the old
+# name. Callers that need a release claim must use capability_inventory().
+ACCEPTED_FEATURE_IDS = LEGACY_REACHABLE_FEATURE_IDS
 
 EXPERIMENTAL_DISABLED_FEATURE_IDS: tuple[str, ...] = ()
 _EXPERIMENTAL_DISABLED_API_PREFIXES: tuple[str, ...] = ()
@@ -349,7 +356,7 @@ def _route_pairs(application: FastAPI) -> set[tuple[str, str]]:
     for route in application.routes:
         path = str(getattr(route, "path", "") or "")
         for method in getattr(route, "methods", None) or ():
-            if path:
+            if path and not _unsafe_legacy_path(path):
                 pairs.add((str(method).upper(), path))
     return pairs
 
@@ -379,7 +386,7 @@ def _merge_openapi() -> dict[str, Any]:
         for method, operation in dict(operations).items():
             target.setdefault(method, operation)
         paths[path] = target
-    merged["paths"] = paths
+    merged["paths"] = {path: operations for path, operations in paths.items() if not _unsafe_legacy_path(path)}
     components = dict(local_schema.get("components") or {})
     for group, values in dict(enterprise_schema.get("components") or {}).items():
         target = dict(components.get(group) or {})
@@ -393,6 +400,33 @@ def _merge_openapi() -> dict[str, Any]:
 def capability_inventory() -> dict[str, Any]:
     local_pairs = _route_pairs(local_app)
     enterprise_pairs = _route_pairs(enterprise_app)
+    try:
+        feature_truth = feature_truth_inventory()
+        configured_reachable = set(feature_truth["legacy_reachable_feature_ids"])
+        runtime_reachable = set(LEGACY_REACHABLE_FEATURE_IDS)
+        mismatch = sorted(configured_reachable ^ runtime_reachable)
+        if mismatch:
+            feature_truth = {
+                **feature_truth,
+                "store_claim_feature_ids": [],
+                "store_feature_claim_eligible": False,
+                "feature_status": "blocked_feature_ledger_route_catalog_mismatch",
+                "release_blockers": sorted(
+                    set((*feature_truth["release_blockers"], "feature_truth_route_catalog_mismatch"))
+                ),
+                "route_catalog_mismatch_feature_ids": mismatch,
+            }
+    except FeatureTruthError as exc:
+        feature_truth = {
+            "schema_version": "runtime_feature_truth_inventory_v1",
+            "feature_status": "blocked_feature_truth_manifest_unavailable",
+            "store_claim_feature_ids": [],
+            "store_feature_claim_eligible": False,
+            "legacy_reachable_feature_ids": list(LEGACY_REACHABLE_FEATURE_IDS),
+            "unavailable_features": [],
+            "release_blockers": [str(exc)],
+            "review_required": True,
+        }
     return {
         "schema_version": "production_capability_inventory_v1",
         "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -411,11 +445,16 @@ def capability_inventory() -> dict[str, Any]:
             "capability_claim_basis": "reachable_route_inventory",
         },
         "release_scope": {
-            "accepted_feature_ids": list(ACCEPTED_FEATURE_IDS),
+            "accepted_feature_ids": list(feature_truth["store_claim_feature_ids"]),
+            "legacy_reachable_feature_ids": list(feature_truth["legacy_reachable_feature_ids"]),
             "experimental_disabled_feature_ids": list(EXPERIMENTAL_DISABLED_FEATURE_IDS),
             "experimental_backend_override_enabled": False,
-            "store_feature_claim_eligible": True,
+            "store_feature_claim_eligible": bool(feature_truth["store_feature_claim_eligible"]),
+            "feature_status": feature_truth["feature_status"],
+            "feature_truth_manifest_sha256": feature_truth.get("manifest_sha256", ""),
+            "release_blockers": list(feature_truth["release_blockers"]),
         },
+        "feature_truth": feature_truth,
         "review_required": True,
     }
 
@@ -443,6 +482,10 @@ def _ensure_control_routes() -> None:
     @local_app.get("/api/runtime/feature-tiers", tags=["runtime"])
     def runtime_feature_tiers() -> dict[str, Any]:
         return feature_tier_status()
+
+    @local_app.get("/api/runtime/release-scope", tags=["runtime"])
+    def runtime_release_scope() -> dict[str, Any]:
+        return capability_inventory()["feature_truth"]
 
     @local_app.get("/api/authority-updates/status", tags=["authority-updates"])
     def authority_updates_status() -> dict[str, Any]:
@@ -1256,12 +1299,15 @@ class ProductionApplication:
         self.enterprise_app = enterprise_app
         self.title = "Maine Family Law LLM Production API"
         self.version = VERSION
+        self._protected_dispatch = LocalGatewayProtection(self._dispatch)
 
     @property
     def routes(self) -> list[Any]:
         seen: set[tuple[str, tuple[str, ...]]] = set()
         routes: list[Any] = []
         for route in [*self.local_app.routes, *self.enterprise_app.routes]:
+            if _unsafe_legacy_path(str(getattr(route, "path", "") or "")):
+                continue
             key = (
                 str(getattr(route, "path", "") or ""),
                 tuple(sorted(str(item) for item in (getattr(route, "methods", None) or ()))),
@@ -1276,8 +1322,21 @@ class ProductionApplication:
         return _merge_openapi()
 
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        token = production_request_active.set(True)
+        try:
+            await self._protected_dispatch(scope, receive, send)
+        finally:
+            production_request_active.reset(token)
+
+    async def _dispatch(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope.get("type") == "http":
             path = str(scope.get("path") or "")
+            if _unsafe_legacy_path(path):
+                response = JSONResponse(status_code=404, content={
+                    "detail": "legacy_contract_not_in_release_scope", "review_required": True,
+                })
+                await response(scope, receive, send)
+                return
             if _disabled_experimental_path(path) and not _experimental_slices_enabled():
                 response = JSONResponse(
                     status_code=404,
@@ -1311,6 +1370,7 @@ app = ProductionApplication()
 __all__: Iterable[str] = (
     "app",
     "ACCEPTED_FEATURE_IDS",
+    "LEGACY_REACHABLE_FEATURE_IDS",
     "capability_inventory",
     "ProductionApplication",
     "runtime_kernel",

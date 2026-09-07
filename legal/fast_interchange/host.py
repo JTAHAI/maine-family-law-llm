@@ -20,9 +20,25 @@ def load_operator_registry() -> HotSwapRegistry:
     trust = os.environ.get("MFL_FAST_INTERCHANGE_ADMISSION_TRUST", "")
     state = os.environ.get("MFL_FAST_INTERCHANGE_STATE_ROOT", "")
     pack_root = os.environ.get("MFL_FAST_INTERCHANGE_PACK_ROOT", "")
+    bundled_root = os.environ.get("MFL_FAST_INTERCHANGE_BUNDLED_PACK_ROOT", "")
     if pack_root and trust and state and not any(values.values()):
         from app.services.model_pack_service import load_active_pack
 
+        active_pointer = Path(pack_root) / "active.json"
+        if not active_pointer.exists() and bundled_root:
+            try:
+                bundled = Path(bundled_root).resolve(strict=True)
+                return HotSwapRegistry.load(
+                    root=bundled,
+                    release_registry=bundled / "releases.json",
+                    artifact_registry=bundled / "artifacts.json",
+                    admission_catalog=bundled / "admission.json",
+                    admission_authority=AdmissionAuthority(
+                        trust_path=Path(trust), state_root=Path(state)
+                    ),
+                )
+            except Exception as exc:
+                raise FastInterchangeError("fast_interchange_bundled_pack_unavailable") from exc
         try:
             return load_active_pack(
                 Path(pack_root), AdmissionAuthority(trust_path=Path(trust), state_root=Path(state))
@@ -52,4 +68,5 @@ def release_identity(registry, release, *, allow_test_only: bool = False) -> dic
         grant = registry.admission(release)
         identity["admission_scope"] = grant.scope
         identity["evaluation_dataset_kind"] = grant.evaluation.dataset_kind
+        identity["compatibility"] = grant.compatibility.model_dump()
     return identity

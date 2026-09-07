@@ -48,6 +48,8 @@ const localAgentModal=element(), localAgentBackdrop=element(), localAgentRun=ele
       localAgentCancel=element(), localAgentTask=element();
 const document={body:{classList:{remove(){},add(){}}}, activeElement:element(),getElementById(){return null}};
 const window={localStorage:{getItem(){return '{}'},setItem(){}},requestAnimationFrame(fn){fn()}};
+// Modal focus/isolation is covered separately; this harness isolates request ownership.
+const openOverlay=element=>{element.hidden=false;},closeOverlay=element=>{element.hidden=true;};
 let localAgentPayload={question:'Fictional original question',local_agent_matter_id:'fictional'},
     localAgentPreview=null,localAgentOwner=null,localAgentBusy=false,localAgentRequestEpoch=0,
     lastPayload=null,lastSources=null;
@@ -58,6 +60,7 @@ const escapeHtml=value=>String(value);
 const toasts=[], messages=[];
 const showToast=text=>toasts.push(text);
 const addMessage=(role,text,payload)=>messages.push({role,text,payload});
+const localAgentCitationsWithVerifierSpans=payload=>payload.citations||[];
 const renderLatestAnswer=()=>{},renderSources=()=>{},renderBadges=()=>{};
 let resolveRequest,rejectRequest,requestCount=0;
 const pendingRequests=[];
@@ -144,3 +147,16 @@ const fetchJson=()=>{requestCount++;return new Promise((resolve,reject)=>{
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_specialist_hardware_block_explains_safe_ram_headroom_without_enabling_load():
+    source = ROOT / "src/maine_family_law_llm/ui/workbench.js"
+    mirror = ROOT / "maine_family_law_llm/ui/workbench.js"
+    assert source.read_bytes() == mirror.read_bytes()
+    script = source.read_text(encoding="utf-8")
+    assert "model allowance plus a 1 GiB system reserve" in script
+    assert "Close or pause other local workloads, then refresh this preview." in script
+    assert "The specialist will remain off until that headroom is available." in script
+    assert "localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length);" in script
+    assert "hardware.execution_accelerator || accelerator" in script
+    assert "CPU fallback selected" in script

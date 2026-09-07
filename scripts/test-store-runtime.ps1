@@ -13,6 +13,8 @@ $env:PYTHONPYCACHEPREFIX = Join-Path $env:TEMP "mfl-pycache-disabled"
 if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
+. (Join-Path $PSScriptRoot "store-build-workspace.ps1")
+$null = Initialize-RepoBuildEnvironment $RepoRoot
 if (-not $RuntimeRoot) {
   $RuntimeRoot = Join-Path $RepoRoot "dist\store\runtime"
 }
@@ -52,6 +54,7 @@ try {
   $env:LOCALAPPDATA = $priorLocalAppData
 }
 
+try {
 if (-not $smokeProcess.WaitForExit($SmokeTimeoutMs)) {
     Stop-Process `
         -Id $smokeProcess.Id `
@@ -111,7 +114,7 @@ if audit["status"] != "pass" or not audit["exact_regression_resolved"] or not au
     raise SystemExit(2)
 '@
 Set-Content -Path $assetAuditScript -Value $assetAuditPython -Encoding UTF8
-$storeBuildPython = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "MaineFamilyLawLLM\build-venvs\store\Scripts\python.exe"
+$storeBuildPython = Join-Path $RepoRoot "dist\build-env\store\Scripts\python.exe"
 $pythonExe = if (Test-Path -LiteralPath $storeBuildPython) { $storeBuildPython } else { "python" }
 & $pythonExe -B $assetAuditScript $runtimeInternal $assetAuditJson
 if ($LASTEXITCODE -ne 0) {
@@ -138,3 +141,23 @@ $summary = @(
 Set-Content -Path (Join-Path $EvidenceRoot "test-summary.txt") -Value $summary -Encoding UTF8
 
 Write-Host "Store runtime smoke passed. Evidence: $smokeJson"
+} finally {
+  if ($smokeProcess -and -not $smokeProcess.HasExited) {
+    $smokeProcess.Kill()
+    $smokeProcess.WaitForExit(10000) | Out-Null
+  }
+  # Delete only the unique fictional profile created by this invocation. The
+  # user's installed Store profile and all preserved evidence are out of scope.
+  $ownedQaRoot = [System.IO.Path]::GetFullPath($qaLocalAppData)
+  $allowedQaParent = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  if (-not $ownedQaRoot.StartsWith($allowedQaParent, [StringComparison]::OrdinalIgnoreCase) -or
+      [System.IO.Path]::GetFileName($ownedQaRoot) -notmatch '^mfl-frozen-smoke-[0-9a-f]{32}$') {
+    throw "Owned smoke profile containment validation failed."
+  }
+  if (Test-Path -LiteralPath $ownedQaRoot) {
+    if ((Get-Item -LiteralPath $ownedQaRoot -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+      throw "Owned smoke profile must not be a reparse point."
+    }
+    Remove-Item -LiteralPath $ownedQaRoot -Recurse -Force
+  }
+}

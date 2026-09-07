@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+from pathlib import Path
 from threading import Event
 
 import pytest
@@ -19,8 +21,9 @@ from legal.fast_interchange.worker import FastInterchangeError, HotSwapManager, 
 class SyntheticStuckBackend:
     """Importable spawn fixture: deliberately ignores cancellation during work."""
 
-    def __init__(self, **_options):
+    def __init__(self, *, entry_marker=None, **_options):
         self.last = None
+        self.entry_marker = entry_marker
 
     def activate(self, *, release, **_kwargs):
         return {
@@ -31,6 +34,8 @@ class SyntheticStuckBackend:
 
     def complete(self, *, release, messages):
         if messages[0]["content"] == "stuck":
+            if self.entry_marker is not None:
+                Path(self.entry_marker).write_text("fictional-worker-entered", encoding="utf-8")
             time.sleep(15)  # Parent must actually terminate this owned child.
         if self.last is not None:
             raise AssertionError("prior request leaked")
@@ -62,29 +67,41 @@ def _release(registry):
 def test_owned_process_is_killed_on_cancel_then_restarts_without_context(tmp_path):
     registry = _registry(tmp_path)
     release = _release(registry)
-    backend = IsolatedAdapterBackend(factory=SyntheticStuckBackend, cancellation_grace_seconds=0.15)
+    entry_marker = tmp_path / "stuck-worker-entered"
+    backend = IsolatedAdapterBackend(
+        factory=partial(SyntheticStuckBackend, entry_marker=entry_marker),
+        cancellation_grace_seconds=0.15,
+    )
     cancel = Event()
-    backend.set_cancellation(cancel, time.monotonic() + 20)
+    # Cold Windows spawn/import is not the cancellation SLA. Start the bounded
+    # generation deadline only after activation, then prove work really began.
+    backend.set_cancellation(cancel, time.monotonic() + 60)
     try:
         backend.activate(
             root=registry.root, binding=registry.bindings[release.release_id], release=release
         )
         first_pid = backend._process.pid
+        backend.set_cancellation(cancel, time.monotonic() + 20)
         with ThreadPoolExecutor(max_workers=1) as pool:
             work = pool.submit(
                 backend.complete, release=release, messages=[{"role": "user", "content": "stuck"}]
             )
+            entered_deadline = time.monotonic() + 10
+            while not entry_marker.exists() and time.monotonic() < entered_deadline:
+                time.sleep(0.025)
+            assert entry_marker.is_file(), "owned worker never entered the long operation"
             cancel.set()
             started = time.monotonic()
             with pytest.raises(FastInterchangeError, match="generation_canceled"):
                 work.result(timeout=5)
             assert time.monotonic() - started < 4
         assert backend._process is None
-        backend.set_cancellation(Event(), time.monotonic() + 20)
+        backend.set_cancellation(Event(), time.monotonic() + 60)
         backend.activate(
             root=registry.root, binding=registry.bindings[release.release_id], release=release
         )
         assert backend._process.pid != first_pid
+        backend.set_cancellation(Event(), time.monotonic() + 20)
         for content in ("fictional-matter-A", "fictional-matter-B"):
             assert (
                 backend.complete(release=release, messages=[{"role": "user", "content": content}])[

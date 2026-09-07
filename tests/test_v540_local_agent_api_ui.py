@@ -90,6 +90,44 @@ def test_local_agent_run_uses_exact_preview_hash(bound_host):
     assert result["provenance_receipt"]["context_manifest_sha256"] == prepared["context_manifest"]["manifest_sha256"]
 
 
+def test_managed_specialist_worker_requires_explicit_local_admin(bound_host, monkeypatch):
+    body = {
+        "matter_id": bound_host["body"]["matter_id"],
+        "model_id": "mfl-evidence-review-v9",
+        "capability": "evidence_review",
+        "user_confirmed": True,
+    }
+    denied = bound_host["client"].post(
+        "/api/local-agent/worker/start", json=body, headers=bound_host["headers"]
+    )
+    assert denied.status_code == 403
+
+    started = []
+
+    def start(**kwargs):
+        started.append(kwargs)
+        return {
+            "status": "running",
+            "endpoint": "http://127.0.0.1:8105",
+            "loopback_only": True,
+            "network_used": False,
+            "review_required": True,
+        }
+
+    monkeypatch.setattr(api.managed_fast_interchange_worker, "start", start)
+    response = bound_host["client"].post(
+        "/api/local-agent/worker/start",
+        json=body,
+        headers={**bound_host["headers"], "X-User-Role": "admin"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "running"
+    assert started[0]["model_id"] == body["model_id"]
+    assert started[0]["capability"] == body["capability"]
+    assert started[0]["repo_root"].is_absolute()
+    assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in response.text
+
+
 def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     html = render_local_workbench_html()
     js = (Path(__file__).resolve().parents[1] / "src/maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")
@@ -98,12 +136,26 @@ def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     assert "Review exactly what the model will receive" in html
     assert "Approve exact context &amp; run local model" in html
     assert "Ask local model" in js
+    assert "Review evidence" in js
+    assert "Draft from records" in js
+    assert "syncFastInterchangeModelSelection" in js
+    assert "window.mflActiveSpecialistModels" in js
+    assert "Before model load" in js
+    assert "Evidence Review — compare records" in html
+    assert "Drafting Assistant — source-bound" in html
     assert "/api/local-agent/preview" in js
     assert "/api/local-agent/run" in js
+    assert "/api/local-agent/worker/status" in js
+    assert "/api/local-agent/worker/start" in js
+    assert "/api/local-agent/worker/stop" in js
     assert "renderContextManifest" in js
     assert "fast_interchange_local" in html
     assert "FAST INTERCHANGE admitted local worker" in html
     assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in html
+    assert 'id="local-agent-worker-confirm"' in html
+    assert 'id="local-agent-worker-start"' in html
+    assert 'id="local-agent-worker-stop"' in html
+    assert "No worker starts automatically" in html
     assert "http://127.0.0.1:8105" in js
     assert ".local-agent-modal" in css
     assert ".chat-context-manifest" in css

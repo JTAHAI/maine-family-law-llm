@@ -1,0 +1,27 @@
+{
+  "schema_version": "v802_release_scope_v1",
+  "release": "8.0.2",
+  "package_version": "8.0.2.0",
+  "decision": "PACKAGE_CANDIDATE_PENDING_VERIFICATION",
+  "release_type": "maintenance",
+  "existing_feature_scope_reference": "configs/v800_release_scope.json",
+  "previous_maintenance_scope_reference": "configs/v801_release_scope.json",
+  "canonical_feature_truth_manifest": "configs/release_feature_truth.json",
+  "public_feature_claims_status": "pending_current_package_verification",
+  "new_public_feature_ids": [],
+  "new_bundled_legal_model_ids": [],
+  "model_import_requires_production_admission": true,
+  "excluded_model_candidate_classes": [
+    "untrained_specialist_slots",
+    "research_only_protocol_adapters",
+    "failed_quality_evidence_review_candidates",
+    "failed_quality_drafting_candidates",
+    "unqualified_parenting_and_financial_candidates"
+  ],
+  "storage_schema_change": false,
+  "automatic_downloads": false,
+  "review_required": true,
+  "attorney_approval_claimed": false,
+  "enterprise_organizational_validation_claimed": false,
+  "store_certification_claimed": false
+}

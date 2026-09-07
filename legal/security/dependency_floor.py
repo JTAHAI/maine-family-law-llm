@@ -64,11 +64,14 @@ class DependencyAuditReport:
 RULES: tuple[DependencyRule, ...] = (
     DependencyRule(
         "pypdf",
-        "6.15.0",
+        "6.16.1",
         "core",
         True,
-        "Current hardened pypdf floor; excludes known decompression memory-exhaustion and malformed-stream releases.",
-        ("GHSA-7hfw-26vp-jp8m", "GHSA-jfx9-29x2-rv3j"),
+        "Patched PDF tree, outline and XForm iteration bounds; excludes known denial-of-service releases.",
+        (
+            "GHSA-7hfw-26vp-jp8m", "GHSA-jfx9-29x2-rv3j",
+            "CVE-2026-84309", "CVE-2026-84310", "CVE-2026-84311",
+        ),
     ),
     DependencyRule(
         "cryptography",

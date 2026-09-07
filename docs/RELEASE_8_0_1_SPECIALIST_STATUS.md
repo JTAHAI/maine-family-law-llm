@@ -1,5 +1,141 @@
 # 8.0.1 specialist release gate — BLOCKED
 
+## Current specialist verification — 2026-09-05
+
+No specialist is quality-qualified or production-admitted. Safe withholding or
+partial quotation extraction is **not** a successful specialist review and does
+not satisfy the requested GA release. Historical internal/template scores below
+must not be used as current release evidence.
+
+| Specialist | Latest verified evidence | Release state |
+| --- | --- | --- |
+| Evidence Review r0013 parent | 40/104 frozen mechanical cases; saved-output replay: 86 complete extract sets, 5 partial sets, 13 withheld | Blocked; extract sets are not verified explanations |
+| Evidence correction, 4e-5 learning rate | 50/104 frozen cases, including one generation error; only 81 complete extract sets versus the parent's 86 | Rejected for promotion despite higher mechanical score |
+| Evidence correction, 1e-5 learning rate | Training completed on 512 fictional rows. Actual CPU generation: 3/8 development checks; only 1/8 also passed the additional unquoted-explanation keyword diagnostic | Blocked; neither diagnostic proves semantic or legal accuracy |
+| Evidence paired-source correction, 2e-5 learning rate | Trained on 128 of 512 new fictional rows. Real CPU generation: paired development 5/8 mechanical, 3/8 combined unquoted-keyword; original development 2/8 mechanical and combined | Rejected for promotion: misses material source changes, including supplied attachment, consent and recorded finding |
+| Drafting r0003 | 12/22 frozen mechanical cases; saved-output replay: 15 complete extract sets, 7 withheld | Blocked |
+| Parenting-plan Review r0002 | External research pack exists; internal development/test/challenge reports each contain 24 passing template cases; no completed out-of-template report found | Not independently qualified or integrated for release |
+| Financial-disclosure Review | No completed substantive specialist pack found in the authorized model project | Not ready |
+| Intake, Authority, Safety/privacy | Earlier fictional protocol/workflow adapters only | No substantive specialist qualification |
+
+The 1e-5 CPU evaluation used two threads, below-normal process priority, no GPU,
+and the existing shared base without copying it. All eight generations completed
+in 172.329 seconds, including 23.641 seconds of activation. These are measurements
+on this Ryzen 9 host, **not** a low-end-PC certification. No other workload was
+stopped or reconfigured.
+
+The original frozen evaluator and fixtures remain unchanged. An additional,
+separately reported diagnostic removes quoted text before checking explanation
+keywords. It catches copied source language masquerading as explanatory coverage;
+even its pass does not establish polarity, causality, factual truth, or legal
+accuracy. Three of the eight original meaning-keyword matches disappeared when
+quoted source language was excluded. No score or qualifier was silently rewritten.
+
+Correction work now includes 512 newly authored fictional examples arranged as
+256 matched pairs. Within each pair the question is unchanged while a material
+source fact changes: conflicting versus matching accounts, absent versus supplied
+approval, missing versus readable attachments, unknown versus specified clock
+settings, allegations versus explicitly recorded findings, negative versus
+positive limited searches, requests versus confirmations, and absent versus
+readable source bodies. Separate diagnostic pairs are never training input.
+Integrity, exact quotations, privacy markers, source order, prompt parity and
+development separation passed the mechanical audit; this is not attorney review.
+
+A bounded 128-row CPU continuation completed on a subset of that corpus, not all
+512 examples. It is not a release-qualified model. No model admission, Store
+listing claim, or package inclusion is authorized by a training receipt alone.
+
+Update at 19:55 America/New_York: the 128-row continuation completed in 2,269.453
+seconds. Its new adapter is 40,422,168 bytes; all 392 tensors / 10,092,544
+parameters are finite and the source/receipt hashes revalidated. RAM subsequently
+cleared the unchanged 12 GiB initial guard. Both sequential CPU evaluation sets
+completed: 16 actual generations with no generation errors, in 183.766 and
+157.515 seconds respectively. No other application was stopped or reconfigured.
+
+The candidate is **rejected for promotion**. It calls an attachment body missing
+despite supplied content, fails to acknowledge documented consent, and treats a
+source explicitly recording a fictional finding as merely an unresolved
+allegation. The paired set mechanically passes some of these incorrect answers;
+neither original scores nor the additional lexical diagnostic certify meaning.
+All fictional answers were inspected as engineering diagnostics, not independent
+human or attorney review. The full 104-case evaluation was not repeated for this
+already failing candidate. The bounded follow-up has reached its stop condition;
+no repeated training or new package build is underway.
+
+Evidence (repository-local, ignored model workspace):
+
+- `dist/model-candidates/generalization-pilot-20260905/evidence-review-decision.json`
+- `dist/model-candidates/generalization-pilot2-20260905/candidate-development-cpu.json`
+- `dist/model-candidates/generalization-pilot2-20260905/candidate-development-cpu-explanations-final.json`
+- `dist/model-candidates/generalization-pilot2-20260905/counterfactual-data/audit.json`
+- `dist/model-candidates/generalization-pilot2-20260905/training-counterfactual-cpu/`
+- `dist/model-candidates/generalization-pilot2-20260905/counterfactual-decision.json`
+- `dist/model-candidates/generalization-pilot2-20260905/counterfactual-candidate-development-cpu.json`
+- `dist/model-candidates/generalization-pilot2-20260905/counterfactual-candidate-original-development-cpu.json`
+
+The prior full application regression completed with **2,643 passes, 22 documented
+platform skips and no failures/errors** across 2,665 collected tests. Its source
+snapshot and hashes are recorded in `full-regression-postfix/summary.json` inside
+the same model workspace. That earlier application result is not new-model E2E,
+an installed-package qualification, or a substitute for the focused checks on
+subsequent research tooling changes.
+
+Remaining specialist-release gates: complete and accurate unfamiliar-source
+responses; independent quality evidence satisfying the existing admission policy;
+hash-bound production admission; actual production UI/API, low-memory hardware,
+frozen-runtime and installed-package verification using the final admitted
+artifacts. No new specialist-bearing MSIX or GA claim was produced by these
+research checks.
+
+## Historical r0011 verification — 2026-09-03
+
+This update supersedes any earlier wording that could be read as r0011 being a
+usable Evidence Review specialist. It is not usable or releasable today.
+
+- A fresh production-UI → canonical-API → loopback-worker run used only the
+  repository's fictional pickup-note matter. The host preserved two exact,
+  hashed source excerpts and review-required status, but the actual r0011
+  inference call reached the 120-second safety deadline. The host returned its
+  safe `local_model_failed_review_required` fallback; it did not accept model
+  prose. The owned worker stopped cleanly and removed its temporary model
+  snapshot.
+- The desktop runtime was CPU-only even though the driver could see an RTX
+  3060. Hardware preflight and worker launch now distinguish driver inventory
+  from the installed Torch runtime, and map a usable GPU by UUID rather than
+  assuming driver and Torch device indexes match. The UI now tells a person
+  when CPU fallback, rather than the detected GPU, would execute the model.
+- An isolated, offline GPU diagnostic loaded the real shared base and r0011
+  adapter on the RTX 3060. At both 64 and 256-token budgets it failed to stop
+  naturally and did not reproduce both exact fictional source values. Raw
+  output was withheld; only its SHA-256, bounded timing, and safety verdict
+  were retained. This is a real-weight failure, not a successful specialist
+  result.
+
+Current evidence is limited to the small, repository-local fictional records
+under `dist/qa801/evidence-r0011/`; it contains no client record, raw model
+answer, model snapshot, corpus, or credential. r0011 remains hidden from the
+production registry and excluded from the MSIX. The next admissible action is
+a new immutable corrective candidate with held-out exact-source and natural
+completion tests, followed by independent review and admission; changing UI
+text, timeouts, or trust settings cannot repair these weight-quality failures.
+
+Update, 2026-09-01: Evidence Review r0011 supersedes r0010 as the current
+development research candidate. It passed a real-weight, production-source
+UI/API journey with fictional records on CPU. The host exposed two exact
+verified quotations, withheld all raw model narrative, preserved exact source
+offsets through the UI drill-down, kept review required, wrote encrypted audit
+state, and shut down without leaving a model snapshot. The deterministic output
+boundary now also suppresses strongly labeled sensitive values and can retain
+safe verified excerpts while rejecting an inexact or sensitive proposed quote.
+See [`EVIDENCE_REVIEW_R0011_E2E.md`](EVIDENCE_REVIEW_R0011_E2E.md).
+
+This proves a bounded, verifier-mediated research path—not a general legal
+answering model. r0011 passed 87/87 held-out failure-family mechanical checks,
+but passed only 5/12 cases on the older free-wording regression. Its raw
+narrative remains hidden, production admission remains unavailable, and the
+overall specialist release gate remains **BLOCKED**. The r0010 report is retained
+only as historical evidence.
+
 Current maintenance-package work is recorded in `configs/v801_release_scope.json`
 and `docs/RELEASE_NOTES_v8.0.1.md`. It may produce an 8.0.1 MSIX with research
 models excluded. The specialist acceptance gate described below remains blocked;

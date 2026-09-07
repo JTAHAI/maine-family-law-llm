@@ -246,10 +246,14 @@ class LocalAgentRuntime:
 
         output_validation: dict[str, Any] = {}
         binding = getattr(self.client, "model_binding", {})
-        if (self.client.provider_id == "fast_interchange_local" and response is not None
-                and binding.get("capability") == "evidence_review"):
+        if (
+            self.client.provider_id == "fast_interchange_local"
+            and response is not None
+            and binding.get("capability") == "evidence_review"
+        ):
             from legal.fast_interchange.evidence_output import (
-                render_verified_evidence_extracts, verify_evidence_output,
+                render_verified_evidence_extracts,
+                verify_evidence_output,
             )
 
             try:
@@ -257,11 +261,28 @@ class LocalAgentRuntime:
                 if not output_validation["blockers"] and not blockers:
                     answer = render_verified_evidence_extracts(output_validation, selected)
                     warnings.append("evidence_review_unverified_narrative_withheld")
+                elif output_validation.get("partial_extracts_available") and not blockers:
+                    blockers.extend(output_validation["blockers"])
+                    answer = render_verified_evidence_extracts(
+                        output_validation, selected, allow_partial=True
+                    )
+                    warnings.extend(
+                        (
+                            "evidence_review_unverified_narrative_withheld",
+                            "evidence_review_partial_output_withheld",
+                        )
+                    )
+                    status = "specialist_output_partial_review_required"
             except Exception:
                 # A verifier failure is never permission to show unchecked text.
-                output_validation = {"status": "withheld", "review_required": True,
-                                     "blockers": ["evidence_review_verifier_failed"]}
-            if output_validation["blockers"]:
+                output_validation = {
+                    "status": "withheld",
+                    "review_required": True,
+                    "blockers": ["evidence_review_verifier_failed"],
+                }
+            if output_validation["blockers"] and not output_validation.get(
+                "partial_extracts_available"
+            ):
                 blockers.extend(output_validation["blockers"])
                 status = "specialist_output_blocked_review_required"
                 answer = (
@@ -270,6 +291,53 @@ class LocalAgentRuntime:
                     "Your records were not changed. Open the source cards to inspect the "
                     "exact text; try a narrower question or review the records directly.\n\n"
                     "Review required."
+                )
+                citation_refs = []
+
+        if (
+            self.client.provider_id == "fast_interchange_local"
+            and response is not None
+            and binding.get("capability") == "drafting"
+        ):
+            from legal.fast_interchange.drafting_output import (
+                render_source_bound_draft,
+                verify_drafting_output,
+            )
+
+            try:
+                output_validation = verify_drafting_output(response.text.strip(), selected)
+                if not output_validation["blockers"] and not blockers:
+                    answer = render_source_bound_draft(output_validation, selected)
+                    warnings.append("drafting_unverified_narrative_withheld")
+                elif output_validation.get("partial_extracts_available") and not blockers:
+                    blockers.extend(output_validation["blockers"])
+                    answer = render_source_bound_draft(
+                        output_validation, selected, allow_partial=True
+                    )
+                    warnings.extend(
+                        (
+                            "drafting_unverified_narrative_withheld",
+                            "drafting_partial_output_withheld",
+                        )
+                    )
+                    status = "specialist_output_partial_review_required"
+            except Exception:
+                output_validation = {
+                    "status": "withheld",
+                    "review_required": True,
+                    "filing_ready": False,
+                    "blockers": ["drafting_verifier_failed"],
+                }
+            if output_validation["blockers"] and not output_validation.get(
+                "partial_extracts_available"
+            ):
+                blockers.extend(output_validation["blockers"])
+                status = "specialist_output_blocked_review_required"
+                answer = (
+                    "The Drafting response was withheld: its quotations or source references "
+                    "could not be verified against the approved records. Your records and drafts "
+                    "were not changed. Open the source cards, narrow the request, or add the "
+                    "missing support before trying again.\n\nReview required."
                 )
                 citation_refs = []
 

@@ -7,14 +7,23 @@ legal review gates.
 """
 
 from .fleet import FAST_INTERCHANGE_CAPABILITIES, FastInterchangeFleet, FleetError
-from .worker import (
-    ArtifactBinding,
-    ArtifactInventory,
-    FastInterchangeError,
-    FastInterchangeRelease,
-    HotSwapManager,
-    HotSwapRegistry,
-)
+
+# Hardware/fleet inspection must remain available without optional model/API
+# dependencies. Only import the strict serving contracts when requested.
+_WORKER_EXPORTS = frozenset({
+    "ArtifactBinding", "ArtifactInventory", "FastInterchangeError",
+    "FastInterchangeRelease", "HotSwapManager", "HotSwapRegistry",
+})
+
+
+def __getattr__(name):
+    if name not in _WORKER_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    value = getattr(import_module(".worker", __name__), name)
+    globals()[name] = value
+    return value
 
 __all__ = [
     "ArtifactBinding",

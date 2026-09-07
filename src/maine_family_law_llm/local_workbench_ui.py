@@ -8,6 +8,23 @@ from pathlib import Path
 from .version import BUILD_NUMBER, PACKAGE_VERSION, UI_FOOTER_LABEL, UI_PASS_MARKER, UI_VERSION, VERSION
 
 
+_EDITION_COPY = {
+    "personal": {
+        "label": "Personal edition",
+        "version": VERSION,
+        "track": "Local family workspace",
+        "scope": "Private matter tools stay local to this device.",
+    },
+    "public": {
+        "label": "Public edition",
+        # Presentation editions are not independent product releases.
+        "version": VERSION,
+        "track": "Legal operations",
+        "scope": "Presentation shell; source review is still required.",
+    },
+}
+
+
 def ui_asset_root() -> Path:
     """Return the filesystem directory containing bundled workbench assets."""
 
@@ -38,8 +55,11 @@ def read_workbench_asset(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def render_local_workbench_html() -> str:
-    """Return the dependency-free local workbench shell."""
+def render_workbench_html(*, edition: str = "personal") -> str:
+    """Return one edition of the dependency-free local workbench shell."""
+
+    selected_edition = edition if edition in _EDITION_COPY else "personal"
+    edition_copy = _EDITION_COPY[selected_edition]
 
     return (
         read_workbench_asset("workbench.html")
@@ -49,4 +69,25 @@ def render_local_workbench_html() -> str:
         .replace("{{PRODUCT_VERSION}}", VERSION)
         .replace("{{BUILD_NUMBER}}", str(BUILD_NUMBER))
         .replace("{{PACKAGE_VERSION}}", PACKAGE_VERSION)
+        .replace("{{WORKBENCH_EDITION}}", selected_edition)
+        .replace("{{WORKBENCH_EDITION_LABEL}}", edition_copy["label"])
+        .replace("{{WORKBENCH_EDITION_VERSION}}", edition_copy["version"])
+        .replace("{{WORKBENCH_EDITION_TRACK}}", edition_copy["track"])
+        .replace("{{WORKBENCH_EDITION_SCOPE}}", edition_copy["scope"])
     )
+
+
+def render_local_workbench_html() -> str:
+    """Return the Personal Edition local workbench shell."""
+
+    return render_workbench_html(edition="personal")
+
+
+def render_public_workbench_html() -> str:
+    """Return the Public Edition presentation shell for the current release.
+
+    This route changes the edition treatment only. It is not a claim that a
+    public deployment or a separate model run has been authorized.
+    """
+
+    return render_workbench_html(edition="public")

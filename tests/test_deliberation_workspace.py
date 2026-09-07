@@ -19,7 +19,7 @@ def _registered_routes() -> set[tuple[str, str]]:
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and str(path).startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
     return registered
 

@@ -6,13 +6,13 @@ import hmac
 import json
 import os
 import re
+import secrets
 import threading
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Header, HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -24,6 +24,9 @@ _TENANT_ID_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?")
 _SESSION_PURPOSE = "security_privacy_session_capability"
 _CAPABILITY_REPLAY_LOCK = threading.RLock()
 _CONSUMED_CAPABILITIES: dict[str, float] = {}
+# Capabilities deliberately expire on process restart unless an operator supplies
+# an actual secret. A public installation path is not cryptographic key material.
+_PROCESS_SESSION_SECRET = secrets.token_bytes(32)
 
 
 @dataclass(frozen=True)
@@ -93,12 +96,8 @@ def _server_audit_event_id(request: Request) -> str:
 
 
 def _session_secret() -> bytes:
-    seed = (
-        os.environ.get("MFL_SESSION_SIGNING_SECRET")
-        or os.environ.get("MFL_PROJECT_ROOT")
-        or "maine-family-law-llm-local-session-secret"
-    )
-    return hashlib.sha256(seed.encode("utf-8")).digest()
+    seed = os.environ.get("MFL_SESSION_SIGNING_SECRET")
+    return hashlib.sha256(seed.encode("utf-8")).digest() if seed else _PROCESS_SESSION_SECRET
 
 
 def _canonical_token_payload(payload: dict[str, Any]) -> bytes:
@@ -118,9 +117,7 @@ def mint_session_capability(
 ) -> SessionCapability:
     issued = datetime.now(UTC)
     expires = issued + timedelta(seconds=max(60, ttl_seconds))
-    csrf_token = hashlib.sha256(
-        f"{user_role}|{tenant_id}|{matter_id}|{action}|{issued.isoformat()}".encode("utf-8")
-    ).hexdigest()[:32]
+    csrf_token = secrets.token_hex(32)
     payload = {
         "purpose": _SESSION_PURPOSE,
         "user_role": user_role,
@@ -135,8 +132,12 @@ def mint_session_capability(
         "issued_at": issued.isoformat(),
         "expires_at": expires.isoformat(),
     }
-    signature = hmac.new(_session_secret(), _canonical_token_payload(payload), hashlib.sha256).hexdigest()
-    token = base64.urlsafe_b64encode(_canonical_token_payload({**payload, "signature": signature})).decode("ascii")
+    signature = hmac.new(
+        _session_secret(), _canonical_token_payload(payload), hashlib.sha256
+    ).hexdigest()
+    token = base64.urlsafe_b64encode(
+        _canonical_token_payload({**payload, "signature": signature})
+    ).decode("ascii")
     return SessionCapability(
         token=token,
         issued_at=payload["issued_at"],
@@ -176,13 +177,23 @@ def validate_session_capability(
 ) -> dict[str, Any]:
     if not token:
         raise HTTPException(status_code=403, detail={"error": "session_capability_required"})
+    if not isinstance(token, str) or len(token) > 16384:
+        raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"})
     try:
-        raw = base64.urlsafe_b64decode(token.encode("ascii"))
+        raw = base64.b64decode(token.encode("ascii"), altchars=b"-_", validate=True)
         payload = json.loads(raw.decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("capability_object_required")
     except Exception as exc:  # pragma: no cover - defensive parsing
-        raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"}) from exc
+        raise HTTPException(
+            status_code=403, detail={"error": "session_capability_invalid"}
+        ) from exc
     signature = str(payload.pop("signature", ""))
-    expected_signature = hmac.new(_session_secret(), _canonical_token_payload(payload), hashlib.sha256).hexdigest()
+    if not re.fullmatch(r"[0-9a-f]{64}", signature):
+        raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"})
+    expected_signature = hmac.new(
+        _session_secret(), _canonical_token_payload(payload), hashlib.sha256
+    ).hexdigest()
     if not hmac.compare_digest(signature, expected_signature):
         raise HTTPException(status_code=403, detail={"error": "session_capability_tampered"})
     if payload.get("purpose") != _SESSION_PURPOSE:
@@ -195,16 +206,28 @@ def validate_session_capability(
         raise HTTPException(status_code=403, detail={"error": "session_matter_mismatch"})
     if payload.get("action") != expected_action:
         raise HTTPException(status_code=403, detail={"error": "session_action_mismatch"})
-    if expected_resource_type is not None and payload.get("resource_type") != expected_resource_type:
+    if (
+        expected_resource_type is not None
+        and payload.get("resource_type") != expected_resource_type
+    ):
         raise HTTPException(status_code=403, detail={"error": "session_resource_type_mismatch"})
     if expected_resource_id is not None and payload.get("resource_id") != expected_resource_id:
         raise HTTPException(status_code=403, detail={"error": "session_resource_mismatch"})
-    if csrf_token is not None and payload.get("csrf_token") != csrf_token:
+    if csrf_token is not None and not hmac.compare_digest(
+        str(payload.get("csrf_token", "")).encode("utf-8"), csrf_token.encode("utf-8")
+    ):
         raise HTTPException(status_code=403, detail={"error": "csrf_token_mismatch"})
     try:
         expires_at = datetime.fromisoformat(str(payload.get("expires_at")))
-    except ValueError as exc:
-        raise HTTPException(status_code=403, detail={"error": "session_capability_invalid"}) from exc
+        issued_at = datetime.fromisoformat(str(payload.get("issued_at")))
+        if expires_at.tzinfo is None or issued_at.tzinfo is None or expires_at <= issued_at:
+            raise ValueError("capability_time_invalid")
+        if type(payload.get("single_use")) is not bool:
+            raise ValueError("capability_boolean_invalid")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=403, detail={"error": "session_capability_invalid"}
+        ) from exc
     if expires_at <= datetime.now(UTC):
         raise HTTPException(status_code=403, detail={"error": "session_capability_expired"})
     if bool(payload.get("single_use")) and consume:
@@ -214,7 +237,9 @@ def validate_session_capability(
         _prune_consumed_capabilities()
         with _CAPABILITY_REPLAY_LOCK:
             if capability_id in _CONSUMED_CAPABILITIES:
-                raise HTTPException(status_code=403, detail={"error": "session_capability_replayed"})
+                raise HTTPException(
+                    status_code=403, detail={"error": "session_capability_replayed"}
+                )
             _CONSUMED_CAPABILITIES[capability_id] = expires_at.timestamp()
     return payload
 
@@ -275,7 +300,10 @@ async def require_api_role(
             status_code=403,
             detail={"error": "tenant_scope_invalid", "audit_event_id": event_id},
         )
-    if any(_path_is_within_prefix(path, prefix) for prefix in ADMIN_ONLY_PREFIXES) and role != "admin":
+    if (
+        any(_path_is_within_prefix(path, prefix) for prefix in ADMIN_ONLY_PREFIXES)
+        and role != "admin"
+    ):
         raise HTTPException(
             status_code=403,
             detail={"error": "admin_role_required", "audit_event_id": event_id},
@@ -288,17 +316,20 @@ class AuditHeaderMiddleware(BaseHTTPMiddleware):
     """Emit one server-generated audit identifier on every API response."""
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        audit_event_id = str(uuid.uuid4())
-        request.state.mfll_audit_event_id = audit_event_id
+        audit_event_id = _server_audit_event_id(request)
         response = await call_next(request)
         if request.url.path.startswith("/api"):
             response.headers["X-MFLL-Audit-Event-Id"] = audit_event_id
             response.headers["X-MFLL-Audit-Event-Type"] = f"{request.method}:{request.url.path}"
-            response.headers["X-MFLL-RBAC"] = "public" if request.url.path in PUBLIC_ENDPOINTS else "enforced"
+            response.headers["X-MFLL-RBAC"] = (
+                "public" if request.url.path in PUBLIC_ENDPOINTS else "enforced"
+            )
         return response
 
 
-def audit_event(endpoint: str, action: str, role: str = "contract", tenant_id: str = "contract") -> dict[str, str]:
+def audit_event(
+    endpoint: str, action: str, role: str = "contract", tenant_id: str = "contract"
+) -> dict[str, str]:
     return {
         "event_id": str(uuid.uuid4()),
         "endpoint": endpoint,
@@ -309,7 +340,9 @@ def audit_event(endpoint: str, action: str, role: str = "contract", tenant_id: s
     }
 
 
-def rbac_envelope(required_role: str = "attorney_or_reviewer", tenant_scoped: bool = True) -> dict[str, str | bool]:
+def rbac_envelope(
+    required_role: str = "attorney_or_reviewer", tenant_scoped: bool = True
+) -> dict[str, str | bool]:
     return {
         "enforced": True,
         "required_role": required_role,

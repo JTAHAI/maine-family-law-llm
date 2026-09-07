@@ -85,6 +85,7 @@ def test_pass137_rejects_wrong_scope_and_preserves_expiry_validation(monkeypatch
     import json
 
     payload = json.loads(base64.urlsafe_b64decode(expired.token.encode("ascii")).decode("utf-8"))
+    payload["issued_at"] = (datetime.now(UTC) - timedelta(minutes=20)).isoformat()
     payload["expires_at"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
     signature = hmac.new(security._session_secret(), security._canonical_token_payload({key: value for key, value in payload.items() if key != "signature"}), hashlib.sha256).hexdigest()
     expired_token = base64.urlsafe_b64encode(security._canonical_token_payload({**{key: value for key, value in payload.items() if key != "signature"}, "signature": signature})).decode("ascii")

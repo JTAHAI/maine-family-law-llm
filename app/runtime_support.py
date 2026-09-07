@@ -19,6 +19,10 @@ API_STATE_PATH_ENV = "MFL_LOCAL_API_STATE_PATH"
 CASE_LIBRARY_PATH_ENV = "MFL_CASE_LIBRARY_PATH"
 RUNTIME_LOG_DIR_ENV = "MFL_RUNTIME_LOG_DIR"
 AUTHORITY_DATA_ROOT_ENV = "MFL_AUTHORITY_DATA_ROOT"
+FAST_INTERCHANGE_PACK_ROOT_ENV = "MFL_FAST_INTERCHANGE_PACK_ROOT"
+FAST_INTERCHANGE_TRUST_ENV = "MFL_FAST_INTERCHANGE_ADMISSION_TRUST"
+FAST_INTERCHANGE_STATE_ENV = "MFL_FAST_INTERCHANGE_STATE_ROOT"
+FAST_INTERCHANGE_BUNDLED_PACK_ROOT_ENV = "MFL_FAST_INTERCHANGE_BUNDLED_PACK_ROOT"
 _RUNTIME_LOG_MAX_BYTES = 512 * 1024
 _RUNTIME_LOG_MESSAGE_MAX_BYTES = 16 * 1024
 _VALID_RUNTIME_MODES = frozenset({"source", "store"})
@@ -117,6 +121,26 @@ def configure_runtime_environment(context: RuntimeContext) -> RuntimeContext:
         os.environ[CASE_LIBRARY_PATH_ENV] = str(context.case_library_path)
         os.environ[API_STATE_PATH_ENV] = str(context.api_state_path)
         os.environ[RUNTIME_LOG_DIR_ENV] = str(context.logs_root)
+        # A Store user should not need to invent operator paths merely to open
+        # the signed local-model pack manager.  These defaults contain only
+        # writable pack state and the shipped public trust anchors; model
+        # admission and explicit activation remain mandatory.
+        pack_root = context.runtime_data_root / "fast-interchange" / "model-packs"
+        admission_state = context.writable_root / "state" / "fast-interchange"
+        pack_root.mkdir(parents=True, exist_ok=True)
+        admission_state.mkdir(parents=True, exist_ok=True)
+        os.environ.setdefault(FAST_INTERCHANGE_PACK_ROOT_ENV, str(pack_root))
+        os.environ.setdefault(
+            FAST_INTERCHANGE_TRUST_ENV,
+            str(context.bundle_root / "configs" / "fast_interchange_admission_trust.json"),
+        )
+        os.environ.setdefault(FAST_INTERCHANGE_STATE_ENV, str(admission_state))
+        bundled_pack = context.bundle_root / "store" / "fast-interchange"
+        if bundled_pack.is_dir():
+            os.environ.setdefault(
+                FAST_INTERCHANGE_BUNDLED_PACK_ROOT_ENV,
+                str(bundled_pack),
+            )
     os.environ[RUNTIME_MODE_ENV] = context.mode
     return context
 

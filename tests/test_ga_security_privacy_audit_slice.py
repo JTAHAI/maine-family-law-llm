@@ -130,6 +130,7 @@ def test_stale_session_origin_body_and_record_capability_fail_closed(monkeypatch
         "matter_id": "matter-a",
         "action": "security_privacy_backup",
         "csrf_token": "csrf",
+        "single_use": False,
         "issued_at": issued.isoformat(),
         "expires_at": (issued + timedelta(minutes=15)).isoformat(),
     }
@@ -192,6 +193,10 @@ def test_prompt_ocr_model_tool_and_url_injection_cannot_change_policy() -> None:
 def test_matter_encryption_isolation_backup_restore_and_audit_tamper_detection(tmp_path: Path) -> None:
     project_root = tmp_path / "repo"
     project_root.mkdir()
+    # Source discovery must stop at this synthetic repository, not the real
+    # checkout surrounding its repository-local dist fixture workspace.
+    (project_root / "pyproject.toml").write_text("[project]\nname='fictional-qa'\n")
+    (project_root / "legal").mkdir()
     matter_root = tmp_path / "matters"
     store = MatterStore(matter_root, project_root=project_root, encryption_key="unit-test-encryption-key")
     matter_dir = store.create_matter(Matter(matter_id="matter-a", tenant_id="tenant-a", title="Fictional"))

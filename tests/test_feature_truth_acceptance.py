@@ -4,10 +4,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.api.production import ACCEPTED_FEATURE_IDS, app, capability_inventory
+from app.api.production import (
+    ACCEPTED_FEATURE_IDS,
+    LEGACY_REACHABLE_FEATURE_IDS,
+    app,
+    capability_inventory,
+)
 from maine_family_law_llm.local_workbench_ui import read_workbench_asset
 from maine_family_law_llm.production_ui import production_ui_manifest
-
 
 SLICE_PATHS = (
     "/api/intake/matters", "/api/orders/inventory", "/api/calendar/events",
@@ -53,13 +57,20 @@ def test_every_accepted_specialized_workbench_has_production_navigation() -> Non
     assert "Review required" in javascript
 
 
-def test_runtime_and_ui_manifests_publish_only_the_accepted_scope() -> None:
+def test_runtime_inventory_separates_legacy_reachability_from_current_store_claims() -> None:
     release_scope = capability_inventory()["release_scope"]
     assert len(ACCEPTED_FEATURE_IDS) == 54
-    assert release_scope["accepted_feature_ids"] == list(ACCEPTED_FEATURE_IDS)
+    assert release_scope["legacy_reachable_feature_ids"] == list(LEGACY_REACHABLE_FEATURE_IDS)
+    assert release_scope["accepted_feature_ids"] == []
     assert release_scope["experimental_disabled_feature_ids"] == []
     assert release_scope["experimental_backend_override_enabled"] is False
-    assert release_scope["store_feature_claim_eligible"] is True
+    assert release_scope["store_feature_claim_eligible"] is False
+    assert (
+        release_scope["feature_status"]
+        == "legacy_reachable_pending_current_package_verification"
+    )
+    assert release_scope["feature_truth_manifest_sha256"]
+    assert "current_source_regression_required" in release_scope["release_blockers"]
 
     ui_manifest = production_ui_manifest()
     assert ui_manifest["status"] == "pass"
@@ -77,22 +88,10 @@ def test_feature_truth_sources_contain_no_private_paths_or_people() -> None:
         assert forbidden not in combined
 
 
-def test_public_catalog_promotes_all_accepted_slices_without_preview_claims() -> None:
+def test_public_catalog_marks_historical_acceptance_pending_package_reverification() -> None:
     catalog = Path("docs/features.md").read_text(encoding="utf-8")
     truth = Path("docs/GA_TODAY_FEATURE_TRUTH.md").read_text(encoding="utf-8")
-    specialized = catalog.split("<h2>Verified specialized workbenches</h2>", 1)[1].split(
-        "<h2>Verified Matter Productivity Studio</h2>", 1
-    )[0]
-    productivity = catalog.split("<h2>Verified Matter Productivity Studio</h2>", 1)[1].split(
-        "<h2>Verified Add-on Studio</h2>", 1
-    )[0]
-    addons = catalog.split("<h2>Verified Add-on Studio</h2>", 1)[1].split(
-        "<h2>Additional source capabilities under qualification</h2>", 1
-    )[0]
-    assert specialized.count("Verified end to end") == 24
-    assert productivity.count("Verified end to end") == 10
-    assert addons.count("Verified end to end") == 20
-    assert "Usable with local-engine prerequisite" not in addons
-    assert "bundled, hash-pinned whisper.cpp" in addons
-    assert "Development preview" not in specialized
-    assert truth.count("`verified_end_to_end`") >= 24
+    assert "current package revalidation pending" in catalog
+    assert "not current Store listing copy" in catalog
+    assert "not a claim for the current 8.0.1 package" in truth
+    assert "configs/release_feature_truth.json" in truth

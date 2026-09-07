@@ -21,7 +21,7 @@ def test_guided_workflow_navigation_reuses_the_guarded_workspaces() -> None:
     for marker in (
         "function setWorkflowFocus(workflow)",
         "question?.focus({preventScroll: true})",
-        "setDrawerOpen(true, 'setup')",
+        "openWorkbenchPanel('setup')",
         "openDocumentIntelligence(button)",
         "await openDocumentWorkspace()",
         "openOverlay(privacyOverlay)",

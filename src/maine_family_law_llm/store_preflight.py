@@ -27,7 +27,7 @@ UAP_NS = "http://schemas.microsoft.com/appx/manifest/uap/windows10"
 DESKTOP_NS = "http://schemas.microsoft.com/appx/manifest/desktop/windows10"
 RESCAP_NS = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 
-REQUIRED_TOP_LEVEL_FILES = {"AppxManifest.xml", "AppxBlockMap.xml", "[Content_Types].xml", "AppxSignature.p7x"}
+REQUIRED_TOP_LEVEL_FILES = {"AppxManifest.xml", "AppxBlockMap.xml", "[Content_Types].xml"}
 REQUIRED_NOTICE_PATTERNS = ("license", "licenses/")
 FORBIDDEN_EXACT_BASENAMES = {
     "store-preflight.json",
@@ -281,13 +281,14 @@ def audit_manifest(msix_path: Path, expected_version: str) -> dict[str, Any]:
 def audit_archive(msix_path: Path) -> dict[str, Any]:
     issues: list[str] = []
     with zipfile.ZipFile(msix_path) as archive:
-        names = [_canonical_path(info.filename) for info in archive.infolist() if not info.is_dir()]
+        raw_names = [info.filename for info in archive.infolist() if not info.is_dir()]
+        names = [_canonical_path(name) for name in raw_names]
         normalized = [name.lower() for name in names]
         duplicate_counts = Counter(normalized)
         duplicate_paths = sorted(path for path, count in duplicate_counts.items() if count > 1)
         if duplicate_paths:
             issues.append("duplicate_destination_path")
-        traversal_hits = [name for name in names if name.startswith("/") or name.startswith("\\") or ".." in Path(name).parts or ":" in name]
+        traversal_hits = [name for name in raw_names if name.startswith("/") or name.startswith("\\") or ".." in Path(name).parts or ":" in name]
         if traversal_hits:
             issues.append("path_traversal_or_ads")
         required_missing = sorted(path for path in REQUIRED_TOP_LEVEL_FILES if path not in names)
@@ -313,10 +314,14 @@ def audit_archive(msix_path: Path) -> dict[str, Any]:
         if forbidden_hits:
             issues.append("forbidden_package_entries")
 
-        signature_state = "unsigned"
-        signature_tool = _find_sdk_tool("signtool.exe")
+        # Partner Center signs MSIX submissions. Unsigned is not sideload-ready,
+        # but must not create a fictitious certificate requirement for upload.
+        # https://learn.microsoft.com/en-us/windows/msix/package/sign-msix-package-guide
+        signature_present = "appxsignature.p7x" in normalized
+        signature_state = "unsigned_store_signing_pending"
+        signature_tool = _find_sdk_tool("signtool.exe") if signature_present else None
         signature_details = {"tool_path": signature_tool or "", "exit_code": None, "stdout": "", "stderr": ""}
-        if signature_tool:
+        if signature_present and signature_tool:
             completed = subprocess.run(
                 [signature_tool, "verify", "/pa", "/v", str(msix_path)],
                 capture_output=True,
@@ -334,10 +339,11 @@ def audit_archive(msix_path: Path) -> dict[str, Any]:
                 signature_state = "signed_verified"
             elif "not trusted" in f"{completed.stdout}\n{completed.stderr}".lower():
                 signature_state = "signed_untrusted_chain"
+                issues.append("signature_verification_failed")
             else:
                 signature_state = "verify_failed"
                 issues.append("signature_verification_failed")
-        else:
+        elif signature_present:
             signature_state = "signtool_not_found"
             issues.append("signtool_not_found")
 
@@ -346,6 +352,7 @@ def audit_archive(msix_path: Path) -> dict[str, Any]:
         "issues": issues,
         "signature_state": signature_state,
         "signature_details": signature_details,
+        "signing_scope": "microsoft_store_submission_not_sideload_installation",
         "duplicate_destination_paths": duplicate_paths,
         "traversal_hits": traversal_hits,
         "required_missing": required_missing,

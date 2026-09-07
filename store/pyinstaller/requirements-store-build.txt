@@ -8,7 +8,7 @@ uvicorn==0.51.0
 # must be an explicit Store-runtime dependency rather than a development extra.
 python-multipart>=0.0.20,<0.1
 httpx==0.28.1
-pypdf>=6.15,<7
+pypdf>=6.16.1,<7
 pypdfium2==5.12.1
 cryptography>=50,<51
 python-docx>=1.2.0,<2

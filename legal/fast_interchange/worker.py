@@ -1271,6 +1271,32 @@ def _required_env(name: str, minimum_bytes: int = 1) -> str:
     return value
 
 
+def _backend_options_from_environment() -> dict[str, Any]:
+    """Parse the explicit local device choice without silently changing lanes."""
+
+    allow_cpu = os.environ.get("MFL_FAST_INTERCHANGE_ALLOW_CPU") == "1"
+    force_cpu = os.environ.get("MFL_FAST_INTERCHANGE_FORCE_CPU") == "1"
+    if force_cpu and not allow_cpu:
+        raise FastInterchangeError("fast_interchange_force_cpu_requires_cpu_admission")
+    device_text = os.environ.get("MFL_FAST_INTERCHANGE_CUDA_DEVICE", "0")
+    threads_text = os.environ.get("MFL_FAST_INTERCHANGE_CPU_THREADS", "")
+    if not re.fullmatch(r"\d{1,2}", device_text):
+        raise FastInterchangeError("fast_interchange_cuda_device_invalid")
+    cuda_device = int(device_text)
+    if cuda_device > 31:
+        raise FastInterchangeError("fast_interchange_cuda_device_invalid")
+    options: dict[str, Any] = {
+        "allow_cpu": allow_cpu,
+        "force_cpu": force_cpu,
+        "cuda_device": cuda_device,
+    }
+    if threads_text:
+        if not re.fullmatch(r"\d", threads_text) or not 1 <= int(threads_text) <= 4:
+            raise FastInterchangeError("fast_interchange_cpu_threads_invalid")
+        options["cpu_threads"] = int(threads_text)
+    return options
+
+
 def main() -> int:
     try:
         import uvicorn
@@ -1293,9 +1319,7 @@ def main() -> int:
         raise FastInterchangeError("fast_interchange_test_release_forbidden")
     for release in registry.releases.values():
         registry.select(release.model_id, allow_test_only=False)
-    backend = IsolatedAdapterBackend(
-        allow_cpu=os.environ.get("MFL_FAST_INTERCHANGE_ALLOW_CPU") == "1"
-    )
+    backend = IsolatedAdapterBackend(**_backend_options_from_environment())
     app = create_worker_app(
         manager=HotSwapManager(registry=registry, backend=backend),
         registry=registry,

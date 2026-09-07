@@ -5,29 +5,79 @@ from types import SimpleNamespace
 
 import pytest
 
-from legal.agent_runtime import ContextSource, LocalAgentRunRequest, LocalAgentRuntime, LocalModelResponse
+from legal.agent_runtime import (
+    ContextSource,
+    LocalAgentRunRequest,
+    LocalAgentRuntime,
+    LocalModelResponse,
+)
 from legal.agent_runtime.providers import LoopbackEndpointPolicy
 from legal.fast_interchange.evidence_output import verify_evidence_output
 
+SOURCE = ContextSource(
+    source_id="fictional-note",
+    lane="private_record",
+    title="Fictional title",
+    locator="fictional page 1",
+    text="Only the March attachments subfolder was searched.",
+)
 
-SOURCE = ContextSource(source_id="fictional-note", lane="private_record", title="Fictional title",
-                       locator="fictional page 1", text="Only the March attachments subfolder was searched.")
 
-
-@pytest.mark.parametrize("answer,sources,blocker", [
-    ('The record says "A missed session." [1]', (), "specialist_source_references_required"),
-    ('The record says "Fictional title" [1]', (SOURCE,), "evidence_review_quote_not_in_cited_record"),
-    ('"HOST SOURCE STATUS: unknown" [1]', (SOURCE,), "evidence_review_quote_not_in_cited_record"),
-    ('"Only April was searched." [1]', (SOURCE,), "evidence_review_quote_not_in_cited_record"),
-    ('"Only the March attachments subfolder was searched." [9999]', (SOURCE,), "specialist_source_references_required"),
-    ('"Only the March attachments subfolder was searched." [0]', (SOURCE,), "specialist_source_references_required"),
-    ('"Only the March attachments subfolder was searched." [1]. Under 2099 ME 777, this is proven.', (SOURCE,), "evidence_review_legal_authority_not_verified"),
-    ('"Only the March attachments subfolder was searched." [1]. 19-A M.R.S. § 99999 applies.', (SOURCE,), "evidence_review_legal_authority_not_verified"),
-    ('All evidence supports the claim [1].', (SOURCE,), "evidence_review_exact_quote_required"),
-    ('"Only the March attachments subfolder was searched." [1] and "unclosed', (SOURCE,), "evidence_review_malformed_quote"),
-    ('"Only the March attachments subfolder was searched." [1]', (replace(SOURCE, lane="legal_authority"),), "evidence_review_private_records_required"),
-    ('"Only the March attachments subfolder was searched.". A different claim [1]', (SOURCE,), "evidence_review_quote_not_in_cited_record"),
-])
+@pytest.mark.parametrize(
+    "answer,sources,blocker",
+    [
+        ('The record says "A missed session." [1]', (), "specialist_source_references_required"),
+        (
+            'The record says "Fictional title" [1]',
+            (SOURCE,),
+            "evidence_review_quote_not_in_cited_record",
+        ),
+        (
+            '"HOST SOURCE STATUS: unknown" [1]',
+            (SOURCE,),
+            "evidence_review_quote_not_in_cited_record",
+        ),
+        ('"Only April was searched." [1]', (SOURCE,), "evidence_review_quote_not_in_cited_record"),
+        (
+            '"Only the March attachments subfolder was searched." [9999]',
+            (SOURCE,),
+            "specialist_source_references_required",
+        ),
+        (
+            '"Only the March attachments subfolder was searched." [0]',
+            (SOURCE,),
+            "specialist_source_references_required",
+        ),
+        (
+            '"Only the March attachments subfolder was searched." [1]. '
+            "Under 2099 ME 777, this is proven.",
+            (SOURCE,),
+            "evidence_review_legal_authority_not_verified",
+        ),
+        (
+            '"Only the March attachments subfolder was searched." [1]. '
+            "19-A M.R.S. § 99999 applies.",
+            (SOURCE,),
+            "evidence_review_legal_authority_not_verified",
+        ),
+        ("All evidence supports the claim [1].", (SOURCE,), "evidence_review_exact_quote_required"),
+        (
+            '"Only the March attachments subfolder was searched." [1] and "unclosed',
+            (SOURCE,),
+            "evidence_review_malformed_quote",
+        ),
+        (
+            '"Only the March attachments subfolder was searched." [1]',
+            (replace(SOURCE, lane="legal_authority"),),
+            "evidence_review_private_records_required",
+        ),
+        (
+            '"Only the March attachments subfolder was searched.". A different claim [1]',
+            (SOURCE,),
+            "evidence_review_quote_not_in_cited_record",
+        ),
+    ],
+)
 def test_bad_output_is_withheld(answer, sources, blocker):
     report = verify_evidence_output(answer, sources)
     assert report["status"] == "withheld"
@@ -36,35 +86,93 @@ def test_bad_output_is_withheld(answer, sources, blocker):
 
 def test_exact_quotes_bind_to_the_cited_body_not_another_record():
     other = replace(SOURCE, source_id="fictional-other", text="The April folder was not searched.")
-    assert verify_evidence_output('"The April folder was not searched." [1]', (SOURCE, other))["blockers"]
-    answer = 'Compare "Only the March attachments subfolder was searched." [1] with “The April folder was not searched.” [2]. Review required.'
+    assert verify_evidence_output('"The April folder was not searched." [1]', (SOURCE, other))[
+        "blockers"
+    ]
+    answer = (
+        'Compare "Only the March attachments subfolder was searched." [1] with '
+        "“The April folder was not searched.” [2]. Review required."
+    )
     report = verify_evidence_output(answer, (SOURCE, other))
     assert not report["blockers"]
-    assert [row["source_id"] for row in report["source_spans"]] == [SOURCE.source_id, other.source_id]
+    assert [row["source_id"] for row in report["source_spans"]] == [
+        SOURCE.source_id,
+        other.source_id,
+    ]
     assert report["factual_claims_verified"] is False
     assert report["legal_claims_verified"] is False
     assert len(report["report_sha256"]) == 64
 
 
+def test_model_cannot_silently_omit_a_selected_record():
+    other = replace(
+        SOURCE,
+        source_id="fictional-conflicting-note",
+        text="A different record places the activity in the April folder.",
+    )
+    report = verify_evidence_output(
+        '"Only the March attachments subfolder was searched." [1]. Review required.',
+        (SOURCE, other),
+    )
+    assert report["status"] == "withheld"
+    assert "evidence_review_all_records_required" in report["blockers"]
+
+
+def test_each_selected_record_must_supply_a_bound_span_not_a_loose_reference():
+    other = replace(
+        SOURCE,
+        source_id="fictional-conflicting-note",
+        text="A different record places the activity in the April folder.",
+    )
+    report = verify_evidence_output(
+        '"Only the March attachments subfolder was searched." [1]. The other record is [2].',
+        (SOURCE, other),
+    )
+    assert "evidence_review_all_records_required" in report["blockers"]
+
+
 def test_whitespace_only_normalization_retains_original_offsets():
     source = replace(SOURCE, text="Header: Only the March\nattachments subfolder was searched.")
-    report = verify_evidence_output('"Only the March attachments subfolder was searched." [1]', (source,))
+    report = verify_evidence_output(
+        '"Only the March attachments subfolder was searched." [1]', (source,)
+    )
     row = report["source_spans"][0]
     assert row["status"] == "whitespace_normalized"
-    assert source.text[row["start_offset"]:row["end_offset"]].startswith("Only the March\n")
+    assert source.text[row["start_offset"] : row["end_offset"]].startswith("Only the March\n")
     assert not report["blockers"]
 
 
 def run_answer(answer):
-    client = SimpleNamespace(provider_id="fast_interchange_local", model_name="fictional-model",
-                             model_binding={"capability": "evidence_review"},
-                             endpoint=LoopbackEndpointPolicy().validate("http://127.0.0.1:8105"))
-    client.generate_response = lambda prompt: LocalModelResponse(text=answer, provider_id=client.provider_id,
-        model_id=client.model_name, endpoint_class=client.endpoint.endpoint_class, usage={}, finish_reason="stop")
+    client = SimpleNamespace(
+        provider_id="fast_interchange_local",
+        model_name="fictional-model",
+        model_binding={"capability": "evidence_review"},
+        endpoint=LoopbackEndpointPolicy().validate("http://127.0.0.1:8105"),
+    )
+    client.generate_response = lambda prompt: LocalModelResponse(
+        text=answer,
+        provider_id=client.provider_id,
+        model_id=client.model_name,
+        endpoint_class=client.endpoint.endpoint_class,
+        usage={},
+        finish_reason="stop",
+    )
     runtime = LocalAgentRuntime(client)
-    manifest, sources, _ = runtime.preview(question="Review fictional records", sources=(SOURCE,), run_id="fictional-run", created_at="2026-08-30T00:00:00Z")
-    return runtime.run(LocalAgentRunRequest(question="Review fictional records", sources=sources,
-        approved_manifest_sha256=manifest.manifest_sha256, run_id=manifest.run_id, manifest_created_at=manifest.created_at))
+    manifest, sources, _ = runtime.preview(
+        question="Review fictional records",
+        sources=(SOURCE,),
+        run_id="fictional-run",
+        created_at="2026-08-30T00:00:00Z",
+    )
+    return runtime.run(
+        LocalAgentRunRequest(
+            question="Review fictional records",
+            sources=sources,
+            approved_manifest_sha256=manifest.manifest_sha256,
+            run_id=manifest.run_id,
+            manifest_created_at=manifest.created_at,
+        )
+    )
 
 
 def test_real_runtime_returns_safe_withholding_and_audit_bound_result():
@@ -77,7 +185,9 @@ def test_real_runtime_returns_safe_withholding_and_audit_bound_result():
 
 
 def test_runtime_accepts_bound_quote_without_certifying_claims():
-    result = run_answer('"Only the March attachments subfolder was searched." [1]. Review required.')
+    result = run_answer(
+        '"Only the March attachments subfolder was searched." [1]. Review required.'
+    )
     assert result.status == "completed_review_required"
     assert not result.blockers
     assert result.output_validation["factual_claims_verified"] is False
@@ -85,16 +195,61 @@ def test_runtime_accepts_bound_quote_without_certifying_claims():
 
 
 def test_valid_quote_does_not_launder_an_unsupported_narrative():
-    result = run_answer('"Only the March attachments subfolder was searched." [1]. The full record is missing. Review required.')
+    result = run_answer(
+        '"Only the March attachments subfolder was searched." [1]. '
+        "The full record is missing. Review required."
+    )
     assert "The full record is missing" not in result.answer
     assert '"Only the March attachments subfolder was searched." [1]' in result.answer
     assert "other narrative was withheld" in result.answer
     assert "evidence_review_unverified_narrative_withheld" in result.warnings
 
 
+def test_runtime_keeps_only_valid_extract_when_another_quote_is_inexact():
+    answer = (
+        '"Only the March attachments subfolder was searched." [1]; '
+        '"No permission form was found." [1]. Review required.'
+    )
+    result = run_answer(answer)
+    assert result.status == "specialist_output_partial_review_required"
+    assert '"Only the March attachments subfolder was searched." [1]' in result.answer
+    assert "No permission form was found" not in result.answer
+    assert "Some model-selected text was withheld" in result.answer
+    assert "evidence_review_quote_not_in_cited_record" in result.blockers
+    assert "evidence_review_partial_output_withheld" in result.warnings
+
+
+def test_labeled_private_identifier_is_omitted_while_safe_extract_remains():
+    source = replace(
+        SOURCE,
+        text=(
+            "Private reference string: FICTIONAL-REF-ZM83. "
+            "Appointment note: a consultation was reported on 2026-07-09."
+        ),
+    )
+    answer = (
+        '"Appointment note: a consultation was reported on 2026-07-09." [1]; '
+        '"Private reference string: FICTIONAL-REF-ZM83." [1]. Review required.'
+    )
+    report = verify_evidence_output(answer, (source,))
+    assert report["status"] == "partial_quoted_spans_bound_review_required"
+    assert report["partial_extracts_available"] is True
+    assert len(report["source_spans"]) == 1
+    assert len(report["suppressed_spans"]) == 1
+    assert "evidence_review_sensitive_quote_withheld" in report["blockers"]
+    from legal.fast_interchange.evidence_output import render_verified_evidence_extracts
+
+    rendered = render_verified_evidence_extracts(report, (source,), allow_partial=True)
+    assert "consultation was reported on 2026-07-09" in rendered
+    assert "FICTIONAL-REF-ZM83" not in rendered
+
+
 def test_extract_renderer_rechecks_source_identity():
     from legal.fast_interchange.evidence_output import render_verified_evidence_extracts
-    report = verify_evidence_output('"Only the March attachments subfolder was searched." [1]', (SOURCE,))
+
+    report = verify_evidence_output(
+        '"Only the March attachments subfolder was searched." [1]', (SOURCE,)
+    )
     with pytest.raises(ValueError, match="source_changed"):
         render_verified_evidence_extracts(report, (replace(SOURCE, text="Changed record"),))
 
@@ -102,6 +257,7 @@ def test_extract_renderer_rechecks_source_identity():
 def test_verifier_exception_fails_closed(monkeypatch):
     def broken(*args):
         raise RuntimeError("private internal detail")
+
     monkeypatch.setattr("legal.fast_interchange.evidence_output.verify_evidence_output", broken)
     result = run_answer('"Only the March attachments subfolder was searched." [1]')
     assert result.status == "specialist_output_blocked_review_required"
@@ -111,21 +267,26 @@ def test_verifier_exception_fails_closed(monkeypatch):
 
 def test_production_ui_shows_source_check_limitations_and_mirrors_match():
     from pathlib import Path
+
     root = Path(__file__).resolve().parents[1]
     production = root / "src/maine_family_law_llm/ui/workbench.js"
     mirror = root / "maine_family_law_llm/ui/workbench.js"
     assert production.read_bytes() == mirror.read_bytes()
     text = production.read_text(encoding="utf-8")
-    assert "Record quotations checked — review required" in text
-    assert "Evidence Review withheld — review required" in text
+    assert "quotations checked — review required" in text
+    assert "withheld — review required" in text
     assert "This does not verify factual claims or establish what happened." in text
     assert "escapeHtml(code)" in text
     assert "escapeHtml(span.start_offset)" in text
     assert "Array.isArray(payload.blockers) ? payload.blockers : []" in text
+    assert "localAgentCitationsWithVerifierSpans" in text
+    assert "quotations partially checked — review required" in text
+    assert "source_span_preview: snippet.slice(relativeStart, relativeEnd)" in text
 
 
 def test_status_on_missing_authority_store_does_not_create_directories(tmp_path, monkeypatch):
     from app.services.authority_library_service import AuthorityLibraryService
+
     # Both are disposable siblings: authority remains outside the test repo.
     project = tmp_path / "project"
     project.mkdir()

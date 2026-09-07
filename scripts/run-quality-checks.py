@@ -554,15 +554,17 @@ def run_pass37_38_offline_smoke() -> dict:
 
 
 def run_pass39_40_offline_smoke() -> dict:
+    from app.api.production import app as production_app
+
     registered = set()
-    for route in app.routes:
+    for route in production_app.routes:
         methods = getattr(route, "methods", set()) or set()
         path = getattr(route, "path", "")
         for method in methods:
-            if method in {"GET", "POST"} and str(path).startswith("/api"):
+            if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                 registered.add((method, str(path)))
-    endpoint_report = EndpointInventory().compare_to_registered(registered)
-    openapi_report = OpenAPICompletionAuditor().audit(app.openapi()).as_dict()
+    endpoint_report = EndpointInventory().compare_to_registered(registered, surface="production")
+    openapi_report = OpenAPICompletionAuditor().audit(production_app.openapi(), surface="production").as_dict()
     ui_report = UICompletionAuditor(ROOT / "app/web/pages").audit().as_dict()
     policy = APICompletionPolicy().evidence().as_dict()
     blockers = []

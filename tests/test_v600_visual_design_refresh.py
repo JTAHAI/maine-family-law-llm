@@ -28,11 +28,11 @@ def _contrast(first: str, second: str) -> float:
 
 
 def test_v600_release_identity() -> None:
-    assert VERSION == "8.0.1"
-    assert PACKAGE_VERSION == "8.0.1.0"
-    assert BUILD_NUMBER == 54
-    assert UI_PASS_MARKER == "v8.0.1-ga"
-    assert UI_VERSION == "8.0.1-ga-b54"
+    assert VERSION == "8.0.2"
+    assert PACKAGE_VERSION == "8.0.2.0"
+    assert BUILD_NUMBER == 55
+    assert UI_PASS_MARKER == "v8.0.2-ga"
+    assert UI_VERSION == "8.0.2-ga-b55"
 
 
 def test_v600_ui_mirrors_match() -> None:
@@ -42,11 +42,11 @@ def test_v600_ui_mirrors_match() -> None:
 
 def test_visual_generation_is_scoped_without_breaking_prior_layout_contracts() -> None:
     html = HTML_PATHS[0].read_text(encoding="utf-8")
-    assert 'class="v6-workbench v8-workbench"' in html
-    assert 'class="app-shell v5-workbench"' in html
-    assert 'data-ui-generation="v5-premium-workbench"' in html
-    assert 'data-visual-generation="v8-command-surface"' in html
-    assert 'class="v6-release-chip v8-release-chip"' in html
+    assert 'class="v6-workbench v8-workbench v9-legal-ops-workbench"' in html
+    assert 'class="app-shell v5-workbench v9-legal-ops-shell"' in html
+    assert 'data-ui-generation="v9-prose-legal-ops"' in html
+    assert 'data-visual-generation="v9-legal-ops-command-surface"' in html
+    assert 'class="v6-release-chip v8-release-chip v9-release-chip"' in html
     assert 'data-v8-view="chat"' in html
     assert 'id="v8-view-menu"' in html
     assert 'data-response-progress' in (ROOT / "maine_family_law_llm" / "ui" / "workbench.js").read_text(encoding="utf-8")

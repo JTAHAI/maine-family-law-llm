@@ -10,12 +10,11 @@ import re
 from hashlib import sha256
 
 from legal.agent_runtime.contracts import ContextSource, canonical_json
+from legal.security.protected_spans import overlaps_protected_span
 from legal.verifiers.citation_parser import extract_citations
 
 _REFERENCE = re.compile(r"\[(\d+)\]")
 _QUOTE = re.compile(r'"([^"\n]+)"|“([^”\n]+)”')
-
-
 def _span(quote: str, body: str) -> tuple[int, int] | None:
     """Allow whitespace differences only; return offsets in the original body."""
     parts = re.split(r"\s+", quote.strip())
@@ -33,74 +32,139 @@ def verify_evidence_output(answer: str, sources: tuple[ContextSource, ...]) -> d
     if any(source.lane != "private_record" for source in sources):
         blockers.append("evidence_review_private_records_required")
     spans = []
+    suppressed_spans = []
     quotes = list(_QUOTE.finditer(answer))
     if not quotes:
         blockers.append("evidence_review_exact_quote_required")
     # An unmatched quote is not silently ignored while other quotations pass.
     remainder = _QUOTE.sub("", answer)
-    if any(delimiter in remainder for delimiter in ('"', '“', '”')):
+    if any(delimiter in remainder for delimiter in ('"', "“", "”")):
         blockers.append("evidence_review_malformed_quote")
     for quote in quotes:
         text = quote.group(1) or quote.group(2)
         # Citation must follow this quotation, not another sentence or quote.
-        following = re.match(r"[\s.,;:]*\[(\d+)\]", answer[quote.end():])
+        following = re.match(r"[\s.,;:]*\[(\d+)\]", answer[quote.end() :])
         index = int(following.group(1)) if following else 0
         source = sources[index - 1] if 1 <= index <= len(sources) else None
         span = _span(text, source.text) if source else None
         if span is None:
             blockers.append("evidence_review_quote_not_in_cited_record")
+        elif overlaps_protected_span(span[0], span[1], source.text, source.metadata):
+            blockers.append("evidence_review_sensitive_quote_withheld")
+            suppressed_spans.append(
+                {
+                    "source_id": source.source_id,
+                    "reference": index,
+                    "start_offset": span[0],
+                    "end_offset": span[1],
+                    "reason": "labeled_sensitive_value",
+                }
+            )
         else:
-            spans.append({
-                "source_id": source.source_id, "reference": index,
-                "start_offset": span[0], "end_offset": span[1],
-                "source_text_sha256": sha256(source.text.encode("utf-8")).hexdigest(),
-                "quote_sha256": sha256(text.encode("utf-8")).hexdigest(),
-                "status": "exact" if text in source.text else "whitespace_normalized",
-            })
+            spans.append(
+                {
+                    "source_id": source.source_id,
+                    "reference": index,
+                    "start_offset": span[0],
+                    "end_offset": span[1],
+                    "source_text_sha256": sha256(source.text.encode("utf-8")).hexdigest(),
+                    "quote_sha256": sha256(text.encode("utf-8")).hexdigest(),
+                    "status": "exact" if text in source.text else "whitespace_normalized",
+                }
+            )
     # Evidence Review cannot introduce law. Even an existing citation is only
     # acceptable as quoted record content, never as this specialist's authority.
     for citation in extract_citations(answer):
         if not any(q.start() < citation.start and q.end() > citation.end for q in quotes):
             blockers.append("evidence_review_legal_authority_not_verified")
+    # A selected record may contain the contradiction or qualification that
+    # changes the entire review. Never let a small model make that record
+    # disappear merely by omitting its reference or choosing no exact span.
+    represented = {row["reference"] for row in (*spans, *suppressed_spans)}
+    if sources and represented != set(range(1, len(sources) + 1)):
+        blockers.append("evidence_review_all_records_required")
+    unique_blockers = sorted(set(blockers))
+    partial_extracts_available = (
+        bool(spans)
+        and bool(unique_blockers)
+        and set(unique_blockers).issubset(
+            {
+                "evidence_review_quote_not_in_cited_record",
+                "evidence_review_sensitive_quote_withheld",
+            }
+        )
+    )
     report = {
         "schema_version": "evidence_output_boundary_v1",
-        "status": "withheld" if blockers else "quoted_spans_bound_review_required",
-        "display_mode": "withheld" if blockers else "verified_extracts_only",
+        "status": (
+            "partial_quoted_spans_bound_review_required"
+            if unique_blockers and partial_extracts_available
+            else "withheld"
+            if unique_blockers
+            else "quoted_spans_bound_review_required"
+        ),
+        "display_mode": (
+            "verified_extracts_only_partial"
+            if unique_blockers and partial_extracts_available
+            else "withheld"
+            if unique_blockers
+            else "verified_extracts_only"
+        ),
         "review_required": True,
         "factual_claims_verified": False,
         "legal_claims_verified": False,
         "source_spans": spans,
-        "blockers": sorted(set(blockers)),
+        "suppressed_spans": suppressed_spans,
+        "partial_extracts_available": partial_extracts_available,
+        "blockers": unique_blockers,
         "candidate_answer_sha256": sha256(answer.encode("utf-8")).hexdigest(),
     }
     report["report_sha256"] = sha256(canonical_json(report)).hexdigest()
     return report
 
 
-def render_verified_evidence_extracts(report: dict, sources: tuple[ContextSource, ...]) -> str:
+def render_verified_evidence_extracts(
+    report: dict,
+    sources: tuple[ContextSource, ...],
+    *,
+    allow_partial: bool = False,
+) -> str:
     """Display only checked body spans, never the candidate's unchecked prose.
 
     This is an explicitly extractive mode. Passing quotation checks is not
     enough to establish that the narrative around a quotation is supported.
     """
-    if report.get("blockers") or not report.get("source_spans"):
+    if (report.get("blockers") and not allow_partial) or not report.get("source_spans"):
         raise ValueError("evidence_review_no_verified_extracts")
+    if allow_partial and not report.get("partial_extracts_available"):
+        raise ValueError("evidence_review_no_verified_partial_extracts")
     extracts = []
     seen = set()
     for span in report["source_spans"]:
         index, start, end = span["reference"], span["start_offset"], span["end_offset"]
         source = sources[index - 1]
-        if (source.source_id != span["source_id"] or not 0 <= start < end <= len(source.text)
-                or sha256(source.text.encode("utf-8")).hexdigest() != span["source_text_sha256"]):
+        if (
+            source.source_id != span["source_id"]
+            or not 0 <= start < end <= len(source.text)
+            or sha256(source.text.encode("utf-8")).hexdigest() != span["source_text_sha256"]
+            or overlaps_protected_span(start, end, source.text, source.metadata)
+        ):
             raise ValueError("evidence_review_source_changed")
         key = (index, start, end)
         if key not in seen:
             # These are literal source characters, not regenerated quotations.
             extracts.append(f'"{source.text[start:end]}" [{index}]')
             seen.add(key)
+    partial_notice = (
+        "\n\nSome model-selected text was withheld because it was inexact, sensitive, "
+        "or otherwise failed verification."
+        if report.get("blockers")
+        else ""
+    )
     return (
         "Evidence Review — model-selected record excerpts\n\n"
         + "\n\n".join(extracts)
+        + partial_notice
         + "\n\nThese excerpts match the approved records. The model's other narrative "
         "was withheld because its factual conclusions were not verified. Open each source "
         "to check surrounding context, differences, and missing information. A record's "

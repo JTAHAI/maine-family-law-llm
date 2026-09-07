@@ -17,6 +17,7 @@
     const clearDraftButton = document.getElementById('clear-draft-button');
     const stopButton = document.getElementById('stop-button');
     const childImpactLens = document.getElementById('child-impact-lens');
+    const composerGuidesStatus = document.getElementById('composer-guides-status');
     const sourcesButton = document.getElementById('sources-button');
     const copySourcesButton = document.getElementById('copy-sources-bottom');
     const authorityLibraryStatus = document.getElementById('authority-library-status');
@@ -1081,6 +1082,17 @@
     const connectionBanner = document.getElementById('connection-banner');
     const connectionRetry = document.getElementById('connection-retry');
     const sessionSummary = document.getElementById('session-summary');
+    const chatMatterButton = document.getElementById('chat-matter-button');
+    const chatMatterStatus = document.getElementById('chat-matter-status');
+    const chatMatterDetail = document.getElementById('chat-matter-detail');
+    const startingPathStatus = document.getElementById('starting-path-status');
+    const nextSafeActionCard = document.getElementById('next-safe-action-card');
+    const nextSafeActionHeading = document.getElementById('next-safe-action-heading');
+    const nextSafeActionDetail = document.getElementById('next-safe-action-detail');
+    const nextSafeActionStatus = document.getElementById('next-safe-action-status');
+    const nextSafeActionPrimary = document.getElementById('next-safe-action-primary');
+    const nextSafeActionAlternativeOne = document.getElementById('next-safe-action-alternative-one');
+    const nextSafeActionAlternativeTwo = document.getElementById('next-safe-action-alternative-two');
     const trustStatusStrip = document.getElementById('trust-status-strip');
     const trustAuthorityStatus = document.getElementById('trust-authority-status');
     const trustAuthorityDetail = document.getElementById('trust-authority-detail');
@@ -1635,6 +1647,10 @@
     const localAgentContextList = document.getElementById('local-agent-context-list');
     const localAgentSecurityReport = document.getElementById('local-agent-security-report');
     const localAgentStatus = document.getElementById('local-agent-status');
+    const localAgentWorkerConfirm = document.getElementById('local-agent-worker-confirm');
+    const localAgentWorkerStart = document.getElementById('local-agent-worker-start');
+    const localAgentWorkerStop = document.getElementById('local-agent-worker-stop');
+    const localAgentWorkerStatus = document.getElementById('local-agent-worker-status');
     const authorityVerificationModal = document.getElementById('authority-verification-modal');
     const authorityVerificationBackdrop = document.getElementById('authority-verification-backdrop');
     const authorityVerificationClose = document.getElementById('authority-verification-close');
@@ -1898,6 +1914,7 @@
     let libraryItems = [];
     let promptPacks = [];
     let lastPayload = null;
+    let corpusLibraryPayload = null;
     let lastSources = [];
     const sourceCardWindowPageSize = 60;
     let sourceCardWindowLimit = sourceCardWindowPageSize;
@@ -1939,6 +1956,8 @@
     let localAgentPreview = null;
     let localAgentOwner = null;
     let localAgentBusy = false;
+    let localAgentWorkerBusy = false;
+    let localAgentWorkerSnapshot = null;
     let localAgentRequestEpoch = 0;
     let authorityVerificationOwner = null;
     let authorityVerificationReceipt = null;
@@ -1947,6 +1966,7 @@
     let activeWorkflow = 'research';
     const overlayReturnFocus = new WeakMap();
     const overlayStack = [];
+    const overlayBackgroundInert = new Map();
     const safeErrorEvents = [];
     const maxSafeErrorEvents = 25;
 
@@ -1954,7 +1974,7 @@
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
     }
 
-    function makeSafeLocalError({status = 0, code = '', message = '', recovery = ''} = {}) {
+    function makeSafeLocalError({status = 0, code = '', message = '', recovery = '', writeOutcomeUnknown = false} = {}) {
       const normalizedCode = String(code || `local_http_${status || 'unavailable'}`)
         .toLowerCase().replace(/[^a-z0-9_.:-]+/g, '_').slice(0, 80);
       const statusMessages = {
@@ -1970,8 +1990,13 @@
       const error = new Error(statusMessages[status] || message || 'The local service could not complete this action.');
       error.safeCode = normalizedCode;
       error.safeScope = 'Only this local action was affected.';
-      error.preserved = 'Your matter, draft, and original records were preserved.';
-      error.recovery = recovery || (status === 404
+      error.writeOutcomeUnknown = writeOutcomeUnknown;
+      error.preserved = writeOutcomeUnknown
+        ? 'The request may have completed, but its saved state was not confirmed. This message is not a rollback receipt.'
+        : 'This error handler did not delete or roll back records. Check the saved state before retrying.';
+      error.recovery = writeOutcomeUnknown
+        ? 'Reopen the item or inspect its job history before retrying. Do not repeat an export or change until you know its result.'
+        : recovery || (status === 404
         ? 'Confirm the active matter, then reopen the item from its source card.'
         : 'Review the active matter and prerequisites, then retry.');
       return error;
@@ -1983,7 +2008,7 @@
         message: hasSafeEnvelope ? String(error?.message || 'The local service could not complete this action.') : 'The local service could not complete this action.',
         code: String(error?.safeCode || 'local_action_failed'),
         scope: String(error?.safeScope || 'Only this local action was affected.'),
-        preserved: String(error?.preserved || 'Your matter, draft, and original records were preserved.'),
+        preserved: String(error?.preserved || 'This error handler did not delete or roll back records. Check the saved state before retrying.'),
         recovery: String(error?.recovery || 'Review the active matter and prerequisites, then retry.'),
       };
     }
@@ -2181,6 +2206,7 @@
     async function fetchJson(url, options = {}) {
       let res;
       const mutation = isIdempotentMutation(url, options);
+      const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
       if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
@@ -2197,16 +2223,21 @@
         } catch (err) {
           if (err?.name === 'AbortError') throw err;
           if (attempt === 0 && mutation) continue;
-          throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.'});
+          throw makeSafeLocalError({code: 'local_service_unreachable', message: 'The local service could not be reached.', recovery: 'Restart or reconnect the local service, then retry.', writeOutcomeUnknown: writesState});
         }
       }
-      const text = await res.text();
+      let text;
+      try { text = await res.text(); }
+      catch (error) {
+        if (error?.name === 'AbortError') throw error;
+        throw makeSafeLocalError({code: 'local_response_incomplete', writeOutcomeUnknown: writesState});
+      }
       let payload = null;
       if (text) {
         try {
           payload = JSON.parse(text);
         } catch (err) {
-          throw makeSafeLocalError({status: res.status, code: 'local_response_invalid', recovery: 'Retry once. If the problem continues, restart the local service.'});
+          throw makeSafeLocalError({status: res.status, code: 'local_response_invalid', recovery: 'Close and reopen the app if the problem continues.', writeOutcomeUnknown: writesState});
         }
       } else {
         payload = {};
@@ -2215,7 +2246,7 @@
         const detail = payload && typeof payload.detail === 'object' ? payload.detail : null;
         const rawCode = payload?.error_code || payload?.code || detail?.code || (typeof payload?.detail === 'string' ? payload.detail : '');
         const safeCode = /^[a-z0-9_.:-]{1,80}$/i.test(String(rawCode || '')) ? String(rawCode) : `local_http_${res.status}`;
-        throw makeSafeLocalError({status: res.status, code: safeCode, recovery: payload?.recovery_hint && !/[\\/]|[A-Z]:/i.test(String(payload.recovery_hint)) ? String(payload.recovery_hint).slice(0, 240) : ''});
+        throw makeSafeLocalError({status: res.status, code: safeCode, recovery: payload?.recovery_hint && !/[\\/]|[A-Z]:/i.test(String(payload.recovery_hint)) ? String(payload.recovery_hint).slice(0, 240) : '', writeOutcomeUnknown: writesState && res.status >= 500});
       }
       return payload;
     }
@@ -2462,6 +2493,7 @@
       if (localWorkbenchReducedMotion) localWorkbenchReducedMotion.checked = preferences.motion === 'reduced';
       if (localWorkbenchScreenReader) localWorkbenchScreenReader.checked = Boolean(preferences.screen_reader_mode);
       applyLocalWorkbenchPreferences(preferences);
+      renderStartingPath(String(preferences.starting_path || 'understand_situation'));
     }
 
     function healthDependencyDetail(component) {
@@ -4057,7 +4089,7 @@
       if (!documentWorkspace) return;
       setWorkflowFocus('draft');
       documentWorkspaceState.returnFocus = document.activeElement;
-      documentWorkspace.hidden = false;
+      openOverlay(documentWorkspace);
       documentWorkspaceBackdrop.hidden = false;
       documentWorkspace.setAttribute('aria-hidden', 'false');
       documentWorkspaceBackdrop.setAttribute('aria-hidden', 'false');
@@ -4070,7 +4102,7 @@
 
     function closeDocumentWorkspace() {
       if (!documentWorkspace) return;
-      documentWorkspace.hidden = true;
+      closeOverlay(documentWorkspace);
       documentWorkspaceBackdrop.hidden = true;
       documentWorkspace.setAttribute('aria-hidden', 'true');
       documentWorkspaceBackdrop.setAttribute('aria-hidden', 'true');
@@ -5296,13 +5328,116 @@
       return latestUser ? latestUser.text : '';
     }
 
+    function activeMatterContext() {
+      const activeCaseId = String(corpusLibraryPayload?.active_case_id || '');
+      const cases = Array.isArray(corpusLibraryPayload?.cases) ? corpusLibraryPayload.cases : [];
+      const active = cases.find((item) => String(item?.case_id || '') === activeCaseId) || null;
+      if (!activeCaseId || !active) return {active: false, label: 'General Maine law', indexedRecords: 0, pdfPages: 0};
+      return {
+        active: true,
+        label: String(corpusLibraryPayload?.active_case_label || active.label || 'Selected matter'),
+        indexedRecords: Math.max(0, Number(active.indexed_records || 0)),
+        pdfPages: Math.max(0, Number(active.pdf_pages || 0)),
+      };
+    }
+
+    function configureNextSafeAction(button, {action = '', label = '', hidden = false} = {}) {
+      if (!button) return;
+      button.hidden = hidden;
+      button.dataset.nextSafeAction = action;
+      button.textContent = label;
+    }
+
+    function renderNextSafeAction() {
+      if (!nextSafeActionCard) return;
+      const matter = activeMatterContext();
+      const citations = Array.isArray(lastPayload?.citations) ? lastPayload.citations : [];
+      const hasAnswerSources = Boolean(lastPayload?.search_id) && (Number(lastPayload?.source_card_count || 0) > 0 || citations.length > 0);
+      const hasAnswer = Boolean(String(lastPayload?.answer || '').trim());
+      let state;
+      if (hasAnswer && hasAnswerSources) {
+        state = {
+          heading: 'Inspect the sources before relying on this answer',
+          detail: 'Open the exact source cards first. The answer remains review-required, even when a source card is available.',
+          primary: {action: 'open_sources', label: 'Inspect answer sources'},
+          alternatives: [{action: 'review_blockers', label: 'Review blockers'}, {action: 'focus_question', label: 'Ask a follow-up'}],
+          status: 'Source cards can be inspected without changing the matter. Review is still required before reliance or export.',
+        };
+      } else if (matter.active && matter.indexedRecords > 0) {
+        state = {
+          heading: 'Ask a source-backed question about the active matter',
+          detail: `${matter.label} has ${matter.indexedRecords.toLocaleString()} indexed record${matter.indexedRecords === 1 ? '' : 's'}. Record statements remain evidence, not findings or legal authority.`,
+          primary: {action: 'focus_question', label: 'Write a question'},
+          alternatives: [{action: 'open_records', label: 'Inspect private records'}, {action: 'review_blockers', label: 'Review blockers'}],
+          status: 'The active matter stays local. Asking a question does not change records, and every result remains review-required.',
+        };
+      } else if (matter.active) {
+        state = {
+          heading: 'Prepare this matter for record review',
+          detail: `${matter.label} is active, but no indexed records are available yet. Open the matter setup before relying on a private-record search.`,
+          primary: {action: 'open_records', label: 'Open matter setup'},
+          alternatives: [{action: 'focus_question', label: 'Ask a Maine law question'}, {action: 'open_privacy', label: 'Review privacy'}],
+          status: 'Opening setup does not import, scan, or change a record. Review is required before relying on any later result.',
+        };
+      } else if (authorityTrustPayload?.active !== true || Number(authorityTrustPayload?.source_count || authorityTrustPayload?.count || 0) <= 0) {
+        state = {
+          heading: authorityTrustPayload ? 'Set up official sources before legal research' : 'Check official-source availability',
+          detail: 'Source-backed legal research needs an admitted local authority library. It is not available yet. You can still choose a matter or open safety resources.',
+          primary: {action: 'review_authority', label: 'Review source setup'},
+          alternatives: [{action: 'choose_matter', label: 'Choose a private matter'}, {action: 'safety_support', label: 'Safety support'}],
+          status: 'Nothing is downloaded or imported by opening setup. Current-law answers remain blocked until official sources are available and reviewed.',
+        };
+      } else {
+        state = {
+          heading: 'Start with a source-backed Maine family-law question',
+          detail: 'General Maine-law research is available now. Private-record tools stay closed until you explicitly choose a matter.',
+          primary: {action: 'focus_question', label: 'Write a question'},
+          alternatives: [{action: 'choose_matter', label: 'Choose a private matter'}, {action: 'safety_support', label: 'Safety support'}],
+          status: 'Nothing is sent, imported, or changed until you explicitly choose an action. Every answer remains review-required.',
+        };
+      }
+      if (nextSafeActionHeading) nextSafeActionHeading.textContent = state.heading;
+      if (nextSafeActionDetail) nextSafeActionDetail.textContent = state.detail;
+      if (nextSafeActionStatus) nextSafeActionStatus.textContent = state.status;
+      configureNextSafeAction(nextSafeActionPrimary, state.primary);
+      configureNextSafeAction(nextSafeActionAlternativeOne, state.alternatives[0]);
+      configureNextSafeAction(nextSafeActionAlternativeTwo, state.alternatives[1]);
+    }
+
+    function runNextSafeAction(action) {
+      switch (action) {
+        case 'review_authority':
+          openWorkbenchPanel('setup', {focusTarget: authoritySearch});
+          break;
+        case 'focus_question':
+          question?.focus({preventScroll: true});
+          break;
+        case 'choose_matter':
+        case 'open_records':
+          openWorkbenchPanel('setup', {focusTarget: corpusSelect});
+          break;
+        case 'open_sources':
+          openWorkbenchPanel('evidence');
+          break;
+        case 'review_blockers':
+          openWorkbenchPanel('review');
+          break;
+        case 'open_privacy':
+          openOverlay(privacyOverlay);
+          break;
+        case 'safety_support':
+          chooseStartingPath('safety_support');
+          break;
+        default:
+          return;
+      }
+    }
+
     function syncContextBar() {
       if (!sessionSummary) return;
 
-      const corpusLabel =
-        corpusSelect && corpusSelect.value
-          ? selectedLabel(corpusSelect).split(' (')[0]
-          : 'General Maine law';
+      const matter = activeMatterContext();
+      const corpusLabel = matter.label;
 
       const modeLabel =
         selectedLabel(searchMode) || 'Both';
@@ -5323,18 +5458,28 @@
 
       sessionSummary.textContent = parts.filter(Boolean).join(' · ');
       if (activeMatterLabel) activeMatterLabel.textContent = corpusLabel;
+      if (chatMatterStatus) chatMatterStatus.textContent = corpusLabel;
+      if (chatMatterDetail) chatMatterDetail.textContent = matter.active
+        ? `${matter.indexedRecords.toLocaleString()} indexed record${matter.indexedRecords === 1 ? '' : 's'} · Review required`
+        : 'No private matter selected · Review required';
       if (drawerActiveCorpus) drawerActiveCorpus.textContent = corpusLabel;
       const matterLabel = `Open matter setup. Current matter: ${corpusLabel}`;
       matterShortcutButton?.setAttribute('aria-label', matterLabel);
       matterButton?.setAttribute('aria-label', matterLabel);
+      chatMatterButton?.setAttribute('aria-label', `Choose active matter. Current matter: ${corpusLabel}`);
       updateTrustStatus();
       updateWorkflowStatus();
+      renderNextSafeAction();
     }
 
     function updateTrustStatus() {
       if (!trustStatusStrip) return;
-      const hasMatter = Boolean(corpusSelect?.value);
-      const matterLabel = hasMatter ? selectedLabel(corpusSelect).split(' (')[0] : 'General Maine law';
+      // The select can temporarily contain a requested corpus before the
+      // canonical activation route confirms it. Trust status must describe
+      // only the currently active matter, never that pending selection.
+      const activeMatter = activeMatterContext();
+      const hasMatter = activeMatter.active;
+      const matterLabel = activeMatter.label;
       if (trustRecordStatus) trustRecordStatus.textContent = matterLabel;
       if (trustRecordDetail) trustRecordDetail.textContent = hasMatter
         ? 'Active local matter. Record statements are evidence—not legal authority or findings.'
@@ -5363,6 +5508,7 @@
       if (trustReviewDetail) trustReviewDetail.textContent = blockerCount
         ? `${blockerCount} current blocker${blockerCount === 1 ? '' : 's'} · open the relevant source or review panel, correct the issue, then rerun.`
         : 'No automated blocker is currently listed, but human review is still required.';
+      renderNextSafeAction();
     }
 
     function updateWorkflowStatus() {
@@ -5372,7 +5518,7 @@
         research: 'Ask a Maine-law question, then inspect the source cards placed with the answer.',
         matter: hasActiveMatter
           ? 'A private matter is selected. Review the inventory or run local OCR only when you approve it.'
-          : 'Select a private matter to inspect records locally. General Maine-law research remains available without one.',
+          : 'Select a private matter to inspect records locally. Official-source research also needs an admitted authority library.',
         authority: 'Open the Maine Authority Library, verify official sources, and check freshness before relying on a citation.',
         intelligence: hasActiveMatter
           ? 'Inspect a verified record, preserve the original, and create OCR or privacy derivatives only when approved.'
@@ -5417,16 +5563,29 @@
       updateWorkflowStatus();
     }
 
+    function renderedInteractionTarget(node) {
+      if (!node || !node.isConnected || node.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+      if (node.matches(':disabled, [aria-disabled="true"], input[type="hidden"]')) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      // Closed details descendants may retain layout boxes in some engines.
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        if (parent.matches('details:not([open])') && !parent.querySelector(':scope > summary')?.contains(node)) return false;
+      }
+      return node.getClientRects().length > 0;
+    }
+
     function overlayFocusableElements(element) {
       if (!element) return [];
       return Array.from(element.querySelectorAll(
         'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], details > summary, [tabindex]:not([tabindex="-1"])'
-      )).filter((node) => !node.hidden && !node.closest('[hidden]') && node.getAttribute('aria-hidden') !== 'true');
+      )).filter((node) => node.tabIndex >= 0 && renderedInteractionTarget(node));
     }
 
     function activeManagedOverlay() {
       return [...overlayStack].reverse().find((overlay) => overlay && !overlay.hidden)
         || Array.from(document.querySelectorAll('.overlay-shell')).reverse().find((overlay) => !overlay.hidden)
+        || (evidenceDrawer?.dataset.modal === 'true' && !evidenceDrawer.hidden ? evidenceDrawer : null)
         || null;
     }
 
@@ -5438,18 +5597,70 @@
       if (dialog) dialog.setAttribute('aria-modal', active ? 'true' : 'false');
     }
 
+    function overlayBackdrop(element) {
+      return new Map([
+        [evidenceDrawer, drawerBackdrop], [recordInspector, recordInspectorBackdrop],
+        [documentWorkspace, documentWorkspaceBackdrop], [localAgentModal, localAgentBackdrop],
+        [authorityVerificationModal, authorityVerificationBackdrop],
+        [documentIntelligenceModal, documentIntelligenceBackdrop],
+        [evidenceWorkProductModal, evidenceWorkProductBackdrop],
+        [releasePilotHardeningModal, releasePilotHardeningBackdrop],
+        [retrievalWorkbenchModal, retrievalWorkbenchBackdrop],
+        [sourcePreviewFlyout, sourcePreviewBackdrop],
+      ]).get(element);
+    }
+
+    function syncOverlayIsolation() {
+      // Restore exactly what this manager changed, including pre-existing inert
+      // regions. Walk ancestors so dialogs work both inside and outside the shell.
+      overlayBackgroundInert.forEach((wasInert, node) => { node.inert = wasInert; });
+      overlayBackgroundInert.clear();
+      const active = activeManagedOverlay();
+      overlayStack.filter((overlay) => !overlay.hidden).forEach((overlay) => {
+        setOverlayBackgroundState(overlay, overlay === active);
+        // An ancestor dialog loses modal semantics, but must not make its
+        // nested active dialog inert. Its other children are isolated below.
+        if (active && overlay !== active && overlay.contains(active)) {
+          overlay.inert = false;
+          overlay.setAttribute('aria-hidden', 'false');
+        }
+      });
+      if (!active) return;
+      for (let branch = active; branch && branch !== document.body; branch = branch.parentElement) {
+        for (const sibling of branch.parentElement?.children || []) {
+          if (sibling === branch || sibling.matches('script, style, link')) continue;
+          if (sibling === overlayBackdrop(active)) continue;
+          overlayBackgroundInert.set(sibling, sibling.inert);
+          sibling.inert = true;
+        }
+      }
+    }
+
+    function overlayReturnTarget(target) {
+      if (renderedInteractionTarget(target)) return target;
+      const summary = target?.closest('details')?.querySelector(':scope > summary');
+      if (renderedInteractionTarget(summary)) return summary;
+      const parent = activeManagedOverlay();
+      if (parent) return overlayFocusableElements(parent)[0] || parent.querySelector('[role="dialog"]');
+      return renderedInteractionTarget(question) ? question : null;
+    }
+
     function openOverlay(element) {
       if (!element) return;
       const previous = activeManagedOverlay();
       if (element.hidden) overlayReturnFocus.set(element, document.activeElement);
-      if (!overlayStack.includes(element)) overlayStack.push(element);
+      const priorIndex = overlayStack.indexOf(element);
+      if (priorIndex >= 0) overlayStack.splice(priorIndex, 1);
+      overlayStack.push(element);
       if (previous && previous !== element) setOverlayBackgroundState(previous, false);
       element.hidden = false;
       setOverlayBackgroundState(element, true);
+      syncOverlayIsolation();
       const dialog = element.matches('[role="dialog"]') ? element : element.querySelector('[role="dialog"]');
       if (dialog && !dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
       const focusable = overlayFocusableElements(element);
       window.setTimeout(() => {
+        if (element.hidden || activeManagedOverlay() !== element) return;
         if (dialog) {
           dialog.scrollTop = 0;
           dialog.focus({preventScroll: true});
@@ -5461,6 +5672,10 @@
 
     function closeOverlay(element) {
       if (!element || element.hidden) return;
+      if (element === evidenceDrawer) {
+        setDrawerOpen(false, '', {userInitiated: true});
+        return;
+      }
       const returnTarget = overlayReturnFocus.get(element) || newChatButton || focusModeButton;
       // Hide the closing surface, reactivate a possible parent, then move
       // focus. A control in a parent dialog cannot be focused while inert.
@@ -5472,8 +5687,10 @@
       if (stackIndex >= 0) overlayStack.splice(stackIndex, 1);
       const previous = activeManagedOverlay();
       if (previous) setOverlayBackgroundState(previous, true);
-      if (returnTarget && typeof returnTarget.focus === 'function') {
-        returnTarget.focus({preventScroll: true});
+      syncOverlayIsolation();
+      const destination = overlayReturnTarget(returnTarget);
+      if (destination && typeof destination.focus === 'function') {
+        destination.focus({preventScroll: true});
       }
     }
 
@@ -6100,7 +6317,7 @@
       recordInspectorController = controller;
       recordInspectorState = null;
       recordInspectorOwner = owner || document.activeElement;
-      recordInspector.hidden = false;
+      openOverlay(recordInspector);
       recordInspectorBackdrop.hidden = false;
       recordInspector.setAttribute('aria-hidden', 'false');
       recordInspectorBackdrop.setAttribute('aria-hidden', 'false');
@@ -6141,7 +6358,7 @@
     function closeRecordInspector() {
       releaseRecordInspectorPreview();
       if (!recordInspector || recordInspector.hidden) return;
-      recordInspector.hidden = true;
+      closeOverlay(recordInspector);
       recordInspectorBackdrop.hidden = true;
       recordInspector.setAttribute('aria-hidden', 'true');
       recordInspectorBackdrop.setAttribute('aria-hidden', 'true');
@@ -6251,17 +6468,19 @@
       if (!sourcePreviewFlyout || sourcePreviewFlyout.hidden) return;
       if (sourcePreviewPinned && !force) return;
       const owner = sourcePreviewOwner;
+      const wasPinned = sourcePreviewPinned;
       sourcePreviewPinned = false;
       sourcePreviewOwner = null;
       sourcePreviewSuppressUntil = Date.now() + 500;
-      sourcePreviewFlyout.hidden = true;
+      if (wasPinned) closeOverlay(sourcePreviewFlyout);
+      else sourcePreviewFlyout.hidden = true;
       sourcePreviewFlyout.setAttribute('aria-hidden', 'true');
       sourcePreviewFlyout.classList.remove('is-pinned');
       sourcePreviewFlyout.setAttribute('aria-modal', 'false');
       document.body.classList.remove('source-preview-open');
       ['width', 'left', 'top', 'right', 'bottom'].forEach((name) => sourcePreviewFlyout.style.removeProperty(name));
       if (sourcePreviewBackdrop) sourcePreviewBackdrop.hidden = true;
-      if (returnFocus && owner && typeof owner.focus === 'function') owner.focus();
+      if (returnFocus) overlayReturnTarget(owner)?.focus({preventScroll: true});
     }
 
     function showSourcePreview(item, owner, {pin = false, payload = null} = {}) {
@@ -6280,7 +6499,12 @@
       sourcePreviewTitle.textContent = title;
       sourcePreviewBody.innerHTML = sourcePreviewMarkup(item, payload);
       sourcePreviewActions.innerHTML = `${lane === 'private_record' && binding ? `<button class="primary-action" data-preview-inspect-record type="button">Inspect document</button><button class="secondary" data-preview-open-record type="button">Open original</button>${pageNumber > 0 ? '<button class="secondary" data-preview-inspect-page type="button">Inspect matching page</button>' : ''}` : ''}${lane === 'legal_authority' && url ? `<a class="primary-action" href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">Open official source</a>` : ''}<button class="secondary" data-preview-copy type="button">Copy source card</button>`;
-      sourcePreviewFlyout.hidden = false;
+      if (sourcePreviewPinned) {
+        openOverlay(sourcePreviewFlyout);
+        overlayReturnFocus.set(sourcePreviewFlyout, sourcePreviewOwner || document.activeElement);
+      } else {
+        sourcePreviewFlyout.hidden = false;
+      }
       sourcePreviewFlyout.setAttribute('aria-hidden', 'false');
       sourcePreviewFlyout.classList.toggle('is-pinned', sourcePreviewPinned);
       sourcePreviewFlyout.setAttribute('aria-modal', sourcePreviewPinned ? 'true' : 'false');
@@ -6475,7 +6699,7 @@
 
     function closeDocumentIntelligence() {
       if (!documentIntelligenceModal) return;
-      documentIntelligenceModal.hidden = true;
+      closeOverlay(documentIntelligenceModal);
       documentIntelligenceModal.setAttribute('aria-hidden', 'true');
       if (documentIntelligenceBackdrop) documentIntelligenceBackdrop.hidden = true;
       document.body.classList.remove('document-intelligence-open');
@@ -6669,7 +6893,7 @@
       documentIntelligenceRecordId = String(recordInspectorState?.evidence_id || '');
       lastDocumentIntelligenceReport = null;
       documentIntelligenceOwner = owner || document.activeElement;
-      documentIntelligenceModal.hidden = false;
+      openOverlay(documentIntelligenceModal);
       documentIntelligenceModal.setAttribute('aria-hidden', 'false');
       if (documentIntelligenceBackdrop) documentIntelligenceBackdrop.hidden = false;
       document.body.classList.add('document-intelligence-open');
@@ -6899,13 +7123,13 @@
 
     function closeRetrievalWorkbench() {
       if (!retrievalWorkbenchModal || retrievalWorkbenchModal.hidden) return;
-      retrievalWorkbenchModal.hidden = true;
+      closeOverlay(retrievalWorkbenchModal);
       retrievalWorkbenchModal.setAttribute('aria-hidden', 'true');
       if (retrievalWorkbenchBackdrop) retrievalWorkbenchBackdrop.hidden = true;
       document.body.classList.remove('retrieval-workbench-open');
       const owner = retrievalWorkbenchOwner;
       retrievalWorkbenchOwner = null;
-      if (owner && typeof owner.focus === 'function') owner.focus({preventScroll: true});
+      if (owner && typeof owner.focus === 'function') overlayReturnTarget(owner)?.focus({preventScroll: true});
     }
 
     function renderRetrievalBackendStatus(payload) {
@@ -6945,7 +7169,7 @@
     async function openRetrievalWorkbench(owner) {
       if (!retrievalWorkbenchModal) return;
       retrievalWorkbenchOwner = owner || document.activeElement;
-      retrievalWorkbenchModal.hidden = false;
+      openOverlay(retrievalWorkbenchModal);
       retrievalWorkbenchModal.setAttribute('aria-hidden', 'false');
       if (retrievalWorkbenchBackdrop) retrievalWorkbenchBackdrop.hidden = false;
       document.body.classList.add('retrieval-workbench-open');
@@ -6996,7 +7220,7 @@
 
     function closeReleasePilotHardening() {
       if (!releasePilotHardeningModal || releasePilotHardeningModal.hidden) return;
-      releasePilotHardeningModal.hidden = true;
+      closeOverlay(releasePilotHardeningModal);
       releasePilotHardeningModal.setAttribute('aria-hidden', 'true');
       if (releasePilotHardeningBackdrop) releasePilotHardeningBackdrop.hidden = true;
       document.body.classList.remove('release-pilot-hardening-open');
@@ -7047,7 +7271,7 @@
     async function openReleasePilotHardening(owner) {
       if (!releasePilotHardeningModal) return;
       releasePilotHardeningOwner = owner || document.activeElement;
-      releasePilotHardeningModal.hidden = false;
+      openOverlay(releasePilotHardeningModal);
       releasePilotHardeningModal.setAttribute('aria-hidden', 'false');
       if (releasePilotHardeningBackdrop) releasePilotHardeningBackdrop.hidden = false;
       document.body.classList.add('release-pilot-hardening-open');
@@ -7430,7 +7654,7 @@
 
     function closeEvidenceWorkProduct() {
       if (!evidenceWorkProductModal || evidenceWorkProductModal.hidden) return;
-      evidenceWorkProductModal.hidden = true;
+      closeOverlay(evidenceWorkProductModal);
       evidenceWorkProductModal.setAttribute('aria-hidden', 'true');
       if (evidenceWorkProductBackdrop) evidenceWorkProductBackdrop.hidden = true;
       document.body.classList.remove('evidence-work-product-open');
@@ -7484,7 +7708,7 @@
       if (!evidenceWorkProductModal) return;
       setWorkflowFocus('evidence');
       evidenceWorkProductOwner = owner || document.activeElement;
-      evidenceWorkProductModal.hidden = false;
+      openOverlay(evidenceWorkProductModal);
       evidenceWorkProductModal.setAttribute('aria-hidden', 'false');
       if (evidenceWorkProductBackdrop) evidenceWorkProductBackdrop.hidden = false;
       document.body.classList.add('evidence-work-product-open');
@@ -7548,23 +7772,30 @@
     localAgentBackdrop?.addEventListener('click', closeLocalAgentDialog);
     localAgentRefreshPreview?.addEventListener('click', refreshLocalAgentPreview);
     localAgentRun?.addEventListener('click', runApprovedLocalAgent);
+    localAgentWorkerConfirm?.addEventListener('change', renderManagedWorkerControls);
+    localAgentWorkerStart?.addEventListener('click', startManagedFastInterchangeWorker);
+    localAgentWorkerStop?.addEventListener('click', stopManagedFastInterchangeWorker);
     [localAgentModel, localAgentEndpoint, localAgentTask].forEach((control) => control?.addEventListener('change', () => {
       if (localAgentBusy) return;
+      if (control === localAgentTask) syncFastInterchangeModelSelection();
       localAgentPreview = null;
       localAgentRun.disabled = true;
       localAgentStatus.textContent = 'Model or task changed. Rebuild the exact preview before approving.';
+      refreshManagedWorkerStatus();
     }));
     localAgentProvider?.addEventListener('change', () => {
       if (localAgentProvider.value === 'ollama') {
         localAgentEndpoint.value = 'http://127.0.0.1:11434';
+        localAgentModel.readOnly = false;
         if (!localAgentModel.value || localAgentModel.value === 'local-model') localAgentModel.value = 'qwen2.5:7b';
       } else if (localAgentProvider.value === 'fast_interchange_local') {
-        localAgentEndpoint.value = 'http://127.0.0.1:8105';
-        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'local-model') localAgentModel.value = 'admitted-release-model';
+        syncFastInterchangeModelSelection();
       } else {
         localAgentEndpoint.value = 'http://127.0.0.1:1234';
+        localAgentModel.readOnly = false;
         if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'admitted-release-model') localAgentModel.value = 'local-model';
       }
+      renderManagedWorkerControls();
       refreshLocalAgentPreview();
     });
 
@@ -7728,135 +7959,30 @@
     sourcePreviewBackdrop?.addEventListener('click', () => closeSourcePreview({force: true, returnFocus: true}));
     window.addEventListener('resize', () => positionSourcePreview(sourcePreviewOwner));
     document.addEventListener('scroll', () => positionSourcePreview(sourcePreviewOwner), true);
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && localWorkbenchOverlay && !localWorkbenchOverlay.hidden) {
-        event.preventDefault();
-        closeLocalWorkbench();
-        return;
-      }
-      if (event.key === 'Tab' && localWorkbenchOverlay && !localWorkbenchOverlay.hidden) {
-        const focusable = overlayFocusableElements(localWorkbenchOverlay);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && releasePilotHardeningModal && !releasePilotHardeningModal.hidden) {
-        event.preventDefault();
-        closeReleasePilotHardening();
-        return;
-      }
-      if (event.key === 'Tab' && releasePilotHardeningModal && !releasePilotHardeningModal.hidden) {
-        const focusable = overlayFocusableElements(releasePilotHardeningModal);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && evidenceWorkProductModal && !evidenceWorkProductModal.hidden) {
-        event.preventDefault();
-        closeEvidenceWorkProduct();
-        return;
-      }
-      if (event.key === 'Tab' && evidenceWorkProductModal && !evidenceWorkProductModal.hidden) {
-        const focusable = overlayFocusableElements(evidenceWorkProductModal);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && documentIntelligenceModal && !documentIntelligenceModal.hidden) {
-        event.preventDefault();
-        closeDocumentIntelligence();
-        return;
-      }
-      if (event.key === 'Tab' && documentIntelligenceModal && !documentIntelligenceModal.hidden) {
-        const focusable = overlayFocusableElements(documentIntelligenceModal);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && authorityVerificationModal && !authorityVerificationModal.hidden) {
-        event.preventDefault();
-        closeAuthorityVerification();
-        return;
-      }
-      if (event.key === 'Tab' && authorityVerificationModal && !authorityVerificationModal.hidden) {
-        const focusable = overlayFocusableElements(authorityVerificationModal);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && localAgentModal && !localAgentModal.hidden) {
-        event.preventDefault();
-        closeLocalAgentDialog();
-        return;
-      }
-      if (event.key === 'Tab' && localAgentModal && !localAgentModal.hidden) {
-        const focusable = overlayFocusableElements(localAgentModal);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && documentWorkspace && !documentWorkspace.hidden) {
-        event.preventDefault();
-        closeDocumentWorkspace();
-        return;
-      }
-      if (event.key === 'Tab' && documentWorkspace && !documentWorkspace.hidden) {
-        const focusable = overlayFocusableElements(documentWorkspace);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && recordInspector && !recordInspector.hidden) {
-        event.preventDefault();
-        closeRecordInspector();
-        return;
-      }
-      if (event.key === 'Tab' && recordInspector && !recordInspector.hidden) {
-        const focusable = overlayFocusableElements(recordInspector);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Tab' && sourcePreviewPinned && sourcePreviewFlyout && !sourcePreviewFlyout.hidden) {
-        const focusable = overlayFocusableElements(sourcePreviewFlyout);
-        if (focusable.length) {
-          const first = focusable[0];
-          const last = focusable[focusable.length - 1];
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-        }
-      }
-      if (event.key === 'Escape' && sourcePreviewFlyout && !sourcePreviewFlyout.hidden) {
-        event.preventDefault();
-        closeSourcePreview({force: true, returnFocus: true});
-      }
-    });
+    function closeActiveManagedOverlay() {
+      const active = activeManagedOverlay();
+      if (!active) return false;
+      // Close only the top surface, using its own cleanup (media, request
+      // ownership, backdrop, and context). Never close a covered parent first.
+      const close = new Map([
+        [localWorkbenchOverlay, closeLocalWorkbench],
+        [releasePilotHardeningModal, closeReleasePilotHardening],
+        [evidenceWorkProductModal, closeEvidenceWorkProduct],
+        [documentIntelligenceModal, closeDocumentIntelligence],
+        [authorityVerificationModal, closeAuthorityVerification],
+        [localAgentModal, closeLocalAgentDialog],
+        [documentWorkspace, closeDocumentWorkspace],
+        [recordInspector, closeRecordInspector],
+        [retrievalWorkbenchModal, closeRetrievalWorkbench],
+        [sourcePreviewFlyout, () => closeSourcePreview({force: true, returnFocus: true})],
+      ]).get(active);
+      if (close) close();
+      else closeOverlay(active);
+      return true;
+    }
 
     function renderCorpusLibrary(payload) {
+      corpusLibraryPayload = payload || null;
       const cases = payload?.cases || [];
       const activeCaseId = payload?.active_case_id || '';
       corpusSelect.innerHTML = '<option value="">General Maine law workbench only</option>' + cases.map((item) => {
@@ -8249,6 +8375,128 @@
       };
     }
 
+    function syncFastInterchangeModelSelection() {
+      if (localAgentProvider?.value !== 'fast_interchange_local') return;
+      const capability = String(localAgentTask?.value || '');
+      const models = Array.isArray(window.mflActiveSpecialistModels) ? window.mflActiveSpecialistModels : [];
+      const admitted = models.find((item) => item?.capability === capability);
+      localAgentEndpoint.value = 'http://127.0.0.1:8105';
+      localAgentModel.value = admitted?.id || 'admitted-release-model';
+      localAgentModel.readOnly = Boolean(admitted?.id);
+      localAgentModel.setAttribute(
+        'aria-description',
+        admitted?.id
+          ? `Active admitted ${capability.replaceAll('_', ' ')} model selected automatically.`
+          : 'No active admitted model is available for this task.'
+      );
+      renderManagedWorkerControls();
+    }
+
+    function selectedFastInterchangeModel() {
+      const capability = String(localAgentTask?.value || '');
+      const models = Array.isArray(window.mflActiveSpecialistModels) ? window.mflActiveSpecialistModels : [];
+      return models.find((item) => item?.capability === capability) || null;
+    }
+
+    function renderManagedWorkerControls() {
+      if (!localAgentWorkerStatus) return;
+      const running = localAgentWorkerSnapshot?.status === 'running';
+      const selected = selectedFastInterchangeModel();
+      const fastInterchangeSelected = localAgentProvider?.value === 'fast_interchange_local';
+      const confirmed = Boolean(localAgentWorkerConfirm?.checked);
+      localAgentWorkerStart.disabled = Boolean(localAgentWorkerBusy || running || !confirmed || !fastInterchangeSelected || !selected);
+      localAgentWorkerStop.disabled = Boolean(localAgentWorkerBusy || !running || !confirmed);
+      if (localAgentWorkerBusy) return;
+      if (running) {
+        const model = localAgentWorkerSnapshot.model || {};
+        const scope = String(model.admission_scope || 'unknown admission scope').replaceAll('_', ' ');
+        localAgentWorkerStatus.textContent = `Running locally: ${model.model_id || 'admitted specialist'} · ${String(model.capability || '').replaceAll('_', ' ')} · ${scope} · Review required.`;
+      } else if (!fastInterchangeSelected) {
+        localAgentWorkerStatus.textContent = 'Choose FAST INTERCHANGE to manage an admitted specialist. No worker is running.';
+      } else if (!selected) {
+        localAgentWorkerStatus.textContent = 'No signed, admitted specialist is active for this task. Import and activate an approved offline pack first.';
+      } else {
+        const admission = String(selected.admission || 'admission unknown').replaceAll('_', ' ');
+        localAgentWorkerStatus.textContent = `Ready for explicit start: ${selected.id} · ${admission}. Hardware will be checked before any model is loaded.`;
+      }
+    }
+
+    async function refreshManagedWorkerStatus() {
+      const matterId = String(localAgentPayload?.local_agent_matter_id || '');
+      if (!matterId || !localAgentWorkerStatus) return;
+      try {
+        localAgentWorkerSnapshot = await fetchJson(`/api/local-agent/worker/status?matter_id=${encodeURIComponent(matterId)}`);
+      } catch (error) {
+        localAgentWorkerSnapshot = null;
+        localAgentWorkerStatus.textContent = `Worker status unavailable: ${localAgentErrorMessage(error)} No model was started.`;
+        localAgentWorkerStart.disabled = true;
+        localAgentWorkerStop.disabled = true;
+        return;
+      }
+      renderManagedWorkerControls();
+    }
+
+    async function startManagedFastInterchangeWorker() {
+      const selected = selectedFastInterchangeModel();
+      const matterId = String(localAgentPayload?.local_agent_matter_id || '');
+      if (localAgentWorkerBusy || !selected || !matterId || !localAgentWorkerConfirm?.checked) return;
+      localAgentWorkerBusy = true;
+      localAgentWorkerStatus.textContent = 'Checking hardware and starting the admitted specialist locally…';
+      renderManagedWorkerControls();
+      try {
+        localAgentWorkerSnapshot = await fetchJson('/api/local-agent/worker/start', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-User-Role': 'admin'},
+          body: JSON.stringify({
+            matter_id: matterId,
+            model_id: selected.id,
+            capability: String(localAgentTask?.value || ''),
+            user_confirmed: true
+          })
+        });
+        localAgentPreview = null;
+        localAgentRun.disabled = true;
+        localAgentStatus.textContent = 'Specialist started. Rebuilding the exact source preview before use…';
+      } catch (error) {
+        localAgentWorkerSnapshot = null;
+        localAgentWorkerStatus.textContent = `Specialist did not start: ${localAgentErrorMessage(error)} No records were changed.`;
+      } finally {
+        localAgentWorkerBusy = false;
+        renderManagedWorkerControls();
+      }
+      if (localAgentWorkerSnapshot?.status === 'running') refreshLocalAgentPreview();
+    }
+
+    async function stopManagedFastInterchangeWorker() {
+      const matterId = String(localAgentPayload?.local_agent_matter_id || '');
+      if (localAgentWorkerBusy || !matterId || !localAgentWorkerConfirm?.checked) return;
+      const selected = selectedFastInterchangeModel();
+      const runningModel = localAgentWorkerSnapshot?.model || {};
+      localAgentWorkerBusy = true;
+      localAgentWorkerStatus.textContent = 'Stopping the local specialist and clearing its active context…';
+      renderManagedWorkerControls();
+      try {
+        localAgentWorkerSnapshot = await fetchJson('/api/local-agent/worker/stop', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-User-Role': 'admin'},
+          body: JSON.stringify({
+            matter_id: matterId,
+            model_id: runningModel.model_id || selected?.id || 'admitted-release-model',
+            capability: runningModel.capability || String(localAgentTask?.value || ''),
+            user_confirmed: true
+          })
+        });
+        localAgentPreview = null;
+        localAgentRun.disabled = true;
+        localAgentStatus.textContent = 'Specialist stopped. Existing records and answers were preserved.';
+      } catch (error) {
+        localAgentWorkerStatus.textContent = `Could not confirm the stop: ${localAgentErrorMessage(error)} Retry before closing the app.`;
+      } finally {
+        localAgentWorkerBusy = false;
+        renderManagedWorkerControls();
+      }
+    }
+
     // Model data is transferred only to this local API, never to a remote host.
     // Inference and model-pack activation retain separate explicit approvals.
     (function installOfflineModelPacks() {
@@ -8362,6 +8610,8 @@
       const post = (suffix, extra = {}) => fetchJson(path(suffix), {method: 'POST', headers: {'Content-Type':'application/json', ...headers()}, body: body(extra)});
       const loadInventory = async () => {
         inventory = await fetchJson(`/api/model-packs?matter_id=${encodeURIComponent(matter)}`, {headers:headers()});
+        window.mflActiveSpecialistModels = Array.isArray(inventory.models) ? inventory.models : [];
+        if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
         const selected = job?.job_id || '';
         element('job').replaceChildren(option('', 'New import — none selected'), ...inventoryRows().map(row => option(row.job_id, `${row.status}${row.recovery_required ? ' · previous session' : ''} · ${row.job_id.slice(0,12)}`)));
         element('job').value = inventoryRows().some(row => row.job_id === selected) ? selected : '';
@@ -8374,6 +8624,16 @@
         if (inventory.error) message(`Model-pack state blocked (${inventory.error}). ${inventory.transaction ? 'Review the interrupted change below and choose explicit recovery. Worker startup is blocked.' : 'An operator must resolve the admission or store setup before activation.'}`);
         controls();
       };
+      panel.addEventListener('model-pack-context', async (event) => {
+        matter = String(event.detail?.matterId || '');
+        if (!matter || busy) return;
+        try {
+          await loadInventory();
+        } catch (error) {
+          window.mflActiveSpecialistModels = [];
+          if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
+        }
+      });
       element('job').addEventListener('change', () => {
         if (busy) return;
         cancelRequested = false;
@@ -8526,6 +8786,38 @@
       return Array.isArray(payload?.local_agent_source_refs) ? payload.local_agent_source_refs : [];
     }
 
+    function localAgentCitationsWithVerifierSpans(payload) {
+      const citations = Array.isArray(payload?.citations) ? payload.citations : [];
+      const spans = Array.isArray(payload?.output_validation?.source_spans)
+        ? payload.output_validation.source_spans : [];
+      return citations.map((item, index) => {
+        const sourceId = sourceIdentity(item);
+        const span = spans.find((row) => Number(row?.reference) === index + 1
+          && String(row?.source_id || '') === sourceId);
+        const reference = item?.source_reference || {};
+        const snippet = String(item?.snippet || '');
+        const relativeStart = Number(span?.start_offset);
+        const relativeEnd = Number(span?.end_offset);
+        const baseStart = Number(reference.start_offset || 0);
+        if (!span || !Number.isInteger(relativeStart) || !Number.isInteger(relativeEnd)
+            || relativeStart < 0 || relativeEnd <= relativeStart || relativeEnd > snippet.length) return item;
+        return {
+          ...item,
+          metadata: {
+            ...(item?.metadata || {}),
+            source_span: {
+              start_offset: baseStart + relativeStart,
+              end_offset: baseStart + relativeEnd,
+              status: String(span.status || 'exact'),
+              source_text_sha256: String(span.source_text_sha256 || ''),
+              quote_sha256: String(span.quote_sha256 || ''),
+            },
+            source_span_preview: snippet.slice(relativeStart, relativeEnd),
+          },
+        };
+      });
+    }
+
     function renderContextManifest(payload) {
       const manifest = payload?.context_manifest || payload?.metadata?.context_manifest || null;
       if (!manifest) return '';
@@ -8552,9 +8844,12 @@
         ...(Array.isArray(validation.blockers) ? validation.blockers : []),
         ...(Array.isArray(payload.blockers) ? payload.blockers : []),
       ])];
+      const partial = validation.partial_extracts_available === true;
+      const specialistName = String(validation.schema_version || '').startsWith('drafting_')
+        ? 'Drafting Assistant' : 'Evidence Review';
       const boundary = validation.status ? `<section class="local-agent-receipt" role="status">
-        <strong>${blockers.length ? 'Evidence Review withheld — review required' : 'Record quotations checked — review required'}</strong>
-        <p>${blockers.length ? 'The model response failed source checks. Your records were preserved. Open the source cards below, or retry with a narrower record selection.' : `${spans.length} quotation(s) match the selected record text. This does not verify factual claims or establish what happened.`}</p>
+        <strong>${partial ? `${specialistName} quotations partially checked — review required` : blockers.length ? `${specialistName} withheld — review required` : `${specialistName} quotations checked — review required`}</strong>
+        <p>${partial ? `${spans.length} exact quotation(s) remain visible; other model-selected text was withheld. This does not verify factual claims or establish what happened.` : blockers.length ? 'The model response failed source checks. Your records were preserved. Open the source cards below, or retry with a narrower record selection.' : `${spans.length} quotation(s) match the selected record text. This does not verify factual claims or establish what happened.`}</p>
         <details><summary>Source-check details</summary>
           ${blockers.length ? `<ul>${blockers.map(code => `<li>${escapeHtml(code)}</li>`).join('')}</ul>` : ''}
           <ul>${spans.map(span => `<li>Source [${escapeHtml(span.reference)}] · ${escapeHtml(span.status)} · approved-excerpt offsets ${escapeHtml(span.start_offset)}–${escapeHtml(span.end_offset)}</li>`).join('')}</ul>
@@ -8584,7 +8879,7 @@
 
     function closeAuthorityVerification() {
       if (!authorityVerificationModal) return;
-      authorityVerificationModal.hidden = true;
+      closeOverlay(authorityVerificationModal);
       authorityVerificationModal.setAttribute('aria-hidden', 'true');
       if (authorityVerificationBackdrop) {
         authorityVerificationBackdrop.hidden = true;
@@ -8656,7 +8951,7 @@
       authorityVerificationOwner = owner || document.activeElement;
       authorityVerificationReceipt = null;
       authorityVerificationBusy = true;
-      authorityVerificationModal.hidden = false;
+      openOverlay(authorityVerificationModal);
       authorityVerificationModal.setAttribute('aria-hidden', 'false');
       if (authorityVerificationBackdrop) {
         authorityVerificationBackdrop.hidden = false;
@@ -8699,7 +8994,13 @@
         fast_interchange_operator_admission_required: 'No trusted model catalog is configured. A licensed, signed model release must be provisioned before this worker can run.',
         fast_interchange_worker_token_required: 'The local app has no worker credential. Configure the host-only worker token; never paste it into this window.',
         fast_interchange_model_not_registered: 'This model is not in the trusted local registry. Choose an installed admitted release.',
-        fast_interchange_admission_unavailable: 'The model admission could not be verified. Check its signature, expiry, revocation, and installed artifacts.'
+        fast_interchange_admission_unavailable: 'The model admission could not be verified. Check its signature, expiry, revocation, and installed artifacts.',
+        fast_interchange_hardware_not_ready: 'This computer does not currently have verified safe memory and accelerator headroom for the selected specialist.',
+        fast_interchange_local_admin_confirmation_required: 'Confirm that you are the local operator before changing the specialist worker.',
+        fast_interchange_worker_port_unavailable: 'The private loopback worker address is already in use. Stop the conflicting local process, then retry.',
+        fast_interchange_worker_restart_required: 'A different specialist is already loaded. Stop it before starting this one.',
+        fast_interchange_worker_start_failed: 'The admitted specialist could not start. The app and your records remain available.',
+        fast_interchange_worker_start_timeout: 'The specialist did not become healthy in time and was stopped safely.'
       };
       return explanations[error?.safeCode] || error?.message || 'The local model action could not complete.';
     }
@@ -8734,7 +9035,7 @@
       if (localAgentBusy && localAgentActiveRun) { cancelLocalAgentGeneration(); return; }
       localAgentRequestEpoch += 1;
       if (localAgentBusy) showToast('Review closed. An approved model request may still be running; its result will not be shown.');
-      localAgentModal.hidden = true;
+      closeOverlay(localAgentModal);
       localAgentModal.setAttribute('aria-hidden', 'true');
       if (localAgentBackdrop) { localAgentBackdrop.hidden = true; localAgentBackdrop.setAttribute('aria-hidden', 'true'); }
       document.body.classList.remove('local-agent-open');
@@ -8780,6 +9081,29 @@
         if (preview.model_admission?.release_id) {
           localAgentPreviewSummary.innerHTML += `<p><strong>Exact model:</strong> ${escapeHtml(preview.model_admission.release_id)} · ${escapeHtml(preview.model_admission.capability)}<br><strong>Admission:</strong> ${escapeHtml(preview.model_admission.admission_scope || preview.model_admission.evidence_basis)} · Review required<br><small>Release SHA-256: ${escapeHtml(preview.model_admission.release_fingerprint)}</small></p>`;
         }
+        const hardware = preview.hardware_readiness || {};
+        if (preview.model?.provider_id === 'fast_interchange_local') {
+          const accelerator = hardware.recommended_accelerator || {};
+          const executionAccelerator = hardware.execution_accelerator || accelerator;
+          const gib = 1024 * 1024 * 1024;
+          const availableMemory = Number(hardware.available_memory_bytes || 0);
+          const requiredMemory = Number(hardware.required_resident_memory_bytes || 0);
+          const requiredVram = Number(hardware.required_available_vram_bytes || 0);
+          const blockers = Array.isArray(hardware.blockers) ? hardware.blockers : [];
+          const needsRam = blockers.includes('insufficient_available_memory_for_specialist');
+          const needsGpu = blockers.includes('compatible_gpu_headroom_required_for_specialist_precision');
+          const headroom = [];
+          if (needsRam && requiredMemory > 0) {
+            headroom.push(`This run needs ${((requiredMemory + gib) / gib).toFixed(1)} GiB free RAM (model allowance plus a 1 GiB system reserve); ${Math.max(0, availableMemory / gib).toFixed(1)} GiB is currently free. Close or pause other local workloads, then refresh this preview.`);
+          }
+          if (needsGpu && requiredVram > 0) {
+            headroom.push(`This precision needs ${Math.max(0, requiredVram / gib).toFixed(1)} GiB free compatible GPU memory. The specialist will remain off until that headroom is available.`);
+          }
+          const hardwareMessage = hardware.status === 'ready'
+            ? `Hardware check passed${executionAccelerator.name ? ` · ${executionAccelerator.name}` : executionAccelerator.kind === 'cpu' ? ' · CPU fallback selected' : ''}. The model has safe memory headroom for this run.${hardware.runtime_warning ? ` ${hardware.runtime_warning}` : ''}`
+            : `${headroom.join(' ') || `Hardware check blocked this model: ${blockers.join(', ') || 'requirements could not be verified'}.`} The source-backed app remains available without it.`;
+          localAgentPreviewSummary.innerHTML += `<p class="${hardware.status === 'ready' ? 'status-good' : 'status-bad'}"><strong>Before model load:</strong> ${escapeHtml(hardwareMessage)}</p>`;
+        }
         localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
           <header><span class="context-index">${escapeHtml(entry.index)}</span><strong>${escapeHtml(entry.title)}</strong><span class="badge ${entry.lane === 'private_record' ? 'warn' : 'good'}">${entry.lane === 'private_record' ? 'Private record' : 'Maine law'}</span>${entry.instruction_like_text_detected ? '<span class="badge warn">instructions quarantined</span>' : ''}</header>
           <small>${escapeHtml(entry.locator || entry.source_id)} · ${Number(entry.char_count || 0).toLocaleString()} characters · SHA-256 ${escapeHtml(String(entry.content_sha256 || '').slice(0, 18))}…</small>
@@ -8794,9 +9118,11 @@
           model: preview.model,
           admission: preview.model_admission
         }, null, 2);
-        localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked);
+        localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length);
         localAgentStatus.textContent = preview.injection_report?.direct_prompt_blocked
           ? 'Run blocked: the user prompt attempted to override protected instructions.'
+          : preview.hardware_readiness?.blockers?.length
+          ? 'Run blocked before model load: this machine does not currently have verified safe headroom. The source-backed app remains available.'
           : 'Nothing has been transmitted. Review the source list, then approve the exact hash.';
       } catch (err) {
         if (requestEpoch !== localAgentRequestEpoch) return;
@@ -8820,15 +9146,23 @@
       localAgentRequestEpoch += 1;
       localAgentPayload = payload;
       if (localAgentTask) localAgentTask.value = payload.local_agent_task || 'authority_review';
+      document.getElementById('model-pack-panel')?.dispatchEvent(new CustomEvent('model-pack-context', {
+        detail: {matterId: payload.local_agent_matter_id || ''}
+      }));
       localAgentOwner = owner || document.activeElement;
       localAgentPreview = null;
+      let savedProvider = false;
       try {
         const saved = JSON.parse(window.localStorage.getItem('mfl-local-agent-settings') || '{}');
-        if (saved.provider) localAgentProvider.value = saved.provider;
+        if (saved.provider) { localAgentProvider.value = saved.provider; savedProvider = true; }
         if (saved.endpoint) localAgentEndpoint.value = saved.endpoint;
         if (saved.model) localAgentModel.value = saved.model;
       } catch (err) {}
-      localAgentModal.hidden = false;
+      if (!savedProvider && ['evidence_review', 'drafting'].includes(String(payload.local_agent_task || ''))) {
+        localAgentProvider.value = 'fast_interchange_local';
+      }
+      syncFastInterchangeModelSelection();
+      openOverlay(localAgentModal);
       localAgentModal.setAttribute('aria-hidden', 'false');
       if (localAgentBackdrop) { localAgentBackdrop.hidden = false; localAgentBackdrop.setAttribute('aria-hidden', 'false'); }
       document.body.classList.add('local-agent-open');
@@ -8838,6 +9172,8 @@
       localAgentStatus.textContent = 'Nothing has been transmitted.';
       localAgentCancel.textContent = 'Cancel';
       localAgentCancel.disabled = false;
+      if (localAgentWorkerConfirm) localAgentWorkerConfirm.checked = false;
+      refreshManagedWorkerStatus();
       window.requestAnimationFrame(() => localAgentClose?.focus());
       refreshLocalAgentPreview();
     }
@@ -8891,7 +9227,7 @@
         const displayPayload = {
           ...result,
           question: original.question,
-          citations: result.citations || [],
+          citations: localAgentCitationsWithVerifierSpans(result),
           handoff_safe_source_cards: original.handoff_safe_source_cards || [],
           local_agent_result: true,
           structured_answer: null
@@ -9413,6 +9749,13 @@
       return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${intentNotice}${renderQueryExpansionGuardrails(payload)}${renderTemporalAuthorityReview(payload)}${renderAuthorityConflictReview(payload)}${renderClarificationMinimizer(payload)}${renderAudiencePresentation(payload)}${renderInlineEvidence(payload)}${renderContextManifest(payload)}${depthNotice}${responseDepth === 'concise' ? '' : renderProgressiveAnswerDetails(payload, structured, {open: responseDepth === 'thorough'})}${renderAssumptionLedger(payload)}${renderQuestionDecomposition(payload)}${renderContradictionFollowup(payload)}${renderLatencyObservatory(payload)}${renderAnswerComparisonControls(payload, primary)}${renderAnswerCorrectionControls(payload, primary)}${renderConversationBranchControl(payload)}${renderFactPinControl(payload)}${renderUsefulnessControl(payload)}${renderActionableFooter(payload)}</div>`;
     }
 
+    function responseReviewLabel(payload) {
+      const blockers = Array.isArray(payload?.blockers) ? payload.blockers : [];
+      const failed = payload?.failure_class && payload.failure_class !== 'none';
+      const modelBlocked = payload?.local_agent_result && payload.status !== 'completed_review_required';
+      return blockers.length || failed || modelBlocked ? 'Review blocked' : 'Review required';
+    }
+
     function addMessage(role, text, payload = null) {
       const at = new Date().toISOString();
       messages.push({role, text, at});
@@ -9425,7 +9768,9 @@
       const evidenceJump = evidenceCount ? `<button class="message-evidence-jump" data-message-evidence-jump type="button">Evidence ${evidenceCount}</button>` : '';
       const draftAction = role === 'assistant' ? '<button class="message-draft-action" data-message-save-draft type="button">Save as draft</button>' : '';
       const localAgentAction = role === 'assistant' && payload?.local_agent_available && !payload?.local_agent_result
-        ? '<button class="message-local-agent-action" data-message-local-agent type="button">Ask local model</button>'
+        ? payload?.local_agent_task === 'evidence_review'
+          ? '<button class="message-local-agent-action" data-message-local-agent data-specialist-task="evidence_review" type="button">Review evidence</button><button class="message-local-agent-action" data-message-local-agent data-specialist-task="drafting" type="button">Draft from records</button>'
+          : '<button class="message-local-agent-action" data-message-local-agent type="button">Ask local model</button>'
         : '';
       const legalEvidenceCount = role === 'assistant' ? sourceItemsFromPayload(payload).filter((item) => sourceLane(item) !== 'records').length : 0;
       const authorityVerifyAction = legalEvidenceCount
@@ -9433,10 +9778,8 @@
         : '';
       const wrapper = document.createElement('div');
       wrapper.className = `message ${role}`;
-      const localModelBlocked = payload?.local_agent_result && payload.status !== 'completed_review_required';
-      const completion = role !== 'assistant' ? '' : localModelBlocked
-        ? ' <span class="badge warn" aria-label="Model response unavailable or withheld">Review blocked</span>'
-        : ' <span class="message-verified" aria-label="Response complete, not verified">✓</span>';
+      const completion = role !== 'assistant' ? ''
+        : ` <span class="message-review-status">${responseReviewLabel(payload)}</span>`;
       wrapper.innerHTML = `<div class="message-bubble ${bubbleClass}"><div class="message-speaker"><strong>${speaker}</strong><div class="message-speaker-meta">${draftAction}${localAgentAction}${authorityVerifyAction}${evidenceJump}<span>${formatLocalTime(at)}${completion}</span></div></div><div class="message-content">${content}</div></div>`;
       transcript.appendChild(wrapper);
       if (role === 'assistant' && payload) bindInlineEvidenceActions(wrapper, payload);
@@ -9454,7 +9797,10 @@
       if (role === 'assistant' && payload?.response_kind === 'local_help_fast_path') bindFastPathActions(wrapper);
       if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
       wrapper.querySelector('[data-message-save-draft]')?.addEventListener('click', () => saveAnswerAsDraft(text, payload));
-      wrapper.querySelector('[data-message-local-agent]')?.addEventListener('click', (event) => openLocalAgentDialog(payload, event.currentTarget));
+      wrapper.querySelectorAll('[data-message-local-agent]').forEach((button) => button.addEventListener('click', (event) => {
+        const task = String(event.currentTarget.dataset.specialistTask || payload.local_agent_task || 'authority_review');
+        openLocalAgentDialog({...payload, local_agent_task: task}, event.currentTarget);
+      }));
       wrapper.querySelector('[data-message-authority-verify]')?.addEventListener('click', (event) => openAuthorityVerification(text, payload, event.currentTarget));
       wrapper.querySelector('[data-message-evidence-jump]')?.addEventListener('click', () => {
         const target = wrapper.querySelector('.chat-evidence-panel, .record-results');
@@ -9548,6 +9894,32 @@
       }
     }
 
+    function addComposerGuide(guideId) {
+      const guides = {
+        what_happened: {label: 'What happened?', draft: 'What happened: '},
+        document: {label: 'What document?', draft: 'Document or record: '},
+        urgent: {label: 'What feels most urgent?', draft: 'Most urgent concern: '},
+        help_next: {label: 'What would help next?', draft: 'What would help next: '},
+      };
+      const guide = guides[guideId];
+      if (!guide || !question) return;
+      const existing = String(question.value || '');
+      if (existing.includes(guide.draft)) {
+        question.focus({preventScroll: true});
+        const start = existing.indexOf(guide.draft) + guide.draft.length;
+        question.setSelectionRange(start, start);
+        if (composerGuidesStatus) composerGuidesStatus.textContent = `${guide.label} is already in your local draft. Add your own words, edit it, or remove it before sending.`;
+        return;
+      }
+      const separator = existing.trim() ? (existing.endsWith('\n') ? '\n' : '\n\n') : '';
+      question.value = `${existing}${separator}${guide.draft}`;
+      question.dispatchEvent(new Event('input', {bubbles: true}));
+      question.focus({preventScroll: true});
+      const caret = question.value.length;
+      question.setSelectionRange(caret, caret);
+      if (composerGuidesStatus) composerGuidesStatus.textContent = `${guide.label} was added to your local draft. Nothing has been sent.`;
+    }
+
     async function ask() {
       if (sending) return;
       const text = question.value.trim();
@@ -9621,7 +9993,9 @@
           const feedbackSuffix = Number.isFinite(firstFeedbackMs)
             ? ` First local update: ${firstFeedbackMs} ms${firstFeedbackMs > Number(streamed.metrics?.first_feedback_budget_ms || CHAT_FIRST_FEEDBACK_BUDGET_MS) ? ' (over the 150 ms target)' : ''}.`
             : '';
-          showToast((payload.grounded ? `Grounded answer ready in ${durationLabel}.` : `Answer returned with review-needed flags in ${durationLabel}.`) + feedbackSuffix);
+          // Record matches can be grounded while the authority lane is blocked.
+          // Completion must never imply that the whole answer passed review.
+          showToast(`Response ready for review in ${durationLabel}.` + feedbackSuffix);
         }
       } catch (err) {
         clearResponseProgress();
@@ -9665,7 +10039,7 @@
         runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics:</strong> ${escapeHtml(payload.version)} | ${escapeHtml(payload.ui_version)} | Enter submit: ${payload.enter_to_submit ? 'on' : 'off'} | Appeals routing fix: ${payload.appeals_routing_fix ? 'on' : 'off'} | Brand assets mounted: ${payload.brand_assets_mounted ? 'yes' : 'no'} | Branding: ${escapeHtml(payload.branding || 'unknown')} | Conversation settings: on | Evidence drawer: on | Ctrl+K: on | Ctrl+J: on`;
       } catch (err) {
         runtimeDiagnostics.dataset.runtimeDiagnostics = 'failed';
-        runtimeDiagnostics.innerHTML = `<strong>Runtime diagnostics failed:</strong> ${escapeHtml(err.message)}. If the footer does not show the current v3 UI, stop the old server and restart from the current build.`;
+        runtimeDiagnostics.innerHTML = renderRecoverableError(err, {title: 'Local diagnostics could not be loaded'});
       }
     }
 
@@ -10784,13 +11158,11 @@
         renderSources(cards);
         updateAuthorityLibrarySummary(payload);
       } catch (err) {
-        try {
-          const payload = await fetchJson('/sources');
-          const cards = Array.isArray(payload) ? payload : (payload.sources || []);
-          renderSources(cards);
-        } catch (fallbackErr) {
-          sourceCards.innerHTML = renderRecoverableError(fallbackErr || err, {title: 'Sources could not be loaded'});
-        }
+        // A failure of the admitted-authority API cannot silently switch the
+        // official-source lane to a generic/development source collection.
+        authorityTrustPayload = {active: false, source_count: 0, blockers: ['authority_sources_unavailable']};
+        updateTrustStatus();
+        sourceCards.innerHTML = renderRecoverableError(err, {title: 'Official sources could not be loaded'});
       } finally {
         sourcesButton.disabled = false;
       }
@@ -10984,6 +11356,56 @@
       });
     });
 
+    const startingPathPrompts = Object.freeze({
+      understand_situation: 'Help me understand what to do after I received Maine family court papers.',
+      organize_records: 'Help me safely organize records for a Maine family-law matter.',
+      prepare_for_court: 'Help me prepare questions and a checklist for an upcoming Maine family court date.',
+      prepare_a_draft: 'Help me prepare a review-required draft outline from sources I can inspect.',
+      safety_support: 'Someone may be unsafe. Show immediate support options and safe next steps.',
+    });
+
+    function renderStartingPath(startingPath, {announce = false} = {}) {
+      const selected = Object.hasOwn(startingPathPrompts, startingPath)
+        ? startingPath
+        : 'understand_situation';
+      document.querySelectorAll('[data-starting-path]').forEach((button) => {
+        const active = button.dataset.startingPath === selected;
+        button.classList.toggle('is-selected', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      if (startingPathStatus) {
+        const label = document.querySelector(`[data-starting-path="${selected}"]`)?.textContent?.trim() || 'Starting point';
+        startingPathStatus.textContent = announce
+          ? `${label} saved locally. Review the suggested question before sending; sources and review status remain available.`
+          : `Suggested path: ${label}. Choose a path to place a safe starter question in the chat.`;
+      }
+    }
+
+    async function chooseStartingPath(startingPath) {
+      if (!Object.hasOwn(startingPathPrompts, startingPath)) return;
+      question.value = startingPathPrompts[startingPath];
+      question.focus({preventScroll: true});
+      renderStartingPath(startingPath);
+      try {
+        await fetchJson('/api/local-workbench/preferences', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({preferences: {starting_path: startingPath}}),
+        });
+        renderStartingPath(startingPath, {announce: true});
+      } catch (_error) {
+        if (startingPathStatus) startingPathStatus.textContent = 'The starter question is ready. Its local preference could not be saved; nothing was sent or changed in a matter.';
+      }
+    }
+
+    document.querySelectorAll('[data-starting-path]').forEach((button) => {
+      button.addEventListener('click', () => chooseStartingPath(String(button.dataset.startingPath || '')));
+    });
+
+    document.querySelectorAll('[data-next-safe-action]').forEach((button) => {
+      button.addEventListener('click', () => runNextSafeAction(String(button.dataset.nextSafeAction || '')));
+    });
+
     async function compactSafeConversationContext() {
       const expectedSearchId = String(lastPayload?.search_id || '').trim();
       if (!expectedSearchId) {
@@ -11021,6 +11443,9 @@
       }
     }
 
+    document.querySelectorAll('[data-composer-guide]').forEach((button) => {
+      button.addEventListener('click', () => addComposerGuide(String(button.dataset.composerGuide || '')));
+    });
     askButton.addEventListener('click', ask);
     stopButton?.addEventListener('click', () => {
       requestAbortReason = 'user_cancelled';
@@ -11309,27 +11734,30 @@
         drawerUserPreference = Boolean(open);
         saveLayoutPreferences();
       }
-      if (open && !wasOpen && manageFocus) drawerReturnFocus = document.activeElement;
-      if (!open && wasOpen && manageFocus) {
-        const returnTarget = drawerReturnFocus || focusModeButton;
-        // Move focus before hiding the drawer from assistive technology.
-        if (returnTarget && typeof returnTarget.focus === 'function') {
-          returnTarget.focus({preventScroll: true});
-        }
-        drawerReturnFocus = null;
-      }
+      if (open && !wasOpen) drawerReturnFocus = document.activeElement;
+      const returnTarget = drawerReturnFocus || focusModeButton;
       document.body.dataset.drawer = open ? 'open' : 'closed';
       const overlayMode = currentResponsiveLayoutMode() === 'overlay';
       document.body.classList.toggle('drawer-modal-open', Boolean(open && overlayMode));
       if (evidenceDrawer) {
         evidenceDrawer.hidden = !open;
         evidenceDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+        evidenceDrawer.dataset.modal = open && overlayMode ? 'true' : 'false';
+        evidenceDrawer.setAttribute('role', open && overlayMode ? 'dialog' : 'complementary');
+        evidenceDrawer.setAttribute('aria-modal', open && overlayMode ? 'true' : 'false');
       }
       focusModeButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (drawerBackdrop) drawerBackdrop.hidden = !(open && overlayMode);
       if (open && panel) selectDrawerTab(panel);
-      if (open && overlayMode && manageFocus) {
-        window.setTimeout(() => closeDrawerButton?.focus({preventScroll: true}), 40);
+      syncOverlayIsolation();
+      if (!open && wasOpen && (manageFocus || evidenceDrawer?.contains(document.activeElement))) {
+        overlayReturnTarget(returnTarget)?.focus({preventScroll: true});
+        drawerReturnFocus = null;
+      }
+      if (open && overlayMode) {
+        window.setTimeout(() => {
+          if (activeManagedOverlay() === evidenceDrawer) closeDrawerButton?.focus({preventScroll: true});
+        }, 0);
       }
     }
 
@@ -11405,7 +11833,7 @@
       if (v8ActiveViewLabel) v8ActiveViewLabel.textContent = nextView === 'workspace' ? 'Workbench' : 'Chat';
       document.querySelectorAll('button[data-v8-view]').forEach((button) => {
         const selected = button.dataset.v8View === nextView;
-        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        button.setAttribute('aria-checked', selected ? 'true' : 'false');
       });
       if (nextView === 'chat') {
         setShortcutCardsVisible(false, {userInitiated: false});
@@ -11415,20 +11843,65 @@
         setDrawerOpen(true, drawerPanel || 'evidence', {manageFocus: false});
       }
       if (userInitiated) saveLayoutPreferences();
-      if (v8ViewMenu) v8ViewMenu.open = false;
+      if (v8ViewMenu) {
+        const returnFocus = userInitiated && v8ViewMenu.contains(document.activeElement);
+        v8ViewMenu.open = false;
+        if (returnFocus) v8ViewMenu.querySelector('summary')?.focus();
+      }
     }
+
+    function syncViewMenuTabStops(current = null) {
+      const items = Array.from(v8ViewMenu?.querySelectorAll('[role="menu"] button:not([disabled])') || []);
+      const selected = current || items.find((item) => item.getAttribute('aria-checked') === 'true') || items[0];
+      items.forEach((item) => { item.tabIndex = v8ViewMenu.open && item === selected ? 0 : -1; });
+    }
+    syncViewMenuTabStops();
+    v8ViewMenu?.addEventListener('toggle', () => {
+      syncViewMenuTabStops(v8ViewMenu.contains(document.activeElement) && document.activeElement.matches('[role^="menuitem"]') ? document.activeElement : null);
+    });
+    v8ViewMenu?.addEventListener('focusout', (event) => {
+      if (event.relatedTarget && !v8ViewMenu.contains(event.relatedTarget)) v8ViewMenu.open = false;
+    });
+    v8ViewMenu?.addEventListener('keydown', (event) => {
+      const items = Array.from(v8ViewMenu.querySelectorAll('[role="menu"] button:not([disabled])'));
+      if (!items.length) return;
+      const current = items.indexOf(document.activeElement);
+      if (event.key === 'Escape' && v8ViewMenu.open) {
+        event.preventDefault();
+        v8ViewMenu.open = false;
+        v8ViewMenu.querySelector('summary')?.focus();
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      v8ViewMenu.open = true;
+      const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : event.key === 'ArrowDown' ? (current + 1) % items.length
+        : (current < 0 ? items.length - 1 : (current - 1 + items.length) % items.length);
+      syncViewMenuTabStops(items[index]);
+      items[index].focus();
+    });
 
     function openWorkbenchPanel(panel, {focusTarget = null} = {}) {
       // Chat intentionally keeps all supporting cards collapsed. Any explicit
       // navigation request therefore needs to promote the destination into a
       // visible Workbench panel instead of merely changing hidden drawer state.
+      const opener = document.activeElement;
       setV8View('workspace', {userInitiated: true, drawerPanel: panel});
-      if (focusTarget && typeof focusTarget.focus === 'function') {
-        window.requestAnimationFrame(() => focusTarget.focus({preventScroll: true}));
+      drawerReturnFocus = opener;
+      const destination = focusTarget || closeDrawerButton;
+      if (destination && typeof destination.focus === 'function') {
+        window.requestAnimationFrame(() => destination.focus({preventScroll: true}));
       }
     }
 
-    focusModeButton?.addEventListener('click', () => setDrawerOpen(document.body.dataset.drawer !== 'open', '', {userInitiated: true}));
+    focusModeButton?.addEventListener('click', () => {
+      if (document.body.dataset.drawer === 'open' && activeV8View === 'workspace') {
+        setDrawerOpen(false, '', {userInitiated: true});
+      } else {
+        openWorkbenchPanel('evidence');
+      }
+    });
     toggleSideCardsButton?.addEventListener('click', () => setShortcutCardsVisible(document.body.dataset.shortcuts !== 'open', {userInitiated: true}));
     closeDrawerButton?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
     drawerBackdrop?.addEventListener('click', () => setDrawerOpen(false, '', {userInitiated: true}));
@@ -11599,6 +12072,8 @@
     matterContext.addEventListener('input', syncContextBar);
     corpusSelect?.addEventListener('change', syncContextBar);
     question.addEventListener('keydown', (event) => {
+      // Enter confirms an IME composition; it must not send unfinished text.
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         ask();
@@ -11720,7 +12195,7 @@
     function setSearchMode(mode) {
       if (!searchMode) return;
       if ((mode === 'my_records' || mode === 'both') && !corpusSelect?.value) {
-        setDrawerOpen(true, 'setup');
+        openWorkbenchPanel('setup', {focusTarget: corpusSelect});
         showToast('Choose an active matter before searching private records.');
         return;
       }
@@ -12052,24 +12527,23 @@
       }
     }
 
-    matterShortcutButton?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
-    matterButton?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
-    trustRecordAction?.addEventListener('click', () => setDrawerOpen(true, 'setup'));
+    matterShortcutButton?.addEventListener('click', () => openWorkbenchPanel('setup'));
+    matterButton?.addEventListener('click', () => openWorkbenchPanel('setup'));
+    chatMatterButton?.addEventListener('click', () => openWorkbenchPanel('setup'));
+    trustRecordAction?.addEventListener('click', () => openWorkbenchPanel('setup'));
     trustAuthorityAction?.addEventListener('click', () => {
-      setDrawerOpen(true, 'setup');
-      window.setTimeout(() => authoritySearch?.focus({preventScroll: true}), 20);
+      openWorkbenchPanel('setup', {focusTarget: authoritySearch});
     });
-    trustReviewAction?.addEventListener('click', () => setDrawerOpen(true, 'review'));
+    trustReviewAction?.addEventListener('click', () => openWorkbenchPanel('review'));
     workflowActions.forEach((button) => button.addEventListener('click', async () => {
       const workflow = button.dataset.workflowAction || 'research';
       setWorkflowFocus(workflow);
       if (workflow === 'research') {
         question?.focus({preventScroll: true});
       } else if (workflow === 'matter') {
-        setDrawerOpen(true, 'setup');
+        openWorkbenchPanel('setup');
       } else if (workflow === 'authority') {
-        setDrawerOpen(true, 'setup');
-        window.setTimeout(() => authoritySearch?.focus({preventScroll: true}), 20);
+        openWorkbenchPanel('setup', {focusTarget: authoritySearch});
       } else if (workflow === 'intelligence') {
         await openDocumentIntelligence(button);
       } else if (workflow === 'timeline') {
@@ -12395,10 +12869,16 @@
 
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Tab') return;
+      if (document.querySelector('dialog:modal')) return; // Native modal owns its focus.
       const activeOverlay = activeManagedOverlay();
       if (!activeOverlay) return;
       const focusable = overlayFocusableElements(activeOverlay);
-      if (!focusable.length) return;
+      if (!focusable.length) {
+        event.preventDefault();
+        const emptyDialog = activeOverlay.matches('[role="dialog"]') ? activeOverlay : activeOverlay.querySelector('[role="dialog"]');
+        emptyDialog?.focus({preventScroll: true});
+        return;
+      }
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       const activeInside = activeOverlay.contains(document.activeElement);
@@ -12413,6 +12893,14 @@
         event.preventDefault();
         first.focus();
       }
+    });
+
+    document.addEventListener('focusin', (event) => {
+      if (document.querySelector('dialog:modal')) return;
+      const active = activeManagedOverlay();
+      if (!active || active.contains(event.target)) return;
+      const destination = overlayFocusableElements(active)[0] || active.querySelector('[role="dialog"]');
+      destination?.focus({preventScroll: true});
     });
 
     document.addEventListener('click', (event) => {
@@ -12437,10 +12925,9 @@
         return;
       }
       if (event.key === 'Escape') {
-        const activeOverlay = activeManagedOverlay();
-        if (activeOverlay) {
+        if (document.querySelector('dialog:modal')) return;
+        if (closeActiveManagedOverlay()) {
           event.preventDefault();
-          closeOverlay(activeOverlay);
           return;
         }
         closeOverlay(helpOverlay);
@@ -12920,6 +13407,7 @@
       refresh.addEventListener('click',async()=>{if(!ack.checked){status.textContent='Confirm that you are authorized for this tenant-scoped admin review first.';badge.textContent='Confirmation required';return;}refresh.disabled=true;status.textContent='Loading privacy-safe administration status and recording an encrypted local receipt…';try{const payload=await fetchJson('/api/admin/console/refresh',{method:'POST',headers:{'Content-Type':'application/json','X-User-Role':'admin'}});render(payload);}catch(error){results.innerHTML=renderRecoverableError(error,{title:'Administration review could not be refreshed'});status.textContent='The existing matter and local work were preserved.';badge.textContent='Review unavailable';}finally{refresh.disabled=false;}});
     }());
     installSpecializedSourceInspectors();
+    renderStartingPath('understand_situation');
     setV8View(activeV8View, {userInitiated: false});
     selectDrawerTab('evidence');
     syncResponsiveLayout({initial: true});
@@ -12941,3 +13429,46 @@
     window.setInterval(runDueProductivityBackups, 15 * 60 * 1000);
 
     // v8 add-on marker: native_whisper_transcription, ocr_correction_studio, communications_importer, evidence_relationship_graph, local_model_manager, court_form_autofill, advanced_table_extraction, financial_document_intelligence, semantic_order_comparison, authority_update_center, guided_research_builder, evidence_annotation_studio, local_automation_scheduler, secure_reviewer_collaboration, matter_template_library, conflict_entity_resolver, desktop_notification_center, courtroom_bundle_exporter, voice_drafting_commands, extension_sdk_permission_center
+
+    // v9 ProSe-SENTINEL is a local status/admission boundary.  It intentionally
+    // has no model-start, training, document, filing, or writeback action.
+    (function installV9SentinelBoundary() {
+      const openButton = document.getElementById('sentinel-button');
+      const overlay = document.getElementById('sentinel-overlay');
+      const closeButton = document.getElementById('sentinel-close');
+      const refreshButton = document.getElementById('sentinel-refresh');
+      const status = document.getElementById('sentinel-status');
+      if (!openButton || !overlay || !closeButton || !refreshButton || !status) return;
+
+      const render = (payload) => {
+        const service = String(payload?.service || 'ProSe-SENTINEL AI');
+        const contract = String(payload?.contract_version || 'local contract');
+        const version = String(payload?.adapter_version || 'unavailable');
+        const reviewRequired = payload?.human_review_required === true ? 'Human review required.' : 'Review state unavailable.';
+        status.textContent = `${service} ${version} · ${contract}. ${reviewRequired} This boundary creates no model run, training run, writeback, filing, service, signature, or external action.`;
+      };
+      const refresh = async () => {
+        refreshButton.disabled = true;
+        status.textContent = 'Checking the local source-bound Sentinel boundary…';
+        try {
+          render(await fetchJson('/api/sentinel/status'));
+        } catch (error) {
+          status.textContent = safeErrorMessage(error, 'The local Sentinel status could not be read. No model or case action was started.');
+        } finally {
+          refreshButton.disabled = false;
+        }
+      };
+      const close = () => {
+        closeOverlay(overlay);
+        openButton.setAttribute('aria-expanded', 'false');
+      };
+      openButton.addEventListener('click', async () => {
+        openOverlay(overlay);
+        openButton.setAttribute('aria-expanded', 'true');
+        await refresh();
+        refreshButton.focus({preventScroll: true});
+      });
+      closeButton.addEventListener('click', close);
+      overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(); });
+      refreshButton.addEventListener('click', refresh);
+    }());

@@ -56,7 +56,7 @@ class RepoGAEvidenceBuilder:
             methods = getattr(route, "methods", set()) or set()
             path = getattr(route, "path", "")
             for method in methods:
-                if method in {"GET", "POST"} and str(path).startswith("/api"):
+                if method not in {"HEAD", "OPTIONS"} and str(path).startswith("/api"):
                     registered.add((method, str(path)))
         return registered
 
@@ -66,7 +66,7 @@ class RepoGAEvidenceBuilder:
         inventory_report = EndpointInventory().compare_to_registered(
             self._registered_routes(), surface="production"
         )
-        openapi_report = OpenAPICompletionAuditor().audit(openapi_schema).as_dict()
+        openapi_report = OpenAPICompletionAuditor().audit(openapi_schema, surface="production").as_dict()
         policy_report = APICompletionPolicy().evidence().as_dict()
         ui_report = UICompletionAuditor(self.project_root / "app" / "web" / "pages").audit().as_dict()
 

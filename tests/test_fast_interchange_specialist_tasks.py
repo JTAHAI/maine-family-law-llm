@@ -22,6 +22,24 @@ def test_all_seven_task_contracts_are_distinct_and_not_admissions():
         specialist_contract("invented_by_record")
 
 
+def test_evidence_contract_names_critical_fail_closed_relations():
+    instructions = specialist_contract("evidence_review")["instructions"].casefold()
+    for phrase in (
+        "every supplied record",
+        "never omit a conflicting record",
+        "neither agreement nor completion",
+        "allegation as no finding",
+        "absent attachment",
+        "across clocks",
+        "limited search",
+        "duplicate copies",
+        "event date",
+        "private identifiers",
+        "no readable source body",
+    ):
+        assert phrase in instructions
+
+
 @pytest.mark.parametrize("case", acceptance_cases(), ids=lambda row: row.case_id)
 def test_generic_smoke_answer_cannot_pass_specialist_acceptance(case):
     result = assess(case, '{"status":"review_required","next":"verify_source"}')

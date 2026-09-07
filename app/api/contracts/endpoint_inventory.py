@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.api.release_boundary import unsafe_legacy_path
+
 
 @dataclass(frozen=True)
 class EndpointSpec:
@@ -439,27 +441,36 @@ class EndpointInventory:
         as a duplicate alias with different request validation.
         """
 
-        if surface not in {"enterprise", "local", "production"}:
-            raise ValueError("endpoint_inventory_surface_invalid")
-        scoped = tuple(
-            endpoint
-            for endpoint in self.endpoints
-            if surface == "production"
-            or endpoint.surface == surface
-            or endpoint.surface == "shared"
-        )
-        registered_methods = {method for method, _ in registered}
+        scoped = self.scoped_endpoints(surface)
         required = {
             (endpoint.method, endpoint.path)
             for endpoint in scoped
-            if endpoint.method in registered_methods
         }
         missing = sorted(required - registered)
+        forbidden = sorted(
+            (method, path) for method, path in registered
+            if surface == "production" and unsafe_legacy_path(path)
+        )
         return {
-            "status": "pass" if not missing else "fail",
+            "status": "pass" if not missing and not forbidden else "fail",
             "missing": [{"method": method, "path": path} for method, path in missing],
+            "forbidden_registered": [{"method": method, "path": path} for method, path in forbidden],
+            "disabled": [
+                {**endpoint.as_dict(), "reason": "legacy_contract_not_in_release_scope"}
+                for endpoint in self.endpoints
+                if surface == "production" and unsafe_legacy_path(endpoint.path)
+            ],
             "extra": [],
             "surface": surface,
             "required_count": len(scoped),
             "registered_count": len(registered),
         }
+
+    def scoped_endpoints(self, surface: str) -> tuple[EndpointSpec, ...]:
+        if surface not in {"enterprise", "local", "production"}:
+            raise ValueError("endpoint_inventory_surface_invalid")
+        return tuple(
+            endpoint for endpoint in self.endpoints
+            if (surface == "production" or endpoint.surface in {surface, "shared"})
+            and not (surface == "production" and unsafe_legacy_path(endpoint.path))
+        )

@@ -17,10 +17,10 @@ if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
 if (-not $PackagePath) {
-  $PackagePath = Join-Path $RepoRoot "dist\release\v8.0.0\msix\MaineFamilyLawLLM_8.0.0.0_x64.msix"
+  throw "An explicit exact candidate -PackagePath is required for WACK qualification."
 }
 if (-not $OutputRoot) {
-  $OutputRoot = Join-Path $RepoRoot "dist\release\v8.0.0\evidence\wack"
+  $OutputRoot = Join-Path $RepoRoot "dist\store\evidence\wack"
 }
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 $resultPath = Join-Path $OutputRoot "wack-result.json"

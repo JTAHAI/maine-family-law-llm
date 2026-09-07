@@ -97,6 +97,43 @@ def test_pass104_refuses_to_warm_without_admission_or_release_capability(tmp_pat
         store.warm({"task": "summarization"}, model=_admitted_model(), worker=FakeWarmWorker())
 
 
+def test_pass104_hardware_check_runs_before_worker_warm(monkeypatch, tmp_path: Path):
+    from legal.runtime import warm_model_pool as pool_module
+
+    monkeypatch.setattr(
+        pool_module,
+        "profile_hardware",
+        lambda _root: type(
+            "Hardware",
+            (),
+            {
+                "as_dict": lambda self: {
+                    "available_memory_bytes": (9 * 1024**3) // 2,
+                    "available_vram_bytes": 0,
+                    "vram_bytes": 0,
+                }
+            },
+        )(),
+    )
+    root = tmp_path / "fictional-matter"
+    root.mkdir()
+    worker = FakeWarmWorker()
+    model = {
+        **_admitted_model(),
+        "max_resident_bytes": 4 * 1024**3,
+        "quantization": "bf16",
+    }
+    result = WarmModelPoolStore(root, encryption_key="fictional-test-key").warm(
+        {"task": "drafting", "user_confirmed": True}, model=model, worker=worker
+    )
+    assert result["status"] == "not_warmed_incompatible_hardware_review_required"
+    assert set(result["hardware_fit"]["blockers"]) == {
+        "insufficient_available_memory_for_specialist",
+        "compatible_gpu_required_for_specialist_precision",
+    }
+    assert worker.warm_calls == 0
+
+
 def test_pass104_api_is_matter_scoped_and_production_assets_are_mirrored(monkeypatch, tmp_path: Path):
     first, second = tmp_path / "matter-one", tmp_path / "matter-two"
     first.mkdir()
