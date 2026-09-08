@@ -4488,11 +4488,34 @@ if FastAPI is not None:
             sources, cards = _local_agent_context_service().resolve(payload.source_refs)
             # The host owns run identity. The returned value is required on run.
             payload = payload.model_copy(update={"run_id": uuid.uuid4().hex})
-            manifest, _, injection_report = runtime.preview(
+            manifest, selected, injection_report = runtime.preview(
                 question=payload.question,
                 sources=sources,
                 run_id=payload.run_id,
             )
+            # Keep the original source cards for normal record review, while
+            # giving the approval dialog a separate, exact copy of the packet
+            # that will be sent to the local model.  A quarantined record is
+            # deliberately masked there; showing its original body under an
+            # “exact text supplied” label would be misleading.
+            cards_by_source_id = {
+                str(card.get("source_id", "")): card for card in cards if isinstance(card, dict)
+            }
+            model_source_cards: list[dict[str, Any]] = []
+            for source in selected:
+                original = dict(cards_by_source_id.get(source.source_id, {}))
+                metadata = dict(original.get("metadata") or {})
+                metadata["instruction_like_text_detected"] = source.instruction_like_text_detected
+                if source.instruction_like_text_detected:
+                    metadata["model_context_status"] = "instruction_quarantined"
+                model_source_cards.append(
+                    {
+                        **original,
+                        "source_id": source.source_id,
+                        "snippet": source.text,
+                        "metadata": metadata,
+                    }
+                )
             binding = _local_agent_binding(payload, scope, runtime)
             hardware_readiness = _local_agent_hardware_readiness(runtime)
             audit = _local_agent_audit_store(root).record("preview", scope=scope, binding_sha256=local_agent_digest(binding))
@@ -4527,6 +4550,7 @@ if FastAPI is not None:
                 "loopback_only": True,
             },
             "source_cards": cards,
+            "model_source_cards": model_source_cards,
             "review_required": True,
             "model_admission": getattr(runtime.client, "model_binding", {}),
             "hardware_readiness": hardware_readiness,

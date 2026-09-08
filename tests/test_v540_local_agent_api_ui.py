@@ -149,6 +149,8 @@ def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     assert "/api/local-agent/worker/start" in js
     assert "/api/local-agent/worker/stop" in js
     assert "renderContextManifest" in js
+    assert "model_source_cards" in js
+    assert "Instruction-like source text was quarantined and masked from the model" in js
     assert "fast_interchange_local" in html
     assert "FAST INTERCHANGE admitted local worker" in html
     assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in html

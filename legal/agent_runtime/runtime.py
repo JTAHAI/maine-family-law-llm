@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import uuid
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from legal.security.injection_defense import OutputFilter
@@ -85,22 +85,57 @@ class LocalAgentRuntime:
         created_at: str | None = None,
     ) -> tuple[ContextManifest, tuple[ContextSource, ...], dict[str, Any]]:
         actual_run_id = run_id or uuid.uuid4().hex
+        # Retrieved records are evidence, never instructions.  A record that
+        # contains instruction-like text is retained in the user's source
+        # system, but its entire body is masked in the *model* context.  This
+        # is deliberately stricter than merely flagging the text: an Evidence
+        # Review model must not be able to quote a hostile instruction back to
+        # the user as an apparently verified excerpt.  The caller's original
+        # ContextSource instances are immutable and are never rewritten.
+        prepared_sources: list[ContextSource] = []
+        quarantined_source_count = 0
+        document_findings: list[str] = []
+        for source in sources:
+            findings = self.scanner.scan_document_text(source.text)
+            metadata = dict(source.metadata or {})
+            prior_quarantine = (
+                source.instruction_like_text_detected
+                or metadata.get("instruction_quarantine") == "document_instruction_like_text"
+            )
+            if findings or prior_quarantine:
+                finding_codes = [finding.kind for finding in findings]
+                if not finding_codes:
+                    stored_codes = metadata.get("instruction_quarantine_findings", [])
+                    finding_codes = (
+                        [str(code) for code in stored_codes]
+                        if isinstance(stored_codes, list)
+                        else ["document_injection:previously_quarantined"]
+                    )
+                metadata["exclude_from_model"] = True
+                metadata["instruction_quarantine"] = "document_instruction_like_text"
+                metadata["instruction_quarantine_findings"] = sorted(set(finding_codes))
+                source = replace(
+                    source,
+                    instruction_like_text_detected=True,
+                    metadata=metadata,
+                )
+                quarantined_source_count += 1
+                document_findings.extend(finding_codes)
+            prepared_sources.append(source)
         manifest, selected = self.manifest_builder.build(
             question=question,
-            sources=sources,
+            sources=prepared_sources,
             run_id=actual_run_id,
             created_at=created_at,
         )
         direct = self.scanner.scan_user_prompt(question)
-        document = []
-        for source in selected:
-            document.extend(self.scanner.scan_document_text(source.text))
         report = {
             "schema_version": "local_agent_injection_preview_v1",
             "direct_findings": [finding.kind for finding in direct],
-            "document_findings": [finding.kind for finding in document],
+            "document_findings": sorted(set(document_findings)),
             "direct_prompt_blocked": any(finding.severity == "high" for finding in direct),
-            "document_instructions_quarantined": bool(document),
+            "document_instructions_quarantined": bool(quarantined_source_count),
+            "instruction_quarantined_source_count": quarantined_source_count,
             "retrieved_text_may_change_policy": False,
         }
         return manifest, selected, report

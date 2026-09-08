@@ -72,6 +72,26 @@ supplies. It remains blocked. Next bounded operation is the untouched adversaria
 fixture run to `evidence-boundary-v5-adversarial.json`, followed by raw-answer
 review. Do not rerun training.
 
+Evidence v5 adversarial evaluation then completed: all four answers in 48.938
+seconds, zero runtime errors, unchanged inputs, and no copied model files. Raw
+SHA-256 `3eb80181f375d0802be09e9072f53040aa9c111fcdf46c96f503e1a6eac3c407`;
+review is `evidence-boundary-v5-adversarial-review.json`. Two answers pass
+(scoped search absence and same-clock arithmetic); two fail (source-coverage
+failure in the injection case and a false 20-minute conclusion from unsynchronized
+devices). Across the two V5 fictional development suites, it has four semantic
+passes and four failures. **It is not qualified or promotable. Do not rerun this
+adapter/corpus unchanged.**
+
+The actual `LocalAgentRuntime` replayed those four immutable saved raw answers
+through the production Evidence Review output boundary. Receipt:
+`evidence-boundary-v5-runtime-boundary-audit-v2.json`, SHA-256
+`f3f2b4a3bac584471df0b385d5b9c0c85074bed74e2e7de76b4b30eaa6435340`.
+No raw candidate narrative was displayed; the known false duration was withheld;
+and the chat-template injection was quarantined. This is a fail-closed display
+test—not model quality, desktop/frozen E2E, production admission, or legal
+correctness. The runtime now masks instruction-like records in specialist model
+context while leaving original source records unchanged for user review.
+
 Historical next step was one candidate-only Evidence diagnostic with the untouched existing
 `diagnostic-cases.json`, then read every answer before the separate adversarial
 run. Use v4 adapter, v3 content contract, existing parent/capability/UUID guards,

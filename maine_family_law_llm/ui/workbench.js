@@ -9078,6 +9078,10 @@
         const manifest = preview.context_manifest || {};
         const lanes = manifest.lane_counts || {};
         localAgentPreviewSummary.innerHTML = `<strong>Approval required.</strong> ${escapeHtml(manifest.entry_count || 0)} source blocks · ${Number(manifest.total_chars || 0).toLocaleString()} characters · Maine law ${escapeHtml(lanes.legal_authority || 0)} · private records ${escapeHtml(lanes.private_record || 0)}.<br><span class="muted">Destination: ${escapeHtml(preview.model?.endpoint_host || '')}:${escapeHtml(preview.model?.endpoint_port || '')} (${escapeHtml(preview.model?.endpoint_class || 'loopback')}).</span>`;
+        const quarantinedSources = Number(preview.injection_report?.instruction_quarantined_source_count || 0);
+        if (quarantinedSources > 0) {
+          localAgentPreviewSummary.innerHTML += `<p class="status-bad"><strong>${quarantinedSources} source block${quarantinedSources === 1 ? '' : 's'} quarantined.</strong> Instruction-like document text is masked from the model and cannot appear as a verified specialist excerpt. Your original record is unchanged; inspect it directly before narrowing the selection.</p>`;
+        }
         if (preview.model_admission?.release_id) {
           localAgentPreviewSummary.innerHTML += `<p><strong>Exact model:</strong> ${escapeHtml(preview.model_admission.release_id)} · ${escapeHtml(preview.model_admission.capability)}<br><strong>Admission:</strong> ${escapeHtml(preview.model_admission.admission_scope || preview.model_admission.evidence_basis)} · Review required<br><small>Release SHA-256: ${escapeHtml(preview.model_admission.release_fingerprint)}</small></p>`;
         }
@@ -9104,12 +9108,13 @@
             : `${headroom.join(' ') || `Hardware check blocked this model: ${blockers.join(', ') || 'requirements could not be verified'}.`} The source-backed app remains available without it.`;
           localAgentPreviewSummary.innerHTML += `<p class="${hardware.status === 'ready' ? 'status-good' : 'status-bad'}"><strong>Before model load:</strong> ${escapeHtml(hardwareMessage)}</p>`;
         }
+        const modelSourceCards = Array.isArray(preview.model_source_cards) ? preview.model_source_cards : preview.source_cards;
         localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
           <header><span class="context-index">${escapeHtml(entry.index)}</span><strong>${escapeHtml(entry.title)}</strong><span class="badge ${entry.lane === 'private_record' ? 'warn' : 'good'}">${entry.lane === 'private_record' ? 'Private record' : 'Maine law'}</span>${entry.instruction_like_text_detected ? '<span class="badge warn">instructions quarantined</span>' : ''}</header>
           <small>${escapeHtml(entry.locator || entry.source_id)} · ${Number(entry.char_count || 0).toLocaleString()} characters · SHA-256 ${escapeHtml(String(entry.content_sha256 || '').slice(0, 18))}…</small>
           <p>${escapeHtml(entry.preview || '')}</p>
           <small>Freshness: ${escapeHtml(entry.freshness_status || 'unknown')} · Review required</small>
-          <details><summary>Exact source text supplied to the model</summary><pre class="source-excerpt">${escapeHtml(preview.source_cards?.[Number(entry.index) - 1]?.snippet || '')}</pre></details>
+          <details><summary>Exact source text supplied to the model</summary><pre class="source-excerpt">${escapeHtml(modelSourceCards?.[Number(entry.index) - 1]?.snippet || '')}</pre></details>
         </article>`).join('');
         localAgentSecurityReport.textContent = JSON.stringify({
           manifest_sha256: manifest.manifest_sha256,
@@ -9121,6 +9126,8 @@
         localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length);
         localAgentStatus.textContent = preview.injection_report?.direct_prompt_blocked
           ? 'Run blocked: the user prompt attempted to override protected instructions.'
+          : quarantinedSources > 0
+          ? 'Instruction-like source text was quarantined and masked from the model. Review the original record directly, then rebuild a narrower source selection if needed.'
           : preview.hardware_readiness?.blockers?.length
           ? 'Run blocked before model load: this machine does not currently have verified safe headroom. The source-backed app remains available.'
           : 'Nothing has been transmitted. Review the source list, then approve the exact hash.';

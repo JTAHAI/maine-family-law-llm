@@ -42,7 +42,10 @@ class PromptInjectionScanner:
     }
     DOCUMENT_PATTERNS = {
         "embedded_instruction": re.compile(
-            r"(?:^|\n)\s*(?:assistant|system|developer)\s*:|ignore\s+(?:all\s+)?(?:the\s+)?(?:above|previous|prior)|follow\s+these\s+instructions",
+            r"(?:^|\n)\s*(?:assistant|system|developer)\s*(?::|\n)|"
+            r"<\|(?:im_start|im_end|system|assistant|user)[^|]*\|>|"
+            r"ignore\s+(?:all\s+)?(?:the\s+)?(?:above|previous|prior)|"
+            r"follow\s+these\s+instructions",
             re.I,
         ),
         "tool_exfiltration": re.compile(
