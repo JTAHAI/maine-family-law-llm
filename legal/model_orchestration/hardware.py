@@ -199,10 +199,14 @@ def profile_hardware(root: str | Path) -> HardwareProfile:
             disk_free = 0
 
     total_memory = _total_memory_bytes()
-    available_memory = _available_memory_bytes() or total_memory
+    # Installed RAM is not available RAM. Failed/zero headroom must not grant
+    # model admission using total capacity while the machine is already full.
+    available_memory = _available_memory_bytes()
     cpu_count = os.cpu_count() or 1
     instruction_sets = _instruction_sets()
     warnings: list[str] = []
+    if not available_memory:
+        warnings.append("available_memory_unverified_or_exhausted")
     if available_memory and available_memory < 4 * 1024**3:
         warnings.append("low_available_memory")
     if disk_free and disk_free < 10 * 1024**3:
@@ -227,8 +231,8 @@ def profile_hardware(root: str | Path) -> HardwareProfile:
     if not gpu_hint and not vram_bytes:
         warnings.append("no_gpu_hint_detected")
 
-    recommended_concurrency = 1 if available_memory and available_memory < 8 * 1024**3 else max(1, min(4, cpu_count // 2 or 1))
-    recommended_context_limit = 4096 if available_memory and available_memory < 8 * 1024**3 else 8192
+    recommended_concurrency = 1 if available_memory < 8 * 1024**3 else max(1, min(4, cpu_count // 2 or 1))
+    recommended_context_limit = 4096 if available_memory < 8 * 1024**3 else 8192
     estimated_peak_memory_bytes = max(0, min(total_memory or available_memory, int(available_memory * 0.65))) if available_memory else 0
 
     return HardwareProfile(

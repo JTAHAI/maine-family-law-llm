@@ -1,9 +1,9 @@
 {
   "schema_version": "release_feature_truth_v1",
   "release": {
-    "product_version": "8.0.2",
-    "package_version": "8.0.2.0",
-    "release_scope": "configs/v802_release_scope.json",
+    "product_version": "9.0.1",
+    "package_version": "9.0.1.0",
+    "release_scope": "configs/v901_release_scope.json",
     "status": "pending_current_package_verification",
     "review_required": true,
     "local_only": true

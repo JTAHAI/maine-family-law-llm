@@ -196,6 +196,7 @@ def test_v580_api_and_ui_expose_queue_and_claim_annotations(monkeypatch, tmp_pat
     monkeypatch.setattr(api_module, "active_case_root", lambda: case)
     monkeypatch.setattr(api_module.AuthorityProductService, "verify_output", lambda self, **kwargs: _authority_result())
     client = TestClient(api_module.app)
+    client.headers.update({"X-User-Role": "reviewer", "X-Tenant-Id": "local-desktop", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)})
 
     prepared = client.post(f"/api/document-workspace/documents/{document['document_id']}/review/prepare", json={"facts": []})
     assert prepared.status_code == 200

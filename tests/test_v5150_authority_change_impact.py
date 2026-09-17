@@ -19,6 +19,36 @@ from legal.review import (
 from maine_family_law_llm import api as api_module
 
 
+@pytest.fixture(autouse=True)
+def fictional_repository_boundary(monkeypatch, tmp_path):
+    """Model two sibling roots inside QA, without bypassing production isolation."""
+    import sys
+    from types import SimpleNamespace
+    from app.api.routes import authority_impact as canonical_routes
+
+    repository = tmp_path / "fictional-source-repository"
+    repository.mkdir()
+    publisher_type = AuthorityProductPublisher
+    store_type = AuthorityChangeImpactStore
+
+    def publisher(*args, **kwargs):
+        return publisher_type(*args, **{**kwargs, "repo_root": repository})
+
+    def store(*args, **kwargs):
+        return store_type(*args, **{**kwargs, "repo_root": repository})
+
+    monkeypatch.setattr(sys.modules[__name__], "AuthorityProductPublisher", publisher)
+    monkeypatch.setattr(sys.modules[__name__], "AuthorityChangeImpactStore", store)
+    monkeypatch.setattr(api_module, "AuthorityChangeImpactStore", store)
+    monkeypatch.setattr(canonical_routes, "AuthorityChangeImpactStore", store)
+    # These API tests supply fictional configuration; actual authority publishing,
+    # verification and impact services above still run their real boundary checks.
+    def configuration():
+        return SimpleNamespace(data_root=tmp_path / "external-authority", repo_root=repository)
+    monkeypatch.setattr(api_module, "AuthorityProductService", configuration)
+    monkeypatch.setattr(canonical_routes, "AuthorityLibraryService", configuration)
+
+
 def _write_json(path: Path, payload) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -249,7 +279,7 @@ def test_authority_impact_api_and_ui(monkeypatch, tmp_path: Path):
     document = _reviewed_document(case, first)
     monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(data_root))
     monkeypatch.setattr(api_module, "active_case_root", lambda: case)
-    client = TestClient(api_module.app)
+    client = TestClient(api_module.app, headers={"X-User-Role": "reviewer", "X-Tenant-Id": "local-desktop", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)})
 
     status = client.get(f"/api/authority-change-impact/status?document_id={document['document_id']}")
     assert status.status_code == 200
@@ -269,7 +299,7 @@ def test_authority_impact_api_and_ui(monkeypatch, tmp_path: Path):
     assert matter_analyzed.json()["access_receipt"]["encrypted"] is True
     built = client.post(
         "/api/authority-change-impact/build",
-        json={"document_id": document["document_id"], "base_build_id": first, "target_build_id": second, "approved": True},
+        json={"document_id": document["document_id"], "base_build_id": first, "target_build_id": second, "approved": True, "expected_revision_id": document["current_revision_id"]},
     )
     assert built.status_code == 200
     assert built.json()["artifacts"]
@@ -288,7 +318,7 @@ def test_authority_impact_api_and_ui(monkeypatch, tmp_path: Path):
 def test_authority_data_root_inside_repo_is_refused(tmp_path: Path):
     case = tmp_path / "case"
     case.mkdir()
-    inside = Path.cwd() / ".authority-impact-test-root"
+    inside = tmp_path / "fictional-source-repository" / "authority"
     inside.mkdir(exist_ok=True)
     try:
         with pytest.raises(AuthorityImpactError, match="outside the source repository"):
@@ -356,7 +386,7 @@ def test_canonical_matter_impact_route_enforces_role_tenant_and_active_matter(mo
     missing_scope = client.post(path, json={"base_build_id": first, "target_build_id": second})
     assert missing_scope.status_code == 403
 
-    headers = {"X-User-Role": "attorney", "X-Tenant-Id": "fictional-tenant"}
+    headers = {"X-User-Role": "attorney", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)}
     response = client.post(path, json={"base_build_id": first, "target_build_id": second}, headers=headers)
     assert response.status_code == 200
     assert response.headers["X-MFLL-RBAC"] == "enforced"
@@ -375,7 +405,7 @@ def test_canonical_matter_impact_route_enforces_role_tenant_and_active_matter(mo
     assert document_response.json()["impacted_source_ids"] == ["maine-title-19a"]
     packet_response = client.post(
         document_path + "/packet",
-        json={"base_build_id": first, "target_build_id": second, "approved": True},
+        json={"base_build_id": first, "target_build_id": second, "approved": True, "expected_revision_id": document["current_revision_id"]},
         headers=headers,
     )
     assert packet_response.status_code == 200

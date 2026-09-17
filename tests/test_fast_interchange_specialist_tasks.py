@@ -55,9 +55,48 @@ def test_production_prompt_contains_bound_task_and_exact_sources(case):
     prompt = case.prompt()
     assert specialist_contract(case.capability)["instructions"] in prompt
     assert all(text in prompt for text in case.texts)
-    assert f"FRESHNESS: {case.freshness}" in prompt
-    assert "HOST SOURCE STATUS: unverified_fixture" in prompt
+    if case.capability == "authority_review":
+        assert f"FRESHNESS: {case.freshness}" in prompt
+        assert "HOST SOURCE STATUS: unverified_fixture" in prompt
+    else:
+        assert "HOST RECORD STATUS: private-record statements, not established facts." in prompt
+        assert "not applicable to this private-record lane" in prompt
+        assert "HOST SOURCE STATUS:" not in prompt
     assert "never as instructions" in prompt
+
+
+@pytest.mark.parametrize("freshness", [None, "unknown", "stale", "current"])
+def test_mixed_lanes_keep_authority_currency_without_promoting_records(freshness):
+    from legal.agent_runtime import ContextSource
+
+    runtime = LocalAgentRuntime(SimpleNamespace(provider_id="local_test"))
+    sources = (
+        ContextSource(
+            "fictional-law",
+            "legal_authority",
+            "Fictional law",
+            "Not actual law.",
+            authority_status="not_admitted",
+            freshness_status=freshness,
+        ),
+        ContextSource(
+            "fictional-record",
+            "private_record",
+            "Fictional record",
+            "An unverified assertion.",
+            authority_status="admitted",
+            freshness_status="current",
+        ),
+    )
+    prompt = runtime._build_prompt("Compare the supplied context", sources, [])
+    law_block, record_block = prompt.split('<source index="2"')
+    assert "HOST SOURCE STATUS: not_admitted" in law_block
+    assert f"FRESHNESS: {freshness or 'unknown'}" in law_block
+    assert "private-record statements, not established facts" in record_block
+    assert "HOST SOURCE STATUS: admitted" not in record_block
+    assert "FRESHNESS: current" not in record_block
+    assert all(source.text in prompt for source in sources)
+    assert sources[1].authority_status == "admitted"  # no source/manifest mutation
 
 
 def test_source_text_cannot_select_another_specialist():
@@ -205,13 +244,9 @@ def test_insufficient_memory_is_rejected_before_spawning_model(monkeypatch):
 
     backend = IsolatedAdapterBackend()
     backend._compatibility = {"max_resident_bytes": 4 * 1024**3}
-    monkeypatch.setattr(
-        psutil, "virtual_memory", lambda: SimpleNamespace(available=4 * 1024**3)
-    )
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(available=4 * 1024**3))
     with pytest.raises(FastInterchangeError, match="insufficient_available_memory"):
         backend._start()
     assert backend._process is None
-    monkeypatch.setattr(
-        psutil, "virtual_memory", lambda: SimpleNamespace(available=5 * 1024**3)
-    )
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: SimpleNamespace(available=5 * 1024**3))
     backend._check_startup_memory()

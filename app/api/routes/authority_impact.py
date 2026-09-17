@@ -18,7 +18,9 @@ from pydantic import BaseModel, Field, StrictBool
 
 from app.api.security import review_response
 from app.services import AuthorityLibraryService
+from legal.documents.workspace import DocumentWorkspaceError
 from legal.review import AuthorityChangeImpactStore, AuthorityImpactError
+from legal.review.review_ledger import ReviewLedgerError
 
 
 router = APIRouter(tags=["authority-impact"])
@@ -31,6 +33,7 @@ class AuthorityImpactAnalyzeRequest(BaseModel):
 
 class AuthorityImpactBuildRequest(AuthorityImpactAnalyzeRequest):
     approved: StrictBool = False
+    expected_revision_id: str = Field(pattern=r"^[a-f0-9]{32}$")
 
 
 def _main_api():
@@ -43,9 +46,9 @@ def _matter_id(case_root: Path) -> str:
     return hashlib.sha256(str(case_root.resolve()).encode("utf-8")).hexdigest()[:16]
 
 
-def _store(matter_id: str) -> AuthorityChangeImpactStore:
+def _store(matter_id: str, request: Request) -> AuthorityChangeImpactStore:
     main_api = _main_api()
-    case_root = main_api.active_case_root()
+    case_root, scope = main_api.app.state.private_review_access(request, "authority_impact_alias")
     if case_root is None:
         raise HTTPException(
             status_code=409,
@@ -60,11 +63,16 @@ def _store(matter_id: str) -> AuthorityChangeImpactStore:
             detail={"error": "authority_impact_matter_unavailable", "message": "The requested matter is unavailable."},
         )
     authority = AuthorityLibraryService()
-    return AuthorityChangeImpactStore(
-        resolved_case_root,
-        data_root=authority.data_root,
-        repo_root=authority.repo_root,
-    )
+    try:
+        store = AuthorityChangeImpactStore(
+            resolved_case_root,
+            data_root=authority.data_root,
+            repo_root=authority.repo_root,
+        )
+    except AuthorityImpactError as exc:
+        raise HTTPException(exc.status_code, detail={"error": exc.code, "message": exc.message}) from exc
+    store.request_review_scope = scope
+    return store
 
 
 def _audit_id(request: Request) -> str:
@@ -94,12 +102,15 @@ def _invoke(
             document_id=document_id,
             build_id=build_id,
         )
-    except AuthorityImpactError as exc:
+    except (AuthorityImpactError, DocumentWorkspaceError, ReviewLedgerError) as exc:
         raise HTTPException(
             status_code=exc.status_code,
             detail={"error": exc.code, "message": exc.message},
         ) from exc
     result["access_receipt"] = receipt
+    result = _main_api().app.state.private_review_result(
+        store.case_root, store.request_review_scope, action, result
+    )
     return review_response(endpoint, action, result)
 
 
@@ -113,7 +124,7 @@ def status(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
-    store = _store(matter_id)
+    store = _store(matter_id, request)
     return _invoke(
         store=store,
         handler=store.list_generations,
@@ -136,7 +147,7 @@ def analyze_matter(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
-    store = _store(matter_id)
+    store = _store(matter_id, request)
     return _invoke(
         store=store,
         handler=store.analyze_matter,
@@ -162,7 +173,7 @@ def analyze_document(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
-    store = _store(matter_id)
+    store = _store(matter_id, request)
     return _invoke(
         store=store,
         handler=lambda: store.analyze_document(
@@ -189,7 +200,7 @@ def build_packet(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
-    store = _store(matter_id)
+    store = _store(matter_id, request)
     return _invoke(
         store=store,
         handler=lambda: store.build(
@@ -197,6 +208,7 @@ def build_packet(
             payload.base_build_id,
             payload.target_build_id,
             approved=payload.approved,
+            expected_revision_id=payload.expected_revision_id,
         ),
         action="authority_impact_packet_build",
         endpoint="POST /api/matters/{matter_id}/authority-change-impact/documents/{document_id}/packet",
@@ -218,7 +230,7 @@ def packet(
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
-    store = _store(matter_id)
+    store = _store(matter_id, request)
     return _invoke(
         store=store,
         handler=lambda: store.active(build_id),

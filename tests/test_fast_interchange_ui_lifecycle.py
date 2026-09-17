@@ -24,6 +24,10 @@ ROOT = Path(__file__).resolve().parents[1]
         "approved_success",
         "changed_config",
         "cancel_confirmed",
+        "network_denied",
+        "model_timeout",
+        "model_failed",
+        "output_blocked",
     ],
 )
 def test_approval_dialog_rejects_late_results_and_binds_settings(scenario):
@@ -31,6 +35,8 @@ def test_approval_dialog_rejects_late_results_and_binds_settings(scenario):
     if not node:
         pytest.fail("Node is required to verify the production approval-dialog lifecycle")
     script = (ROOT / "src/maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")
+    notifier_start = script.index("    function setLocalAgentBusy(value) {")
+    notifier = script[notifier_start : script.index("\n    }", notifier_start) + len("\n    }")]
     functions = script[
         script.index("    let localAgentActiveRun = null;") : script.index(
             "    function renderInlineSourceCard("
@@ -46,7 +52,8 @@ const localAgentModal=element(), localAgentBackdrop=element(), localAgentRun=ele
       localAgentSecurityReport=element(), localAgentProvider=element(),
       localAgentEndpoint=element(), localAgentModel=element(), localAgentClose=element(),
       localAgentCancel=element(), localAgentTask=element();
-const document={body:{classList:{remove(){},add(){}}}, activeElement:element(),getElementById(){return null}};
+const document={body:{classList:{remove(){},add(){}}}, activeElement:element(),
+                getElementById(){return null}};
 const window={localStorage:{getItem(){return '{}'},setItem(){}},requestAnimationFrame(fn){fn()}};
 // Modal focus/isolation is covered separately; this harness isolates request ownership.
 const openOverlay=element=>{element.hidden=false;},closeOverlay=element=>{element.hidden=true;};
@@ -99,6 +106,33 @@ const fetchJson=()=>{requestCount++;return new Promise((resolve,reject)=>{
    }
    const pending=runApprovedLocalAgent();
    assert.equal(requestCount,1);
+   if(['network_denied','model_timeout','model_failed','output_blocked'].includes(scenario)){
+     resolveRequest({status:scenario==='output_blocked'?'specialist_output_blocked_review_required':'local_model_failed_review_required',
+       warnings:scenario==='network_denied'?['fast_interchange_compact_python_network_denied']:scenario==='model_timeout'?['fast_interchange_generation_timeout']:[],
+       answer:'Untrusted failure detail must not replace the host answer'});
+     await pending;
+     assert.equal(messages.length,0);
+     assert.equal(localAgentModal.hidden,false);
+     assert.equal(localAgentPreview,null);
+     assert.equal(localAgentRun.disabled,true);
+     assert.equal(localAgentRefreshPreview.disabled,false);
+     assert.equal(localAgentBusy,false);
+     assert.ok(!toasts.some(text=>text.includes('result added')));
+     assert.ok(!localAgentStatus.textContent.includes('Untrusted failure detail'));
+     assert.ok(localAgentStatus.textContent.includes('original records and answer are unchanged'));
+     assert.ok(localAgentStatus.textContent.includes('Review required'));
+     if(scenario==='network_denied') {
+       assert.ok(localAgentStatus.textContent.includes('Keep Local-only on'));
+     }
+     if(scenario==='model_timeout') {
+       assert.ok(localAgentStatus.textContent.includes('exceeded its time limit'));
+       assert.ok(localAgentStatus.textContent.includes(
+         'inspect the selected sources without the model'));
+       assert.ok(localAgentStatus.textContent.includes(
+         'refresh the preview and approve a new run'));
+     }
+     return;
+   }
    if(scenario==='cancel_confirmed'){
      assert.equal(localAgentCancel.textContent,'Cancel generation');
      const cancel=cancelLocalAgentGeneration();
@@ -140,9 +174,13 @@ const fetchJson=()=>{requestCount++;return new Promise((resolve,reject)=>{
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
     completed = subprocess.run(
-        [node, "-e", harness + functions + checks, scenario],
+        [node, "-", scenario],
+        input=(harness + notifier + functions + checks).replace(
+            "process.argv[1]", "process.argv[2]"
+        ),
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=20,
         check=False,
     )
@@ -157,6 +195,14 @@ def test_specialist_hardware_block_explains_safe_ram_headroom_without_enabling_l
     assert "model allowance plus a 1 GiB system reserve" in script
     assert "Close or pause other local workloads, then refresh this preview." in script
     assert "The specialist will remain off until that headroom is available." in script
-    assert "localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length);" in script
+    assert (
+        "localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || "
+        "preview.hardware_readiness?.blockers?.length);"
+    ) in script
     assert "hardware.execution_accelerator || accelerator" in script
     assert "CPU fallback selected" in script
+    assert "Available RAM could not be confirmed or is exhausted" in script
+    assert "The required local model runtime is unavailable" in script
+    assert (ROOT / "src/maine_family_law_llm/api.py").read_bytes() == (
+        ROOT / "maine_family_law_llm/api.py"
+    ).read_bytes()

@@ -198,7 +198,11 @@ def test_api_and_ui_expose_reviewed_filing_packet(monkeypatch, tmp_path: Path):
     case.mkdir()
     document = create_document(case, title="Draft", content="Working draft", document_type="draft")
     monkeypatch.setattr(api_module, "active_case_root", lambda: case)
-    client = TestClient(api_module.app)
+    # This fixture has no admitted authority. Do not initialize a real external
+    # authority store merely to exercise a blocked, fictional packet export.
+    from types import SimpleNamespace
+    monkeypatch.setattr(api_module, "AuthorityProductService", lambda: SimpleNamespace(status=lambda: {"status": "blocked"}, list_forms=lambda **kwargs: {"forms": []}))
+    client = TestClient(api_module.app, headers={"X-User-Role": "reviewer", "X-Tenant-Id": "local-desktop", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)})
 
     status = client.get(f"/api/reviewed-filing-packet/status?document_id={document['document_id']}")
     assert status.status_code == 200
@@ -241,14 +245,15 @@ def test_packet_lifecycle_blocks_changed_authority_removed_form_and_deleted_fact
     # and re-hash the request to exercise generation lifecycle checks.
     review_root = case / "19_DOCUMENT_WORKSPACE" / "reviews" / document["document_id"] / "requests"
     request_path = next(review_root.glob("*.json"))
-    request = json.loads(request_path.read_text(encoding="utf-8"))
+    from legal.documents import storage
+    request = storage.decode(request_path, request_path.read_bytes())
     request["packet"]["authority_verification"]["build_id"] = "a" * 24
     request.pop("request_sha256", None)
     import hashlib
     request["request_sha256"] = hashlib.sha256(
         json.dumps(request, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).hexdigest()
-    request_path.write_text(json.dumps(request, indent=2, sort_keys=True), encoding="utf-8")
+    request_path.write_bytes(storage.encode(request_path, request))
 
     store = ReviewedFilingPacketStore(case)
     store.assign(

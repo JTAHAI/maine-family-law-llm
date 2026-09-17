@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from legal.agent_runtime import LocalModelResponse, LoopbackEndpointPolicy
+from legal.agent_runtime import LocalAgentRuntime, LocalModelResponse, LoopbackEndpointPolicy
 from maine_family_law_llm import api
 from maine_family_law_llm.local_workbench_ui import render_local_workbench_html
 from test_fast_interchange_host_source_binding import bound_host, approved_body, preview  # noqa: F401
@@ -75,6 +75,89 @@ def test_local_agent_status_discloses_fast_interchange_as_external_and_unbundled
     assert fast_interchange["requires_host_worker_token"] is True
     assert fast_interchange["bundled_model_artifacts"] is False
     assert fast_interchange["external_admission_required"] is True
+
+
+def test_local_agent_status_discloses_sentinel_as_server_configured_only():
+    status = api.local_agent_status()
+    sentinel = next(
+        item for item in status["supported_providers"] if item["provider_id"] == "sentinel_ollama"
+    )
+    assert sentinel["server_configured_only"] is True
+    assert sentinel["browser_endpoint_override_allowed"] is False
+    assert sentinel["browser_model_override_allowed"] is False
+    assert sentinel["bundled_model_artifacts"] is False
+
+
+def test_local_agent_status_discloses_curated_qwen_as_not_legal_qualified():
+    status = api.local_agent_status()
+    curated = next(
+        item for item in status["supported_providers"] if item["provider_id"] == "curated_ollama_reasoning"
+    )
+    assert curated["allowed_models"] == ["qwen3:4b", "qwen3:8b"]
+    assert curated["browser_endpoint_override_allowed"] is False
+    assert curated["legal_quality_status"] == "not_legal_qualified"
+
+
+def test_curated_qwen_cannot_be_redirected_by_a_browser_endpoint(monkeypatch):
+    seen = {}
+
+    class Client:
+        provider_id = "curated_ollama_reasoning"
+        model_name = "qwen3:4b"
+        endpoint = LoopbackEndpointPolicy().validate("http://127.0.0.1:11434")
+
+    def build(**kwargs):
+        seen.update(kwargs)
+        return Client()
+
+    monkeypatch.setattr(api, "build_local_client", build)
+    runtime = api._local_agent_runtime_from_request(
+        api.LocalAgentPreviewRequest(
+            question="Fictional question",
+            provider="curated_ollama_reasoning",
+            endpoint="http://127.0.0.1:19999",
+            model="qwen3:4b",
+        )
+    )
+    assert runtime.client.provider_id == "curated_ollama_reasoning"
+    assert seen["endpoint"] == "http://127.0.0.1:11434"
+
+
+def test_curated_qwen_hardware_preflight_uses_ram_or_gpu_headroom(monkeypatch):
+    class Profile:
+        def as_dict(self):
+            return {
+                "available_memory_bytes": 5 * 1024**3,
+                "available_vram_bytes": 7 * 1024**3,
+            }
+
+    class Client:
+        provider_id = "curated_ollama_reasoning"
+        model_name = "qwen3:8b"
+
+    monkeypatch.setattr(api, "profile_hardware", lambda *_args, **_kwargs: Profile())
+    readiness = api._local_agent_hardware_readiness(LocalAgentRuntime(Client()))
+    assert readiness["status"] == "ready_for_local_runtime_request"
+    assert readiness["execution_lane"] == "gpu_vram"
+    assert readiness["model_presence_checked"] is False
+
+    class NoHeadroom(Profile):
+        def as_dict(self):
+            return {"available_memory_bytes": 1 * 1024**3, "available_vram_bytes": 1 * 1024**3}
+
+    monkeypatch.setattr(api, "profile_hardware", lambda *_args, **_kwargs: NoHeadroom())
+    blocked = api._local_agent_hardware_readiness(LocalAgentRuntime(Client()))
+    assert blocked["status"] == "hardware_review_required"
+    assert blocked["blockers"] == ["insufficient_available_memory_or_vram"]
+
+    class GpuWithoutSystemReserve(Profile):
+        def as_dict(self):
+            return {"available_memory_bytes": 1024**3, "available_vram_bytes": 12 * 1024**3}
+
+    monkeypatch.setattr(api, "profile_hardware", lambda *_args, **_kwargs: GpuWithoutSystemReserve())
+    blocked = api._local_agent_hardware_readiness(LocalAgentRuntime(Client()))
+    assert blocked["status"] == "hardware_review_required"
+    assert blocked["gpu_lane_system_memory_reserve_bytes"] == 2 * 1024**3
 
 
 def test_local_agent_run_uses_exact_preview_hash(bound_host):
@@ -153,6 +236,17 @@ def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     assert "Instruction-like source text was quarantined and masked from the model" in js
     assert "fast_interchange_local" in html
     assert "FAST INTERCHANGE admitted local worker" in html
+    assert "sentinel_ollama" in html
+    assert "SENTINEL configured local route" in html
+    assert "curated_ollama_reasoning" in html
+    assert "Local Qwen reasoning (4B / 8B)" in html
+    default_selection = js.split("if (!savedProvider && ['evidence_review', 'drafting']", 1)[1].split('}', 1)[0]
+    assert "localAgentProvider.value = 'curated_ollama_reasoning'" in default_selection
+    assert "fast_interchange_local" not in default_selection
+    assert "qwen3:4b" in html
+    assert "qwen3:8b" in html
+    assert "Before local Qwen runs" in js
+    assert "Configured by this device" in js
     assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in html
     assert 'id="local-agent-worker-confirm"' in html
     assert 'id="local-agent-worker-start"' in html

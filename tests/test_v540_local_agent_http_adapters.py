@@ -4,11 +4,13 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Any
+from urllib.request import urlopen
 
 import pytest
 
 from legal.agent_runtime.providers import (
     FastInterchangeLocalClient,
+    CuratedOllamaReasoningClient,
     LocalModelError,
     OllamaLocalClient,
     OpenAICompatibleLocalClient,
@@ -31,6 +33,7 @@ class _LocalModelHandler(BaseHTTPRequestHandler):
                 "model": payload["model"],
                 "response": "Ollama loopback answer [1]. Review required.",
                 "done_reason": "stop",
+                "done": True,
                 "prompt_eval_count": 24,
                 "eval_count": 10,
             }
@@ -101,6 +104,32 @@ def test_ollama_adapter_round_trips_only_over_literal_loopback(local_model_serve
     path, payload = local_model_server.seen_requests[-1]
     assert path == "/api/generate"
     assert payload["stream"] is False
+
+
+def test_curated_qwen_route_allows_only_4b_or_8b_and_checks_completion_identity(local_model_server):
+    endpoint = f"http://127.0.0.1:{local_model_server.server_port}"
+    client = CuratedOllamaReasoningClient(model_name="qwen3:4b", endpoint=endpoint, timeout_seconds=5)
+    result = client.generate_response("Use only approved source [1].")
+
+    assert result.provider_id == "curated_ollama_reasoning"
+    assert result.model_id == "qwen3:4b"
+    assert result.finish_reason == "stop"
+    path, payload = local_model_server.seen_requests[-1]
+    assert path == "/api/generate"
+    assert payload["model"] == "qwen3:4b"
+    assert payload["options"]["num_predict"] == 2048
+    assert payload["options"]["num_ctx"] == 8192
+    assert payload["think"] is False
+    assert payload["raw"] is True
+    assert payload["prompt"].endswith("<think>\n\n</think>\n\n")
+    with pytest.raises(LocalModelError) as denied:
+        CuratedOllamaReasoningClient(model_name="unreviewed-model", endpoint=endpoint)
+    assert denied.value.code == "curated_ollama_model_not_allowed"
+
+
+def test_curated_qwen_default_transport_refuses_redirects():
+    client = CuratedOllamaReasoningClient(model_name="qwen3:4b")
+    assert client._http.opener is not urlopen
 
 
 def test_openai_compatible_adapter_round_trips_only_over_literal_loopback(local_model_server):

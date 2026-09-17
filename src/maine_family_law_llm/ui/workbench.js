@@ -2,6 +2,7 @@
     const question = document.getElementById('question');
     const answer = document.getElementById('answer');
     const transcript = document.getElementById('transcript');
+    const localAiChatSetup = document.getElementById('local-ai-chat-setup');
     const chatScroll = document.querySelector('.chat-scroll');
     const chatPanel = document.querySelector('.chat-panel');
     const sourceCards = document.getElementById('source-cards');
@@ -1454,6 +1455,12 @@
     const localWorkbenchReadingLevel = document.getElementById('local-workbench-reading-level');
     const localWorkbenchReducedMotion = document.getElementById('local-workbench-reduced-motion');
     const localWorkbenchScreenReader = document.getElementById('local-workbench-screen-reader');
+    const localAiSetupRefresh = document.getElementById('local-ai-setup-refresh');
+    const localAiSetupBasic = document.getElementById('local-ai-setup-basic');
+    const localAiSetupStatus = document.getElementById('local-ai-setup-status');
+    const localAiSetupBadge = document.getElementById('local-ai-setup-badge');
+    const localAiSetupResults = document.getElementById('local-ai-setup-results');
+    let localAiSetupSnapshot = null;
     const localHealthDashboardRefresh = document.getElementById('local-health-dashboard-refresh');
     const localHealthDashboardBadge = document.getElementById('local-health-dashboard-badge');
     const localHealthDashboardStatus = document.getElementById('local-health-dashboard-status');
@@ -1618,6 +1625,10 @@
     const filingPacketReviewerRole = document.getElementById('filing-packet-reviewer-role');
     const filingPacketExclusive = document.getElementById('filing-packet-exclusive');
     const filingPacketAssign = document.getElementById('filing-packet-assign');
+    const assignmentMigrationPanel = document.getElementById('assignment-migration-panel');
+    const assignmentMigrationPreview = document.getElementById('assignment-migration-preview');
+    const assignmentMigrationConfirm = document.getElementById('assignment-migration-confirm');
+    const assignmentMigrationRun = document.getElementById('assignment-migration-run');
     const filingPacketRefresh = document.getElementById('filing-packet-refresh');
     const filingPacketApproved = document.getElementById('filing-packet-approved');
     const filingPacketBuild = document.getElementById('filing-packet-build');
@@ -1956,6 +1967,10 @@
     let localAgentPreview = null;
     let localAgentOwner = null;
     let localAgentBusy = false;
+    function setLocalAgentBusy(value) {
+      localAgentBusy = value;
+      document.getElementById('model-pack-panel')?.dispatchEvent(new Event('model-pack-worker-state'));
+    }
     let localAgentWorkerBusy = false;
     let localAgentWorkerSnapshot = null;
     let localAgentRequestEpoch = 0;
@@ -2078,10 +2093,68 @@
     }
 
     function confirmFullLocalExport() {
-      const mode = String(lastPayload?.search_mode || lastPayload?.metadata?.search_mode || '').toLowerCase();
-      const mayContainPrivateMatterContent = hasPrivateRecordSources() || mode === 'my_records' || mode === 'both';
-      if (!mayContainPrivateMatterContent) return true;
-      return window.confirm('This full local export includes private-record excerpts and may include sensitive information. Continue only if you intend to store or share the complete local transcript securely.');
+      // The complete conversation may contain earlier private turns even when
+      // the most recent answer uses only public law or has no source cards.
+      return window.confirm('This full local export includes private-record excerpts when present and may include sensitive information from any turn. Continue only if you intend to store or share the complete local transcript securely.');
+    }
+
+    const pendingTranscriptDownloads = new Set();
+    const TRANSCRIPT_DOWNLOAD_LIFETIME_MS = 60_000;
+    const MAX_TRANSCRIPT_EXPORT_BYTES = 16 * 1024 * 1024;
+
+    function transcriptExportStatus(message) {
+      const status = document.getElementById('transcript-export-status');
+      if (status) { status.hidden = false; status.textContent = message; }
+    }
+
+    function clearTranscriptDownload(download) {
+      window.clearTimeout(download.timer);
+      download.anchor.remove();
+      URL.revokeObjectURL(download.url);
+      pendingTranscriptDownloads.delete(download);
+    }
+
+    function clearTranscriptDownloads() {
+      for (const download of pendingTranscriptDownloads) clearTranscriptDownload(download);
+    }
+    window.addEventListener('pagehide', clearTranscriptDownloads);
+
+    function requestTranscriptDownload(buildContent, format) {
+      if (!['txt', 'json'].includes(format)) return false;
+      if (!confirmFullLocalExport()) {
+        transcriptExportStatus('Export cancelled. Your conversation is unchanged.');
+        return false;
+      }
+      if (pendingTranscriptDownloads.size >= 4) {
+        transcriptExportStatus('Several downloads were requested. Check Downloads, or wait one minute before trying again. Your conversation is unchanged.');
+        return false;
+      }
+      let download;
+      try {
+        const blob = new Blob([buildContent()], {type: format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8'});
+        if (blob.size > MAX_TRANSCRIPT_EXPORT_BYTES) {
+          transcriptExportStatus('This transcript exceeds the 16 MiB download limit. Copy the needed answer instead. Your conversation is unchanged.');
+          return false;
+        }
+        const anchor = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        download = {anchor, url, timer: 0};
+        pendingTranscriptDownloads.add(download);
+        anchor.href = url;
+        anchor.download = `maine-family-law-llm-transcript.${format}`;
+        anchor.hidden = true;
+        document.body.appendChild(anchor);
+        // Revoking in the click task races the browser's asynchronous download.
+        // Keep a bounded, hidden link alive; cleanup also runs when the page exits.
+        download.timer = window.setTimeout(() => clearTranscriptDownload(download), TRANSCRIPT_DOWNLOAD_LIFETIME_MS);
+        anchor.click();
+        transcriptExportStatus('Download requested. Check your browser or Downloads folder to confirm the file was saved. Review required; keep this private export secure.');
+        return true;
+      } catch (_error) {
+        if (download) clearTranscriptDownload(download);
+        transcriptExportStatus('The download could not start. Your conversation is unchanged. Try again or use Copy answer.');
+        return false;
+      }
     }
 
     function formatLocalTime(value) {
@@ -2211,6 +2284,9 @@
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
       if (!headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', 'local-desktop');
       if (!headers.has('X-MFLL-Client-Session')) headers.set('X-MFLL-Client-Session', localCapabilitySession());
+      if (/^\/api\/document-workspace\/(?:review-queue|documents\/[^/]+\/reviews?(?:\/|$))/.test(url) && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
+      if (url.startsWith('/api/reviewed-filing-packet/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
+      if (url.startsWith('/api/authority-change-impact/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {
         const supplied = String(options.idempotencyKey || '').trim();
         const key = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/.test(supplied) ? supplied : newLocalIdempotencyKey();
@@ -2494,6 +2570,100 @@
       if (localWorkbenchScreenReader) localWorkbenchScreenReader.checked = Boolean(preferences.screen_reader_mode);
       applyLocalWorkbenchPreferences(preferences);
       renderStartingPath(String(preferences.starting_path || 'understand_situation'));
+    }
+
+    function renderLocalAiSetup(payload) {
+      localAiSetupSnapshot = payload || null;
+      const recommendation = payload?.recommendation || {};
+      const hardware = payload?.hardware || {};
+      const blockers = Array.isArray(recommendation.blockers) ? recommendation.blockers : [];
+      const installable = Array.isArray(recommendation.installable_models) ? recommendation.installable_models : [];
+      const memoryGiB = Number(hardware.available_memory_bytes || 0) / (1024 ** 3);
+      const diskGiB = Number(hardware.disk_free_bytes || 0) / (1024 ** 3);
+      const blocked = blockers.length > 0;
+      if (localAiSetupStatus) {
+        localAiSetupStatus.textContent = blocked
+          ? `This PC needs review before optional model setup: ${blockers.map(item => String(item).replaceAll('_', ' ')).join(', ')}.`
+          : 'Core workbench is ready. Optional local models remain unavailable until their release artifacts are independently verified.';
+      }
+      if (localAiSetupBadge) {
+        localAiSetupBadge.className = `status-badge ${blocked ? 'blocked' : 'review'}`;
+        localAiSetupBadge.textContent = blocked ? 'Hardware review' : 'Review required';
+      }
+      if (localAiSetupResults) {
+        const capability = `${memoryGiB ? `${memoryGiB.toFixed(1)} GiB memory available` : 'Available memory not verified'} · ${diskGiB ? `${diskGiB.toFixed(1)} GiB free storage` : 'Free storage not verified'}`;
+        const catalog = installable.length
+          ? `${installable.length} independently verified optional model${installable.length === 1 ? '' : 's'} available for review.`
+          : 'No optional model can be downloaded from this build yet. No external request, discovery, model start, or background installer has run.';
+        const assessments = new Map((Array.isArray(recommendation.model_assessments) ? recommendation.model_assessments : [])
+          .map((item) => [String(item?.profile_id || ''), item]));
+        const cards = installable.map((item) => {
+          const assessment = assessments.get(String(item?.profile_id || '')) || {};
+          const selected = assessment.selected_resource_profile || {};
+          const modelClass = String(item?.model_class || 'local reasoning').replaceAll('_', ' ');
+          const status = String(assessment.status || 'review_required');
+          const fit = status === 'eligible_for_install_review'
+            ? `This PC meets the measured ${escapeHtml(String(selected.resource_profile_id || 'model'))} review threshold.`
+            : 'Check this PC for the exact memory and storage requirements.';
+          const bytes = Number(item?.artifact_bytes || 0) / (1024 ** 3);
+          return `<article class="local-ai-profile-card"><strong>${escapeHtml(String(item?.display_name || modelClass))}</strong><p>${escapeHtml(modelClass)} · ${bytes ? `${bytes.toFixed(1)} GiB download` : 'Download size verified at installation'}</p><p>${fit}</p><button class="secondary compact-action" data-local-ai-profile="${escapeHtml(String(item?.profile_id || ''))}" type="button">Review this PC</button></article>`;
+        }).join('');
+        localAiSetupResults.innerHTML = `<strong>Device-scoped and encrypted preference.</strong><p>${escapeHtml(capability)}.</p><p>${escapeHtml(catalog)}</p><p>${escapeHtml(String(recommendation.explanation || 'Review exact model artifacts and requirements before changing the local setup.'))}</p>${cards ? `<div class="local-ai-profile-grid">${cards}</div>` : ''}`;
+        localAiSetupResults.querySelectorAll('[data-local-ai-profile]').forEach((button) => button.addEventListener('click', () => showLocalAiProfileAssessment(String(button.dataset.localAiProfile || ''))));
+      }
+      if (localAiSetupBasic) localAiSetupBasic.disabled = false;
+    }
+
+    async function loadLocalAiSetup() {
+      if (localAiSetupStatus) localAiSetupStatus.textContent = 'Checking local-only hardware and model-catalog readiness…';
+      if (localAiSetupRefresh) { localAiSetupRefresh.disabled = true; localAiSetupRefresh.setAttribute('aria-busy', 'true'); }
+      try {
+        renderLocalAiSetup(await fetchJson('/api/local-ai/setup/status'));
+      } catch (err) {
+        if (localAiSetupStatus) localAiSetupStatus.innerHTML = renderRecoverableError(err, {title: 'Local AI setup could not be checked'});
+        if (localAiSetupBadge) { localAiSetupBadge.className = 'status-badge blocked'; localAiSetupBadge.textContent = 'Unavailable'; }
+      } finally {
+        if (localAiSetupRefresh) { localAiSetupRefresh.disabled = false; localAiSetupRefresh.removeAttribute('aria-busy'); }
+      }
+    }
+
+    async function chooseLocalAiBasicMode() {
+      if (!localAiSetupSnapshot) { await loadLocalAiSetup(); return; }
+      if (localAiSetupBasic) { localAiSetupBasic.disabled = true; localAiSetupBasic.setAttribute('aria-busy', 'true'); }
+      if (localAiSetupStatus) localAiSetupStatus.textContent = 'Saving your device-scoped core-workbench preference…';
+      try {
+        const result = await fetchJson('/api/local-ai/setup/basic-mode', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({expected_revision: Number(localAiSetupSnapshot.revision || 0), user_confirmed: true})
+        });
+        if (localAiSetupStatus) localAiSetupStatus.textContent = `Core-workbench preference saved. Receipt ${String(result?.receipt?.event_id || '').slice(0, 12) || 'recorded'} remains review-required.`;
+        await loadLocalAiSetup();
+      } catch (err) {
+        if (localAiSetupStatus) localAiSetupStatus.innerHTML = renderRecoverableError(err, {title: 'The local AI preference was not changed'});
+      } finally {
+        if (localAiSetupBasic) { localAiSetupBasic.disabled = false; localAiSetupBasic.removeAttribute('aria-busy'); }
+      }
+    }
+
+    async function showLocalAiProfileAssessment(profileId) {
+      const cleanId = String(profileId || '').trim();
+      if (!cleanId) return;
+      if (localAiSetupStatus) localAiSetupStatus.textContent = 'Checking this PC against the model’s measured requirements…';
+      try {
+        const payload = await fetchJson('/api/local-ai/setup/assess', {
+          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({profile_id: cleanId})
+        });
+        const assessment = payload?.assessment || {};
+        const selected = assessment.selected_resource_profile || {};
+        const blockers = Array.isArray(assessment?.resource_options?.[0]?.blockers) ? assessment.resource_options[0].blockers : [];
+        if (localAiSetupStatus) {
+          localAiSetupStatus.textContent = assessment.status === 'eligible_for_install_review'
+            ? `This PC can review ${String(assessment.model_class || 'this model').replaceAll('_', ' ')} at the measured ${Number(selected.context_tokens || 0).toLocaleString()}-token context. Installation remains an explicit next step.`
+            : `This model is not recommended on this PC yet: ${blockers.map((item) => String(item).replaceAll('_', ' ')).join(', ') || 'requirements need review'}.`;
+        }
+      } catch (err) {
+        if (localAiSetupStatus) localAiSetupStatus.innerHTML = renderRecoverableError(err, {title: 'This model could not be assessed'});
+      }
     }
 
     function healthDependencyDetail(component) {
@@ -2892,6 +3062,7 @@
       } catch (err) {
         if (localWorkbenchStatus) localWorkbenchStatus.textContent = `Could not load local control status: ${err.message}`;
       }
+      await loadLocalAiSetup();
     }
 
     async function inspectLocalWorkbenchReleaseReadiness() {
@@ -3453,8 +3624,13 @@
       docxAvailable: false,
       seedSourceRefs: [],
       seedNote: '',
+      seedMatterId: '',
+      storagePolicy: null,
       reviewRequest: null,
       reviewHistory: null,
+      reviewBusy: false,
+      reviewHistoryEpoch: 0,
+      documentOpenEpoch: 0,
       reviewQueue: null,
       findingsFormsStatus: null,
       findingsFormsReview: null,
@@ -3545,11 +3721,15 @@
       const sourceRefs = Array.isArray(active?.source_refs) ? active.source_refs : [];
       const hasDocx = sourceRefs.some((row) => /docx/i.test(`${row?.source_class || ''} ${row?.title || ''}`));
       if (documentWorkspaceDocxLoad) documentWorkspaceDocxLoad.disabled = !hasActive || !hasDocx || !documentWorkspaceState.docxAvailable;
-      if (documentReviewPrepare) documentReviewPrepare.disabled = !hasActive || deleted;
-      if (documentReviewCommit) documentReviewCommit.disabled = !hasActive || deleted || !documentWorkspaceState.reviewRequest;
+      const reviewBlocked = documentWorkspaceState.reviewBusy || !documentWorkspaceState.reviewHistory || documentWorkspaceState.reviewHistory.storage_authenticated === false || documentWorkspaceState.reviewHistory.history_head?.valid === false;
+      if (documentReviewPrepare) documentReviewPrepare.disabled = !hasActive || deleted || reviewBlocked;
+      if (documentReviewCommit) documentReviewCommit.disabled = !hasActive || deleted || reviewBlocked || !documentWorkspaceState.reviewRequest;
       if (findingsFormsBuild) findingsFormsBuild.disabled = !hasActive || deleted || !findingsFormsApproved?.checked;
       if (findingsFormsComplete) findingsFormsComplete.disabled = !hasActive || deleted || !documentWorkspaceState.findingsFormsReview;
-      if (filingPacketAssign) filingPacketAssign.disabled = !hasActive || deleted;
+      if (filingPacketAssign) filingPacketAssign.disabled = !hasActive || deleted || documentWorkspaceState.filingAssignmentBusy || documentWorkspaceState.filingPacketStatus?.assignments?.storage_authenticated !== true;
+      const migration = documentWorkspaceState.filingPacketStatus?.assignments?.migration;
+      if (assignmentMigrationRun) assignmentMigrationRun.disabled = !hasActive || deleted || documentWorkspaceState.filingAssignmentBusy || migration?.status !== 'preview' || migration.expected_revision_id !== active?.current_revision_id || !assignmentMigrationConfirm?.checked;
+      if (assignmentMigrationConfirm) assignmentMigrationConfirm.disabled = Boolean(documentWorkspaceState.filingAssignmentBusy);
       if (filingPacketRefresh) filingPacketRefresh.disabled = !hasActive || deleted;
       if (filingPacketBuild) filingPacketBuild.disabled = !hasActive || deleted || !filingPacketApproved?.checked;
       const authorityPairReady = Boolean(authorityImpactBase?.value && authorityImpactTarget?.value && authorityImpactBase?.value !== authorityImpactTarget?.value);
@@ -3557,6 +3737,12 @@
       if (authorityImpactAnalyze) authorityImpactAnalyze.disabled = !hasActive || deleted || !authorityPairReady;
       if (authorityImpactMatter) authorityImpactMatter.disabled = !hasActive || deleted || !authorityPairReady;
       if (authorityImpactBuild) authorityImpactBuild.disabled = !hasActive || deleted || !authorityPairReady || !authorityImpactApproved?.checked;
+      if (documentWorkspaceState.authorityBusy) [authorityImpactRefresh, authorityImpactAnalyze, authorityImpactMatter, authorityImpactBuild].forEach(button => { if (button) button.disabled = true; });
+      [authorityImpactBase, authorityImpactTarget, authorityImpactApproved].forEach(control => { if (control) control.disabled = Boolean(documentWorkspaceState.authorityBusy); });
+      const legacyStorage = documentWorkspaceState.storagePolicy?.legacy_read_only === true;
+      if (documentWorkspaceSaveNew) documentWorkspaceSaveNew.disabled = legacyStorage;
+      if (documentWorkspaceEditor) documentWorkspaceEditor.readOnly = legacyStorage;
+      if (legacyStorage) [documentWorkspacePropose, documentWorkspaceCommit, documentWorkspaceReject, documentWorkspaceDelete, documentWorkspaceRestore, documentReviewPrepare, documentReviewCommit].forEach(button => { if (button) button.disabled = true; });
     }
 
     function renderWorkspaceList() {
@@ -3570,10 +3756,36 @@
       documentWorkspaceList.querySelectorAll('[data-workspace-document-id]').forEach((button) => button.addEventListener('click', () => selectWorkspaceDocument(button.dataset.workspaceDocumentId)));
     }
 
+    function clearDocumentReviewInputs() {
+      // Uncommitted review text and attestations belong to one document/matter.
+      // Committed notes remain in its encrypted history, never copied forward.
+      for (const input of [documentReviewFacts, documentReviewNotes, documentReviewerName]) {
+        if (input) input.value = '';
+      }
+      if (documentReviewerRole) documentReviewerRole.value = 'other_reviewer';
+      if (documentReviewDecision) documentReviewDecision.value = 'request_changes';
+      if (documentReviewAttested) documentReviewAttested.checked = false;
+      if (filingPacketReviewerLabel) filingPacketReviewerLabel.value = '';
+      if (filingPacketReviewerRole) filingPacketReviewerRole.value = 'other_reviewer';
+      if (filingPacketApproved) filingPacketApproved.checked = false;
+      if (authorityImpactApproved) authorityImpactApproved.checked = false;
+      if (assignmentMigrationConfirm) assignmentMigrationConfirm.checked = false;
+      if (assignmentMigrationPanel) assignmentMigrationPanel.hidden = true;
+      if (documentClaimAnnotations) documentClaimAnnotations.textContent = 'Prepare this document’s review packet to annotate claims.';
+      documentWorkspaceState.reviewRequest = null;
+      documentWorkspaceState.reviewHistory = null;
+      documentWorkspaceState.reviewHistoryEpoch++;
+      if (documentReviewPacket) documentReviewPacket.textContent = 'Prepare a new packet for this document. Prior review inputs were cleared.';
+      if (documentReviewHistory) documentReviewHistory.textContent = 'Load this document’s authenticated review history.';
+      if (documentReviewLedgerStatus) { documentReviewLedgerStatus.className = 'badge warn'; documentReviewLedgerStatus.textContent = 'Not reviewed'; }
+    }
+
     function newWorkspaceDraft(seed = {}) {
+      clearDocumentReviewInputs();
       documentWorkspaceState.active = null;
       documentWorkspaceState.seedSourceRefs = Array.isArray(seed.sourceRefs) ? seed.sourceRefs : [];
       documentWorkspaceState.seedNote = String(seed.note || '');
+      documentWorkspaceState.seedMatterId = String(seed.matterId || corpusLibraryPayload?.active_case_id || '');
       clearWorkspaceProposal();
       if (documentWorkspaceTitle) { documentWorkspaceTitle.disabled = false; documentWorkspaceTitle.value = String(seed.title || ''); }
       if (documentWorkspaceType) { documentWorkspaceType.disabled = false; documentWorkspaceType.value = String(seed.documentType || 'draft'); }
@@ -3583,6 +3795,7 @@
       if (documentWorkspaceDocxResult) documentWorkspaceDocxResult.textContent = 'Original Word files are never overwritten.';
       documentWorkspaceState.reviewRequest = null;
       documentWorkspaceState.reviewHistory = null;
+      documentWorkspaceState.documentOpenEpoch++;
       if (documentReviewPacket) documentReviewPacket.textContent = 'Save the draft before preparing a review packet.';
       if (documentReviewHistory) documentReviewHistory.textContent = 'No review decisions recorded.';
       if (documentClaimAnnotations) documentClaimAnnotations.textContent = 'Claim-by-claim review controls appear after a packet is built.';
@@ -3610,13 +3823,121 @@
       documentWorkspaceTitle?.focus();
     }
 
+    let documentMigrationReviewEpoch = 0;
+    function installDocumentMigrationReview(notice, info) {
+      const epoch = ++documentMigrationReviewEpoch;
+      let panel = document.getElementById('document-migration-review');
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'document-migration-review';
+        panel.style.cssText = 'flex:0 0 auto;font-size:14px;overflow-wrap:anywhere';
+        notice.after(panel);
+      }
+      panel.replaceChildren();
+      if (!info?.storage?.legacy_read_only || !info.matter_id) return;
+      const owner = String(info.matter_id);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Inspect legacy migration requirements';
+      button.id = 'document-migration-review-open';
+      const output = document.createElement('div');
+      output.setAttribute('role', 'status');
+      output.setAttribute('aria-live', 'polite');
+      panel.append(button, output);
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        panel.querySelectorAll('details').forEach(item => item.remove());
+        output.textContent = 'Checking draft IDs, revision hashes and migration blockers. No documents will change.';
+        try {
+          const result = await fetchJson('/api/document-workspace/migration-review', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({matter_id:owner})
+          });
+          if (epoch !== documentMigrationReviewEpoch || !panel.isConnected) return;
+          if (result.matter_id !== owner || result.schema_version !== 'document_migration_review_v1' ||
+              result.migration_performed !== false || result.ready_to_migrate !== true) throw new Error('Invalid migration review');
+          output.textContent = `${result.document_count} documents · ${result.revision_count} revisions · ${result.json_bytes} bytes inspected. No migration performed. Confirmation converts draft index and revision JSON only and retains encrypted byte-exact originals. Other review files, imports and exports are not covered. Keep the complete workspace and protected key. Review required.`;
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = 'Inspect revision identities and hashes';
+          details.append(summary);
+          for (const row of (result.revisions || []).slice(0, 256)) {
+            const item = document.createElement('p');
+            item.style.cssText = 'display:flex;flex-direction:column;gap:8px;overflow-wrap:anywhere';
+            const identity = document.createElement('span');
+            identity.className = 'document-migration-revision-identity';
+            identity.textContent = `Document ${row.document_id} · revision ${row.revision_id} · ${row.status} · ${row.bytes} bytes · SHA-256 ${row.sha256}`;
+            const open = document.createElement('button');
+            open.style.alignSelf = 'flex-start';
+            open.type = 'button'; open.textContent = 'Open current draft';
+            open.addEventListener('click', () => { if (epoch === documentMigrationReviewEpoch) selectWorkspaceDocument(row.document_id); });
+            item.append(identity, open); details.append(item);
+          }
+          panel.append(details);
+          const migrate = document.createElement('button');
+          migrate.type = 'button'; migrate.id = 'document-migration-execute';
+          migrate.textContent = 'Confirm encrypted draft migration';
+          panel.append(migrate);
+          migrate.addEventListener('click', async () => {
+            if (epoch !== documentMigrationReviewEpoch || !window.confirm('Convert this matter’s draft index and revisions to encrypted storage? Encrypted byte-exact originals will be retained for recovery. Keep the complete workspace and original key. Other private files are not converted. Close older app versions first.')) return;
+            migrate.disabled = true; button.disabled = true;
+            output.textContent = 'Preparing verified recovery copies and migrating draft JSON. Keep this matter open. A confirmed interruption resumes on reopen.';
+            try {
+              const done = await fetchJson('/api/document-workspace/migration-execute', {
+                method:'POST', headers:{'Content-Type':'application/json','X-User-Role':'admin'},
+                body:JSON.stringify({matter_id:owner,expected_manifest:result.manifest_sha256,confirmed:true})
+              });
+              if (epoch !== documentMigrationReviewEpoch) return;
+              if (done.matter_id !== owner || done.migration_performed !== true || done.original_bytes_recoverable !== true) throw new Error('Migration receipt unavailable');
+              await loadDocumentWorkspaceDocuments();
+              if (documentWorkspaceState.storageMatterId === owner && !documentWorkspaceState.storagePolicy?.legacy_read_only) {
+                setDocumentWorkspaceStatus(`Draft JSON migration verified: ${done.file_count} files. Recovery receipt ${done.transaction_id}. Keep the complete workspace and key. Review required.`, 'good');
+              }
+            } catch (_) {
+              if (epoch === documentMigrationReviewEpoch) output.textContent = 'Migration or its result could not be verified. Keep all workspace, recovery and key files. Refresh the original matter to verify or resume; do not delete migration files.';
+            }
+          });
+        } catch (_) {
+          if (epoch === documentMigrationReviewEpoch) output.textContent = 'Migration review unavailable. No documents were changed. Refresh the original matter and check workspace integrity and local access.';
+        } finally {
+          if (epoch === documentMigrationReviewEpoch) button.disabled = false;
+        }
+      });
+    }
+    corpusSelect?.addEventListener('change', () => {
+      documentMigrationReviewEpoch++;
+      document.getElementById('document-migration-review')?.replaceChildren();
+    });
+
     async function loadDocumentWorkspaceDocuments(selectId = '') {
       if (!documentWorkspaceList) return;
+      const startingSelectionEpoch = documentWorkspaceState.documentOpenEpoch;
       documentWorkspaceList.textContent = 'Loading local documents…';
       try {
         const payload = await fetchJson('/api/document-workspace/documents?include_deleted=true&limit=500');
         documentWorkspaceState.documents = Array.isArray(payload.documents) ? payload.documents : [];
+        const workspaceInfo = await fetchJson('/api/document-workspace/status');
+        if (documentWorkspaceState.storageMatterId !== String(workspaceInfo?.matter_id || '')) clearDocumentReviewInputs();
+        documentWorkspaceState.storagePolicy = workspaceInfo?.storage || null;
+        documentWorkspaceState.storageMatterId = String(workspaceInfo?.matter_id || '');
+        updateWorkspaceControls();
         renderWorkspaceList();
+        let storageNotice = document.getElementById('document-workspace-storage-notice');
+        if (!storageNotice && documentWorkspaceEditor) {
+          storageNotice = document.createElement('p');
+          storageNotice.id = 'document-workspace-storage-notice';
+          storageNotice.className = 'document-workspace-status';
+          storageNotice.setAttribute('role', 'status');
+          storageNotice.setAttribute('aria-live', 'polite');
+          storageNotice.style.fontSize = '14px';
+          documentWorkspaceEditor.before(storageNotice);
+        }
+        if (storageNotice) storageNotice.textContent = workspaceInfo?.storage?.schema_version === 'document_workspace_encrypted_json_v1'
+          ? workspaceInfo.storage.legacy_read_only
+            ? 'Legacy draft storage: read-only until a reviewed encryption migration. Existing files are preserved. Do not remove storage identity or key files.'
+            : 'New draft text, revision notes and index writes are encrypted with your local key. Imported originals and exported copies are not encrypted by this layer. Back up the complete workspace and preserve your protected key; older app versions cannot open new encrypted revisions.'
+          : 'Draft-storage protection is not confirmed. Do not assume local files or exports are encrypted.';
+        if (storageNotice) installDocumentMigrationReview(storageNotice, workspaceInfo);
         const audit = await fetchJson('/api/document-workspace/audit/verify');
         if (documentWorkspaceAudit) {
           documentWorkspaceAudit.className = `document-workspace-audit ${audit.valid ? 'is-good' : 'is-bad'}`;
@@ -3629,6 +3950,7 @@
           documentWorkspaceDocxStatus.textContent = documentWorkspaceState.docxAvailable ? `docx-editor ${engine.version || ''}`.trim() : 'Word tracking unavailable';
         }
         await loadDocumentReviewQueue();
+        if (startingSelectionEpoch !== documentWorkspaceState.documentOpenEpoch) return;
         if (selectId) await selectWorkspaceDocument(selectId);
         else if (documentWorkspaceState.active?.document_id) await selectWorkspaceDocument(documentWorkspaceState.active.document_id);
       } catch (err) {
@@ -3704,16 +4026,39 @@
       ];
       documentReviewPacket.innerHTML = `<div class="document-review-packet-summary"><span><strong>Revision</strong> ${escapeHtml(String(packet.revision_id || '').slice(0, 8))}</span><span><strong>Authority</strong> ${escapeHtml(authority.status || 'blocked')}</span><span><strong>Facts found</strong> ${escapeHtml(facts.supported_count || 0)} / ${escapeHtml(facts.fact_count || 0)}</span><span><strong>Claims</strong> ${escapeHtml(claims.length)}</span><span><strong>Procedure</strong> ${escapeHtml(String(procedure.procedural_posture || 'unknown').replaceAll('_', ' '))}</span><span><strong>Forms</strong> ${escapeHtml(forms.status || 'unknown')}</span><span><strong>Blockers</strong> ${blockers.length}</span></div>${blockers.length ? `<ul>${blockers.map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul>` : '<p class="status-good">All automated preflight checks passed. Human review still must be recorded.</p>'}<details><summary>Procedure, forms, fact matches, and packet hash</summary><p><code>${escapeHtml(packet.packet_sha256 || '')}</code></p>${procedureItems.length ? `<article><strong>Procedure review checklist</strong><span class="badge ${procedure.status === 'checked' ? 'good' : 'warn'}">${escapeHtml(procedure.status || 'unknown')}</span><ul>${procedureItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>` : ''}${formNotes.length ? `<article><strong>Form review</strong><span class="badge ${forms.status === 'checked' ? 'good' : 'warn'}">${escapeHtml(forms.status || 'unknown')}</span><ul>${formNotes.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></article>` : '<article><strong>Form review</strong><small>No form IDs were identified. A required-form selection may still need confirmation.</small></article>'}${(facts.facts || []).map((item) => `<article><strong>${escapeHtml(item.fact || '')}</strong><span class="badge ${item.status === 'record_text_found' ? 'good' : 'warn'}">${escapeHtml(item.status || 'unknown')}</span><small>${escapeHtml((item.supporting_records || []).map((row) => row.source_locator || row.evidence_id).join(' · ') || 'No indexed record span found')}</small></article>`).join('')}</details>`;
       renderClaimAnnotations(claims);
+      const sourceDetails = document.createElement('details');
+      const sourceSummary = document.createElement('summary');
+      sourceSummary.textContent = 'Inspect matched private-record text and provenance';
+      sourceDetails.appendChild(sourceSummary);
+      for (const fact of facts.facts || []) {
+        for (const source of fact.supporting_records || []) {
+          const block = document.createElement('article');
+          const label = document.createElement('p');
+          label.textContent = `${source.evidence_id || 'Record'} · ${source.match_type || 'unverified match'} · offsets ${source.span_start}–${source.span_end} · SHA-256 ${source.source_hash || 'unavailable'}`;
+          const quote = document.createElement('blockquote');
+          quote.textContent = source.text || 'No source span available.';
+          block.append(label, quote);
+          sourceDetails.appendChild(block);
+        }
+      }
+      const caution = document.createElement('p');
+      caution.textContent = 'Private record text is not official authority or a factual finding. Match offsets refer to indexed text; authenticity, context and legal significance require review.';
+      sourceDetails.appendChild(caution);
+      documentReviewPacket.appendChild(sourceDetails);
     }
 
     function renderDocumentReviewHistory(payload) {
       documentWorkspaceState.reviewHistory = payload || null;
-      const rows = Array.isArray(payload?.decisions) ? payload.decisions : [];
-      const latest = payload?.latest || null;
+      const authenticated = new Set(payload?.authenticated_decision_ids || []);
+      const rows = (Array.isArray(payload?.decisions) ? payload.decisions : []).map(row =>
+        payload?.storage_authenticated && authenticated.has(row.decision_id)
+          ? row.revision_id === payload.current_revision_id ? row : {...row, status: 'prior revision — review required', filing_gate: {filing_ready: false}}
+          : {...row, status: 'unverified history — review required', filing_gate: {filing_ready: false}});
+      const latest = payload?.latest_is_current ? payload.latest : null;
       if (documentReviewLedgerStatus) {
         const ready = Boolean(latest?.filing_gate?.filing_ready);
         documentReviewLedgerStatus.className = `badge ${ready ? 'good' : 'warn'}`;
-        documentReviewLedgerStatus.textContent = latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : 'Not reviewed';
+        documentReviewLedgerStatus.textContent = latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : rows.length ? 'History not authenticated — review required' : 'Not reviewed';
       }
       if (!documentReviewHistory) return;
       documentReviewHistory.innerHTML = rows.length ? rows.map((row) => { const annotations = Array.isArray(row.claim_annotations) ? row.claim_annotations : []; return `<article><div><strong>${escapeHtml(String(row.decision || 'review').replaceAll('_', ' '))}</strong><span class="badge ${row?.filing_gate?.filing_ready ? 'good' : 'warn'}">${escapeHtml(String(row.status || 'review').replaceAll('_', ' '))}</span></div><small>${escapeHtml(row.committed_at || '')} · revision ${escapeHtml(String(row.revision_id || '').slice(0, 8))} · ${escapeHtml(row?.reviewer?.name || '')}</small>${row.notes ? `<p>${escapeHtml(row.notes)}</p>` : ''}${annotations.length ? `<details><summary>${annotations.length} claim finding(s)</summary><ul>${annotations.map((item) => `<li><strong>${escapeHtml(item.claim_id || '')}</strong>: ${escapeHtml(String(item.status || '').replaceAll('_', ' '))}${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('')}</ul></details>` : ''}<code>${escapeHtml(String(row.decision_sha256 || '').slice(0, 24))}…</code></article>`; }).join('') : 'No review decisions recorded.';
@@ -3721,30 +4066,68 @@
 
     async function loadDocumentReviewHistory(documentId) {
       if (!documentId) return;
+      const epoch = ++documentWorkspaceState.reviewHistoryEpoch;
       try {
         const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(documentId)}/reviews`);
+        if (epoch !== documentWorkspaceState.reviewHistoryEpoch || payload.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== documentId) return;
         renderDocumentReviewHistory(payload);
+        const notice = document.createElement('p');
+        notice.dataset.reviewStorageNotice = 'true';
+        notice.textContent = payload.storage_notice || 'Review storage status unavailable; review required.';
+        documentReviewHistory?.prepend(notice);
+        const head = document.createElement('p');
+        head.dataset.reviewHeadStatus = 'true';
+        head.setAttribute('role', 'status');
+        const status = payload.history_head?.status;
+        head.textContent = payload.history_head?.valid === false
+          ? 'Review history is incomplete or cannot be authenticated. Prior approval cannot be used. Preserve the complete workspace and key; restore a verified complete backup or create a new working draft.'
+          : payload.history_head?.recovered_interrupted_commit
+            ? 'Recovered an interrupted, already-confirmed review decision from its encrypted journal. Inspect the decision and blockers below; recovery does not grant approval.'
+            : status === 'verified'
+              ? 'Local encrypted review head verified against the retained decision count and chain. This is not an external timestamp or protection against replacing the entire workspace with an older backup.'
+              : 'No review history head has been created yet. A fresh review creates one.';
+        documentReviewHistory?.prepend(head);
+        if (payload.history_head?.valid === false) {
+          documentWorkspaceState.reviewRequest = null;
+          if (documentReviewCommit) documentReviewCommit.disabled = true;
+          if (documentReviewPrepare) documentReviewPrepare.disabled = true;
+        }
       } catch (err) {
-        if (documentReviewHistory) documentReviewHistory.textContent = err.message;
+        if (epoch === documentWorkspaceState.reviewHistoryEpoch && documentWorkspaceState.active?.document_id === documentId && documentReviewHistory) {
+          renderDocumentReviewHistory({decisions: [], latest: null, storage_authenticated: false});
+          documentReviewHistory.textContent = err.message;
+          documentWorkspaceState.reviewRequest = null;
+          if (documentReviewCommit) documentReviewCommit.disabled = true;
+          if (documentReviewPrepare) documentReviewPrepare.disabled = true;
+        }
       }
     }
 
     async function prepareDocumentReview() {
       const active = documentWorkspaceState.active;
       if (!active?.document_id) return;
+      const owner = documentWorkspaceState.storageMatterId;
+      if (documentReviewPrepare?.disabled) return;
+      documentWorkspaceState.reviewBusy = true;
+      if (documentReviewPrepare) documentReviewPrepare.disabled = true;
+      if (documentReviewCommit) documentReviewCommit.disabled = true;
       const facts = String(documentReviewFacts?.value || '').split(/\r?\n/).map((row) => row.trim()).filter(Boolean).slice(0, 128);
       setDocumentWorkspaceStatus('Building a revision-bound authority and evidence review packet…');
       try {
         const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({facts, quotes: [], claims: [], auto_extract_claims: true})});
+        if (owner !== documentWorkspaceState.storageMatterId || payload.matter_id !== owner || documentWorkspaceState.active?.document_id !== active.document_id || documentWorkspaceState.active?.current_revision_id !== payload.packet?.revision_id) return;
         documentWorkspaceState.reviewRequest = payload;
         renderDocumentReviewPacket(payload);
-        if (documentReviewCommit) documentReviewCommit.disabled = false;
         await loadDocumentReviewQueue();
-        setDocumentWorkspaceStatus('Review packet prepared. It is bound to this exact revision and expires if the draft changes.', 'good');
+        if (documentWorkspaceState.reviewRequest !== payload || owner !== documentWorkspaceState.storageMatterId) return;
+        setDocumentWorkspaceStatus('Encrypted review packet prepared. It is bound to this exact revision and expires if the draft changes. Review remains required.', 'warn');
       } catch (err) {
         documentWorkspaceState.reviewRequest = null;
         if (documentReviewCommit) documentReviewCommit.disabled = true;
         setDocumentWorkspaceStatus(err.message, 'bad');
+      } finally {
+        documentWorkspaceState.reviewBusy = false;
+        updateWorkspaceControls();
       }
     }
 
@@ -3752,22 +4135,37 @@
       const active = documentWorkspaceState.active;
       const prepared = documentWorkspaceState.reviewRequest;
       if (!active?.document_id || !prepared?.request_id || !prepared?.confirmation_token) return;
+      if (documentReviewCommit?.disabled || prepared.matter_id !== documentWorkspaceState.storageMatterId || prepared.packet?.document_id !== active.document_id || prepared.packet?.revision_id !== active.current_revision_id) return;
       const reviewerName = documentReviewerName?.value.trim() || '';
       if (!reviewerName) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
       const decision = documentReviewDecision?.value || 'approve_review';
       const attested = Boolean(documentReviewAttested?.checked);
       if (decision === 'approve_review' && !attested) { setDocumentWorkspaceStatus('Review completion requires the exact-revision attestation.', 'bad'); return; }
       if (!window.confirm('Record this immutable review decision for the exact revision and packet shown? A review decision cannot override unresolved filing blockers.')) return;
+      documentWorkspaceState.reviewBusy = true;
+      updateWorkspaceControls();
+      if (documentReviewCommit) documentReviewCommit.disabled = true;
+      setDocumentWorkspaceStatus('Encrypting and recording the exact-revision decision…');
       try {
         const result = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/commit`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({request_id: prepared.request_id, confirmation_token: prepared.confirmation_token, confirmed: true, decision, reviewer_name: reviewerName, reviewer_role: documentReviewerRole?.value || 'other_reviewer', attested, notes: documentReviewNotes?.value || '', claim_annotations: collectClaimAnnotations()})});
+        if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         documentWorkspaceState.reviewRequest = null;
         if (documentReviewCommit) documentReviewCommit.disabled = true;
         await loadDocumentReviewHistory(active.document_id);
         await loadDocumentReviewQueue();
+        if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         const blockers = result?.filing_gate?.blockers || [];
         renderDocumentReviewPacket({packet: {...prepared.packet, filing_gate_preflight: result.filing_gate}});
         setDocumentWorkspaceStatus(blockers.length ? `Review recorded. Export remains blocked by ${blockers.length} gate item(s).` : 'Review recorded and all filing-gate checks passed.', blockers.length ? 'warn' : 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      } catch (err) {
+        setDocumentWorkspaceStatus(err.message + ' Reload review history before retrying; an earlier write may have been preserved.', 'bad');
+        documentWorkspaceState.reviewRequest = null;
+        await loadDocumentReviewHistory(active.document_id);
+        await loadDocumentReviewQueue();
+      } finally {
+        documentWorkspaceState.reviewBusy = false;
+        updateWorkspaceControls();
+      }
     }
 
 
@@ -3876,11 +4274,17 @@
 
     function renderFilingPacketStatus(payload) {
       documentWorkspaceState.filingPacketStatus = payload || null;
+      if (assignmentMigrationConfirm) assignmentMigrationConfirm.checked = false;
       const incremental = payload?.incremental_review || payload?.packet?.incremental_review || {};
       const diff = incremental.diff || {};
       const reviewUnits = incremental.review_units || {};
       const units = Array.isArray(reviewUnits.units) ? reviewUnits.units : [];
       const assignments = payload?.assignments || payload?.packet?.reviewer_assignments || {};
+      const migration = assignments.migration || {};
+      if (assignmentMigrationPanel) assignmentMigrationPanel.hidden = !['preview', 'blocked'].includes(migration.status);
+      if (assignmentMigrationPreview) assignmentMigrationPreview.textContent = migration.status === 'blocked'
+        ? 'Migration unavailable: ' + (migration.blockers || []).join(', ') + '. Original history is unchanged; migrate the draft workspace first if required.'
+        : 'Review required. Scope: all reviewer assignment history in this active matter. ' + Number(migration.event_count || 0) + ' events across ' + Number(migration.document_count || 0) + ' documents; ' + Number(migration.original_bytes || 0) + ' original bytes. Original SHA-256: ' + String(migration.original_sha256 || '') + '. Exact originals will remain encrypted in this ledger. This does not validate historical identities or activate assignments.';
       const activeAssignments = Array.isArray(assignments.active) ? assignments.active : [];
       const active = payload?.active || (payload?.packet ? payload : null);
       const packet = active?.packet || payload?.packet || {};
@@ -3898,6 +4302,39 @@
         const gatePanel = active?.build_id ? `<section class="authority-verification-section"><h3>Canonical filing gate</h3><div class="authority-verification-card ${blockers.length ? 'is-blocked' : 'is-supported'}"><header><strong>${escapeHtml(filingGate?.blocker_panel?.panel_title || 'Filing gate blockers')}</strong><span class="authority-verification-status-pill ${blockers.length ? 'is-blocked' : 'is-supported'}">${escapeHtml(String(filingGate.export_status || 'unknown').replaceAll('_', ' '))}</span></header><p><strong>Immutable hash:</strong> <code>${escapeHtml(gateHash || 'not recorded')}</code></p><p><strong>Review required:</strong> ${escapeHtml(String(filingGate.review_required ?? true))} · <strong>Filing ready:</strong> ${escapeHtml(String(filingGate.filing_ready ?? false))}</p>${blockers.length ? `<ul class="authority-verification-blockers">${blockers.slice(0, 50).map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul>` : '<p>All canonical gate checks passed.</p>'}</div></section>` : '';
         filingPacketResults.innerHTML = `<div class="document-review-packet-summary"><span><strong>Diff</strong> ${escapeHtml(diff.summary || 'No comparison')}</span><span><strong>Changed units</strong> ${escapeHtml(reviewUnits.changed_unit_count || 0)}</span><span><strong>Historical units</strong> ${escapeHtml(reviewUnits.unchanged_historical_count || 0)}</span><span><strong>Active assignments</strong> ${escapeHtml(activeAssignments.length)}</span><span><strong>Packet blockers</strong> ${escapeHtml(blockers.length)}</span><span><strong>Prior approval stale</strong> ${incremental.prior_approval_stale ? 'yes' : 'no'}</span></div>${gatePanel}${blockers.length ? `<ul>${blockers.slice(0, 50).map((item) => `<li>${escapeHtml(String(item).replaceAll('_', ' '))}</li>`).join('')}</ul>` : ''}<div class="filing-packet-unit-grid">${units.length ? units.map((row) => `<article class="filing-packet-unit"><strong>${escapeHtml(row.label || row.unit_id || '')}</strong><span class="badge ${row.status === 'changed_requires_review' ? 'warn' : 'good'}">${escapeHtml(String(row.status || '').replaceAll('_', ' '))}</span><small>${escapeHtml(row.unit_type || '')} · prior approval not carried forward</small>${(row.source_ids || []).map((sourceId) => `<button class="secondary compact-action" data-filing-packet-source-id="${escapeHtml(sourceId)}" type="button">Open ${escapeHtml(sourceId)}</button>`).join('')}</article>`).join('') : '<p>No prior review units were available. A full review remains required.</p>'}</div><p>${escapeHtml(reviewUnits.notice || packet.notice || 'Human review remains required.')}</p>`;
       }
+      if (filingPacketResults) {
+        const privacy = document.createElement('p');
+        privacy.dataset.assignmentPrivacy = 'true';
+        privacy.setAttribute('role', 'status');
+        privacy.style.fontSize = '14px';
+        const assignmentState = assignments.read_only === true ? 'Legacy assignment history is read-only. ' : assignments.storage_authenticated === true ? ((assignments.history || []).length ? 'Assignment history authenticated. ' : 'No assignments recorded yet. ') : 'Assignment storage is unconfirmed. ';
+        privacy.textContent = assignmentState + (assignments.storage_notice || 'Review required.');
+        const details = document.createElement('details');
+        details.dataset.assignmentHistory = 'true';
+        const summary = document.createElement('summary');
+        summary.textContent = 'Inspect reviewer assignment, exact revision and event hash';
+        summary.style.cssText = 'font-size:14px;min-height:36px;line-height:1.5';
+        details.append(summary);
+        for (const row of (assignments.history || []).slice(0, 20)) {
+          const item = document.createElement('p');
+          item.style.cssText = 'font-size:14px;overflow-wrap:anywhere';
+          item.textContent = [row.reviewer_label, row.role, 'Revision ' + row.revision_id, 'Event SHA-256 ' + row.entry_sha256, row.note, 'Locally entered identity; not verified. Review required.'].join(' · ');
+          details.append(item);
+        }
+        filingPacketResults.append(privacy, details);
+        if (migration.status === 'migrated') {
+          const receipt = document.createElement('details');
+          receipt.dataset.assignmentMigrationReceipt = 'true';
+          const title = document.createElement('summary');
+          title.textContent = 'Inspect encrypted migration receipt and original hash';
+          title.style.cssText = 'font-size:14px;min-height:36px;line-height:1.5';
+          const text = document.createElement('p');
+          text.style.cssText = 'font-size:14px;overflow-wrap:anywhere';
+          text.textContent = 'Exact original SHA-256 ' + migration.receipt.original_sha256 + ' · ' + migration.receipt.original_bytes + ' bytes · ' + migration.receipt.event_count + ' historical events. Original bytes preserved inside authenticated encryption. Historical assignments remain inactive; create a new current-revision assignment after review. Keep the complete workspace and its original protected key.';
+          receipt.append(title, text);
+          filingPacketResults.append(receipt);
+        }
+      }
       if (filingPacketArtifacts) filingPacketArtifacts.innerHTML = filingPacketArtifactLinks(active?.artifacts || payload?.artifacts);
       filingPacketResults?.querySelectorAll('[data-filing-packet-source-id]').forEach((button) => button.addEventListener('click', () => {
         const sourceId = button.dataset.filingPacketSourceId || '';
@@ -3909,27 +4346,74 @@
 
     async function loadFilingPacketStatus(documentId) {
       if (!documentId) return;
+      const owner = documentWorkspaceState.storageMatterId;
+      const epoch = documentWorkspaceState.filingStatusEpoch = (documentWorkspaceState.filingStatusEpoch || 0) + 1;
+      const current = () => epoch === documentWorkspaceState.filingStatusEpoch && owner === documentWorkspaceState.storageMatterId && documentWorkspaceState.active?.document_id === documentId;
+      if (assignmentMigrationPanel) assignmentMigrationPanel.hidden = true;
+      if (assignmentMigrationConfirm) assignmentMigrationConfirm.checked = false;
+      documentWorkspaceState.filingPacketStatus = null;
+      updateWorkspaceControls();
       if (filingPacketResults) filingPacketResults.textContent = 'Loading incremental review and reviewer assignments…';
       try {
         const payload = await fetchJson(`/api/reviewed-filing-packet/status?document_id=${encodeURIComponent(documentId)}`);
+        if (!current() || payload.matter_id !== owner) return;
         renderFilingPacketStatus(payload);
       } catch (err) {
+        if (!current()) return;
         if (filingPacketResults) filingPacketResults.textContent = err.message;
         if (filingPacketStatusBadge) { filingPacketStatusBadge.className = 'badge warn'; filingPacketStatusBadge.textContent = 'Unavailable'; }
       }
       updateWorkspaceControls();
     }
 
+    async function migrateFilingAssignments() {
+      const active = documentWorkspaceState.active;
+      const plan = documentWorkspaceState.filingPacketStatus?.assignments?.migration;
+      if (!active?.document_id || assignmentMigrationRun?.disabled || plan?.status !== 'preview') return;
+      const owner = documentWorkspaceState.storageMatterId;
+      const current = () => owner === documentWorkspaceState.storageMatterId && documentWorkspaceState.active?.document_id === active.document_id && documentWorkspaceState.active?.current_revision_id === active.current_revision_id;
+      documentWorkspaceState.filingAssignmentBusy = true;
+      if (assignmentMigrationConfirm) assignmentMigrationConfirm.checked = false;
+      updateWorkspaceControls();
+      setDocumentWorkspaceStatus('Encrypting the reviewed history and its exact original bytes. Do not close the app until the result is confirmed.', 'warn');
+      try {
+        const payload = await fetchJson('/api/reviewed-filing-packet/documents/' + encodeURIComponent(active.document_id) + '/assignments/migrate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({expected_revision_id:active.current_revision_id, original_sha256:plan.original_sha256, confirmed:true})});
+        if (!current() || payload.matter_id !== owner) return;
+        await loadFilingPacketStatus(active.document_id);
+        if (current()) setDocumentWorkspaceStatus('Assignment history encrypted with exact original bytes preserved. Historical assignments remain inactive. Review and create a new assignment when needed.', 'warn');
+      } catch (err) {
+        if (current()) {
+          documentWorkspaceState.filingPacketStatus = null;
+          if (assignmentMigrationPanel) assignmentMigrationPanel.hidden = true;
+          setDocumentWorkspaceStatus(err.message + ' Reload assignment history to confirm its state before retrying.', 'bad');
+        }
+      } finally {
+        documentWorkspaceState.filingAssignmentBusy = false;
+        updateWorkspaceControls();
+      }
+    }
+
     async function assignFilingPacketReviewer() {
       const active = documentWorkspaceState.active;
-      if (!active?.document_id) return;
+      if (!active?.document_id || filingPacketAssign?.disabled) return;
+      const owner = documentWorkspaceState.storageMatterId;
       const reviewerLabel = filingPacketReviewerLabel?.value.trim() || '';
       if (!reviewerLabel) { setDocumentWorkspaceStatus('Enter a local reviewer label before assignment.', 'bad'); return; }
+      documentWorkspaceState.filingAssignmentBusy = true;
+      updateWorkspaceControls();
+      setDocumentWorkspaceStatus('Encrypting the reviewer assignment for this revision…', 'warn');
       try {
         await fetchJson(`/api/reviewed-filing-packet/documents/${encodeURIComponent(active.document_id)}/assignments`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reviewer_label: reviewerLabel, role: filingPacketReviewerRole?.value || 'other_reviewer', capabilities: ['review','annotate_claims','request_changes','export_packet'], expected_revision_id: active.current_revision_id, exclusive: Boolean(filingPacketExclusive?.checked), note: 'Assigned in the local reviewed filing packet workspace.'})});
+        if (owner !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         await loadFilingPacketStatus(active.document_id);
-        setDocumentWorkspaceStatus('Reviewer assignment recorded for this exact revision. Identity is locally entered metadata.', 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+        if (owner !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
+        setDocumentWorkspaceStatus('Encrypted reviewer assignment recorded for this exact revision. Identity is locally entered metadata. Review required.', 'warn');
+      } catch (err) {
+        if (owner === documentWorkspaceState.storageMatterId && documentWorkspaceState.active?.document_id === active.document_id) setDocumentWorkspaceStatus(err.message + ' Reload assignments before retrying. Existing records were preserved.', 'bad');
+      } finally {
+        documentWorkspaceState.filingAssignmentBusy = false;
+        updateWorkspaceControls();
+      }
     }
 
     async function buildReviewedFilingPacket() {
@@ -3982,30 +4466,60 @@
         }
       }
       if (authorityImpactArtifacts) authorityImpactArtifacts.innerHTML = authorityImpactArtifactLinks(payload?.artifacts || []);
-      updateWorkspaceControls();
-    }
-
-    async function loadAuthorityImpactStatus(documentId) {
-      if (!documentId) return;
-      if (authorityImpactResults) authorityImpactResults.textContent = 'Loading verified authority generations…';
-      try {
-        const payload = await fetchJson(`/api/authority-change-impact/status?document_id=${encodeURIComponent(documentId)}`);
-        renderAuthorityImpact(payload);
-      } catch (err) {
-        if (authorityImpactResults) authorityImpactResults.textContent = err.message;
-        if (authorityImpactStatusBadge) { authorityImpactStatusBadge.className = 'badge warn'; authorityImpactStatusBadge.textContent = 'Unavailable'; }
+      if (authorityImpactResults && packet.target_build_id) {
+        const details = document.createElement('details');
+        details.dataset.authorityGenerationDrilldown = 'true';
+        const summary = document.createElement('summary');
+        summary.textContent = 'Inspect exact generations, revision and source hashes';
+        summary.style.cssText = 'font-size:14px;min-height:36px;line-height:1.5';
+        details.append(summary);
+        const add = text => { const row = document.createElement('p'); row.style.cssText = 'font-size:14px;overflow-wrap:anywhere'; row.textContent = text; details.append(row); };
+        add('Revision ' + String(packet.revision_id || '') + ' · Reviewed generation ' + String(packet.base_build_id || '') + ' · Target generation ' + String(packet.target_build_id || '') + '. Review required; these hashes do not determine legal effect.');
+        for (const row of impacted) add(String(row.source_id || '') + ' · Before SHA-256 ' + String(row.before?.sha256 || 'not present') + ' · After SHA-256 ' + String(row.after?.sha256 || 'not present') + ' · Target freshness ' + String(row.after?.freshness_status || 'unknown'));
+        authorityImpactResults.append(details);
       }
       updateWorkspaceControls();
     }
 
-    async function analyzeAuthorityImpact() {
+    async function authorityImpactRequest(url, body, render, success) {
       const active = documentWorkspaceState.active;
       if (!active?.document_id) return;
+      const owner = documentWorkspaceState.storageMatterId;
+      const epoch = documentWorkspaceState.authorityEpoch = (documentWorkspaceState.authorityEpoch || 0) + 1;
+      const current = () => epoch === documentWorkspaceState.authorityEpoch && owner === documentWorkspaceState.storageMatterId && active.document_id === documentWorkspaceState.active?.document_id && active.current_revision_id === documentWorkspaceState.active?.current_revision_id;
+      documentWorkspaceState.authorityBusy = true;
+      if (authorityImpactApproved) authorityImpactApproved.checked = false;
+      if (authorityImpactResults) { authorityImpactResults.textContent = 'Checking source generations for this matter. Existing work is preserved; review remains required.'; authorityImpactResults.setAttribute('aria-busy', 'true'); }
+      if (authorityImpactArtifacts) authorityImpactArtifacts.textContent = '';
+      updateWorkspaceControls();
       try {
-        const payload = await fetchJson('/api/authority-change-impact/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({document_id:active.document_id, base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''})});
-        renderAuthorityImpact(payload);
-        setDocumentWorkspaceStatus(payload.blockers?.length ? 'Authority impact analyzed with visible revalidation blockers.' : 'Authority generations compared. Human revalidation remains required.', payload.blockers?.length ? 'warn' : 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+        const payload = await fetchJson(url, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {});
+        if (!current() || payload.matter_id !== owner) return;
+        render(payload);
+        if (success) setDocumentWorkspaceStatus(success, 'warn');
+      } catch (err) {
+        if (!current()) return;
+        documentWorkspaceState.authorityImpactStatus = null;
+        if (authorityImpactResults) authorityImpactResults.textContent = err.message + ' Reload this matter and its generations before retrying. No prior approval is carried forward.';
+        if (authorityImpactStatusBadge) { authorityImpactStatusBadge.className = 'badge warn'; authorityImpactStatusBadge.textContent = 'Review blocked'; }
+      } finally {
+        if (epoch === documentWorkspaceState.authorityEpoch) {
+          documentWorkspaceState.authorityBusy = false;
+          authorityImpactResults?.setAttribute('aria-busy', 'false');
+          updateWorkspaceControls();
+        }
+      }
+    }
+
+    async function loadAuthorityImpactStatus(documentId) {
+      if (!documentId) return;
+      return authorityImpactRequest('/api/authority-change-impact/status?document_id=' + encodeURIComponent(documentId), null, renderAuthorityImpact, '');
+    }
+
+    async function analyzeAuthorityImpact() {
+      const active = documentWorkspaceState.active;
+      if (!active?.document_id || documentWorkspaceState.authorityBusy) return;
+      return authorityImpactRequest('/api/authority-change-impact/analyze', {document_id:active.document_id, base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''}, renderAuthorityImpact, 'Authority impact compared for this revision. Human revalidation remains required.');
     }
 
     function renderAuthorityImpactMatter(payload) {
@@ -4030,33 +4544,33 @@
 
     async function analyzeAuthorityImpactMatter() {
       const active = documentWorkspaceState.active;
-      if (!active?.document_id) return;
-      try {
-        const payload = await fetchJson('/api/authority-change-impact/matter/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''})});
-        renderAuthorityImpactMatter(payload);
-        setDocumentWorkspaceStatus('Saved matter work was mapped by exact authority source overlap. Every result remains review required.', 'warn');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      if (!active?.document_id || documentWorkspaceState.authorityBusy) return;
+      return authorityImpactRequest('/api/authority-change-impact/matter/analyze', {base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || ''}, renderAuthorityImpactMatter, 'Saved work mapped by source overlap. Review required.');
     }
 
     async function buildAuthorityImpactPacket() {
       const active = documentWorkspaceState.active;
-      if (!active?.document_id) return;
+      if (!active?.document_id || documentWorkspaceState.authorityBusy) return;
       if (!authorityImpactApproved?.checked) { setDocumentWorkspaceStatus('Approve the authority revalidation packet first.', 'bad'); return; }
-      try {
-        const payload = await fetchJson('/api/authority-change-impact/build', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({document_id:active.document_id, base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || '', approved:true})});
-        documentWorkspaceState.authorityImpactBuild = payload;
-        renderAuthorityImpact(payload);
-        setDocumentWorkspaceStatus('Immutable authority revalidation packet built. It does not establish current law or legal materiality.', payload?.packet?.blockers?.length ? 'warn' : 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      return authorityImpactRequest('/api/authority-change-impact/build', {document_id:active.document_id, expected_revision_id:active.current_revision_id, base_build_id:authorityImpactBase?.value || '', target_build_id:authorityImpactTarget?.value || '', approved:true}, renderAuthorityImpact, 'Unencrypted review copies created. Review privacy before sharing; this does not establish current law or filing readiness.');
     }
 
     async function selectWorkspaceDocument(documentId) {
       if (!documentId) return;
+      if (documentWorkspaceState.active?.document_id !== documentId) clearDocumentReviewInputs();
+      const epoch = ++documentWorkspaceState.documentOpenEpoch;
+      const owner = documentWorkspaceState.storageMatterId;
+      documentWorkspaceState.reviewHistory = null;
+      documentWorkspaceState.reviewRequest = null;
+      updateWorkspaceControls();
       setDocumentWorkspaceStatus('Opening local document…');
       try {
         const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(documentId)}`);
+        if (epoch !== documentWorkspaceState.documentOpenEpoch || owner !== documentWorkspaceState.storageMatterId) return;
         const row = payload.document || {};
         documentWorkspaceState.active = row;
+        documentWorkspaceState.reviewHistory = null;
+        updateWorkspaceControls();
         clearWorkspaceProposal();
         if (documentWorkspaceTitle) documentWorkspaceTitle.value = row.title || '';
         if (documentWorkspaceType) documentWorkspaceType.value = row.document_type || 'draft';
@@ -4074,12 +4588,15 @@
         if (findingsFormsResults) findingsFormsResults.textContent = 'Build or load a findings/forms review for this exact revision.';
         if (findingsFormsFields) findingsFormsFields.textContent = 'Required form fields appear after a review is built.';
         await loadDocumentReviewHistory(row.document_id);
+        await loadDocumentReviewQueue();
         await loadFindingsFormsStatus(row.document_id);
         await loadFilingPacketStatus(row.document_id);
         await loadAuthorityImpactStatus(row.document_id);
+        if (epoch !== documentWorkspaceState.documentOpenEpoch || owner !== documentWorkspaceState.storageMatterId) return;
         renderWorkspaceList();
         updateWorkspaceControls();
-        setDocumentWorkspaceStatus('Document opened. Changes remain local until you review and commit them.', 'good');
+        const historyBlocked = documentWorkspaceState.reviewHistory?.storage_authenticated === false || documentWorkspaceState.reviewHistory?.history_head?.valid === false;
+        setDocumentWorkspaceStatus(historyBlocked ? 'Document opened for inspection. Review history is incomplete or unverified; prior approval cannot be used.' : 'Document opened. Changes remain local until you review and commit them.', historyBlocked ? 'warn' : 'good');
       } catch (err) {
         setDocumentWorkspaceStatus(err.message, 'bad');
       }
@@ -4087,6 +4604,7 @@
 
     async function openDocumentWorkspace(options = {}) {
       if (!documentWorkspace) return;
+      const startingSelectionEpoch = documentWorkspaceState.documentOpenEpoch;
       setWorkflowFocus('draft');
       documentWorkspaceState.returnFocus = document.activeElement;
       openOverlay(documentWorkspace);
@@ -4095,8 +4613,8 @@
       documentWorkspaceBackdrop.setAttribute('aria-hidden', 'false');
       document.body.classList.add('document-workspace-open');
       await loadDocumentWorkspaceDocuments(options.documentId || '');
-      if (options.seedContent !== undefined || options.seedTitle !== undefined) newWorkspaceDraft({title: options.seedTitle, content: options.seedContent, documentType: options.documentType, sourceRefs: options.sourceRefs, note: options.note});
-      if (!options.documentId && options.seedContent === undefined && !documentWorkspaceState.active) newWorkspaceDraft();
+      if (options.seedContent !== undefined || options.seedTitle !== undefined) newWorkspaceDraft({title: options.seedTitle, content: options.seedContent, documentType: options.documentType, sourceRefs: options.sourceRefs, note: options.note, matterId: options.matterId});
+      if (!options.documentId && options.seedContent === undefined && !documentWorkspaceState.active && startingSelectionEpoch === documentWorkspaceState.documentOpenEpoch) newWorkspaceDraft();
       documentWorkspaceClose?.focus({preventScroll: true});
     }
 
@@ -5161,21 +5679,44 @@
     }
 
     async function saveWorkspaceNewDraft() {
+      const expectedMatter = documentWorkspaceState.seedMatterId;
+      if (!expectedMatter || expectedMatter !== String(corpusLibraryPayload?.active_case_id || '')) {
+        setDocumentWorkspaceStatus('The active matter changed or is unavailable. Nothing was saved; your editor text is preserved. Reopen the original matter before saving.', 'bad');
+        return;
+      }
       const title = documentWorkspaceTitle?.value.trim() || 'Untitled local draft';
       const content = documentWorkspaceEditor?.value || '';
       setDocumentWorkspaceStatus('Saving immutable first revision…');
       try {
         const note = documentWorkspaceState.seedNote || 'Created in the in-app document workspace.';
         const sourceRefs = Array.isArray(documentWorkspaceState.seedSourceRefs) ? documentWorkspaceState.seedSourceRefs : [];
-        const payload = await fetchJson('/api/document-workspace/documents', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title, content, document_type: documentWorkspaceType?.value || 'draft', note, tags: [], source_refs: sourceRefs})});
+        const payload = await fetchJson('/api/document-workspace/documents', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title, content, document_type: documentWorkspaceType?.value || 'draft', note, tags: [], source_refs: sourceRefs, expected_matter_id: expectedMatter})});
         documentWorkspaceState.seedSourceRefs = [];
         documentWorkspaceState.seedNote = '';
         await loadDocumentWorkspaceDocuments(payload.document?.document_id || '');
         showToast('Draft saved locally.');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      } catch (err) {
+        setDocumentWorkspaceStatus(err.safeCode === 'workspace_active_matter_changed'
+          ? 'The active matter changed. Nothing was saved; your editor text is preserved. Reopen the original matter before saving.'
+          : err.safeCode === 'workspace_legacy_storage_migration_required'
+          ? 'This legacy workspace is read-only until a reviewed encryption migration. Existing files and your editor text are preserved. Do not delete or overwrite the workspace.'
+          : err.safeCode === 'workspace_storage_unavailable'
+          ? 'The draft could not be unlocked or protected. Your editor text is preserved. Keep the complete workspace and original local key; do not replace key or storage identity files.'
+          : err.message, 'bad');
+      }
     }
 
     async function saveAnswerAsDraft(text, payload = null) {
+      const activeMatter = String(corpusLibraryPayload?.active_case_id || '');
+      const originMatter = String(payload?.matter_id || payload?.local_agent_matter_id || '');
+      if (!activeMatter || (originMatter && originMatter !== activeMatter) || (payload?.local_agent_result && !originMatter)) {
+        showToast('Draft not copied: reopen the answer’s original matter first. The answer and records are unchanged.');
+        return;
+      }
+      if (payload?.local_agent_result && !['completed_review_required', 'specialist_output_partial_review_required'].includes(payload.status)) {
+        showToast('This model result was withheld. Review the sources and rerun before creating a draft.');
+        return;
+      }
       const structuredTitle = payload?.structured_answer?.intake_label || payload?.question || 'Chat answer draft';
       const sourceRefs = sourceItemsFromPayload(payload).slice(0, 60).map((item) => {
         const meta = item?.metadata || item || {};
@@ -5200,11 +5741,18 @@
           safe_locator: `answer sha256 ${receipt.answer_sha256 || ''}`
         });
       }
-      const note = receipt?.receipt_sha256
+      let note = receipt?.receipt_sha256
         ? `Created from chat answer with provenance receipt ${receipt.receipt_sha256}. Review required.`
         : 'Created from chat answer. Review required.';
-      await openDocumentWorkspace({seedTitle: String(structuredTitle).slice(0, 200), seedContent: String(text || ''), documentType: 'memo', sourceRefs, note});
-      setDocumentWorkspaceStatus('Answer copied with its source and provenance references. Review the text, then save it.', 'good');
+      if (payload?.local_agent_result) {
+        note += ' Model-selected working material only. Facts, legal claims, relevance and current law are not verified. Not filing-ready.';
+        if (payload.status === 'specialist_output_partial_review_required') note += ' Partial result: some model output was withheld. Unresolved source checks remain.';
+        if (payload?.output_validation?.display_mode?.startsWith('source_bound_draft_extracts')) note += ' Only source-bound extracts were retained; the model’s other prose was withheld.';
+      }
+      await openDocumentWorkspace({seedTitle: String(structuredTitle).slice(0, 200), seedContent: String(text || ''), documentType: 'memo', sourceRefs, note, matterId: originMatter || activeMatter});
+      setDocumentWorkspaceStatus(payload?.local_agent_result
+        ? 'Model working material copied for review—not verified facts or a filing-ready draft. Its limitations are retained in the first-revision note. Review each source before saving.'
+        : 'Answer copied with its source and provenance references. Review the text, then save it.', payload?.local_agent_result ? 'warn' : 'good');
     }
 
     async function importRecordToWorkspace(binding, title = '') {
@@ -5861,6 +6409,10 @@
         const recoveryBlock = payload?.failure_class && payload.failure_class !== 'none'
           ? `<section class="answer-section answer-recovery"><h3>What could not be established</h3><p><strong>Status:</strong> ${escapeHtml(String(payload.failure_class).replaceAll('_', ' '))}</p><p>${escapeHtml(payload.recovery_hint || 'The available local sources did not establish a reliable answer. Refine the question or inspect the source lane before relying on it.')}</p><p class="muted">This is a recovery path, not a conclusion about the facts, deadline, outcome, or legal strategy.</p></section>`
           : '';
+        const safeNext = structured.safe_next_action || {};
+        const safeNextBlock = safeNext.label
+          ? `<section class="answer-section safe-next-action"><h3>Your next safest action</h3><p><strong>${escapeHtml(safeNext.label)}</strong></p><p>${escapeHtml(safeNext.reason || 'Choose a review step before relying on this response.')}</p>${safeNext.action_id && safeNext.action_id !== 'none' ? `<button class="secondary" type="button" data-safe-next-action="${escapeHtml(safeNext.action_id)}">${escapeHtml(safeNext.label)}</button>` : ''}<p class="muted">This opens local review help only. It does not send, file, decide, or certify anything.</p></section>`
+          : '';
         const freshnessWarnings = Array.isArray(groundingIntegrity.warnings) ? groundingIntegrity.warnings : [];
         const currentLawStatus = String(groundingIntegrity.current_law_status || 'not assessed').replaceAll('_', ' ');
         answer.innerHTML = `<div class="answer-body structured-answer">
@@ -5869,6 +6421,8 @@
           ${researchBlock}
           ${renderCriticalDates(structured.critical_dates || intake.critical_dates)}
           <section id="answer-section-main" class="answer-section"><h3>What this means</h3>${renderParagraphBlocks(structured.what_this_means)}</section>
+          ${safeNextBlock}
+          ${renderConversationWorkboard(structured.conversation_workboard)}
           ${retrievalSection}
           ${supportSection}
           ${recoveryBlock}
@@ -5889,7 +6443,12 @@
           ${renderStructuredSection('When to get human help', structured.when_to_get_human_help)}
         </div>`;
         bindAnswerFollowUps(answer);
+        answer.querySelectorAll('[data-safe-next-action]').forEach((button) => button.addEventListener('click', () => {
+          const actionId = String(button.dataset.safeNextAction || '');
+          openWorkbenchPanel(actionId === 'open_starters' ? 'starters' : (actionId === 'open_documents_form_header' ? 'documents' : 'evidence'));
+        }));
         answer.querySelectorAll('[data-open-evidence]').forEach((button) => button.addEventListener('click', () => openWorkbenchPanel('evidence')));
+        bindConversationWorkboard(answer, structured.conversation_workboard);
         answer.querySelectorAll('[data-open-printable]').forEach((button) => button.addEventListener('click', () => window.open(`/api/printables/${encodeURIComponent(button.dataset.openPrintable)}/open`, '_blank', 'noopener,noreferrer')));
         return;
       }
@@ -5925,7 +6484,7 @@
         </section>
         <section id="answer-section-grounding" class="answer-section">
           <h3>Grounding and routing</h3>
-          <p><strong>Grounded:</strong> ${payload?.grounded ? 'yes' : 'not fully grounded'} | <strong>Source cards:</strong> ${escapeHtml(payload?.source_card_count ?? 0)} | <strong>Review required:</strong> ${payload?.review_required === false ? 'no' : 'yes'}</p>
+          <p><strong>Grounding:</strong> ${payload?.local_agent_result ? localModelGroundingLabel(payload) : payload?.grounded ? 'source grounded' : 'not fully grounded'} | <strong>Source cards:</strong> ${escapeHtml(payload?.source_card_count ?? 0)} | <strong>Review required:</strong> ${payload?.review_required === false ? 'no' : 'yes'}</p>
           ${failureLine}
           <p><strong>Active routing:</strong> ${corpusSummary}</p>
         </section>
@@ -5935,14 +6494,25 @@
       answer.querySelectorAll('[data-open-printable]').forEach((button) => button.addEventListener('click', () => window.open(`/api/printables/${encodeURIComponent(button.dataset.openPrintable)}/open`, '_blank', 'noopener,noreferrer')));
     }
 
+    function localModelGroundingLabel(payload) {
+      const withheld = ['blocked', 'local_model_failed_review_required', 'output_blocked_review_required', 'specialist_output_blocked_review_required'].includes(payload?.status);
+      if (withheld) return 'Model output withheld';
+      const checked = payload?.output_grounding?.schema_version === 'local_model_grounding_v1'
+        && payload.output_grounding.status === 'quoted_text_only'
+        && payload.output_grounding.quoted_text_checked === true;
+      return checked ? 'Quoted text checked; facts and law unverified' : 'Model claims unverified';
+    }
+
     function renderBadges(payload) {
       const badges = [];
-      badges.push(`<span class="badge ${payload.grounded ? 'good' : 'warn'}">${payload.grounded ? 'source grounded' : 'not grounded'}</span>`);
+      badges.push(payload?.local_agent_result
+        ? `<span class="badge warn">${localModelGroundingLabel(payload)}</span>`
+        : `<span class="badge ${payload.grounded ? 'good' : 'warn'}">${payload.grounded ? 'source grounded' : 'not grounded'}</span>`);
       if (payload.failure_class && payload.failure_class !== 'none') badges.push(`<span class="badge warn">${escapeHtml(payload.failure_class)}</span>`);
       if (payload.matter_context_used) badges.push('<span class="badge">context used</span>');
       if (payload.answer_style) badges.push(`<span class="badge">${escapeHtml(payload.answer_style)}</span>`);
       if (payload.review_required !== false) badges.push('<span class="badge warn">review required</span>');
-      if (payload?.local_agent_result) badges.push('<span class="badge good">loopback local model</span>');
+      if (payload?.local_agent_result) badges.push('<span class="badge">local model output</span>');
       else if (payload?.local_agent_available) badges.push('<span class="badge">local model available</span>');
       if (payload.metadata && payload.metadata.matched_library_topic) badges.push(`<span class="badge">${escapeHtml(payload.metadata.matched_library_topic)}</span>`);
       if (payload.intake_label || payload?.structured_answer?.intake_label) badges.push(`<span class="badge">${escapeHtml(payload.intake_label || payload.structured_answer.intake_label)}</span>`);
@@ -5955,7 +6525,7 @@
       const retrievalConfidence = payload?.retrieval_confidence || payload?.metadata?.retrieval_confidence || payload?.retrieval_diagnostics?.confidence || payload?.metadata?.retrieval_diagnostics?.confidence;
       if (retrievalConfidence) badges.push(`<span class="badge ${retrievalConfidence === 'low' ? 'warn' : ''}">retrieval ${escapeHtml(retrievalConfidence)}</span>`);
       const groundingIntegrity = payload?.grounding_integrity || payload?.structured_answer?.grounding_integrity || payload?.metadata?.grounding_integrity || {};
-      if (groundingIntegrity.legal_source_count > 0) badges.push(`<span class="badge ${groundingIntegrity.current_law_verified ? 'good' : 'warn'}">${groundingIntegrity.current_law_verified ? 'currentness verified' : 'verify current law'}</span>`);
+      if (groundingIntegrity.legal_source_count > 0) badges.push(`<span class="badge ${!payload?.local_agent_result && groundingIntegrity.current_law_verified ? 'good' : 'warn'}">${!payload?.local_agent_result && groundingIntegrity.current_law_verified ? 'currentness verified' : 'verify current law'}</span>`);
       if (payload?.structured_answer?.intake?.context_inherited) badges.push('<span class="badge">safe continuity used</span>');
       answerBadges.innerHTML = badges.join('');
       syncContextBar();
@@ -6386,6 +6956,38 @@
       image.style.maxHeight = fit ? '100%' : 'none';
     }
 
+    function sourceTextAtCodePoints(text, start, end) {
+      // API offsets count Unicode code points; JavaScript slice counts UTF-16 units.
+      return Array.from(String(text || '')).slice(start, end).join('');
+    }
+
+    function rankedSourceSpanMarkup(item) {
+      const meta = item?.metadata || {};
+      const candidates = meta.source_span_candidates;
+      const reference = item?.source_reference || {};
+      const snippet = String(item?.snippet || '');
+      const snippetLength = Array.from(snippet).length;
+      const baseStart = reference.start_offset;
+      const invalid = '<section class="source-preview-snippet"><strong>Candidate spans unavailable</strong><p class="status-warn">The candidate ranges could not be checked against this approved excerpt. Open the original record; do not treat these candidates as verified quotations.</p></section>';
+      if (!Array.isArray(candidates) || !candidates.length || candidates.length > 3
+          || !Number.isSafeInteger(baseStart) || baseStart < 0) return invalid;
+      const seen = [];
+      for (const span of candidates) {
+        const start = span?.start_offset;
+        const end = span?.end_offset;
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)
+            || start < baseStart || end <= start || end - baseStart > snippetLength
+            || span.source_id !== sourceIdentity(item)
+            || end - start > 600 || span.status !== 'exact'
+            || !/^[a-f0-9]{64}$/.test(String(span.source_text_sha256 || ''))
+            || !/^[a-f0-9]{64}$/.test(String(span.quote_sha256 || ''))
+            || seen.some(([left, right]) => start < right && end > left)) return invalid;
+        seen.push([start, end]);
+      }
+      return '<section class="source-preview-snippet"><strong>Candidate passages — relevance unknown</strong><p>Exact text from the approved excerpt, not facts or findings. Inspect each candidate and the full record; this shortlist may miss important context or contain no answer.</p></section>'
+        + candidates.map((span, index) => `<details class="source-preview-snippet"${index === 0 ? ' open' : ''}><summary>Candidate ${index + 1} · characters ${escapeHtml(span.start_offset)}–${escapeHtml(span.end_offset)}</summary><p>${escapeHtml(sourceTextAtCodePoints(snippet, span.start_offset - baseStart, span.end_offset - baseStart))}</p><p class="status-warn">Review required · relevance not verified</p></details>`).join('');
+    }
+
     function sourcePreviewMarkup(item, payload = null) {
       const meta = item?.metadata || item || {};
       const title = item?.title || meta.title || meta.id || sourceIdentity(item) || 'Source';
@@ -6416,7 +7018,9 @@
       const sourceSpan = payload?.source_span || meta.source_span || {};
       const sourceSpanPreview = payload?.source_span_preview || meta.source_span_preview || snippet;
       const hasExactSpan = Number.isInteger(sourceSpan.start_offset) && Number.isInteger(sourceSpan.end_offset);
-      const spanMarkup = hasExactSpan
+      const spanMarkup = meta.source_span_mode === 'record_passage_ranking'
+        ? rankedSourceSpanMarkup(item)
+        : hasExactSpan
         ? `<section class="source-preview-snippet"><strong>Exact source span</strong><p>${escapeHtml(sourceSpanPreview || `Start ${sourceSpan.start_offset} end ${sourceSpan.end_offset}`)}</p></section>`
         : '<section class="source-preview-snippet"><strong>Exact source span unavailable</strong><p class="status-warn">This card has no admitted character range. Review the original source before treating any passage as a pinpoint citation or verified quote.</p></section>';
       const details = payload && typeof payload === 'object'
@@ -6544,7 +7148,7 @@
 
     function sourceCardSearchText(item) {
       const meta = item?.metadata || item || {};
-      return [item?.title, meta.title, meta.id, item?.citation, meta.citation_hint, item?.snippet, item?.text_excerpt, meta.text_excerpt, meta.description, item?.source_span_preview, meta.source_span_preview, meta.source_type, meta.source_class].filter(Boolean).join(' ');
+      return [sourceIdentity(item), item?.title, meta.title, meta.id, item?.citation, meta.citation_hint, item?.snippet, item?.text_excerpt, meta.text_excerpt, meta.description, item?.source_span_preview, meta.source_span_preview, meta.source_type, meta.source_class].filter(Boolean).join(' ');
     }
 
     function renderSources(items, {preserveFilter = false, restoreShowMoreFocus = false} = {}) {
@@ -6623,10 +7227,7 @@
         card.addEventListener('pointerleave', scheduleSourcePreviewClose);
         card.addEventListener('focusin', () => { if (!sourcePreviewPinned) showSourcePreview(item, card); });
         card.addEventListener('focusout', scheduleSourcePreviewClose);
-        card.addEventListener('click', (event) => {
-          if (event.target.closest('button, a')) return;
-          showSourcePreview(item, card, {pin: true});
-        });
+        bindSourceCardActivation(card, () => showSourcePreview(item, card, {pin: true}));
       });
       sourceCards.querySelectorAll('[data-copy-source]').forEach((button) => {
         button.addEventListener('click', async () => {
@@ -7783,21 +8384,38 @@
       localAgentStatus.textContent = 'Model or task changed. Rebuild the exact preview before approving.';
       refreshManagedWorkerStatus();
     }));
-    localAgentProvider?.addEventListener('change', () => {
-      if (localAgentProvider.value === 'ollama') {
+    function applyLocalAgentProviderState({refreshPreview = false} = {}) {
+      if (!localAgentProvider) return;
+      if (localAgentProvider.value === 'curated_ollama_reasoning') {
         localAgentEndpoint.value = 'http://127.0.0.1:11434';
+        localAgentEndpoint.readOnly = true;
         localAgentModel.readOnly = false;
-        if (!localAgentModel.value || localAgentModel.value === 'local-model') localAgentModel.value = 'qwen2.5:7b';
+        if (!['qwen3:4b', 'qwen3:8b'].includes(String(localAgentModel.value || ''))) localAgentModel.value = 'qwen3:4b';
+      } else if (localAgentProvider.value === 'ollama') {
+        localAgentEndpoint.value = 'http://127.0.0.1:11434';
+        localAgentEndpoint.readOnly = false;
+        localAgentModel.readOnly = false;
+        if (!localAgentModel.value || localAgentModel.value === 'local-model' || localAgentModel.value === 'Configured by this device' || ['qwen3:4b', 'qwen3:8b'].includes(String(localAgentModel.value || ''))) localAgentModel.value = 'qwen2.5:7b';
+      } else if (localAgentProvider.value === 'sentinel_ollama') {
+        // The Sentinel route is deliberately configured by the local app host.
+        // Do not let a browser value select an endpoint or model.
+        localAgentEndpoint.value = 'Configured by this device';
+        localAgentEndpoint.readOnly = true;
+        localAgentModel.value = 'Configured by this device';
+        localAgentModel.readOnly = true;
       } else if (localAgentProvider.value === 'fast_interchange_local') {
+        localAgentEndpoint.readOnly = false;
         syncFastInterchangeModelSelection();
       } else {
         localAgentEndpoint.value = 'http://127.0.0.1:1234';
+        localAgentEndpoint.readOnly = false;
         localAgentModel.readOnly = false;
-        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'admitted-release-model') localAgentModel.value = 'local-model';
+        if (!localAgentModel.value || localAgentModel.value === 'qwen2.5:7b' || localAgentModel.value === 'admitted-release-model' || localAgentModel.value === 'Configured by this device') localAgentModel.value = 'local-model';
       }
       renderManagedWorkerControls();
-      refreshLocalAgentPreview();
-    });
+      if (refreshPreview) refreshLocalAgentPreview();
+    }
+    localAgentProvider?.addEventListener('change', () => applyLocalAgentProviderState({refreshPreview: true}));
 
     recordInspectorClose?.addEventListener('click', closeRecordInspector);
     recordInspectorBackdrop?.addEventListener('click', closeRecordInspector);
@@ -8506,20 +9124,37 @@
       let job = null, matter = '', busy = false, cancelRequested = false;
       let inventory = {}, localHashing = false, noncancellable = false, prefixCanceled = false;
       let confirmation = null;
+      let contextRevision = 0, inventoryRequest = 0, contextPending = false;
+      const currentMatter = () => String(localAgentPayload?.local_agent_matter_id || '');
+      const currentContext = () => !contextPending && !!matter && matter === currentMatter();
+      const clearSelection = () => {
+        job = null; inventory = {}; cancelRequested = false;
+        window.mflActiveSpecialistModels = [];
+        if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
+        for (const name of ['job','version']) { element(name).replaceChildren(); element(name).value = ''; }
+        element('details').textContent = 'No pack selected for this matter. Review required.';
+        element('progress').value = 0;
+      };
       const resumable = ['uploading','interrupted','failed','canceled','verifying','resuming','canceling','ready_to_activate','activated'];
       const headers = () => ({'X-User-Role': 'admin'});
       const path = suffix => `/api/model-packs/imports/${encodeURIComponent(job.job_id)}${suffix}`;
       const body = extra => JSON.stringify({matter_id: matter, ...extra});
       const message = text => { element('status').textContent = text; };
       const failure = error => {
+        if (!currentContext()) return;
         const code = String(error?.safeCode || 'model_pack_operation_failed');
+        if (code === 'model_pack_context_changed') return;
         const recovery = code === 'model_pack_operator_setup_required'
           ? 'An operator must configure the external model store and independent trust keys first.'
           : 'Your original ZIP is preserved. Inspect installed packs for recovery state. A failed activation may require explicit recovery before the next worker start.';
         message(`Pack operation blocked (${code}). ${recovery}`);
       };
       const controls = () => {
-        if (confirmation) {
+        if (contextPending && !busy) {
+          contextPending = false; matter = currentMatter(); clearSelection();
+          message('Matter changed. Inspect installed packs again for this matter. No worker was started; existing files are preserved.');
+        }
+        if (confirmation || contextPending) {
           for (const name of ['admin','import','refresh','activate','cancel','discard','file','job','version','resume','reactivate','remove','restore','recover','deactivate','abandon']) element(name).disabled = true;
           return;
         }
@@ -8543,6 +9178,7 @@
         element('abandon').disabled = busy || !['remove','restore'].includes(inventory.transaction?.kind);
       };
       const selectedVersion = () => [...(inventory.installed || []), ...(inventory.removed || []).map(row => ({...row, removed:true}))].find(row => row.pack_id === element('version').value);
+      panel.addEventListener('model-pack-worker-state', controls);
       const option = (value, text) => { const item = document.createElement('option'); item.value = value; item.textContent = text; return item; };
       const inventoryRows = () => [...(inventory.jobs || []), ...(inventory.recoverable_jobs || []).map(row => ({...row, recovery_required:true}))];
       const confirmPackChange = text => {
@@ -8574,6 +9210,7 @@
         }
       });
       const render = row => {
+        if (!currentContext()) return;
         job = row;
         if (row.recovery_required) inventory.recoverable_jobs = [...(inventory.recoverable_jobs || []).filter(item => item.job_id !== row.job_id), row];
         else {
@@ -8607,9 +9244,20 @@
         matter = current;
         return true;
       };
-      const post = (suffix, extra = {}) => fetchJson(path(suffix), {method: 'POST', headers: {'Content-Type':'application/json', ...headers()}, body: body(extra)});
+      const post = async (suffix, extra = {}) => {
+        const revision = contextRevision, owner = matter;
+        const result = await fetchJson(path(suffix), {method: 'POST', headers: {'Content-Type':'application/json', ...headers()}, body: body(extra)});
+        if (revision !== contextRevision || owner !== matter || !currentContext()) throw makeSafeLocalError({code:'model_pack_context_changed'});
+        return result;
+      };
       const loadInventory = async () => {
-        inventory = await fetchJson(`/api/model-packs?matter_id=${encodeURIComponent(matter)}`, {headers:headers()});
+        const owner = matter, revision = contextRevision, request = ++inventoryRequest;
+        const matches = () => request === inventoryRequest && revision === contextRevision && owner === matter && currentContext();
+        let result;
+        try { result = await fetchJson(`/api/model-packs?matter_id=${encodeURIComponent(owner)}`, {headers:headers()}); }
+        catch (error) { if (matches()) throw error; return; }
+        if (!matches()) return;
+        inventory = result;
         window.mflActiveSpecialistModels = Array.isArray(inventory.models) ? inventory.models : [];
         if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
         const selected = job?.job_id || '';
@@ -8620,18 +9268,42 @@
         element('version').replaceChildren(option('', 'Select a pack version'), ...versions.map(row => option(row.pack_id, `${row.active ? 'Active' : row.previous ? 'Previous' : row.removed ? 'Recovery storage' : 'Inactive'} · ${row.pack_id.slice(0,16)}`)));
         element('version').value = versions.some(row => row.pack_id === version) ? version : '';
         if (selected && element('job').value) render(inventoryRows().find(row => row.job_id === selected));
-        else { job = null; element('details').textContent = JSON.stringify(inventory, null, 2); message(inventory.models?.length ? 'An admitted pack is installed. Review required. Worker startup remains explicit.' : 'Select an import or version to review, or choose a signed offline ZIP. No download will occur.'); }
+        else {
+          job = null; element('details').textContent = JSON.stringify(inventory, null, 2);
+          const readiness = {
+            no_active_pack: 'No active model pack. Choose a signed offline ZIP or inspect an installed version. No download will occur.',
+            development_only: 'Research pack installed — not approved for production use. Hardware and worker startup have not been verified here. Review required.',
+            production_admitted_runtime_unverified: 'Production admission verified. Hardware, worker startup and inference still need separate checks. This is not GA certification. Review required.',
+            admission_blocked: 'Model admission is blocked. No model is available for a new run. Review the signed details and recovery state.'
+          };
+          message(readiness[inventory.readiness?.status] || 'Model readiness is unverified. Inspect the signed details before use. No worker was started. Review required.');
+        }
         if (inventory.error) message(`Model-pack state blocked (${inventory.error}). ${inventory.transaction ? 'Review the interrupted change below and choose explicit recovery. Worker startup is blocked.' : 'An operator must resolve the admission or store setup before activation.'}`);
         controls();
       };
       panel.addEventListener('model-pack-context', async (event) => {
-        matter = String(event.detail?.matterId || '');
-        if (!matter || busy) return;
+        ++contextRevision; ++inventoryRequest;
+        if (confirmation) finishConfirmation(false);
+        if (busy) {
+          // Keep an in-flight operation bound to its original scope. Its
+          // eventual response must not populate the new matter's panel.
+          contextPending = true; cancelRequested = true;
+          window.mflActiveSpecialistModels = [];
+          if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
+          element('details').textContent = 'Previous matter details hidden. Review required.';
+          message('Matter changed during a pack operation. Waiting for its bounded request to finish; no further transfer or automatic activation will begin.');
+          controls(); return;
+        }
+        clearSelection(); matter = String(event.detail?.matterId || '');
+        controls();
+        if (!matter || !currentContext()) return;
         try {
           await loadInventory();
         } catch (error) {
-          window.mflActiveSpecialistModels = [];
-          if (typeof syncFastInterchangeModelSelection === 'function') syncFastInterchangeModelSelection();
+          // A previous context failure must not erase a newer successful load.
+          if (matter === String(event.detail?.matterId || '') && currentContext()) {
+            clearSelection(); failure(error); controls();
+          }
         }
       });
       element('job').addEventListener('change', () => {
@@ -8648,7 +9320,7 @@
       element('refresh').addEventListener('click', async () => {
         if (!authorize() || busy) return;
         busy = true; controls();
-        try { await loadInventory(); } catch (error) { failure(error); }
+        try { await loadInventory(); } catch (error) { if (currentContext()) clearSelection(); failure(error); }
         finally { busy = false; controls(); }
       });
       const prefixOf = async (file, count) => {
@@ -8663,6 +9335,7 @@
       };
       const transfer = async (resume = false) => {
         if (!authorize() || busy || localAgentBusy) return;
+        const transferRevision = contextRevision;
         const file = element('file').files?.[0];
         if (!file || !/\.zip$/i.test(file.name) || !file.size || file.size > 3 * 1024**3) { message('Select a signed, uncompressed model-pack ZIP of at most 3 GiB.'); return; }
         if (inventory.transaction) { message('Resolve the interrupted pack change before importing.'); return; }
@@ -8715,13 +9388,15 @@
         } catch (error) {
           if (!cancelRequested) { lastError = error; failure(error); }
         } finally {
-          clearInterval(poll); busy = false; localHashing = false;
+          clearInterval(poll); localHashing = false;
           if (job && !job.recovery_required) {
             try { render(await fetchJson(`${path('')}?matter_id=${encodeURIComponent(matter)}`, {headers:headers()})); } catch (_) {}
           }
-          controls();
-          if (prefixCanceled) { if (priorJob) render(priorJob); message('File-prefix check canceled locally. The server import and original file are preserved.'); }
-          if (lastError) failure(lastError);
+          busy = false; controls();
+          if (transferRevision === contextRevision) {
+            if (prefixCanceled) { if (priorJob) render(priorJob); message('File-prefix check canceled locally. The server import and original file are preserved.'); }
+            if (lastError) failure(lastError);
+          }
         }
       };
       element('import').addEventListener('click', () => transfer(false));
@@ -8744,8 +9419,10 @@
       element('discard').addEventListener('click', async () => {
         if (!authorize() || busy || !job) return;
         if (!(await confirmPackChange(`Discard staging copy ${job.job_id}? The original ZIP and installed model packs will be preserved.`)) || !authorize()) return;
+        busy = true; controls();
         try { await post('/discard'); job = null; cancelRequested = false; message('Partial import discarded. Original and installed packs preserved.'); element('details').textContent = 'No staged pack selected. Review required.'; controls(); }
         catch (error) { failure(error); }
+        finally { busy = false; controls(); }
       });
       const changeVersion = async (action) => {
         if (!authorize() || busy || localAgentBusy) return;
@@ -8790,17 +9467,28 @@
       const citations = Array.isArray(payload?.citations) ? payload.citations : [];
       const spans = Array.isArray(payload?.output_validation?.source_spans)
         ? payload.output_validation.source_spans : [];
+      const ranked = payload?.output_validation?.schema_version === 'evidence_ranked_spans_boundary_v1';
       return citations.map((item, index) => {
         const sourceId = sourceIdentity(item);
-        const span = spans.find((row) => Number(row?.reference) === index + 1
+        const matches = spans.filter((row) => row?.reference === index + 1
           && String(row?.source_id || '') === sourceId);
+        const span = matches[0];
         const reference = item?.source_reference || {};
         const snippet = String(item?.snippet || '');
-        const relativeStart = Number(span?.start_offset);
-        const relativeEnd = Number(span?.end_offset);
-        const baseStart = Number(reference.start_offset || 0);
-        if (!span || !Number.isInteger(relativeStart) || !Number.isInteger(relativeEnd)
-            || relativeStart < 0 || relativeEnd <= relativeStart || relativeEnd > snippet.length) return item;
+        const relativeStart = span?.start_offset;
+        const relativeEnd = span?.end_offset;
+        const baseStart = reference.start_offset ?? 0;
+        if (!span || !Number.isSafeInteger(relativeStart) || !Number.isSafeInteger(relativeEnd)
+            || !Number.isSafeInteger(baseStart) || baseStart < 0
+            || relativeStart < 0 || relativeEnd <= relativeStart || relativeEnd > Array.from(snippet).length
+            || !Number.isSafeInteger(baseStart + relativeEnd)) return item;
+        // Keep one card per canonical source so [1], [2] references never shift.
+        // All ranked candidates stay inside that source's preview.
+        const candidateSpans = ranked ? matches.map((row) => ({
+          ...row,
+          start_offset: Number.isSafeInteger(row.start_offset) ? baseStart + row.start_offset : null,
+          end_offset: Number.isSafeInteger(row.end_offset) ? baseStart + row.end_offset : null,
+        })) : [];
         return {
           ...item,
           metadata: {
@@ -8812,7 +9500,11 @@
               source_text_sha256: String(span.source_text_sha256 || ''),
               quote_sha256: String(span.quote_sha256 || ''),
             },
-            source_span_preview: snippet.slice(relativeStart, relativeEnd),
+            source_span_preview: sourceTextAtCodePoints(snippet, relativeStart, relativeEnd),
+            ...(ranked ? {
+              source_span_mode: 'record_passage_ranking',
+              source_span_candidates: candidateSpans,
+            } : {}),
           },
         };
       });
@@ -8830,7 +9522,7 @@
           <span><strong>Private records</strong><br>${escapeHtml(lanes.private_record || 0)}</span>
           <span><strong>Characters</strong><br>${Number(manifest.total_chars || 0).toLocaleString()}</span>
         </div>
-        <p class="muted">Nothing was sent to a model. This is the exact packet available for an optional loopback-only run.</p>
+        <p class="muted">${payload?.local_agent_result ? 'Approved local-model context. The result receipt reports the run outcome; supplied sources do not verify model claims.' : 'Nothing was sent to a model. This is the exact packet available for an optional loopback-only run.'}</p>
         <p><strong>Manifest hash:</strong> <code>${escapeHtml(hash)}</code></p>
       </details>`;
     }
@@ -8845,11 +9537,15 @@
         ...(Array.isArray(payload.blockers) ? payload.blockers : []),
       ])];
       const partial = validation.partial_extracts_available === true;
+      const ranked = validation.schema_version === 'evidence_ranked_spans_boundary_v1';
+      const typedField = validation.schema_version === 'evidence_typed_fields_boundary_v1';
       const specialistName = String(validation.schema_version || '').startsWith('drafting_')
         ? 'Drafting Assistant' : 'Evidence Review';
       const boundary = validation.status ? `<section class="local-agent-receipt" role="status">
-        <strong>${partial ? `${specialistName} quotations partially checked — review required` : blockers.length ? `${specialistName} withheld — review required` : `${specialistName} quotations checked — review required`}</strong>
-        <p>${partial ? `${spans.length} exact quotation(s) remain visible; other model-selected text was withheld. This does not verify factual claims or establish what happened.` : blockers.length ? 'The model response failed source checks. Your records were preserved. Open the source cards below, or retry with a narrower record selection.' : `${spans.length} quotation(s) match the selected record text. This does not verify factual claims or establish what happened.`}</p>
+        <strong>${typedField && !blockers.length ? (spans.length ? 'Source-field candidates — not verified facts · review required' : 'No source-field candidate retained — absence not established · review required') : ranked && !blockers.length ? 'Candidate passages — relevance unknown · review required' : partial ? `${specialistName} quotations partially checked — review required` : blockers.length ? `${specialistName} withheld — review required` : `${specialistName} quotations checked — review required`}</strong>
+        <p>${typedField && !spans.length && !blockers.length ? 'No value was retained. This does not establish absence. Read the explanation for each source, then open its source card to inspect the original context.' : partial ? `${spans.length} exact quotation(s) remain visible; other model-selected text was withheld. This does not verify factual claims or establish what happened.` : blockers.length ? 'The model response failed source checks. Your records were preserved. Open the source cards below, or retry with a narrower record selection.' : `${spans.length} quotation(s) match the selected record text. This does not verify factual claims or establish what happened.`}</p>
+        ${ranked ? '<p class="status-warn">A high rank is not confidence or proof. Candidates may not answer your question. Open each source preview to inspect every candidate; no finding or absence is established.</p>' : ''}
+        ${typedField ? '<p class="status-warn">Local QA model plus host checks, not a deterministic lookup. Review the full original source and its qualifications. A withheld field is not proof that an event or value is absent.</p>' : ''}
         <details><summary>Source-check details</summary>
           ${blockers.length ? `<ul>${blockers.map(code => `<li>${escapeHtml(code)}</li>`).join('')}</ul>` : ''}
           <ul>${spans.map(span => `<li>Source [${escapeHtml(span.reference)}] · ${escapeHtml(span.status)} · approved-excerpt offsets ${escapeHtml(span.start_offset)}–${escapeHtml(span.end_offset)}</li>`).join('')}</ul>
@@ -9000,6 +9696,9 @@
         fast_interchange_worker_port_unavailable: 'The private loopback worker address is already in use. Stop the conflicting local process, then retry.',
         fast_interchange_worker_restart_required: 'A different specialist is already loaded. Stop it before starting this one.',
         fast_interchange_worker_start_failed: 'The admitted specialist could not start. The app and your records remain available.',
+        fast_interchange_generation_timeout: 'The local model exceeded its time limit. No new answer was accepted. Your original records and answer are unchanged. You can inspect the selected sources without the model. Wait for other local work to finish or select fewer passages, then refresh the preview and approve a new run.',
+        fast_interchange_compact_model_integrity_failed: 'The local model files do not match the verified inventory or could not be verified. No model answer was accepted. Your original records and answer are unchanged. Inspect the selected sources without the model. Restore the original verified model package, then refresh the preview and approve a new run. Do not edit its receipt to bypass this check.',
+        fast_interchange_compact_python_network_denied: 'The local research worker attempted a Python network operation. The operation was blocked and this run’s output was discarded. Your original records and answer are unchanged. Keep Local-only on. Repair or replace the local model runtime, then refresh the preview and approve a new run. This safeguard is not OS-level isolation.',
         fast_interchange_worker_start_timeout: 'The specialist did not become healthy in time and was stopped safely.'
       };
       return explanations[error?.safeCode] || error?.message || 'The local model action could not complete.';
@@ -9054,7 +9753,7 @@
         localAgentRun.disabled = true;
         return;
       }
-      localAgentBusy = true;
+      setLocalAgentBusy(true);
       const requestEpoch = localAgentRequestEpoch;
       localAgentRun.disabled = true;
       localAgentRefreshPreview.disabled = true;
@@ -9077,7 +9776,18 @@
         localAgentPreview = {...preview, approvedConfig: JSON.stringify(config)};
         const manifest = preview.context_manifest || {};
         const lanes = manifest.lane_counts || {};
-        localAgentPreviewSummary.innerHTML = `<strong>Approval required.</strong> ${escapeHtml(manifest.entry_count || 0)} source blocks · ${Number(manifest.total_chars || 0).toLocaleString()} characters · Maine law ${escapeHtml(lanes.legal_authority || 0)} · private records ${escapeHtml(lanes.private_record || 0)}.<br><span class="muted">Destination: ${escapeHtml(preview.model?.endpoint_host || '')}:${escapeHtml(preview.model?.endpoint_port || '')} (${escapeHtml(preview.model?.endpoint_class || 'loopback')}).</span>`;
+        const privatePipes = preview.model_admission?.transport === 'private_anonymous_pipes';
+        const destination = privatePipes ? 'Isolated local worker through private process pipes; no model network endpoint'
+          : `${preview.model?.endpoint_host || ''}:${preview.model?.endpoint_port || ''} (${preview.model?.endpoint_class || 'loopback'})`;
+        localAgentPreviewSummary.innerHTML = `<strong>Approval required.</strong> ${escapeHtml(manifest.entry_count || 0)} source blocks · ${Number(manifest.total_chars || 0).toLocaleString()} characters · Maine law ${escapeHtml(lanes.legal_authority || 0)} · private records ${escapeHtml(lanes.private_record || 0)}.<br><span class="muted">Destination: ${escapeHtml(destination)}.</span>`;
+        if (preview.model_admission?.production_admitted === false) {
+          localAgentPreviewSummary.innerHTML += '<p class="status-bad"><strong>Research model — not approved for production use.</strong> Successful execution does not establish legal quality or release readiness. Review every candidate against its exact source.</p>';
+        }
+        if (preview.model_admission?.output_mode === 'typed_source_field_review') {
+          const fields = {clock_time:'Time', calendar_date:'Date', money:'Amount'};
+          const bases = {source_field:'Literal source field — not proof an event happened', reported_event:'Reported-event wording — not an established finding'};
+          localAgentPreviewSummary.innerHTML += `<p><strong>Research field contract:</strong> ${escapeHtml(fields[preview.model_admission.field_type] || 'Unsupported field')} · ${escapeHtml(bases[preview.model_admission.basis] || 'Unsupported basis')}.<br>Local QA model plus host checks; no deterministic fallback. Full original source context must be reviewed. A withheld value is not evidence of absence.</p>`;
+        }
         const quarantinedSources = Number(preview.injection_report?.instruction_quarantined_source_count || 0);
         if (quarantinedSources > 0) {
           localAgentPreviewSummary.innerHTML += `<p class="status-bad"><strong>${quarantinedSources} source block${quarantinedSources === 1 ? '' : 's'} quarantined.</strong> Instruction-like document text is masked from the model and cannot appear as a verified specialist excerpt. Your original record is unchanged; inspect it directly before narrowing the selection.</p>`;
@@ -9096,8 +9806,12 @@
           const blockers = Array.isArray(hardware.blockers) ? hardware.blockers : [];
           const needsRam = blockers.includes('insufficient_available_memory_for_specialist');
           const needsGpu = blockers.includes('compatible_gpu_headroom_required_for_specialist_precision');
+          const needsRuntime = blockers.includes('specialist_runtime_unavailable');
           const headroom = [];
-          if (needsRam && requiredMemory > 0) {
+          if (needsRuntime) headroom.push('The required local model runtime is unavailable. Repair the application runtime before retrying; no model was loaded.');
+          if (needsRam && requiredMemory > 0 && availableMemory <= 0) {
+            headroom.push('Available RAM could not be confirmed or is exhausted. Refresh the hardware check after freeing memory; total installed RAM is not proof of headroom.');
+          } else if (needsRam && requiredMemory > 0) {
             headroom.push(`This run needs ${((requiredMemory + gib) / gib).toFixed(1)} GiB free RAM (model allowance plus a 1 GiB system reserve); ${Math.max(0, availableMemory / gib).toFixed(1)} GiB is currently free. Close or pause other local workloads, then refresh this preview.`);
           }
           if (needsGpu && requiredVram > 0) {
@@ -9107,6 +9821,15 @@
             ? `Hardware check passed${executionAccelerator.name ? ` · ${executionAccelerator.name}` : executionAccelerator.kind === 'cpu' ? ' · CPU fallback selected' : ''}. The model has safe memory headroom for this run.${hardware.runtime_warning ? ` ${hardware.runtime_warning}` : ''}`
             : `${headroom.join(' ') || `Hardware check blocked this model: ${blockers.join(', ') || 'requirements could not be verified'}.`} The source-backed app remains available without it.`;
           localAgentPreviewSummary.innerHTML += `<p class="${hardware.status === 'ready' ? 'status-good' : 'status-bad'}"><strong>Before model load:</strong> ${escapeHtml(hardwareMessage)}</p>`;
+        }
+        if (preview.model?.provider_id === 'curated_ollama_reasoning') {
+          const gib = 1024 * 1024 * 1024;
+          const blockers = Array.isArray(hardware.blockers) ? hardware.blockers : [];
+          const lane = hardware.execution_lane === 'gpu_vram' ? 'available GPU memory' : hardware.execution_lane === 'system_memory' ? 'available system memory' : 'no verified execution lane';
+          const hardwareMessage = blockers.length
+            ? `This request needs either ${((Number(hardware.minimum_available_memory_bytes || 0)) / gib).toFixed(1)} GiB available system memory, or ${((Number(hardware.minimum_available_vram_bytes || 0)) / gib).toFixed(1)} GiB available GPU memory plus 2 GiB free system memory. Close other local workloads, then rebuild this preview. Your records are unchanged.`
+            : `Headroom preflight passed using ${lane}. This checks current device headroom only; it does not prove the model is installed, legally qualified, or appropriate for a filing.`;
+          localAgentPreviewSummary.innerHTML += `<p class="${blockers.length ? 'status-bad' : 'status-good'}"><strong>Before local Qwen runs:</strong> ${escapeHtml(hardwareMessage)}</p>`;
         }
         const modelSourceCards = Array.isArray(preview.model_source_cards) ? preview.model_source_cards : preview.source_cards;
         localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
@@ -9139,7 +9862,7 @@
         localAgentSecurityReport.textContent = '';
         localAgentStatus.textContent = 'Nothing was transmitted.';
       } finally {
-        localAgentBusy = false;
+        setLocalAgentBusy(false);
         localAgentRefreshPreview.disabled = false;
       }
     }
@@ -9166,9 +9889,9 @@
         if (saved.model) localAgentModel.value = saved.model;
       } catch (err) {}
       if (!savedProvider && ['evidence_review', 'drafting'].includes(String(payload.local_agent_task || ''))) {
-        localAgentProvider.value = 'fast_interchange_local';
+        localAgentProvider.value = 'curated_ollama_reasoning';
       }
-      syncFastInterchangeModelSelection();
+      applyLocalAgentProviderState();
       openOverlay(localAgentModal);
       localAgentModal.setAttribute('aria-hidden', 'false');
       if (localAgentBackdrop) { localAgentBackdrop.hidden = false; localAgentBackdrop.setAttribute('aria-hidden', 'false'); }
@@ -9193,7 +9916,7 @@
         localAgentStatus.textContent = 'Model settings changed. Refresh the exact source preview before approving again.';
         return;
       }
-      localAgentBusy = true;
+      setLocalAgentBusy(true);
       const requestEpoch = localAgentRequestEpoch;
       const original = localAgentPayload;
       [localAgentProvider, localAgentEndpoint, localAgentModel, localAgentTask].forEach((control) => { if (control) control.disabled = true; });
@@ -9205,7 +9928,7 @@
         run_id: localAgentPreview.context_manifest?.run_id
       } : null;
       localAgentCancel.textContent = localAgentActiveRun ? 'Cancel generation' : 'Close review (does not cancel generation)';
-      localAgentStatus.textContent = 'Running the approved context through the loopback local model…';
+      localAgentStatus.textContent = 'Running the approved context in the local model worker…';
       try {
         const config = localAgentConfigPayload();
         window.localStorage.setItem('mfl-local-agent-settings', JSON.stringify(config));
@@ -9229,7 +9952,20 @@
           localAgentPreview = null;
           return;
         }
-        localAgentBusy = false;
+        if (['local_model_failed_review_required', 'output_blocked_review_required', 'specialist_output_blocked_review_required', 'blocked'].includes(result.status)) {
+          const safeFailure = Array.isArray(result.warnings) && [
+            'fast_interchange_compact_python_network_denied',
+            'fast_interchange_compact_model_integrity_failed',
+            'fast_interchange_generation_timeout'
+          ].find(code => result.warnings.includes(code));
+          localAgentStatus.textContent = safeFailure
+            ? localAgentErrorMessage({safeCode: safeFailure})
+            : 'The local model run was blocked or could not complete. No new answer was accepted. Your original records and answer are unchanged. Review the selected sources, then refresh the preview before approving a new run.';
+          localAgentStatus.textContent += ' Review required.';
+          localAgentPreview = null;
+          return;
+        }
+        setLocalAgentBusy(false);
         closeLocalAgentDialog();
         const displayPayload = {
           ...result,
@@ -9245,7 +9981,7 @@
         renderLatestAnswer(displayPayload);
         renderSources(displayPayload.citations || []);
         renderBadges(displayPayload);
-        showToast('Loopback local model result added with provenance.');
+        showToast('Local model result added with provenance.');
       } catch (err) {
         if (requestEpoch !== localAgentRequestEpoch) return;
         localAgentStatus.textContent = err.safeCode === 'fast_interchange_generation_canceled'
@@ -9255,7 +9991,7 @@
         localAgentRun.disabled = true;
         localAgentStatus.textContent += ' Refresh the preview to obtain a new single-use approval.';
       } finally {
-        localAgentBusy = false;
+        setLocalAgentBusy(false);
         localAgentActiveRun = null;
         [localAgentProvider, localAgentEndpoint, localAgentModel, localAgentTask].forEach((control) => { if (control) control.disabled = false; });
         localAgentCancel.disabled = false;
@@ -9333,6 +10069,21 @@
         more.hidden = hiddenMatches === 0 && !expanded;
         more.textContent = expanded ? 'Show fewer sources' : `Show ${hiddenMatches} more source${hiddenMatches === 1 ? '' : 's'}`;
       }
+    }
+
+    function bindSourceCardActivation(card, activate) {
+      card.setAttribute('aria-haspopup', 'dialog');
+      card.addEventListener('click', (event) => {
+        // Nested controls keep their own action, including Technical disclosures.
+        const control = event.target.closest('button, a, input, select, textarea, summary, details, label, [contenteditable="true"]');
+        if (control && card.contains(control)) return;
+        activate();
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.target !== card || event.repeat || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        activate();
+      });
     }
 
     function bindInlineEvidenceActions(container, payload) {
@@ -9417,8 +10168,7 @@
           addMessage('assistant', 'Citation-link review loaded. Parsed links are not treatment conclusions.', {response_kind: 'citation_graph', ...graph, citations: [item]});
         } catch (err) { showToast(`Citation links unavailable: ${safeErrorInfo(err).message}`); }
       }));
-      container.querySelectorAll('.chat-evidence-card').forEach((card) => card.addEventListener('click', (event) => {
-        if (event.target.closest('button, a')) return;
+      container.querySelectorAll('.chat-evidence-card').forEach((card) => bindSourceCardActivation(card, () => {
         const item = items[Number(card.dataset.inlineSourceIndex)];
         if (item) showSourcePreview(item, card, {pin: true});
       }));
@@ -9488,6 +10238,55 @@
       if (!details) return '';
       const sourceCount = Number(receipt.source_card_count || 0);
       return `<details class="chat-progressive-details"${open ? ' open' : ''}><summary><strong>Expand analysis, missing information, and next steps</strong><span>Uses the same ${escapeHtml(sourceCount)} source card${sourceCount === 1 ? '' : 's'} shown above.</span></summary><div class="chat-progressive-detail-body">${details}<p class="muted">Review required. Expanding these details does not add sources or change the source basis of the concise answer.</p></div></details>`;
+    }
+
+    function renderConversationWorkboard(workboard) {
+      if (workboard?.schema_version !== 'conversation_workboard_v1') return '';
+      const route = workboard.route || {};
+      const stage = workboard.stage || {};
+      const goal = workboard.goal || {};
+      const dates = Array.isArray(workboard.date_candidates) ? workboard.date_candidates : [];
+      const records = Array.isArray(workboard.record_targets) ? workboard.record_targets : [];
+      const questions = Array.isArray(workboard.open_questions) ? workboard.open_questions : [];
+      const lanes = Array.isArray(workboard.source_lanes) ? workboard.source_lanes : [];
+      const laneCards = lanes.map((lane) => {
+        const kind = String(lane.lane || '').toLowerCase().includes('record') ? 'records' : 'law';
+        const count = Math.max(0, Number(lane.source_count || 0));
+        const availability = lane.available ? `${count} source card${count === 1 ? '' : 's'} available` : 'No source card returned';
+        return `<article><strong>${escapeHtml(lane.lane || 'Source lane')}</strong><p>${escapeHtml(availability)} · ${escapeHtml(lane.review_action || 'Open and inspect the original source.')}</p>${count ? `<button class="secondary compact-action" data-workboard-lane="${kind}" type="button">Open ${escapeHtml(lane.lane || 'source')} cards</button>` : ''}</article>`;
+      }).join('');
+      const dateList = dates.length
+        ? `<ul class="answer-list">${dates.map((item) => `<li><strong>${escapeHtml(item.label || 'Date mentioned')}</strong>${item.normalized_date ? ` · normalized locally as ${escapeHtml(item.normalized_date)}` : ''}<br><span class="muted">Confirm against the original paper or docket; this is not a deadline calculation.</span></li>`).join('')}</ul>`
+        : '<p class="muted">No date was extracted from this message.</p>';
+      const recordList = records.length
+        ? `<ul class="answer-list">${records.map((item) => `<li>${escapeHtml(item.label || 'Review item')} <span class="badge warn">${escapeHtml(String(item.review_state || 'review_required').replaceAll('_', ' '))}</span></li>`).join('')}</ul>`
+        : '<p class="muted">No document or record target was identified yet.</p>';
+      const questionList = questions.length
+        ? `<ul class="answer-list">${questions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+        : '<p class="muted">No additional question is required before reviewing the displayed source cards.</p>';
+      return `<details class="chat-conversation-workboard"><summary><strong>Conversation workboard</strong><span>Local intake analysis · review required</span></summary><div class="chat-conversation-workboard-body"><section class="chat-workboard-overview"><article><strong>${escapeHtml(route.label || 'Conversation route')}</strong><p>${escapeHtml(route.value || 'Not established')}</p></article><article><strong>${escapeHtml(stage.label || 'Case stage heard')}</strong><p>${escapeHtml(stage.value || 'Not established')}</p></article><article><strong>${escapeHtml(goal.label || 'Question or goal heard')}</strong><p>${escapeHtml(goal.value || 'Not established')}</p></article></section><section><h4>Dates to verify</h4>${dateList}</section><section><h4>Records or details to locate</h4>${recordList}</section><section><h4>Questions that could change the review</h4>${questionList}</section><section><h4>Source lanes</h4><div class="chat-workboard-lanes">${laneCards}</div></section><p class="muted"><strong>Child-impact prompt:</strong> ${escapeHtml(workboard.child_impact_prompt || '')}</p><p class="muted">${escapeHtml(workboard.boundary || 'Review required.')}</p></div></details>`;
+    }
+
+    function bindConversationWorkboard(container, workboard = null) {
+      container.querySelectorAll('[data-workboard-lane]').forEach((button) => button.addEventListener('click', () => {
+        const lane = String(button.dataset.workboardLane || '');
+        const sourceIds = Array.isArray(workboard?.source_lanes)
+          ? workboard.source_lanes
+            .filter((item) => (lane === 'records'
+              ? String(item?.lane || '').toLowerCase().includes('record')
+              : !String(item?.lane || '').toLowerCase().includes('record')))
+            .flatMap((item) => Array.isArray(item?.source_ids) ? item.source_ids : [])
+            .map((item) => String(item || '').trim())
+            .filter(Boolean)
+          : [];
+        openWorkbenchPanel('evidence');
+        window.requestAnimationFrame(() => {
+          if (!recordCardFilter) return;
+          recordCardFilter.value = sourceIds.join(' ');
+          applyRecordCardFilter();
+          recordCardFilter.focus({preventScroll: true});
+        });
+      }));
     }
 
     function correctionSeedSentence(text) {
@@ -9727,7 +10526,7 @@
 
     function renderMainChatAnswer(text, payload) {
       if (payload?.local_agent_result) {
-        return `<div class="chat-rich-answer"><div class="local-agent-answer-banner"><strong>Optional loopback local model analysis</strong><br>This answer used only the exact context you approved. It remains review-required analytical work product.</div><section class="chat-answer-main"><h3>Local model response</h3>${renderParagraphBlocks(text)}</section>${renderInlineEvidence(payload)}${renderContextManifest(payload)}${renderLocalAgentReceipt(payload)}</div>`;
+        return `<div class="chat-rich-answer"><div class="local-agent-answer-banner"><strong>Optional local model output</strong><br>This result used only the exact context you approved. It remains review-required work product, not a verified finding.<p data-model-grounding>${localModelGroundingLabel(payload)}</p></div><section class="chat-answer-main"><h3>Local model response</h3>${renderParagraphBlocks(text)}</section>${renderInlineEvidence(payload)}${renderContextManifest(payload)}${renderLocalAgentReceipt(payload)}</div>`;
       }
       if (payload?.response_kind === 'local_help_fast_path') {
         return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>Local workbench help</h3>${renderParagraphBlocks(text)}</section>${renderFastPathActions(payload)}<p class="muted">Review required remains visible because this is navigation help, not legal advice, a source-based answer, or a finding about your matter.</p></div>`;
@@ -9753,7 +10552,7 @@
       const intent = payload?.metadata?.answer_intent || {};
       const intentNotice = intent.primary_intent ? `<p class="chat-intent-notice ${intent.ambiguity ? 'status-warn' : 'muted'}"><strong>Route:</strong> ${escapeHtml(String(intent.primary_intent).replaceAll('_', ' '))}${intent.ambiguity ? ` · ${escapeHtml((intent.candidate_intents || []).join(', '))} need separate review` : ''}. This is a workflow hint, not a legal or factual finding.</p>` : '';
       const depthNotice = responseDepth === 'concise' ? '<p class="muted">Concise view selected. Source cards and review safeguards remain unchanged; choose Standard or Thorough for the same-basis analysis.</p>' : '';
-      return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${intentNotice}${renderQueryExpansionGuardrails(payload)}${renderTemporalAuthorityReview(payload)}${renderAuthorityConflictReview(payload)}${renderClarificationMinimizer(payload)}${renderAudiencePresentation(payload)}${renderInlineEvidence(payload)}${renderContextManifest(payload)}${depthNotice}${responseDepth === 'concise' ? '' : renderProgressiveAnswerDetails(payload, structured, {open: responseDepth === 'thorough'})}${renderAssumptionLedger(payload)}${renderQuestionDecomposition(payload)}${renderContradictionFollowup(payload)}${renderLatencyObservatory(payload)}${renderAnswerComparisonControls(payload, primary)}${renderAnswerCorrectionControls(payload, primary)}${renderConversationBranchControl(payload)}${renderFactPinControl(payload)}${renderUsefulnessControl(payload)}${renderActionableFooter(payload)}</div>`;
+      return `<div class="chat-rich-answer"><section class="chat-answer-main"><h3>What this means</h3>${renderParagraphBlocks(primary)}</section>${intentNotice}${renderQueryExpansionGuardrails(payload)}${renderTemporalAuthorityReview(payload)}${renderAuthorityConflictReview(payload)}${renderClarificationMinimizer(payload)}${renderAudiencePresentation(payload)}${renderInlineEvidence(payload)}${renderContextManifest(payload)}${depthNotice}${renderConversationWorkboard(structured.conversation_workboard)}${responseDepth === 'concise' ? '' : renderProgressiveAnswerDetails(payload, structured, {open: responseDepth === 'thorough'})}${renderAssumptionLedger(payload)}${renderQuestionDecomposition(payload)}${renderContradictionFollowup(payload)}${renderLatencyObservatory(payload)}${renderAnswerComparisonControls(payload, primary)}${renderAnswerCorrectionControls(payload, primary)}${renderConversationBranchControl(payload)}${renderFactPinControl(payload)}${renderUsefulnessControl(payload)}${renderActionableFooter(payload)}</div>`;
     }
 
     function responseReviewLabel(payload) {
@@ -9763,17 +10562,147 @@
       return blockers.length || failed || modelBlocked ? 'Review blocked' : 'Review required';
     }
 
+    function renderLocalAiConversationSetup(payload) {
+      const setup = payload?.conversation_setup || null;
+      if (!setup) {
+        return `<section class="local-ai-chat-card" data-local-ai-chat-card><strong>Optional local AI</strong><p>Would you like help setting up optional local AI on this computer? I can check the PC first. Nothing will be downloaded, installed, or shared without your clear permission.</p><div class="row"><button class="primary-action" data-local-ai-chat-check type="button">Check this PC</button><button class="secondary" data-local-ai-chat-skip type="button">Keep regular chat</button></div><p class="muted" data-local-ai-chat-status>Regular source-backed chat already works without local AI.</p></section>`;
+      }
+      const choices = Array.isArray(setup.choices) ? setup.choices : [];
+      const available = choices.filter((choice) => choice?.eligible);
+      const choiceText = available.length
+        ? available.map((choice) => `<li><strong>${escapeHtml(choice.label)}</strong> — ${escapeHtml(choice.plain_description)}</li>`).join('')
+        : '<li>No optional local model is recommended right now.</li>';
+      return `<section class="local-ai-chat-card" data-local-ai-chat-card><strong>Optional local AI check</strong><p>${escapeHtml(String(setup.message || 'This PC has been checked.'))}</p><ul>${choiceText}</ul><p><strong>Nothing changed.</strong> This was a local fit check only.</p><div class="row"><button class="secondary" data-local-ai-chat-check type="button">Check again</button><button class="secondary" data-local-ai-chat-skip type="button">Keep regular chat</button></div><p class="muted" data-local-ai-chat-status>Choose a model below to check existing components. Only missing components will be installed, after your confirmation.</p><div class="row">${choices.map(choice => `<button class="primary-action" data-local-ai-install-model="${escapeHtml(choice.id)}" type="button" ${choice.eligible ? '' : 'disabled'}>Set up ${escapeHtml(choice.label)}</button>`).join('')}</div><div data-local-ai-install-panel></div><details><summary>Questions you may have</summary><p><strong>What is downloaded?</strong> Only missing components: Ollama (about 1.6 GB), and the selected model (about 2.5 GB for 4B or 5.2 GB for 8B). Installed space is larger. You do not need both models. Ollama may run in the background and manage its own updates.</p><p><strong>Does this replace regular chat?</strong> No. Regular source-backed chat continues to work without a model.</p><p><strong>Does it decide my case or make documents filing-ready?</strong> No. Any local-model answer remains review-required.</p><p><strong>Will my matter be sent away?</strong> This check does not send matter text, install a model, or start a model.</p></details><details><summary>Technical details</summary><p>Model presence was not checked. This recommendation is not a legal-quality or filing-readiness decision.</p></details></section>`;
+    }
+
+    async function checkLocalAiConversation(wrapper) {
+      const card = wrapper?.querySelector?.('[data-local-ai-chat-card]');
+      if (!card) return;
+      const status = card.querySelector('[data-local-ai-chat-status]');
+      const button = card.querySelector('[data-local-ai-chat-check]');
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+      if (status) status.textContent = 'Checking this PC. Nothing is being downloaded or installed…';
+      try {
+        const payload = await fetchJson('/api/local-ai/setup/status');
+        const content = renderLocalAiConversationSetup(payload);
+        card.replaceWith(document.createRange().createContextualFragment(content));
+        const replacement = wrapper.querySelector('[data-local-ai-chat-card]');
+        bindLocalAiConversationActions(wrapper);
+        replacement?.querySelector('[data-local-ai-chat-status]')?.focus?.({preventScroll: true});
+      } catch (error) {
+        if (status) status.innerHTML = renderRecoverableError(error, {title: 'This PC could not be checked'});
+      } finally {
+        if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
+      }
+    }
+
+const localAiInstallPolls = new Map();
+
+    async function prepareLocalAiInstall(wrapper, model) {
+      const panel = wrapper.querySelector('[data-local-ai-install-panel]');
+      if (!panel) return;
+      const generation = String(Number(panel.dataset.setupGeneration || 0) + 1);
+      panel.dataset.setupGeneration = generation;
+      panel.textContent = 'Checking existing Ollama, models, memory and disk space…';
+      try {
+        const plan = await fetchJson('/api/local-ai/installation/prepare', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model})});
+        if (!panel.isConnected || panel.dataset.setupGeneration !== generation) return;
+        panel.innerHTML = `<strong>${escapeHtml(plan.label)}</strong><p>Ollama: ${plan.engine_installed ? 'already installed — reuse' : 'installation needed'}. Model: ${plan.model_installed ? 'already installed — skip download' : 'download needed'}.</p><p>Estimated download: ${(Number(plan.download_bytes || 0) / 1e9).toFixed(1)} GB. Space budget with reserve: ${(Number(plan.required_disk_bytes || 0) / 1e9).toFixed(1)} GB.</p><p>${escapeHtml(plan.consent_text)}</p>${plan.eligible ? '<label><input type="checkbox" data-ai-install-consent> I agree to the listed installation, local start and fictional test.</label><button type="button" class="primary-action" data-ai-install-start disabled>Set up now</button>' : '<p role="alert">Setup is blocked: ' + escapeHtml((plan.blockers || []).join(', ')) + '. Close unused apps or free space, then check again. Existing models are not overwritten.</p>'}<p>Licenses: <a href="https://github.com/ollama/ollama/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Ollama</a> · <a href="https://huggingface.co/Qwen/Qwen3-4B/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Qwen</a></p>`;
+        const consent = panel.querySelector('[data-ai-install-consent]');
+        const start = panel.querySelector('[data-ai-install-start]');
+        consent?.addEventListener('change', () => { start.disabled = !consent.checked; });
+        start?.addEventListener('click', async () => {
+          if (!consent.checked) return;
+          wrapper.querySelectorAll('[data-local-ai-install-model], [data-local-ai-chat-check]').forEach(button => { button.disabled = true; });
+          start.disabled = true; consent.disabled = true;
+          try {
+            const job = await fetchJson('/api/local-ai/installation/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({plan_token: plan.plan_token, user_confirmed: true})});
+            try { sessionStorage.setItem('mfl-ai-install-job', JSON.stringify({job_id: job.job_id})); } catch (_) {}
+            pollLocalAiInstall(wrapper, job.job_id);
+          } catch (error) {
+            wrapper.querySelectorAll('[data-local-ai-install-model], [data-local-ai-chat-check]').forEach(button => { button.disabled = false; });
+            panel.innerHTML = renderRecoverableError(error, {title: 'Local AI setup did not start'});
+          }
+        });
+      } catch (error) { panel.innerHTML = renderRecoverableError(error, {title: 'Installed components could not be checked'}); }
+    }
+
+    async function pollLocalAiInstall(wrapper, jobId) {
+      if (localAiInstallPolls.has(jobId)) return;
+      localAiInstallPolls.set(jobId, true);
+      const tick = async () => {
+        const panel = wrapper.querySelector('[data-local-ai-install-panel]') || wrapper.querySelector('[data-local-ai-chat-status]');
+        if (!wrapper.isConnected || !panel) { localAiInstallPolls.delete(jobId); return; }
+        try {
+          const job = await fetchJson('/api/local-ai/installation/jobs/' + encodeURIComponent(jobId));
+          const done = ['ready', 'failed', 'cancelled', 'interrupted'].includes(job.status);
+          const total = Number(job.total_bytes || 0);
+          const current = Math.min(total, Math.max(0, Number(job.completed_bytes || 0)));
+          panel.innerHTML = `<p role="status" aria-live="polite">${escapeHtml(job.message)}</p>${total ? '<progress aria-label="Current download layer" max="' + total + '" value="' + current + '"></progress><p>' + Math.floor(current / total * 100) + '% of current file/layer</p>' : ''}${job.error_code ? '<p>Recovery code: ' + escapeHtml(job.error_code) + '</p>' : ''}${job.status === 'ready' ? '<button class="primary-action" type="button" data-ai-install-use>Use in chat</button>' : !done ? '<button class="secondary" type="button" data-ai-install-cancel>Stop setup after safe step</button>' : '<button class="secondary" type="button" data-ai-install-retry>Check and try again</button>'}`;
+          panel.querySelector('[data-ai-install-cancel]')?.addEventListener('click', async event => {
+            event.currentTarget.disabled = true;
+            try { await fetchJson('/api/local-ai/installation/jobs/' + encodeURIComponent(jobId) + '/cancel', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'}); }
+            catch (_) { showToast('Could not request stop. Keep this window open and try again.'); }
+          });
+          panel.querySelector('[data-ai-install-retry]')?.addEventListener('click', () => checkLocalAiConversation(wrapper));
+          panel.querySelector('[data-ai-install-use]')?.addEventListener('click', () => {
+            if (!['qwen3:4b', 'qwen3:8b'].includes(job.model)) return;
+            try { localStorage.setItem('mfl-local-agent-settings', JSON.stringify({provider: 'curated_ollama_reasoning', endpoint: 'http://127.0.0.1:11434', model: job.model})); }
+            catch (_) { showToast('Choose the model in the review window; the preference could not be saved.'); }
+            panel.innerHTML = '<p role="status">Ready. Ask about your records, then choose Review evidence or Draft from records on the answer. You approve the exact sources before the model runs.</p>';
+            document.getElementById('question')?.focus();
+          });
+          if (done) {
+            wrapper.querySelectorAll('[data-local-ai-install-model], [data-local-ai-chat-check]').forEach(button => { button.disabled = false; });
+            localAiInstallPolls.delete(jobId);
+            try { sessionStorage.removeItem('mfl-ai-install-job'); } catch (_) {}
+          } else { setTimeout(tick, 2000); }
+        } catch (error) {
+          localAiInstallPolls.delete(jobId);
+          panel.innerHTML = renderRecoverableError(error, {title: 'Setup progress is unavailable. Reopen setup to check again'});
+          wrapper.querySelectorAll('[data-local-ai-install-model], [data-local-ai-chat-check]').forEach(button => { button.disabled = false; });
+        }
+      };
+      tick();
+    }
+
+    function bindLocalAiConversationActions(wrapper) {
+      wrapper?.querySelectorAll('[data-local-ai-install-model]').forEach(button => button.addEventListener('click', () => prepareLocalAiInstall(wrapper, button.dataset.localAiInstallModel)));
+      try { const saved = JSON.parse(sessionStorage.getItem('mfl-ai-install-job') || 'null'); if (saved?.job_id) pollLocalAiInstall(wrapper, saved.job_id); } catch (_) {}
+      wrapper?.querySelector('[data-local-ai-chat-check]')?.addEventListener('click', () => checkLocalAiConversation(wrapper));
+      wrapper?.querySelector('[data-local-ai-chat-skip]')?.addEventListener('click', () => {
+        const status = wrapper.querySelector('[data-local-ai-chat-status]');
+        if (status) status.textContent = 'That is okay. You can keep using regular source-backed chat without any model setup.';
+      });
+    }
+
+    function startLocalAiConversationSetup(userText = 'Help me set up optional local AI on this PC.') {
+      addMessage('user', userText);
+      addMessage('assistant', 'Optional local AI setup', {response_kind: 'local_ai_conversation_setup', review_required: true});
+    }
+
+    function isLocalAiSetupQuestion(value) {
+      const text = String(value || '').toLowerCase();
+      return /\b(local ai|ollama|local model|download (a |the )?model|install (a |the )?model|can (my |this )?(pc|computer|laptop).*(run|handle)).*\b/.test(text)
+        || /\b(can (my |this )?(pc|computer|laptop).*(run|handle)).*(local ai|model)\b/.test(text);
+    }
+
     function addMessage(role, text, payload = null) {
       const at = new Date().toISOString();
       messages.push({role, text, at});
+      const isLocalAiConversation = payload?.response_kind === 'local_ai_conversation_setup';
       const speaker = role === 'user' ? 'You' : 'Maine Family Law LLM';
       const bubbleClass = role === 'user' ? 'user-bubble' : 'assistant-bubble';
-      const content = role === 'assistant' ? renderMainChatAnswer(text, payload) : `<p>${escapeHtml(text)}</p>`;
+      const content = role === 'assistant'
+        ? payload?.response_kind === 'local_ai_conversation_setup'
+          ? renderLocalAiConversationSetup(payload)
+          : renderMainChatAnswer(text, payload)
+        : `<p>${escapeHtml(text)}</p>`;
       const evidenceCount = role === 'assistant'
         ? (payload?.direct_record_search ? (Array.isArray(payload?.record_groups) ? payload.record_groups.length : 0) : sourceItemsFromPayload(payload).length)
         : 0;
       const evidenceJump = evidenceCount ? `<button class="message-evidence-jump" data-message-evidence-jump type="button">Evidence ${evidenceCount}</button>` : '';
-      const draftAction = role === 'assistant' ? '<button class="message-draft-action" data-message-save-draft type="button">Save as draft</button>' : '';
+      const draftAction = role === 'assistant' && !isLocalAiConversation ? '<button class="message-draft-action" data-message-save-draft type="button">Save as draft</button>' : '';
       const localAgentAction = role === 'assistant' && payload?.local_agent_available && !payload?.local_agent_result
         ? payload?.local_agent_task === 'evidence_review'
           ? '<button class="message-local-agent-action" data-message-local-agent data-specialist-task="evidence_review" type="button">Review evidence</button><button class="message-local-agent-action" data-message-local-agent data-specialist-task="drafting" type="button">Draft from records</button>'
@@ -9791,6 +10720,7 @@
       transcript.appendChild(wrapper);
       if (role === 'assistant' && payload) bindInlineEvidenceActions(wrapper, payload);
       if (role === 'assistant' && payload) bindAnswerFollowUps(wrapper);
+      if (role === 'assistant' && payload) bindConversationWorkboard(wrapper, payload?.structured_answer?.conversation_workboard);
       if (role === 'assistant' && payload) bindActionableFooter(wrapper);
       if (role === 'assistant' && payload) bindAnswerCorrectionControls(wrapper, payload);
       if (role === 'assistant' && payload) bindClarificationMinimizer(wrapper);
@@ -9802,6 +10732,7 @@
       if (role === 'assistant' && payload) bindFactPinControl(wrapper, payload);
       if (role === 'assistant' && payload) bindUsefulnessControl(wrapper, payload);
       if (role === 'assistant' && payload?.response_kind === 'local_help_fast_path') bindFastPathActions(wrapper);
+      if (role === 'assistant' && payload?.response_kind === 'local_ai_conversation_setup') bindLocalAiConversationActions(wrapper);
       if (payload?.direct_record_search) bindRecordOpenActions(wrapper);
       wrapper.querySelector('[data-message-save-draft]')?.addEventListener('click', () => saveAnswerAsDraft(text, payload));
       wrapper.querySelectorAll('[data-message-local-agent]').forEach((button) => button.addEventListener('click', (event) => {
@@ -9823,6 +10754,9 @@
     }
 
     function resetSession({preserveContext} = {preserveContext: false}) {
+      clearTranscriptDownloads();
+      const exportStatus = document.getElementById('transcript-export-status');
+      if (exportStatus) { exportStatus.textContent = ''; exportStatus.hidden = true; }
       closeRecordInspector();
       question.value = '';
       if (!preserveContext) {
@@ -9937,6 +10871,13 @@
         return;
       }
       question.removeAttribute('aria-invalid');
+      if (isLocalAiSetupQuestion(text)) {
+        question.value = '';
+        question.style.height = '';
+        question.dataset.lastSubmitCleared = 'true';
+        startLocalAiConversationSetup(text);
+        return;
+      }
       sending = true;
       requestAbortReason = '';
       askButton.disabled = true;
@@ -11362,6 +12303,7 @@
         ask();
       });
     });
+    localAiChatSetup?.addEventListener('click', () => startLocalAiConversationSetup());
 
     const startingPathPrompts = Object.freeze({
       understand_situation: 'Help me understand what to do after I received Maine family court papers.',
@@ -11485,8 +12427,7 @@
       setTimeout(() => { copySourcesButton.textContent = 'Copy source cards'; }, 1100);
     });
     downloadButton.addEventListener('click', () => {
-      if (!confirmFullLocalExport()) return;
-      const content = [
+      requestTranscriptDownload(() => [
         'Maine Family Law LLM local transcript',
         'Review required. Not legal advice.',
         '',
@@ -11497,19 +12438,10 @@
         '',
         'Latest source cards (full local export):',
         JSON.stringify(lastSources || [], null, 2)
-      ].join('\n');
-      const blob = new Blob([content || answer.textContent || 'No transcript yet.'], {type: 'text/plain'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'maine-family-law-llm-transcript.txt';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Transcript saved.');
+      ].join('\n'), 'txt');
     });
     downloadJsonButton.addEventListener('click', () => {
-      if (!confirmFullLocalExport()) return;
-      const payload = {
+      requestTranscriptDownload(() => JSON.stringify({
         schema_version: 'local_chat_transcript_v3',
         generated_at: new Date().toISOString(),
         review_required: true,
@@ -11527,15 +12459,7 @@
           missing_information: lastPayload?.metadata?.missing_information || [],
           follow_up_questions: lastPayload?.metadata?.follow_up_questions || []
         } : null
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'maine-family-law-llm-transcript.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Transcript JSON saved.');
+      }, null, 2), 'json');
     });
     clearButton.addEventListener('click', () => {
       if (window.confirm('Clear the visible conversation from this workbench? This cannot erase browser, operating-system, backup, print, or external history.')) {
@@ -11645,6 +12569,8 @@
     schemaMigrationLabRun?.addEventListener('click', runSchemaMigrationLab);
     localWorkbenchReleaseReadiness?.addEventListener('click', inspectLocalWorkbenchReleaseReadiness);
     localWorkbenchSavePreferences?.addEventListener('click', saveLocalWorkbenchPreferences);
+    localAiSetupRefresh?.addEventListener('click', loadLocalAiSetup);
+    localAiSetupBasic?.addEventListener('click', chooseLocalAiBasicMode);
     localWorkbenchOverlay?.addEventListener('mousedown', (event) => {
       if (event.target === localWorkbenchOverlay) closeLocalWorkbench();
     });
@@ -11674,10 +12600,11 @@
     filingPacketExclusive?.addEventListener('change', updateWorkspaceControls);
     filingPacketApproved?.addEventListener('change', updateWorkspaceControls);
     filingPacketAssign?.addEventListener('click', assignFilingPacketReviewer);
+    assignmentMigrationConfirm?.addEventListener('change', updateWorkspaceControls);
+    assignmentMigrationRun?.addEventListener('click', migrateFilingAssignments);
     filingPacketRefresh?.addEventListener('click', () => loadFilingPacketStatus(documentWorkspaceState.active?.document_id || ''));
     filingPacketBuild?.addEventListener('click', buildReviewedFilingPacket);
-    authorityImpactBase?.addEventListener('change', updateWorkspaceControls);
-    authorityImpactTarget?.addEventListener('change', updateWorkspaceControls);
+    [authorityImpactBase, authorityImpactTarget].forEach(control => control?.addEventListener('change', () => { if (authorityImpactApproved) authorityImpactApproved.checked = false; updateWorkspaceControls(); }));
     authorityImpactApproved?.addEventListener('change', updateWorkspaceControls);
     authorityImpactRefresh?.addEventListener('click', () => loadAuthorityImpactStatus(documentWorkspaceState.active?.document_id || ''));
     authorityImpactAnalyze?.addEventListener('click', analyzeAuthorityImpact);
@@ -12729,12 +13656,14 @@
     function recentWorkNotice() {
       let section = document.getElementById('recent-work-restore');
       if (section || !question?.parentElement) return section;
-      section = document.createElement('section');
+      section = document.createElement('details');
       section.id = 'recent-work-restore';
       section.className = 'document-review-card recent-work-restore';
       section.hidden = true;
       section.setAttribute('aria-live', 'polite');
-      question.parentElement.insertAdjacentElement('beforebegin', section);
+      // Keep restoration inside the scrolling conversation, not an implicit
+      // fourth grid row that can squeeze the message area to zero height.
+      document.querySelector('.chat-scroll')?.prepend(section);
       return section;
     }
 
@@ -12747,6 +13676,9 @@
       const draft = String(point.unsent_draft || '');
       section.hidden = false;
       section.innerHTML = `<div class="document-review-heading"><div><span>Encrypted active-matter restore point</span><strong>Recent work is available</strong></div><span class="badge warn">Review required</span></div><p>A locally saved workspace from ${escapeHtml(point.saved_at || 'an earlier session')} can restore a scroll position${draft ? ', unsent draft text' : ''}${count ? `, and ${count} selected source${count === 1 ? '' : 's'}` : ''}. It will not alter records, drafts, or findings.</p><div class="document-workspace-actions"><button class="primary-action" id="recent-work-restore-action" type="button">Restore safe context</button>${count ? '<button class="secondary" id="recent-work-source-action" type="button">Open saved source</button>' : ''}<button class="secondary" id="recent-work-clear-action" type="button">Clear saved context</button></div><div class="document-workspace-status" id="recent-work-status">Review the restored draft and source context before relying on it.</div>`;
+      const summary = document.createElement('summary');
+      summary.textContent = 'Recent work is available — review saved context';
+      section.prepend(summary);
       section.querySelector('#recent-work-restore-action')?.addEventListener('click', restoreRecentWork);
       section.querySelector('#recent-work-source-action')?.addEventListener('click', (event) => openRecentWorkSource(event.currentTarget));
       section.querySelector('#recent-work-clear-action')?.addEventListener('click', clearRecentWork);
@@ -13310,13 +14242,20 @@
     }());
     (function installGuidedFormSessionControl() {
       const host=findingsFormsArtifacts?.parentElement;if(!host||document.getElementById('guided-form-session-start'))return;
-      const section=document.createElement('section');section.className='document-review-card guided-form-session-control';section.innerHTML='<div class="document-review-heading"><div><span>Encrypted local working state</span><strong>Guided form session</strong></div><span class="badge warn">Review required</span></div><p>Save the displayed form working-copy values locally, validate required fields, and keep stale or incomplete forms blocked. This does not complete an official form or create a filing-ready document.</p><div class="document-workspace-fields"><label>Session ID<input id="guided-form-session-id" maxlength="24" placeholder="Start a session or paste a local session ID"></label><label>Reviewer notes<textarea id="guided-form-session-notes" rows="2" maxlength="2000" placeholder="Local notes for the working-copy session"></textarea></label></div><label class="document-review-attestation"><input id="guided-form-session-confirm" type="checkbox"> I confirm these are local review working-copy values and I will review the official form, source freshness, and all blockers.</label><div class="document-workspace-actions"><button class="secondary" id="guided-form-session-start" type="button">Start encrypted session</button><button class="secondary" id="guided-form-session-load" type="button">Load saved session</button><button class="secondary" id="guided-form-session-save" type="button">Save working values</button><button class="primary-action" id="guided-form-session-validate" type="button">Validate working copy</button><button class="secondary" id="guided-form-session-receipt" type="button">Show receipt</button></div><div aria-live="polite" class="document-workspace-status" id="guided-form-session-result">Choose verified current forms, build the exact-revision review, then start a local session.</div>';
-      findingsFormsArtifacts.insertAdjacentElement('afterend',section);const result=section.querySelector('#guided-form-session-result'),id=section.querySelector('#guided-form-session-id'),notes=section.querySelector('#guided-form-session-notes'),confirmed=section.querySelector('#guided-form-session-confirm');let sessionId='';const active=()=>documentWorkspaceState.active||{};const values=()=>typeof collectFindingsFormsValues==='function'?collectFindingsFormsValues():{};const selected=()=>typeof findingsFormsSelectedIds==='function'?findingsFormsSelectedIds():[];const show=(payload,label)=>{const blockers=payload?.validation?.blockers||payload?.completion?.blockers||payload?.blockers||[];result.innerHTML='<strong>'+escapeHtml(label)+'</strong>'+ (blockers.length?'<p>Blockers: '+escapeHtml(blockers.join(', ').replaceAll('_',' '))+'.</p>':'<p>Review required remains visible. No filing-ready status was created.</p>');};
+      const section=document.createElement('section');section.className='document-review-card guided-form-session-control';section.innerHTML='<div class="document-review-heading"><div><span>Encrypted local working state</span><strong>Guided form session</strong></div><span class="badge warn">Review required</span></div><p>Save the displayed form working-copy values locally, validate required fields, and keep stale or incomplete forms blocked. This does not complete an official form or create a filing-ready document.</p><div class="document-workspace-fields"><label>Session ID<input id="guided-form-session-id" maxlength="24" placeholder="Start a session or paste a local session ID"></label><label>Reviewer notes<textarea id="guided-form-session-notes" rows="2" maxlength="2000" placeholder="Local notes for the working-copy session"></textarea></label></div><label class="document-review-attestation"><input id="guided-form-session-confirm" type="checkbox"> I confirm these are local review working-copy values and I will review the official form, source freshness, and all blockers.</label><div class="document-workspace-actions"><button class="secondary" id="guided-form-session-start" type="button">Start encrypted session</button><button class="secondary" id="guided-form-session-load" type="button">Load saved session</button><button class="secondary" id="guided-form-session-save" type="button">Save working values</button><button class="primary-action" id="guided-form-session-validate" type="button">Validate working copy</button><button class="secondary" id="guided-form-session-receipt" type="button">Show receipt</button></div><div aria-live="polite" class="document-workspace-status" id="guided-form-session-result">Choose verified current forms, build the exact-revision review, then start a local session.</div><details class="guided-form-header-helper"><summary>Fill repeated header fields from selected local records</summary><p>Choose record IDs already imported into this matter. The helper only recognizes explicit Court, Docket/Case, Petitioner/Plaintiff, and Respondent/Defendant labels. It never changes an official court form, replaces a typed value, or resolves a conflict.</p><label>Selected local record IDs (comma separated)<input id="guided-form-header-record-ids" maxlength="5000" placeholder="Use IDs from your local record inventory; OCR must already be complete"></label><div class="document-workspace-actions"><button class="secondary" id="guided-form-header-preview" type="button">Find source-bound candidates</button><button class="secondary" id="guided-form-header-apply" type="button" disabled>Copy selected candidates to empty fields</button></div><div aria-live="polite" class="document-workspace-status" id="guided-form-header-result">Start or load a session, select local record IDs, then inspect each exact source candidate.</div></details>';
+      findingsFormsArtifacts.insertAdjacentElement('afterend',section);
+      const result=section.querySelector('#guided-form-session-result'),id=section.querySelector('#guided-form-session-id'),notes=section.querySelector('#guided-form-session-notes'),confirmed=section.querySelector('#guided-form-session-confirm'),headerIds=section.querySelector('#guided-form-header-record-ids'),headerResult=section.querySelector('#guided-form-header-result'),headerApply=section.querySelector('#guided-form-header-apply');
+      let sessionId='',headerSuggestions=[];const active=()=>documentWorkspaceState.active||{};const values=()=>typeof collectFindingsFormsValues==='function'?collectFindingsFormsValues():{};const selected=()=>typeof findingsFormsSelectedIds==='function'?findingsFormsSelectedIds():[];const recordIds=()=>String(headerIds?.value||'').split(',').map((item)=>item.trim()).filter(Boolean);
+      const show=(payload,label)=>{const blockers=payload?.validation?.blockers||payload?.completion?.blockers||payload?.blockers||[];result.innerHTML='<strong>'+escapeHtml(label)+'</strong>'+ (blockers.length?'<p>Blockers: '+escapeHtml(blockers.join(', ').replaceAll('_',' '))+'.</p>':'<p>Review required remains visible. No filing-ready status was created.</p>');};
+      const restoreValues=(saved)=>{findingsFormsFields?.querySelectorAll('[data-findings-form-values]').forEach((fieldset)=>{const formId=String(fieldset.dataset.findingsFormValues||'');const fields=saved?.[formId]||{};fieldset.querySelectorAll('[data-findings-field]').forEach((input)=>{const name=String(input.dataset.findingsField||'');if(Object.prototype.hasOwnProperty.call(fields,name))input.value=String(fields[name]||'');});});};
+      const renderHeaderSuggestions=(payload)=>{headerSuggestions=Array.isArray(payload?.suggestions)?payload.suggestions:[];headerApply.disabled=!headerSuggestions.length;const blockers=Array.isArray(payload?.blockers)?payload.blockers:[];if(!headerSuggestions.length){headerResult.innerHTML='<strong>No fields copied.</strong><p>'+escapeHtml(blockers.map((item)=>String(item).replaceAll('_',' ')).join('. ')||'No explicitly labelled header value was found in those records.')+'</p>';return;}headerResult.innerHTML='<strong>Review each candidate before copying it.</strong><p>OCR-derived values and conflicts stay review-required. Existing working-copy values are preserved.</p><div class="guided-form-header-candidates">'+headerSuggestions.map((item)=>'<article><label><input type="checkbox" data-guided-header-suggestion value="'+escapeHtml(String(item.suggestion_id||''))+'"> <strong>'+escapeHtml(String(item.field_key||'').replaceAll('_',' '))+':</strong> '+escapeHtml(String(item.value||''))+'</label><p><span class="badge '+(item.conflict?'warn':'')+'">'+escapeHtml(String(item.status||'review_required').replaceAll('_',' '))+'</span> '+(item.ocr_derived?'OCR-derived · ':'')+escapeHtml(String(item.source?.source_title||'Local record'))+'</p><details><summary>Show exact source text</summary><blockquote>'+escapeHtml(String(item.exact_source_text||''))+'</blockquote><small>Record '+escapeHtml(String(item.source?.source_id||''))+' · hash '+escapeHtml(String(item.source?.source_hash||'').slice(0,12))+'</small></details></article>').join('')+'</div>';};
       section.querySelector('#guided-form-session-start').addEventListener('click',async()=>{const doc=String(active().document_id||''),formIds=selected();if(!doc||!formIds.length){result.textContent='Open a saved draft, load the current-form catalog, select verified current form(s), and build the exact-revision review first.';return;}if(!findingsFormsApproved?.checked||!confirmed?.checked){result.textContent='Confirm both the exact-revision review and local working-copy boundary.';return;}try{result.textContent='Creating encrypted local guided-form session…';const p=await fetchJson('/api/forms/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({document_id:doc,proceeding_type:findingsFormsPosture?.value||'family_matter',selected_form_ids:formIds,approved:true})});sessionId=String(p?.session_id||'');id.value=sessionId;show(p,'Encrypted local session started.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided form session could not be started'});}});
-      section.querySelector('#guided-form-session-load').addEventListener('click',async()=>{const requested=String(id?.value||'').trim();if(!requested){result.textContent='Enter a local session ID to reopen it in this active matter.';return;}try{result.textContent='Loading encrypted local session…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(requested));const session=p?.session||{};sessionId=String(session.session_id||requested);id.value=sessionId;if(notes)notes.value=String(session.reviewer_notes||'');const saved=session.form_values||{};findingsFormsFields?.querySelectorAll('[data-findings-form-values]').forEach((fieldset)=>{const formId=String(fieldset.dataset.findingsFormValues||'');const fields=saved?.[formId]||{};fieldset.querySelectorAll('[data-findings-field]').forEach((input)=>{const name=String(input.dataset.findingsField||'');if(Object.prototype.hasOwnProperty.call(fields,name))input.value=String(fields[name]||'');});});show(p,'Encrypted local session loaded.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided-form session could not be loaded'});}});
+      section.querySelector('#guided-form-session-load').addEventListener('click',async()=>{const requested=String(id?.value||'').trim();if(!requested){result.textContent='Enter a local session ID to reopen it in this active matter.';return;}try{result.textContent='Loading encrypted local session…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(requested));const session=p?.session||{};sessionId=String(session.session_id||requested);id.value=sessionId;if(notes)notes.value=String(session.reviewer_notes||'');restoreValues(session.form_values||{});show(p,'Encrypted local session loaded.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided-form session could not be loaded'});}});
       section.querySelector('#guided-form-session-save').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}try{result.textContent='Saving encrypted local working values…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_values:values(),reviewer_notes:String(notes?.value||''),selected_form_ids:selected(),approved:true})});show(p,'Working values saved locally.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Working values could not be saved'});}});
       section.querySelector('#guided-form-session-validate').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}if(!confirmed?.checked){result.textContent='Confirm the local review boundary before validation.';return;}try{result.textContent='Checking required fields, document revision, and current-form blockers…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_values:values(),confirmed:true})});show(p,'Working-copy validation completed.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Working-copy validation could not be completed'});}});
       section.querySelector('#guided-form-session-receipt').addEventListener('click',async()=>{if(!sessionId){result.textContent='Start or reopen a local guided-form session first.';return;}try{result.textContent='Loading local session receipt…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/receipt');show(p,p?.status==='pass'?'Completion receipt loaded.':'No completion receipt is available yet.');}catch(e){result.innerHTML=renderRecoverableError(e,{title:'Guided-form receipt could not be loaded'});}});
+      section.querySelector('#guided-form-header-preview').addEventListener('click',async()=>{if(!sessionId){headerResult.textContent='Start or load an encrypted local guided-form session first.';return;}if(!recordIds().length){headerResult.textContent='Enter one or more local record IDs from this active matter.';return;}try{headerResult.textContent='Reading only selected local record text for explicit header labels…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/header-suggestions/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selected_record_ids:recordIds()})});renderHeaderSuggestions(p);}catch(e){headerResult.innerHTML=renderRecoverableError(e,{title:'Header suggestions could not be prepared'});}});
+      headerApply.addEventListener('click',async()=>{const accepted=[...section.querySelectorAll('[data-guided-header-suggestion]:checked')].map((input)=>String(input.value||''));if(!sessionId||!accepted.length){headerResult.textContent='Select at least one exact-source candidate to copy.';return;}if(!confirmed?.checked){headerResult.textContent='Confirm the local review boundary before copying candidates.';return;}try{headerResult.textContent='Copying only selected candidates into empty working-copy fields…';const p=await fetchJson('/api/forms/session/'+encodeURIComponent(sessionId)+'/header-suggestions/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selected_record_ids:recordIds(),accepted_suggestion_ids:accepted,confirmed:true})});restoreValues(p?.session?.form_values||{});headerApply.disabled=true;headerResult.innerHTML='<strong>Selected candidates copied to empty working-copy fields.</strong><p>Review required remains. '+escapeHtml(String((p?.applied||[]).length))+' field(s) changed; '+escapeHtml(String((p?.preserved_existing_values||[]).length))+' existing field(s) were preserved.</p><p>Use Save working values only after you review the visible values and exact sources.</p>';}catch(e){headerResult.innerHTML=renderRecoverableError(e,{title:'Header candidates could not be copied'});}});
     }());
     (function installArgumentCounterargumentMatrixControl() {
       const host=documentWorkspaceMeta?.parentElement;if(!host||document.getElementById('argument-matrix-create'))return;

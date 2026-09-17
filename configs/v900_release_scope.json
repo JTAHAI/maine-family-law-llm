@@ -1,0 +1,33 @@
+{
+  "schema_version": "v900_release_scope_v1",
+  "release": "9.0.0",
+  "package_version": "9.0.0.0",
+  "decision": "PACKAGE_CANDIDATE_PENDING_VERIFICATION",
+  "release_type": "major",
+  "existing_feature_scope_reference": "configs/v800_release_scope.json",
+  "previous_maintenance_scope_reference": "configs/v802_release_scope.json",
+  "canonical_feature_truth_manifest": "configs/release_feature_truth.json",
+  "public_feature_claims_status": "pending_current_package_verification",
+  "new_public_feature_ids": ["optional_local_qwen_source_review"],
+  "optional_local_qwen_source_review": {
+    "models": ["qwen3:4b", "qwen3:8b"],
+    "tasks": ["evidence_review", "drafting"],
+    "evidence_review_output": "exact_model_selected_excerpts_only_no_narrative_conclusions",
+    "drafting_output": "verified_record_quotations_as_source_attributed_working_material_no_free_factual_prose",
+    "requires_separately_installed_ollama_and_model": true,
+    "source_approval_required": true,
+    "output_claims_verified": false,
+    "specialist_legal_quality_certification": false,
+    "automatic_downloads": false,
+    "limitations": ["Short selected passages only; not whole-corpus inference", "Model-generated conclusions require human review", "General-purpose Qwen models, not admitted Maine-law specialists", "Model names are not cryptographic weight admission", "Available memory is checked again for each request"]
+  },
+  "new_bundled_legal_model_ids": [],
+  "model_import_requires_production_admission": true,
+  "excluded_model_candidate_classes": ["untrained_specialist_slots", "research_only_protocol_adapters", "failed_quality_evidence_review_candidates", "failed_quality_drafting_candidates"],
+  "storage_schema_change": false,
+  "automatic_downloads": false,
+  "review_required": true,
+  "attorney_approval_claimed": false,
+  "enterprise_organizational_validation_claimed": false,
+  "store_certification_claimed": false
+}

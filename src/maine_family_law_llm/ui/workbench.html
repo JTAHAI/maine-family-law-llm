@@ -146,6 +146,7 @@
           <button type="button" class="starter-chip example" data-example="I was served with family court papers. What should I do first?">I was served</button>
           <button type="button" class="starter-chip example" data-example="What if I need protection from abuse?">Someone may be unsafe</button>
           <button type="button" class="starter-chip example" data-example="How do I organize evidence for family court?">Organize records</button>
+          <button class="starter-chip" id="local-ai-chat-setup" type="button">Set up local AI</button>
           <button class="starter-chip" id="more-starters-button" type="button">More starting points</button>
         </div>
         <div aria-live="polite" class="session-summary" id="session-summary">Maine law · Parent · Plain language · General Maine law · Local-only</div>
@@ -178,6 +179,7 @@
       <div class="composer-actions"><button type="button" class="secondary compact-action" id="copy-button">▢ Copy answer</button><button class="secondary compact-action" id="download-button" type="button">▱ Save transcript</button><details class="more-menu"><summary>••• More</summary><div class="more-menu-popover"><button class="secondary" id="compact-context-button" type="button">Compact safe context</button><button class="secondary" id="clear-draft-button" type="button">Clear draft</button><button class="secondary" id="clear-button" type="button">Clear visible conversation</button><button class="secondary" id="download-json-button" style="display:none" type="button">Download JSON</button></div></details></div>
       <div class="composer-meta">Press <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for a new line · <strong>Ctrl+K</strong> for commands</div>
     </div>
+    <p id="transcript-export-status" class="field-hint" role="status" aria-live="polite" aria-atomic="true" hidden></p>
   </div>
 </section>
 
@@ -613,6 +615,11 @@ contact schedule"></textarea></label>
         <label class="document-review-attestation"><input id="filing-packet-approved" type="checkbox"/> I approve generating a deterministic review packet for this exact revision.</label>
         <button class="primary-action" disabled id="filing-packet-build" type="button">Build reviewed filing packet</button>
         <div class="filing-packet-results" id="filing-packet-results">Open a saved document to inspect incremental review units.</div>
+        <section id="assignment-migration-panel" hidden aria-label="Reviewer history migration">
+          <p id="assignment-migration-preview" style="font-size:14px;overflow-wrap:anywhere" role="status"></p>
+          <label class="document-review-attestation" style="font-size:14px;line-height:1.5;text-transform:none;letter-spacing:normal"><input id="assignment-migration-confirm" type="checkbox"/> I reviewed the preview and approve encrypting ALL reviewer assignment history in this active matter. Keep the exact originals encrypted; do not activate historical assignments. Older apps cannot open this ledger.</label>
+          <button id="assignment-migration-run" type="button" class="secondary" disabled aria-describedby="assignment-migration-preview">Encrypt reviewed assignment history</button>
+        </section>
         <div class="filing-packet-artifacts" id="filing-packet-artifacts"></div>
       </section>
       <section class="document-review-card authority-change-impact-card">
@@ -622,7 +629,8 @@ contact schedule"></textarea></label>
         <button class="secondary" disabled id="authority-impact-refresh" type="button">Refresh verified generations</button>
         <button class="secondary" disabled id="authority-impact-analyze" type="button">Analyze impact</button>
         <button class="secondary" disabled id="authority-impact-matter" type="button">Review saved matter work</button>
-        <label class="document-review-attestation"><input id="authority-impact-approved" type="checkbox"/> I approve creating an immutable revalidation packet for this exact revision and the selected verified generations.</label>
+        <p style="font-size:14px">Review required. Generation hashes detect source changes, not legal materiality. Packet creation writes separate unencrypted review copies in this matter; share or export them only after privacy review.</p>
+        <label class="document-review-attestation"><input id="authority-impact-approved" type="checkbox"/> I approve creating unencrypted review copies for this exact revision and the selected verified generations.</label>
         <button class="primary-action" disabled id="authority-impact-build" type="button">Build authority revalidation packet</button>
         <div class="authority-impact-results" id="authority-impact-results">Open a saved document and configure an external authority data root.</div>
         <div class="authority-impact-artifacts" id="authority-impact-artifacts"></div>
@@ -651,12 +659,12 @@ contact schedule"></textarea></label>
   <div class="local-agent-safety"><strong>The source remains the authority.</strong> The local model is an optional worker. It cannot certify legal correctness, evidence, or filing readiness.</div>
   <div class="local-agent-layout">
     <aside class="local-agent-settings">
-      <label>Provider<select id="local-agent-provider"><option value="ollama">Ollama</option><option value="openai_compatible_local">OpenAI-compatible local server</option><option value="fast_interchange_local">FAST INTERCHANGE admitted local worker</option></select></label>
+      <label>Provider<select id="local-agent-provider"><option value="curated_ollama_reasoning">Local Qwen reasoning (4B / 8B)</option><option value="ollama">Other Ollama model (advanced)</option><option value="openai_compatible_local">OpenAI-compatible local server</option><option value="sentinel_ollama">SENTINEL configured local route</option><option value="fast_interchange_local">FAST INTERCHANGE admitted local worker</option></select></label>
       <label>Loopback endpoint<input id="local-agent-endpoint" value="http://127.0.0.1:11434" spellcheck="false"/></label>
-      <label>Model name<input id="local-agent-model" value="qwen2.5:7b" spellcheck="false"/></label>
+      <label>Model name<input id="local-agent-model" list="local-agent-curated-models" value="qwen3:4b" spellcheck="false"/><datalist id="local-agent-curated-models"><option value="qwen3:4b">Qwen3 4B — lower memory</option><option value="qwen3:8b">Qwen3 8B — more capable, needs more memory</option></datalist></label>
       <label>Approved task<select id="local-agent-task"><option value="intake_triage">Intake triage</option><option value="evidence_review">Evidence Review — compare records</option><option value="authority_review" selected>Authority review</option><option value="drafting">Drafting Assistant — source-bound</option><option value="parenting_plan_review">Parenting-plan review</option><option value="financial_disclosure_review">Financial-disclosure review</option><option value="safety_privacy_review">Safety and privacy review</option></select></label>
-      <small>The app checks memory and graphics hardware before loading a specialist. FAST INTERCHANGE also requires an admitted model for this exact task. Selecting a task does not train or certify a model.</small>
-      <div class="local-agent-policy-list"><span>✓ Literal 127.0.0.1 / ::1 only</span><span>✓ Exact context hash approval</span><span>✓ Source instructions quarantined</span><span>✓ Review required</span><span>FAST INTERCHANGE requires a signed, admitted model pack for this exact task. No worker starts automatically.</span></div>
+      <small>Local Qwen permits only 4B or 8B over this device's loopback runtime and withholds replies that cannot cite approved sources. It is not Maine-law qualified. FAST INTERCHANGE also requires an admitted model for its exact task.</small>
+      <div class="local-agent-policy-list"><span>✓ Literal 127.0.0.1 / ::1 only</span><span>✓ Exact context hash approval</span><span>✓ Source instructions quarantined</span><span>✓ Review required</span><span>SENTINEL uses only an operator-configured loopback gateway and allowlisted models; this window cannot set either.</span><span>FAST INTERCHANGE requires a signed, admitted model pack for this exact task. No worker starts automatically.</span></div>
       <section class="local-agent-worker-control" aria-labelledby="local-agent-worker-title">
         <strong id="local-agent-worker-title">FAST INTERCHANGE worker</strong>
         <p>For an installed, admitted specialist only. The app checks this computer before loading it and never downloads a model.</p>
@@ -1006,6 +1014,12 @@ contact schedule"></textarea></label>
 <p>See what this PC can run, what local AI is available, and what requires your explicit approval. This panel never downloads a model or enables a connector on its own.</p>
 <div aria-live="polite" class="status-strip" id="local-workbench-status">Checking local readiness…</div>
 <div class="local-workbench-grid" id="local-workbench-summary"></div>
+<section aria-labelledby="local-ai-setup-title" class="privacy-key-hierarchy local-ai-setup">
+<div><span class="overlay-kicker">Optional local model setup</span><strong id="local-ai-setup-title">Choose a safe local AI path</strong></div>
+<p aria-live="polite" id="local-ai-setup-status">Checking this PC’s local-AI recommendation…</p>
+<div class="overlay-actions"><button class="secondary" id="local-ai-setup-refresh" type="button">Check this PC</button><button class="secondary" id="local-ai-setup-basic" type="button">Use core workbench only</button><span class="status-badge review" id="local-ai-setup-badge">Review required</span></div>
+<div class="overlay-meta" id="local-ai-setup-results">No optional model is offered until its exact files, license, integrity record, and device requirements are verified. This never uploads data or installs anything automatically.</div>
+</section>
 <section aria-labelledby="admin-console-title" class="privacy-key-hierarchy local-admin-console">
 <div><span class="overlay-kicker">Enterprise administration</span><strong id="admin-console-title">Administration review console</strong></div>
 <p aria-live="polite" id="admin-console-status">Inspect this tenant’s role boundary, policy hashes, authority status, release-evidence status, and blocked-export reasons. This local app does not list or provision people.</p>

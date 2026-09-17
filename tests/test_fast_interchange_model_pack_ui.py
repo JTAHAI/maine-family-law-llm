@@ -27,6 +27,12 @@ import pytest
         "escape",
         "keyboard",
         "confirmation_matter_changed",
+        "inventory_race",
+        "inventory_aba_error",
+        "transfer_matter_changed",
+        "readiness",
+        "worker_state",
+        "resume_cancel_matter_changed",
     ],
 )
 def test_offline_pack_ui_state_machine(scenario):
@@ -84,9 +90,13 @@ let transaction=process.argv[1]==='recovery'
   ? {id:'d'.repeat(32),kind:'activate',pack_id:stored.pack_id}:null;
 const requests=[];
 let releaseChunk;
+const pendingInventories=[];
 const fetchJson=async(url,options={})=>{
  requests.push({url,options});
+ if(url.startsWith('/api/model-packs?') && process.argv[1].startsWith('inventory_'))
+   return await new Promise((resolve,reject)=>pendingInventories.push({resolve,reject}));
  if(url.startsWith('/api/model-packs?'))return {
+   readiness:{status:'development_only',hardware_verified:false,runtime_verified:false},
    jobs:process.argv[1].startsWith('fresh_session_')?[]:[{...server}],
    recoverable_jobs:process.argv[1].startsWith('fresh_session_')?[{...server}]:[],
    active_pack_id:'',installed:removed?[]:[stored],removed:removed?[stored]:[],transaction};
@@ -103,7 +113,8 @@ const fetchJson=async(url,options={})=>{
  if(url.includes('/chunks')){
    if(process.argv[1]==='failed_upload')
      throw makeSafeLocalError({code:'model_pack_transfer_incomplete'});
-   if(process.argv[1]==='cancel')await new Promise(resolve=>releaseChunk=resolve);
+   if(['cancel','transfer_matter_changed'].includes(process.argv[1]))
+     await new Promise(resolve=>releaseChunk=resolve);
    server.received_bytes+=options.body.length;return {...server};
  }
  if(url.endsWith('/inspect')){
@@ -120,6 +131,42 @@ const fetchJson=async(url,options={})=>{
     checks = r"""
 (async()=>{
  const scenario=process.argv[1];
+ if(scenario==='worker_state'){
+   await e('refresh').handlers.click();
+   e('job').value='';e('job').handlers.change();
+   localAgentBusy=true;e('panel').handlers['model-pack-worker-state']();
+   assert.equal(e('import').disabled,true);
+   localAgentBusy=false;e('panel').handlers['model-pack-worker-state']();
+   assert.equal(e('import').disabled,false);return;
+ }
+ if(scenario.startsWith('inventory_')){
+   const context=value=>{
+     localAgentPayload.local_agent_matter_id=value;
+     return e('panel').handlers['model-pack-context']({detail:{matterId:value}});
+   };
+   const first=context('fictional-a');
+   const second=context('fictional-b');
+   const latest=scenario==='inventory_aba_error'?context('fictional-a'):second;
+   const fresh={models:[{model_id:'current-only'}],readiness:{status:'development_only'},
+                jobs:[],installed:[],removed:[]};
+   pendingInventories.at(-1).resolve(fresh);await latest;
+   if(scenario==='inventory_aba_error'){
+     pendingInventories[1].resolve({models:[{model_id:'old-b'}]});await second;
+     pendingInventories[0].reject(makeSafeLocalError({code:'model_pack_operation_failed'}));
+   }else pendingInventories[0].resolve({models:[{model_id:'old-a'}],jobs:[server]});
+   await first;
+   assert.equal(window.mflActiveSpecialistModels[0].model_id,'current-only');
+   assert.ok(!e('details').textContent.includes('old-'));
+   assert.match(e('status').textContent,/Research pack installed/);
+   assert.equal(e('activate').disabled,true);return;
+ }
+ if(scenario==='readiness'){
+   await e('refresh').handlers.click();
+   assert.match(e('status').textContent,
+     /Research pack installed — not approved for production use/);
+   assert.match(e('status').textContent,/Hardware and worker startup have not been verified/);
+   return;
+ }
  if(['recovery','remove_restore'].includes(scenario)){
    await e('refresh').handlers.click();
    if(scenario==='recovery'){
@@ -134,18 +181,28 @@ const fetchJson=async(url,options={})=>{
    }
    assert.equal(e('panel').dataset.busy,'false');return;
  }
- if(['resume','wrong_file','fresh_session_resume','resume_cancel','fresh_session_cancel'].includes(scenario)){
+ if(['resume','wrong_file','fresh_session_resume','resume_cancel','fresh_session_cancel',
+     'resume_cancel_matter_changed'].includes(scenario)){
    server={...server,status:'canceled',received_bytes:1024**2,prefix_chain:prefix};
    await e('refresh').handlers.click();e('job').value=server.job_id;e('job').handlers.change();
    requests.length=0;
    const pending=e('resume').handlers.click();
-   if(['resume_cancel','fresh_session_cancel'].includes(scenario)){
+   if(['resume_cancel','fresh_session_cancel','resume_cancel_matter_changed'].includes(scenario)){
      for(let i=0;i<20&&!prefixReads.length;i++)await new Promise(resolve=>setImmediate(resolve));
      await e('cancel').handlers.click();
+     if(scenario==='resume_cancel_matter_changed'){
+       localAgentPayload.local_agent_matter_id='fictional-other';
+       await e('panel').handlers['model-pack-context']({detail:{matterId:'fictional-other'}});
+     }
    }
    await pending;
    assert.ok(prefixReads.every(size=>size<=1024**2));
    assert.equal(e('panel').dataset.busy,'false');
+   if(scenario==='resume_cancel_matter_changed'){
+     assert.equal(e('job').value,'');assert.equal(e('resume').disabled,true);
+     assert.ok(!e('details').textContent.includes(server.job_id));
+     assert.match(e('status').textContent,/Matter changed/);return;
+   }
    if(scenario==='wrong_file'){assert.ok(e('status').textContent.includes('prefix_changed'));assert.ok(!requests.some(row=>row.url.endsWith('/resume')));return;}
    if(['resume_cancel','fresh_session_cancel'].includes(scenario)){
      assert.ok(!requests.some(row=>row.url.endsWith('/inspect')));
@@ -160,6 +217,18 @@ const fetchJson=async(url,options={})=>{
  if(scenario==='consent')e('admin').checked=false;
  if(scenario==='wrong_matter')localAgentPayload.local_agent_matter_id='';
  const pending=e('import').handlers.click();
+ if(scenario==='transfer_matter_changed'){
+   for(let i=0;i<20&&!releaseChunk;i++)await new Promise(resolve=>setImmediate(resolve));
+   localAgentPayload.local_agent_matter_id='fictional-other';
+   await e('panel').handlers['model-pack-context']({detail:{matterId:'fictional-other'}});
+   releaseChunk();await pending;
+   assert.ok(!requests.some(row=>row.url.endsWith('/inspect')||row.url.endsWith('/activate')));
+   assert.equal(requests.filter(row=>row.url.includes('/chunks')).length,1);
+   assert.ok(requests.filter(row=>row.url.includes('matter_id=')).every(row=>row.url.includes('fictional-matter')));
+   assert.equal(e('activate').disabled,true);
+   assert.ok(!e('details').textContent.includes(server.job_id));
+   assert.match(e('status').textContent,/Matter changed/);return;
+ }
  if(scenario==='double_click')await e('import').handlers.click();
  if(scenario==='cancel'){
    for(let i=0;i<8&&!releaseChunk;i++)await Promise.resolve();
@@ -186,8 +255,10 @@ const fetchJson=async(url,options={})=>{
     if scenario in {"consent", "wrong_matter"}:
         checks = checks.replace("assert.equal(e('panel').dataset.busy,'false');", "")
     result = subprocess.run(
-        [shutil.which("node") or "node", "-e", harness + implementation + checks, scenario],
+        [shutil.which("node") or "node", "-", scenario],
+        input=(harness + implementation + checks).replace("process.argv[1]", "process.argv[2]"),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         timeout=15,
     )

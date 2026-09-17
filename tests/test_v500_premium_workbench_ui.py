@@ -12,10 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_v500_release_identity_and_store_version_are_aligned() -> None:
-    assert VERSION == "8.0.2"
-    assert PACKAGE_VERSION == "8.0.2.0"
-    assert BUILD_NUMBER == 55
-    assert UI_PASS_MARKER == "v8.0.2-ga"
+    assert VERSION == "9.0.1"
+    assert PACKAGE_VERSION == "9.0.1.0"
+    assert BUILD_NUMBER == 57
+    assert UI_PASS_MARKER == "v9.0.1-ga"
     assert UI_VERSION.endswith(f"-b{BUILD_NUMBER}")
     identity_path = ROOT / "store/msix/identity.local.json"
     if not identity_path.is_file():

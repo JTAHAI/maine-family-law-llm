@@ -61,6 +61,16 @@ def test_v500_mobile_keeps_settings_accessible_without_horizontal_control_overfl
     assert 'role="complementary"' in html
 
 
+def test_v500_full_workbench_command_strip_wraps_instead_of_overlapping_controls() -> None:
+    css = read_workbench_asset("workbench.css")
+    selector = 'body.v9-legal-ops-workbench[data-v8-view="workspace"] .v5-control-bar'
+    assert selector in css
+    assert "display: flex;" in css
+    assert "flex-wrap: wrap;" in css
+    assert ".v5-control-bar .v5-evidence-button" in css
+    assert "min-inline-size: 168px;" in css
+
+
 def test_v500_asset_copies_are_identical() -> None:
     from pathlib import Path
 

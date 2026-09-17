@@ -1,4 +1,7 @@
+import pytest
+
 from legal.fast_interchange.hardware import assess_specialist_hardware
+from legal.model_orchestration import hardware as host_hardware
 
 GIB = 1024**3
 
@@ -87,3 +90,59 @@ def test_execution_uses_the_runtime_cuda_index_matched_by_uuid():
     )
     assert ready["execution_accelerator"]["index"] == 0
     assert ready["execution_accelerator"]["physical_index"] == 1
+
+
+@pytest.mark.parametrize("runtime", [{}, {"kind": "unavailable"}])
+def test_missing_runtime_cannot_pass_cpu_readiness(runtime):
+    result = assess_specialist_hardware(
+        profile(), {"quantization": "fp32", "max_resident_bytes": GIB}, runtime=runtime
+    )
+    assert "specialist_runtime_unavailable" in result["blockers"]
+    assert result["status"] != "ready"
+
+
+def test_first_gpu_index_zero_is_valid_without_uuid_metadata():
+    first = {**gpu(available=8 * GIB, capability=8.6), "index": 0}
+    result = assess_specialist_hardware(
+        profile(gpus=[first]),
+        {"quantization": "bf16", "max_resident_bytes": 4 * GIB},
+        runtime={"kind": "cuda", "cuda_available": True, "device_indices": [0]},
+    )
+    assert result["status"] == "ready"
+    assert result["execution_accelerator"]["index"] == 0
+
+
+def test_cpu_only_worker_never_advertises_gpu_execution():
+    first = {**gpu(available=8 * GIB, capability=8.6), "index": 0}
+    result = assess_specialist_hardware(
+        profile(gpus=[first]),
+        {"quantization": "fp32", "execution_device": "cpu", "max_resident_bytes": 3 * GIB},
+        runtime={"kind": "cuda", "cuda_available": True, "device_indices": [0]},
+    )
+    assert result["status"] == "ready"
+    assert result["execution_accelerator"] == {"kind": "cpu"}
+    assert result["required_available_vram_bytes"] == 0
+
+
+def test_unknown_execution_policy_cannot_grant_readiness():
+    result = assess_specialist_hardware(
+        profile(),
+        {"quantization": "fp32", "execution_device": "guess", "max_resident_bytes": GIB},
+        runtime={"kind": "cpu"},
+    )
+    assert "specialist_execution_device_invalid" in result["blockers"]
+
+
+def test_unavailable_free_ram_is_not_replaced_by_installed_capacity(monkeypatch, tmp_path):
+    monkeypatch.setattr(host_hardware, "_total_memory_bytes", lambda: 64 * GIB)
+    monkeypatch.setattr(host_hardware, "_available_memory_bytes", lambda: 0)
+    monkeypatch.setattr(host_hardware, "_nvidia_inventory", lambda: ())
+    measured = host_hardware.profile_hardware(tmp_path).as_dict()
+    assert measured["available_memory_bytes"] == 0
+    assert measured["recommended_concurrency"] == 1
+    assert measured["recommended_context_limit"] == 4096
+    assert "available_memory_unverified_or_exhausted" in measured["warnings"]
+    result = assess_specialist_hardware(
+        measured, {"quantization": "fp32", "max_resident_bytes": GIB}, runtime={"kind": "cpu"}
+    )
+    assert "insufficient_available_memory_for_specialist" in result["blockers"]

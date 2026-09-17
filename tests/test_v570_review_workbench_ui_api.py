@@ -46,6 +46,7 @@ def test_v570_local_api_prepares_and_commits_bound_review(monkeypatch, tmp_path:
     monkeypatch.setattr(api_module, "active_case_root", lambda: case)
     monkeypatch.setattr(api_module.AuthorityProductService, "verify_output", lambda self, **kwargs: _authority_result())
     client = TestClient(api_module.app)
+    client.headers.update({"X-User-Role": "reviewer", "X-Tenant-Id": "local-desktop", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)})
 
     prepared = client.post(
         f"/api/document-workspace/documents/{document['document_id']}/review/prepare",

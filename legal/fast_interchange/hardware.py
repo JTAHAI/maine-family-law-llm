@@ -59,10 +59,15 @@ def assess_specialist_hardware(
     """Return a public, content-free readiness decision for one signed release."""
 
     quantization = str(compatibility.get("quantization") or "").strip().casefold()
+    execution_policy = compatibility.get("execution_device", "auto")
     resident = max(0, int(compatibility.get("max_resident_bytes") or 0))
     available_memory = max(0, int(profile.get("available_memory_bytes") or 0))
     gpus = [row for row in (profile.get("details") or {}).get("gpus", []) if isinstance(row, dict)]
     blockers: list[str] = []
+    if execution_policy not in {"auto", "cpu"}:
+        blockers.append("specialist_execution_device_invalid")
+    if execution_policy == "cpu":
+        gpus = []  # A CPU-only backend must not advertise GPU execution.
     if not resident:
         blockers.append("specialist_resident_memory_requirement_missing")
     elif available_memory < resident + GIB:
@@ -71,7 +76,7 @@ def assess_specialist_hardware(
     minimum_compute = 8.0 if quantization == "bf16" else 6.0
     required_vram = (
         max(2 * GIB, min(4 * GIB, resident // 2))
-        if quantization in {"fp32", "bf16", "fp16"}
+        if quantization in {"fp32", "bf16", "fp16"} and execution_policy != "cpu"
         else 0
     )
     compatible = [
@@ -93,7 +98,9 @@ def assess_specialist_hardware(
         ),
         default=None,
     )
-    runtime = dict(runtime or installed_torch_runtime())
+    runtime = dict(installed_torch_runtime() if runtime is None else runtime)
+    if runtime.get("kind") not in {"cpu", "cuda"}:
+        blockers.append("specialist_runtime_unavailable")
     runtime_indices = {
         index
         for index in runtime.get("device_indices", [])
@@ -108,8 +115,7 @@ def assess_specialist_hardware(
                 row
                 for row in runtime_devices
                 if selected_uuid
-                and str(row.get("uuid") or "").replace("GPU-", "").casefold()
-                == selected_uuid
+                and str(row.get("uuid") or "").replace("GPU-", "").casefold() == selected_uuid
             ),
             None,
         )
@@ -118,7 +124,8 @@ def assess_specialist_hardware(
         if (
             runtime_device is None
             and not runtime_devices
-            and int(selected.get("index") or -1) in runtime_indices
+            and type(selected.get("index")) is int
+            and selected["index"] in runtime_indices
         ):
             runtime_device = {"runtime_index": int(selected.get("index") or 0)}
     runtime_can_use_selected = runtime_device is not None
@@ -149,6 +156,7 @@ def assess_specialist_hardware(
         "required_resident_memory_bytes": resident,
         "required_available_vram_bytes": required_vram,
         "quantization": quantization or "unknown",
+        "execution_policy": execution_policy,
         "recommended_accelerator": (
             {
                 "index": selected.get("index"),

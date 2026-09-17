@@ -71,3 +71,7 @@ dist/store/
 
 # Prevent accidental nested full-repository snapshots
 ME_FM_LLM/
+
+# Local ad-hoc repository snapshots; never ship or publish these.
+/current_codebase.zip
+/test.zip

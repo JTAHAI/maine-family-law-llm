@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -170,9 +169,10 @@ def test_review_ledger_detects_tampering(tmp_path: Path):
     history = list_review_history(case, document["document_id"])
     assert history["decision_count"] == 1
     decision_path = case / "19_DOCUMENT_WORKSPACE" / "reviews" / document["document_id"] / "decisions" / f"{decision['decision_id']}.json"
-    payload = json.loads(decision_path.read_text(encoding="utf-8"))
+    from legal.documents import storage
+    payload = storage.decode(decision_path, decision_path.read_bytes())
     payload["notes"] = "tampered"
-    decision_path.write_text(json.dumps(payload), encoding="utf-8")
+    decision_path.write_bytes(storage.encode(decision_path, payload))
     report = verify_review_ledger(case, document["document_id"])
     assert report["valid"] is False
     assert any(item.startswith("decision_hash_mismatch:") for item in report["blockers"])
@@ -183,9 +183,10 @@ def test_review_request_hash_tampering_fails_closed(tmp_path: Path):
     document = create_document(case, title="Draft", content="Text", document_type="draft")
     prepared = prepare_review_request(case, document["document_id"], authority_result=_authority_result())
     request_path = case / "19_DOCUMENT_WORKSPACE" / "reviews" / document["document_id"] / "requests" / f"{prepared['request_id']}.json"
-    payload = json.loads(request_path.read_text(encoding="utf-8"))
+    from legal.documents import storage
+    payload = storage.decode(request_path, request_path.read_bytes())
     payload["packet"]["document_title"] = "tampered"
-    request_path.write_text(json.dumps(payload), encoding="utf-8")
+    request_path.write_bytes(storage.encode(request_path, payload))
 
     with pytest.raises(ReviewLedgerError, match="integrity check"):
         commit_review_decision(

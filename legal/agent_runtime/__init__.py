@@ -13,8 +13,10 @@ from .providers import (
     LocalModelError,
     LocalModelResponse,
     FastInterchangeLocalClient,
+    CuratedOllamaReasoningClient,
     OllamaLocalClient,
     OpenAICompatibleLocalClient,
+    SentinelOllamaLocalClient,
     build_local_client,
 )
 from .runtime import LocalAgentRunRequest, LocalAgentRunResult, LocalAgentRuntime
@@ -33,10 +35,12 @@ __all__ = [
     "LocalModelError",
     "LocalModelResponse",
     "FastInterchangeLocalClient",
+    "CuratedOllamaReasoningClient",
     "LoopbackEndpoint",
     "LoopbackEndpointPolicy",
     "OllamaLocalClient",
     "OpenAICompatibleLocalClient",
+    "SentinelOllamaLocalClient",
     "ProvenanceReceipt",
     "ToolDefinition",
     "ToolInvocation",

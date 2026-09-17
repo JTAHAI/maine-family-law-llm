@@ -24,10 +24,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from legal.data_boundaries.storage_layout import is_inside_project_repo
-from legal.documents.workspace import get_document, list_documents, workspace_paths
+from legal.documents.workspace import get_document, list_documents
 from legal.matter.calendar_review import CalendarReviewStore
 from legal.production.authority_product import AuthorityProductVerifier
-from legal.review.review_ledger import list_review_history
+from legal.review.review_ledger import ReviewLedgerError, list_review_history, read_review_request
 from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
 from legal.security.local_encryption import LocalEnvelopeEncryptor
 
@@ -130,27 +130,15 @@ def _safe_citations(text: str) -> list[str]:
 
 
 def _review_request(case_root: Path, document_id: str, request_id: str) -> dict[str, Any]:
-    paths = workspace_paths(case_root)
-    path = paths.root / "reviews" / document_id / "requests" / f"{request_id}.json"
     try:
-        resolved = path.resolve(strict=True)
-        root = (paths.root / "reviews").resolve(strict=True)
-    except OSError as exc:
-        raise AuthorityImpactError("review_request_unavailable", "The prior review request is unavailable.", status_code=409) from exc
-    if root not in resolved.parents or resolved.is_symlink():
-        raise AuthorityImpactError("review_request_path_invalid", "The prior review request path is invalid.", status_code=409)
-    request = _read_json(resolved)
-    stored = str(request.get("request_sha256") or "")
-    check = dict(request)
-    check.pop("request_sha256", None)
-    if not _SHA_RE.fullmatch(stored) or not hmac.compare_digest(stored, _sha(check)):
-        raise AuthorityImpactError("review_request_hash_mismatch", "The prior review request failed its integrity check.", status_code=409)
-    return request
+        return read_review_request(case_root, document_id, request_id)
+    except ReviewLedgerError as exc:
+        raise AuthorityImpactError(exc.code, exc.message, status_code=exc.status_code) from exc
 
 
 def _latest_review_packet(case_root: Path, document_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     history = list_review_history(case_root, document_id)
-    for decision in history.get("decisions") or []:
+    for decision in [history["latest"]] if history.get("latest") else []:
         request_id = str(decision.get("request_id") or "")
         if not _ID_RE.fullmatch(request_id):
             continue
@@ -181,12 +169,25 @@ class AuthorityChangeImpactStore:
             os.environ.get("MAINE_MATTER_STORE_KEY")
             or LocalEnvelopeEncryptor.development_default
         )
+        self._private_location(self.builds)
         self.builds.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    def _private_location(self, path: Path) -> None:
+        if path != self.root and not path.is_relative_to(self.root):
+            raise AuthorityImpactError("authority_impact_storage_invalid", "The private review location is invalid.", status_code=409)
+        for component in (path, *path.parents):
+            if component.is_symlink() or (
+                component.exists() and getattr(component.lstat(), "st_file_attributes", 0) & 0x400
+            ):
+                raise AuthorityImpactError("authority_impact_storage_redirect_refused", "A redirected private review location was refused. Original files were preserved.", status_code=409)
+            if component == self.case_root:
+                break
 
     def _audit_scope(self) -> str:
         return _sha(str(self.case_root))[:24]
 
     def _load_audit(self) -> dict[str, Any]:
+        self._private_location(self.audit_path)
         if not self.audit_path.exists():
             return {
                 "schema_version": "authority_change_impact_access_audit_v1",
@@ -221,9 +222,29 @@ class AuthorityChangeImpactStore:
                 "The authority-impact audit record is invalid.",
                 status_code=409,
             )
+        previous = ""
+        if len(value["events"]) > MAX_AUDIT_EVENTS:
+            raise AuthorityImpactError("authority_impact_audit_invalid", "The authority-impact audit is invalid.", status_code=409)
+        for row in value["events"]:
+            if not isinstance(row, dict):
+                raise AuthorityImpactError("authority_impact_audit_invalid", "The authority-impact audit is invalid.", status_code=409)
+            payload = dict(row)
+            stored = str(payload.pop("event_sha256", ""))
+            if payload.get("previous_event_sha256") != previous or not hmac.compare_digest(stored, _sha(payload)):
+                raise AuthorityImpactError("authority_impact_audit_invalid", "The authority-impact audit failed verification. Preserve this workspace; no new receipt was recorded.", status_code=409)
+            previous = stored
         return value
 
     def record_access(
+        self, **kwargs: Any,
+    ) -> dict[str, Any]:
+        try:
+            self._private_location(self.audit_lock)
+            return self._record_access(**kwargs)
+        except OSError as exc:
+            raise AuthorityImpactError("authority_impact_audit_unavailable", "The authority-impact audit could not be saved. Reload before retrying; existing records were preserved.", status_code=409) from exc
+
+    def _record_access(
         self,
         *,
         action: str,
@@ -718,11 +739,13 @@ class AuthorityChangeImpactStore:
             "<p>This packet is review work product. It does not establish current law or the legal effect of any source change.</p></body></html>"
         )
 
-    def build(self, document_id: str, base_build_id: str, target_build_id: str, *, approved: bool = False) -> dict[str, Any]:
+    def build(self, document_id: str, base_build_id: str, target_build_id: str, *, approved: bool = False, expected_revision_id: str = "") -> dict[str, Any]:
         if approved is not True:
             raise AuthorityImpactError("explicit_authority_revalidation_approval_required", "Explicit approval is required to build an authority revalidation packet.", status_code=409)
         with _LOCK:
             impact = self.analyze_document(document_id, base_build_id, target_build_id)
+            if expected_revision_id and impact["revision_id"] != expected_revision_id:
+                raise AuthorityImpactError("authority_impact_revision_stale", "The document changed. Reload and review the exact revision before creating a packet.", status_code=409)
             stable = dict(impact)
             stable.pop("generated_at", None)
             generation_diff = dict(stable.get("generation_diff") or {})
@@ -780,6 +803,7 @@ class AuthorityChangeImpactStore:
     def verify(self, build_id: str) -> dict[str, Any]:
         build_id = _validate_build_id(build_id)
         build_dir = self.builds / build_id
+        self._private_location(build_dir)
         try:
             resolved = build_dir.resolve(strict=True)
             root = self.builds.resolve(strict=True)

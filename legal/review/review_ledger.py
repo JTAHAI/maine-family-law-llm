@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import re
 import secrets
 import threading
@@ -21,8 +20,11 @@ from pathlib import Path, PureWindowsPath
 from typing import Any, Iterable
 
 from legal.documents.workspace import get_document, workspace_paths
+from legal.documents import storage
+from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
 from legal.drafting.filing_ready_gate import FilingReadyGate
 from legal.drafting.findings_engine import Rule52BestInterestFindingsEngine
+from . import integrity
 from .procedure_intelligence import build_form_freshness_report, build_procedure_posture_report
 
 REVIEW_FOLDER = "reviews"
@@ -43,6 +45,7 @@ BLOCKING_CLAIM_ANNOTATIONS = {"needs_revision", "unsupported", "contradicted", "
 _ID_RE = re.compile(r"^[a-f0-9]{32}$")
 _TOKEN_RE = re.compile(r"^[a-f0-9]{64}$")
 _LOCK = threading.RLock()
+_LOCK_STATE = threading.local()
 
 
 class ReviewLedgerError(RuntimeError):
@@ -83,7 +86,19 @@ def _synchronized(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
         with _LOCK:
-            return func(*args, **kwargs)
+            root = workspace_paths(Path(args[0] if args else kwargs["case_root"])).root
+            held = getattr(_LOCK_STATE, "roots", set())
+            if root in held:
+                return func(*args, **kwargs)
+            try:
+                with exclusive_file_lock(root / ".review-ledger.lock"):
+                    _LOCK_STATE.roots = held | {root}
+                    try:
+                        return func(*args, **kwargs)
+                    finally:
+                        _LOCK_STATE.roots = held
+            except OSError as exc:
+                raise ReviewLedgerError("review_storage_busy", "Review storage is busy or unavailable. Existing records were preserved; reload review history before retrying.", status_code=409) from exc
 
     return wrapped
 
@@ -99,38 +114,60 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
     if path.exists() and path.is_symlink():
         raise ReviewLedgerError("review_symlink_refused", "A review-ledger symlink was refused.", status_code=409)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    temp = path.parent / f".{path.name}.{secrets.token_hex(8)}.tmp"
-    data = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False).encode("utf-8")
     try:
-        with temp.open("xb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.chmod(temp, 0o600)
-        os.replace(temp, path)
-    finally:
-        temp.unlink(missing_ok=True)
+        atomic_write_bytes(path, storage.encode(path, payload))
+    except (OSError, ValueError) as exc:
+        raise ReviewLedgerError("review_storage_unavailable", "The review could not be encrypted and saved. Existing records were preserved; check workspace storage and its original local key.", status_code=409) from exc
 
 
-def _read(path: Path) -> dict[str, Any]:
+class _StoredReview(dict):
+    """Storage assurance is metadata, never part of the historical hash payload."""
+    authenticated = False
+
+
+def _read(path: Path, *, allow_legacy: bool = False) -> dict[str, Any]:
     if not path.exists() or path.is_symlink():
         raise ReviewLedgerError("review_record_not_found", "The review record was not found.", status_code=404)
-    raw = path.read_bytes()
-    if len(raw) > MAX_FILE_BYTES:
-        raise ReviewLedgerError("review_record_too_large", "The review record is unexpectedly large.", status_code=409)
     try:
-        payload = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReviewLedgerError("review_record_invalid", "The review record is invalid.", status_code=409) from exc
+        storage._location(path)
+        raw = read_bounded_regular_file(path, max_bytes=storage.MAX_ENVELOPE)
+        value = json.loads(raw)
+        authenticated = isinstance(value, dict) and "storage_format" in value
+        if authenticated:
+            payload = storage.decode(path, raw)
+        elif allow_legacy:
+            payload = value  # Historical display only; never an authenticated approval.
+        else:
+            raise ValueError("legacy_review_requires_revalidation")
+    except (OSError, ValueError) as exc:
+        raise ReviewLedgerError("review_record_unverified", "The review record failed its storage integrity check. Preserve the workspace and original key. Legacy plaintext reviews require a fresh review; they cannot authorize export.", status_code=409) from exc
     if not isinstance(payload, dict):
         raise ReviewLedgerError("review_record_invalid", "The review record is invalid.", status_code=409)
-    return payload
+    result = _StoredReview(payload)
+    result.authenticated = authenticated
+    return result
+
+
+@_synchronized
+def read_review_request(case_root: Path, document_id: str, request_id: str) -> dict[str, Any]:
+    """Canonical authenticated reader shared by review and filing consumers."""
+    document_id = _validate_id(document_id, "document_id")
+    request_id = _validate_id(request_id, "request_id")
+    _, requests, _ = _roots(case_root, document_id)
+    result = _read(requests / f"{request_id}.json")
+    if result.get("document_id") != document_id or result.get("request_id") != request_id or not _request_integrity_valid(result):
+        raise ReviewLedgerError("review_request_hash_mismatch", "The review request failed its integrity check.", status_code=409)
+    return result
 
 
 def _roots(case_root: Path, document_id: str) -> tuple[Path, Path, Path]:
     paths = workspace_paths(case_root)
     document_id = _validate_id(document_id, "document_id")
     root = paths.root / REVIEW_FOLDER / document_id
+    try:
+        storage._location(root / ".guard")
+    except ValueError as exc:
+        raise ReviewLedgerError("review_symlink_refused", "A redirected review location was refused.", status_code=409) from exc
     resolved_parent = root.parent.resolve(strict=False)
     resolved_workspace = paths.root.resolve(strict=True)
     if resolved_parent != resolved_workspace / REVIEW_FOLDER and resolved_workspace not in resolved_parent.parents:
@@ -141,6 +178,10 @@ def _roots(case_root: Path, document_id: str) -> tuple[Path, Path, Path]:
         if folder.exists() and folder.is_symlink():
             raise ReviewLedgerError("review_symlink_refused", "A review-ledger symlink was refused.", status_code=409)
         folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+    try:
+        integrity.recover(root)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise ReviewLedgerError("review_history_recovery_blocked", "Review history could not be authenticated or recovered. Preserve the complete workspace and original key; do not rely on prior approval. No changed record was overwritten.", status_code=409) from exc
     return root, requests, decisions
 
 
@@ -204,11 +245,13 @@ def build_fact_evidence_report(facts: Iterable[str] | None, records: Iterable[di
         candidates: list[dict[str, Any]] = []
         for record in safe_records:
             text = record["text"]
-            exact_start = text.casefold().find(fact.casefold())
+            exact_match = re.search(re.escape(fact), text, re.IGNORECASE)
+            exact_start = exact_match.start() if exact_match else -1
             overlap = len(fact_tokens & _tokens(text)) / max(len(fact_tokens), 1) if fact_tokens else 0.0
             if exact_start < 0 and overlap < 0.45:
                 continue
-            start = exact_start if exact_start >= 0 else max(0, text.casefold().find(next(iter(sorted(fact_tokens)), "")))
+            lexical_match = re.search(re.escape(next(iter(sorted(fact_tokens)), "")), text, re.IGNORECASE)
+            start = exact_start if exact_start >= 0 else lexical_match.start() if lexical_match else 0
             if start < 0:
                 start = 0
             end = min(len(text), start + max(len(fact), 240))
@@ -379,7 +422,7 @@ def prepare_review_request(
     facts: Iterable[str] | None = None,
     records: Iterable[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    document = get_document(case_root, document_id)
+    document = get_document(case_root, document_id, include_history=False)
     revision_id = _validate_id(str(document.get("current_revision_id") or ""), "revision_id")
     document_id = _validate_id(document_id, "document_id")
     fact_report = build_fact_evidence_report(facts, records)
@@ -440,11 +483,17 @@ def prepare_review_request(
         "packet": packet,
         "gate_payload": gate_payload,
     }
-    _, requests, _ = _roots(case_root, document_id)
+    root, requests, _ = _roots(case_root, document_id)
+    try:
+        integrity.initialize(root)
+    except (OSError, ValueError) as exc:
+        raise ReviewLedgerError("review_history_head_required", "Existing review history has no authenticated head. Preserve it and create a new working draft for a fresh review.", status_code=409) from exc
+    if not _verify_rows(root, _decision_rows(root / "decisions"))["valid"]:
+        raise ReviewLedgerError("review_history_incomplete", "Review history is incomplete or changed. Preserve the complete workspace; no new review packet was created. Create a new working draft if a verified backup is unavailable.", status_code=409)
     pending_count = sum(
         1
         for path in requests.glob("*.json")
-        if path.is_file() and not path.is_symlink() and _read(path).get("status") == "pending"
+        if path.is_file() and not path.is_symlink() and _read(path, allow_legacy=True).get("status") == "pending"
     )
     if pending_count >= MAX_PENDING_REQUESTS:
         raise ReviewLedgerError("pending_review_request_limit", "Too many pending review packets exist for this document.", status_code=409)
@@ -457,14 +506,19 @@ def prepare_review_request(
         "packet": packet,
         "review_required": True,
         "filing_ready": False,
+        "storage_authenticated": True,
     }
 
 
 def _decision_rows(decisions: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for path in decisions.glob("*.json"):
-        if path.is_file() and not path.is_symlink():
-            rows.append(_read(path))
+        if len(rows) >= MAX_DECISIONS:
+            raise ReviewLedgerError("review_decision_limit", "Review history exceeds its safety limit.", status_code=409)
+        row = _read(path, allow_legacy=True)
+        if row.get("decision_id") != path.stem or row.get("document_id") != decisions.parent.name or type(row.get("sequence")) is not int:
+            raise ReviewLedgerError("review_decision_identity_invalid", "The review decision identity failed verification.", status_code=409)
+        rows.append(row)
     rows.sort(key=lambda row: (int(row.get("sequence") or 0), str(row.get("decision_id") or "")))
     return rows
 
@@ -510,12 +564,13 @@ def commit_review_decision(
     if decision == "approve_review" and attested is not True:
         raise ReviewLedgerError("review_attestation_required", "Approval requires the review attestation.", status_code=409)
 
-    _, requests, decisions = _roots(case_root, document_id)
-    request_path = requests / f"{request_id}.json"
-    request = _read(request_path)
+    root, requests, decisions = _roots(case_root, document_id)
+    request = read_review_request(case_root, document_id, request_id)
     if not _request_integrity_valid(request):
         raise ReviewLedgerError("review_request_hash_mismatch", "The review request failed its integrity check.", status_code=409)
     existing_decisions = _decision_rows(decisions)
+    if not _verify_rows(root, existing_decisions)["valid"]:
+        raise ReviewLedgerError("review_history_revalidation_required", "Prior review history could not be authenticated. Preserve it and create a new working draft for a fresh review; no approval was recorded.", status_code=409)
     if any(str(row.get("request_id") or "") == request_id for row in existing_decisions):
         raise ReviewLedgerError("review_request_consumed", "The review request has already been used.", status_code=409)
     if len(existing_decisions) >= MAX_DECISIONS:
@@ -525,7 +580,7 @@ def commit_review_decision(
     expected = str(request.get("confirmation_token_sha256") or "")
     if not hmac.compare_digest(expected, hashlib.sha256(token.encode("utf-8")).hexdigest()):
         raise ReviewLedgerError("invalid_confirmation_token", "The confirmation token is invalid.", status_code=409)
-    document = get_document(case_root, document_id)
+    document = get_document(case_root, document_id, include_history=False)
     if str(document.get("current_revision_id") or "") != str(request.get("revision_id") or ""):
         raise ReviewLedgerError("review_request_stale", "The document changed after this review packet was prepared.", status_code=409)
 
@@ -567,34 +622,47 @@ def commit_review_decision(
         "review_required": not bool(gate.get("filing_ready")),
     }
     record["decision_sha256"] = _sha(record)
-    _atomic_write(decisions / f"{decision_id}.json", record)
+    previous_request_sha256 = request["request_sha256"]
     request["status"] = "consumed"
     request["consumed_at"] = record["committed_at"]
     request["decision_id"] = decision_id
     request.pop("confirmation_token_sha256", None)
     request.pop("request_sha256", None)
     request["request_sha256"] = _sha(request)
-    _atomic_write(request_path, request)
+    try:
+        integrity.commit(root, record, request, previous_request_sha256)
+    except (OSError, ValueError) as exc:
+        raise ReviewLedgerError("review_commit_interrupted", "The review write was interrupted. Reload review history before retrying; the encrypted journal may recover an already-confirmed decision.", status_code=409) from exc
     return record
 
 
 @_synchronized
-def list_review_history(case_root: Path, document_id: str) -> dict[str, Any]:
+def list_review_history(case_root: Path, document_id: str, *, include_pending_packets: bool = False) -> dict[str, Any]:
     document_id = _validate_id(document_id, "document_id")
-    _, requests, decisions = _roots(case_root, document_id)
-    rows = list(reversed(_decision_rows(decisions)))
-    pending = 0
-    for path in requests.glob("*.json"):
-        if path.is_file() and not path.is_symlink() and _read(path).get("status") == "pending":
-            pending += 1
+    root, requests, decisions = _roots(case_root, document_id)
+    rows = _decision_rows(decisions)
+    verified = _verify_rows(root, rows)
+    rows.reverse()
+    pending = _pending_packets(document_id, requests)
+    latest = rows[0] if rows and verified["valid"] else None
+    current_revision = str(get_document(case_root, document_id, include_history=False).get("current_revision_id") or "")
+    latest_is_current = bool(latest and latest.get("revision_id") == current_revision)
     return {
         "schema_version": SCHEMA_VERSION,
         "document_id": document_id,
         "decisions": rows[:MAX_DECISIONS],
         "decision_count": len(rows),
-        "pending_request_count": pending,
-        "latest": rows[0] if rows else None,
-        "review_required": not bool(rows and rows[0].get("filing_gate", {}).get("filing_ready")),
+        "pending_request_count": pending["count"],
+        **({"pending_packets": pending} if include_pending_packets else {}),
+        "latest": latest,
+        "current_revision_id": current_revision,
+        "latest_is_current": latest_is_current,
+        "storage_authenticated": verified["valid"],
+        "history_head": verified.get("history_head", {"status": "unavailable", "valid": False}),
+        "authenticated_decision_ids": [row.get("decision_id") for row in rows if row.authenticated],
+        "storage_notice": "New review packets and decisions are encrypted. Legacy plaintext history is preserved for inspection only and cannot authorize export. If history cannot be authenticated, create a new working draft for a fresh review. Exports and other sidecars are outside this encryption boundary.",
+        "blockers": verified["blockers"],
+        "review_required": not bool(latest_is_current and latest.get("filing_gate", {}).get("filing_ready")),
     }
 
 
@@ -602,11 +670,16 @@ def list_review_history(case_root: Path, document_id: str) -> dict[str, Any]:
 def list_pending_review_packets(case_root: Path, document_id: str) -> dict[str, Any]:
     document_id = _validate_id(document_id, "document_id")
     _, requests, _ = _roots(case_root, document_id)
+    return _pending_packets(document_id, requests)
+
+
+def _pending_packets(document_id: str, requests: Path) -> dict[str, Any]:
+    """Read once within the caller's lock; never retain plaintext between calls."""
     packets: list[dict[str, Any]] = []
     for path in sorted(requests.glob("*.json")):
         if not path.is_file() or path.is_symlink():
             continue
-        request = _read(path)
+        request = _read(path, allow_legacy=True)
         if request.get("status") != "pending":
             continue
         if not _request_integrity_valid(request):
@@ -622,7 +695,8 @@ def list_pending_review_packets(case_root: Path, document_id: str) -> dict[str, 
             "fact_count": int((packet.get("fact_evidence_report") or {}).get("fact_count") or 0),
             "procedural_posture": (packet.get("procedure_posture_report") or {}).get("procedural_posture"),
             "form_status": (packet.get("forms_report") or {}).get("status"),
-            "blockers": list(preflight.get("blockers") or [])[:100],
+            "storage_authenticated": request.authenticated,
+            "blockers": (["legacy_review_requires_revalidation"] if not request.authenticated else []) + list(preflight.get("blockers") or [])[:100],
         })
     packets.sort(key=lambda row: (str(row.get("created_at") or ""), str(row.get("request_id") or "")), reverse=True)
     return {"document_id": document_id, "packets": packets[:MAX_PENDING_REQUESTS], "count": len(packets)}
@@ -631,12 +705,29 @@ def list_pending_review_packets(case_root: Path, document_id: str) -> dict[str, 
 @_synchronized
 def verify_review_ledger(case_root: Path, document_id: str) -> dict[str, Any]:
     document_id = _validate_id(document_id, "document_id")
-    _, _, decisions = _roots(case_root, document_id)
-    rows = _decision_rows(decisions)
+    try:
+        root, _, decisions = _roots(case_root, document_id)
+        rows = _decision_rows(decisions)
+    except ReviewLedgerError:
+        return {"status": "fail", "valid": False, "document_id": document_id, "blockers": ["review_storage_integrity_failed"], "review_required": True}
+    return _verify_rows(root, rows)
+
+
+def _verify_rows(root: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Verify the exact authenticated rows just read under the review lock."""
+    document_id = root.name
     expected_previous = "0" * 64
     expected_sequence = 1
     blockers: list[str] = []
+    try:
+        head = integrity.verify(root, rows)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        head = {"valid": False, "status": "unavailable", "recovered_interrupted_commit": False}
+    if not head["valid"]:
+        blockers.append("review_history_head_" + head["status"])
     for row in rows:
+        if not row.authenticated:
+            blockers.append(f"legacy_review_requires_revalidation:{row.get('decision_id')}")
         stored = str(row.get("decision_sha256") or "")
         payload = dict(row)
         payload.pop("decision_sha256", None)
@@ -654,6 +745,7 @@ def verify_review_ledger(case_root: Path, document_id: str) -> dict[str, Any]:
         "document_id": document_id,
         "decision_count": len(rows),
         "head_sha256": expected_previous,
+        "history_head": head,
         "blockers": blockers,
         "review_required": True,
     }

@@ -56,4 +56,9 @@ def test_pass114_shipped_api_and_ui_keep_restore_local_and_revalidated():
     assert '"/api/recent-work"' in api
     assert "recent_work_source_not_in_active_matter" in api
     assert "Recent work is available" in ui
+    restore = ui.split("function recentWorkNotice()", 1)[1].split("function currentRecentWorkPayload", 1)[0]
+    assert "document.createElement('details')" in restore
+    assert "document.querySelector('.chat-scroll')?.prepend(section)" in restore
+    assert "section.prepend(summary)" in restore
+    assert "insertAdjacentElement('beforebegin', section)" not in restore
     assert "trackRecentWorkRecord(payload)" in ui

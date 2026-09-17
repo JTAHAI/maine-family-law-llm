@@ -981,6 +981,22 @@ class ModelPackService:
                 "active_pack_id": state["active"],
                 "previous_pack_id": state["previous"],
                 "models": models,
+                # Inventory verifies signed admission, not hardware, worker
+                # startup, inference quality or release certification.
+                "readiness": {
+                    "status": (
+                        "admission_blocked"
+                        if error
+                        else "no_active_pack"
+                        if not models
+                        else "development_only"
+                        if any(row.get("admission") != "admitted_for_production" for row in models)
+                        else "production_admitted_runtime_unverified"
+                    ),
+                    "runtime_verified": False,
+                    "hardware_verified": False,
+                    "review_required": True,
+                },
                 "jobs": jobs,
                 "recoverable_jobs": recoverable,
                 "transaction": (

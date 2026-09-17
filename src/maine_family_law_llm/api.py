@@ -183,6 +183,7 @@ from legal.matter.language_access import LanguageAccessStore
 from legal.matter.resource_navigator import ResourceNavigatorStore
 from legal.matter.golden_path import MatterJourneyStore
 from legal.forms import MaineFindingsFormsError, MaineFindingsFormsStore
+from legal.forms.header_suggestions import build_header_suggestions
 from legal.forms.session_store import GuidedFormSessionStore
 from legal.retrieval.workbench import RetrievalWorkbenchError, RetrievalWorkbenchService
 from legal.ops.release_pilot_hardening import (
@@ -359,6 +360,7 @@ if FastAPI is not None:
     )
     from app.services.local_agent_run_service import LocalAgentRunStore
     from app.api.model_packs import register_model_pack_routes
+    from app.api.document_migration import register_document_migration_routes
 
 
 class QueryRequest(BaseModel):
@@ -1228,6 +1230,15 @@ class FormsSessionActionRequest(BaseModel):
     confirmed: StrictBool = False
 
 
+class FormsHeaderSuggestionPreviewRequest(BaseModel):
+    selected_record_ids: list[str] = Field(default_factory=list)
+
+
+class FormsHeaderSuggestionApplyRequest(FormsHeaderSuggestionPreviewRequest):
+    accepted_suggestion_ids: list[str] = Field(default_factory=list)
+    confirmed: StrictBool = False
+
+
 class ReleaseHardeningEvidenceAuditRequest(BaseModel):
     approved: StrictBool = False
 
@@ -1543,6 +1554,7 @@ class WorkspaceDocumentCreateRequest(BaseModel):
     note: str = ""
     tags: list[str] = Field(default_factory=list)
     source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    expected_matter_id: str | None = Field(default=None, min_length=1, max_length=160)
 
 
 class WorkspaceRevisionProposalRequest(BaseModel):
@@ -1616,6 +1628,12 @@ class FilingPacketBuildRequest(BaseModel):
     approved: StrictBool = False
 
 
+class FilingAssignmentMigrationRequest(BaseModel):
+    expected_revision_id: str = Field(pattern=r"^[a-f0-9]{32}$")
+    original_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    confirmed: StrictBool = False
+
+
 class AuthorityImpactAnalyzeRequest(BaseModel):
     document_id: str
     base_build_id: str
@@ -1624,6 +1642,7 @@ class AuthorityImpactAnalyzeRequest(BaseModel):
 
 class AuthorityImpactBuildRequest(AuthorityImpactAnalyzeRequest):
     approved: StrictBool = False
+    expected_revision_id: str = Field(pattern=r"^[a-f0-9]{32}$")
 
 
 class AuthorityImpactMatterRequest(BaseModel):
@@ -1754,6 +1773,7 @@ else:
     from app.api.routes.release_control import router as release_control_router
     from app.api.routes.governance import router as governance_router
     from app.api.routes.security_privacy import router as security_privacy_router
+    from app.api.local_ai_setup import router as local_ai_setup_router
 
     app = FastAPI(
         title="Maine Family Law LLM Local Workbench",
@@ -1768,6 +1788,7 @@ else:
     app.include_router(multimedia_router, prefix="/api")
     app.include_router(productivity_router, prefix="/api")
     app.include_router(addons_router, prefix="/api")
+    app.include_router(local_ai_setup_router, prefix="/api")
 
 
 if FastAPI is not None:
@@ -4379,9 +4400,31 @@ if FastAPI is not None:
                     "default_model": "qwen2.5:7b",
                 },
                 {
+                    "provider_id": "curated_ollama_reasoning",
+                    "default_endpoint": "http://127.0.0.1:11434",
+                    "allowed_models": ["qwen3:4b", "qwen3:8b"],
+                    "browser_endpoint_override_allowed": False,
+                    "browser_model_override_allowed": "allowlisted_only",
+                    "bundled_model_artifacts": False,
+                    "legal_quality_status": "not_legal_qualified",
+                    "review_required": True,
+                },
+                {
                     "provider_id": "openai_compatible_local",
                     "default_endpoint": "http://127.0.0.1:1234",
                     "default_model": "local-model",
+                },
+                {
+                    "provider_id": "sentinel_ollama",
+                    "server_configured_only": True,
+                    "gateway_environment": "SENTINEL_MODEL_GATEWAY_URL",
+                    "model_environment": "SENTINEL_LAW_PRIMARY_MODEL",
+                    "fallback_environment": "SENTINEL_LAW_FALLBACK_MODEL",
+                    "allowlist_environment": "AI_MODEL_ALLOWLIST",
+                    "browser_endpoint_override_allowed": False,
+                    "browser_model_override_allowed": False,
+                    "bundled_model_artifacts": False,
+                    "review_required": True,
                 },
                 {
                     "provider_id": "fast_interchange_local",
@@ -4400,7 +4443,9 @@ if FastAPI is not None:
 
     @app.exception_handler(RequestValidationError)
     async def local_agent_validation_error(request: Request, exc: RequestValidationError):
-        if request.url.path.startswith(("/api/local-agent/", "/api/model-packs")):
+        if request.url.path.startswith("/api/document-workspace/") and "/review" in request.url.path:
+            return JSONResponse(status_code=422, content={"detail": "review_request_invalid", "review_required": True})
+        if request.url.path.startswith(("/api/local-agent/", "/api/model-packs", "/api/document-workspace/migration-")):
             return JSONResponse(status_code=422, content={"detail": "local_agent_request_invalid", "review_required": True})
         return await request_validation_exception_handler(request, exc)
 
@@ -4438,20 +4483,31 @@ if FastAPI is not None:
         return LocalAgentAuditStore(root, encryption_key=os.environ.get("MAINE_MATTER_STORE_KEY") or "local-development-key-change-me")
 
     register_model_pack_routes(app, scope_resolver=_local_agent_scope, audit_factory=_local_agent_audit_store)
+    register_document_migration_routes(app, scope_resolver=_local_agent_scope, audit_factory=_local_agent_audit_store)
 
     def _local_agent_binding(payload: LocalAgentPreviewRequest, scope: dict[str, str], runtime: LocalAgentRuntime) -> dict[str, Any]:
         return {
             "scope": scope, "question": payload.question, "task": payload.task,
-            "provider": payload.provider, "endpoint": payload.endpoint, "model": payload.model,
+            # Never bind untrusted browser values as the effective endpoint or
+            # model.  This matters especially for server-configured SENTINEL.
+            "provider": runtime.client.provider_id,
+            "endpoint": runtime.client.endpoint.base_url,
+            "model": runtime.client.model_name,
+            "requested_route": {"provider": payload.provider, "endpoint": payload.endpoint, "model": payload.model},
             "run_id": payload.run_id, "source_refs": [ref.model_dump() for ref in payload.source_refs],
             "model_admission": getattr(runtime.client, "model_binding", {}),
         }
 
     def _local_agent_runtime_from_request(payload: LocalAgentPreviewRequest) -> LocalAgentRuntime:
         try:
+            provider = str(payload.provider or "").strip().lower().replace("-", "_")
+            # The approachable Qwen choice has one reviewed loopback origin.
+            # A browser or extension cannot redirect it to another local port
+            # while retaining the curated-provider label.
+            endpoint = "http://127.0.0.1:11434" if provider == "curated_ollama_reasoning" else payload.endpoint
             client = build_local_client(
-                provider=payload.provider,
-                endpoint=payload.endpoint,
+                provider=provider,
+                endpoint=endpoint,
                 model_name=payload.model,
                 timeout_seconds=120,
                 capability=payload.task,
@@ -4464,6 +4520,66 @@ if FastAPI is not None:
         return LocalAgentRuntime(client)
 
     def _local_agent_hardware_readiness(runtime: LocalAgentRuntime) -> dict[str, Any]:
+        if runtime.client.provider_id == "curated_ollama_reasoning":
+            profile = profile_hardware(Path(__file__).resolve().parents[2]).as_dict()
+            gib = 1024**3
+            requirements = {
+                "qwen3:4b": {"available_memory_bytes": 6 * gib, "available_vram_bytes": 4 * gib},
+                "qwen3:8b": {"available_memory_bytes": 10 * gib, "available_vram_bytes": int(5.5 * gib)},
+            }
+            model = str(runtime.client.model_name)
+            required = requirements.get(model)
+            available_memory = int(profile.get("available_memory_bytes") or 0)
+            available_vram = int(profile.get("available_vram_bytes") or 0)
+            if required is None:
+                return {
+                    "schema_version": "curated_qwen_hardware_readiness_v1",
+                    "status": "blocked_unknown_model_profile",
+                    "blockers": ["curated_qwen_model_profile_unavailable"],
+                    "review_required": True,
+                    "network_used": False,
+                }
+            ram_ready = available_memory >= required["available_memory_bytes"]
+            gpu_ready = available_vram >= required["available_vram_bytes"] and available_memory >= 2 * gib
+            blockers = [] if ram_ready or gpu_ready else ["insufficient_available_memory_or_vram"]
+            return {
+                "schema_version": "curated_qwen_hardware_readiness_v1",
+                "status": "ready_for_local_runtime_request" if not blockers else "hardware_review_required",
+                "model": model,
+                "available_memory_bytes": available_memory,
+                "available_vram_bytes": available_vram,
+                "minimum_available_memory_bytes": required["available_memory_bytes"],
+                "minimum_available_vram_bytes": required["available_vram_bytes"],
+                "gpu_lane_system_memory_reserve_bytes": 2 * gib,
+                "execution_lane": "system_memory" if ram_ready else "gpu_vram" if gpu_ready else "none",
+                "blockers": blockers,
+                "basis": "local_headroom_preflight_not_model_admission",
+                "model_presence_checked": False,
+                "review_required": True,
+                "network_used": False,
+            }
+        if runtime.client.provider_id == "sentinel_ollama":
+            profile = profile_hardware(Path(__file__).resolve().parents[2]).as_dict()
+            # A configured loopback model name is not a resource profile, an
+            # artifact identity, or task admission.  Fail closed until the
+            # catalog binds all three to an exact executable configuration.
+            return {
+                "schema_version": "local_agent_hardware_readiness_v2",
+                "status": "blocked_unqualified_sentinel_profile",
+                "blockers": [
+                    "sentinel_resource_profile_unavailable",
+                    "sentinel_artifact_not_admitted",
+                    "sentinel_task_qualification_unavailable",
+                ],
+                "hardware": {
+                    "available_memory_bytes": int(profile.get("available_memory_bytes") or 0),
+                    "disk_free_bytes": int(profile.get("disk_free_bytes") or 0),
+                    "available_vram_bytes": int(profile.get("available_vram_bytes") or 0),
+                },
+                "basis": "configured_route_without_verified_catalog_entry",
+                "review_required": True,
+                "network_used": False,
+            }
         if runtime.client.provider_id != "fast_interchange_local":
             return {
                 "schema_version": "fast_interchange_hardware_readiness_v1",
@@ -4657,10 +4773,23 @@ if FastAPI is not None:
         runtime = _local_agent_runtime_from_request(payload)
         hardware_readiness = _local_agent_hardware_readiness(runtime)
         if hardware_readiness["blockers"]:
+            _local_agent_audit_store(root).record(
+                "hardware_blocked",
+                scope=scope,
+                binding_sha256=local_agent_digest({
+                    "run_id": payload.run_id,
+                    "model": payload.model,
+                    "blockers": hardware_readiness["blockers"],
+                }),
+            )
             raise HTTPException(
                 status_code=409,
                 detail={
-                    "code": "fast_interchange_hardware_not_ready",
+                    "code": (
+                        "fast_interchange_hardware_not_ready"
+                        if runtime.client.provider_id == "fast_interchange_local"
+                        else "local_agent_hardware_not_ready"
+                    ),
                     "hardware_readiness": hardware_readiness,
                     "review_required": True,
                 },
@@ -4713,7 +4842,6 @@ if FastAPI is not None:
             "audit_receipt": audit,
             "matter_id": payload.matter_id,
             "local_agent_result": True,
-            "grounded": bool(result.context_manifest.entries),
             "source_card_count": len(result.context_manifest.entries),
         }
 
@@ -8200,8 +8328,10 @@ if FastAPI is not None:
     @app.get("/api/document-workspace/status")
     def document_workspace_status() -> dict[str, Any]:
         try:
-            status = workspace_status(_workspace_case_root())
+            root = _workspace_case_root()
+            status = workspace_status(root)
             return status | {
+                "matter_id": _case_id(root),
                 "docx": docx_engine_status(),
                 "originals_immutable": bool(status.get("originals_preserved")),
                 "explicit_confirmation_required": bool(
@@ -8233,8 +8363,16 @@ if FastAPI is not None:
     @app.post("/api/document-workspace/documents")
     def document_workspace_create(payload: WorkspaceDocumentCreateRequest) -> dict[str, Any]:
         try:
+            # Bind an open editor to the matter it was opened for. Capture the
+            # root once: a concurrent selection change must never redirect a save.
+            root = _workspace_case_root()
+            if payload.expected_matter_id is not None and payload.expected_matter_id != _case_id(root):
+                raise HTTPException(status_code=409, detail={
+                    "code": "workspace_active_matter_changed",
+                    "message": "The active matter changed. Nothing was saved. Reopen the original matter and review the draft before saving.",
+                })
             document = create_workspace_document(
-                _workspace_case_root(),
+                root,
                 title=payload.title,
                 content=payload.content,
                 document_type=payload.document_type,
@@ -10868,6 +11006,46 @@ if FastAPI is not None:
         except IntakeWorkbenchError as exc:
             raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
 
+    def _session_header_suggestions(
+        case_root: Path,
+        session: dict[str, Any],
+        selected_record_ids: Iterable[str] | None,
+    ) -> tuple[dict[str, Any], dict[str, list[str]]]:
+        requested_ids = _normalized_ids(selected_record_ids)
+        if not requested_ids:
+            raise HTTPException(status_code=409, detail="selected_source_record_required")
+        records = load_case_search_records(case_root)
+        by_id = {
+            str(row.get("evidence_id") or row.get("source_id") or row.get("record_id") or "").strip(): row
+            for row in records
+            if isinstance(row, dict)
+        }
+        if any(record_id not in by_id for record_id in requested_ids):
+            raise HTTPException(status_code=404, detail="selected_source_record_not_in_active_matter")
+        try:
+            review = MaineFindingsFormsStore(case_root).load(str(session.get("build_id") or ""))
+        except MaineFindingsFormsError as exc:
+            _raise_findings_forms_error(exc)
+        packet = review["packet"]
+        if str(packet.get("document_id") or "") != str(session.get("document_id") or ""):
+            raise HTTPException(status_code=409, detail="guided_form_session_build_mismatch")
+        fields_by_form: dict[str, list[str]] = {}
+        for form in list((packet.get("form_plan") or {}).get("selected_forms") or []):
+            form_id = str(form.get("form_id") or "").strip().upper()
+            if form_id:
+                fields_by_form[form_id] = [
+                    re.sub(r"[^a-z0-9]+", "_", str(item or "").casefold()).strip("_")[:80]
+                    for item in list(form.get("required_fields") or [])
+                    if str(item or "").strip()
+                ]
+        allowed_fields = [field for fields in fields_by_form.values() for field in fields]
+        report = build_header_suggestions(
+            [by_id[record_id] for record_id in requested_ids], allowed_fields=allowed_fields
+        )
+        report["session_id"] = str(session.get("session_id") or "")
+        report["build_id"] = str(session.get("build_id") or "")
+        return report, fields_by_form
+
     def _active_authority_forms() -> tuple[list[dict[str, Any]], dict[str, Any]]:
         try:
             result = AuthorityProductService().list_forms(limit=500)
@@ -11336,6 +11514,131 @@ if FastAPI is not None:
             raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
         return {"status": "pass", "session": session, "review_required": True, "filing_ready": False}
 
+    @app.post("/api/forms/session/{session_id}/header-suggestions/preview")
+    def forms_session_header_suggestions_preview(
+        session_id: str, payload: FormsHeaderSuggestionPreviewRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        session = _session_payload(case_root, session_id)
+        report, _fields_by_form = _session_header_suggestions(
+            case_root, session, payload.selected_record_ids
+        )
+        return report
+
+    @app.post("/api/forms/session/{session_id}/header-suggestions/apply")
+    def forms_session_header_suggestions_apply(
+        session_id: str, payload: FormsHeaderSuggestionApplyRequest
+    ) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        if payload.confirmed is not True:
+            raise HTTPException(status_code=409, detail="explicit_confirmation_required")
+        session = _session_payload(case_root, session_id)
+        report, fields_by_form = _session_header_suggestions(
+            case_root, session, payload.selected_record_ids
+        )
+        accepted_ids = set(_normalized_ids(payload.accepted_suggestion_ids))
+        if not accepted_ids:
+            raise HTTPException(status_code=409, detail="header_suggestion_selection_required")
+        candidates = {
+            str(item.get("suggestion_id") or ""): item
+            for item in list(report.get("suggestions") or [])
+            if isinstance(item, dict)
+        }
+        if not accepted_ids.issubset(candidates):
+            raise HTTPException(status_code=409, detail="header_suggestion_not_current")
+        chosen = [candidates[item_id] for item_id in sorted(accepted_ids)]
+        values_by_field: dict[str, set[str]] = {}
+        for suggestion in chosen:
+            field = str(suggestion.get("field_key") or "")
+            values_by_field.setdefault(field, set()).add(str(suggestion.get("value") or "").casefold())
+        if any(len(values) > 1 for values in values_by_field.values()):
+            raise HTTPException(status_code=409, detail="conflicting_header_suggestion_selection")
+
+        form_values = {str(form_id): dict(values or {}) for form_id, values in (session.get("form_values") or {}).items()}
+        applied: list[dict[str, Any]] = []
+        preserved: list[dict[str, str]] = []
+        selected_forms = set(_normalized_ids(session.get("selected_form_ids") or []))
+        for suggestion in chosen:
+            field = str(suggestion.get("field_key") or "")
+            value = str(suggestion.get("value") or "")
+            for form_id, fields in fields_by_form.items():
+                if form_id not in selected_forms or field not in fields:
+                    continue
+                current = str((form_values.get(form_id) or {}).get(field) or "").strip()
+                if current:
+                    preserved.append({"form_id": form_id, "field_key": field})
+                    continue
+                form_values.setdefault(form_id, {})[field] = value
+                applied.append({"suggestion_id": suggestion["suggestion_id"], "form_id": form_id, "field_key": field})
+        if not applied:
+            raise HTTPException(status_code=409, detail="header_suggestion_no_empty_matching_form_field")
+
+        receipts = list(session.get("header_suggestion_receipts") or [])[-99:]
+        receipts.extend(
+            {
+                "suggestion_id": suggestion["suggestion_id"],
+                "field_key": suggestion["field_key"],
+                "value": suggestion["value"],
+                "source": suggestion["source"],
+                "exact_source_text": suggestion["exact_source_text"],
+                "ocr_derived": bool(suggestion.get("ocr_derived")),
+                "status": str(suggestion.get("status") or "candidate_review_required"),
+                "review_required": True,
+            }
+            for suggestion in chosen
+        )
+        session["form_values"] = form_values
+        session["header_suggestion_receipts"] = receipts[-100:]
+        session["updated_at"] = _utc_now()
+        session["review_required"] = True
+        try:
+            session = _guided_form_session_store(case_root).replace(
+                session, action="apply_source_bound_header_suggestions"
+            )
+        except IntakeWorkbenchError as exc:
+            raise HTTPException(status_code=int(exc.status_code), detail=exc.code) from None
+        return {
+            "status": "review_required",
+            "session": session,
+            "applied": applied,
+            "preserved_existing_values": preserved,
+            "review_required": True,
+            "filing_ready": False,
+            "notice": "Only selected, exact-source candidates were copied to empty working-copy fields. Review every value against the official form before validation or export.",
+        }
+
+    @app.get("/api/forms/session/{session_id}/header-suggestions/{suggestion_id}/source")
+    def forms_session_header_suggestion_source(session_id: str, suggestion_id: str) -> dict[str, Any]:
+        case_root = active_case_root()
+        if case_root is None:
+            raise HTTPException(status_code=404, detail="active_matter_unavailable")
+        session = _session_payload(case_root, session_id)
+        receipt = next(
+            (
+                item
+                for item in list(session.get("header_suggestion_receipts") or [])
+                if str(item.get("suggestion_id") or "") == str(suggestion_id or "")
+            ),
+            None,
+        )
+        if not isinstance(receipt, dict):
+            raise HTTPException(status_code=404, detail="header_suggestion_source_not_found")
+        return {
+            "status": "pass",
+            "suggestion_id": str(receipt.get("suggestion_id") or ""),
+            "field_key": str(receipt.get("field_key") or ""),
+            "value": str(receipt.get("value") or ""),
+            "source": dict(receipt.get("source") or {}),
+            "exact_source_text": str(receipt.get("exact_source_text") or ""),
+            "ocr_derived": bool(receipt.get("ocr_derived")),
+            "review_required": True,
+            "filing_ready": False,
+        }
+
     @app.post("/api/forms/session/{session_id}/validate")
     def forms_session_validate(
         session_id: str, payload: FormsSessionActionRequest
@@ -11443,13 +11746,45 @@ if FastAPI is not None:
             "review_required": True,
         }
 
+    def _review_access(request: Request, action: str):
+        identity = _require_local_dashboard_identity(request)
+        root = _workspace_case_root()
+        matter_id = str(request.headers.get("X-MFLL-Matter-Id") or "")
+        if not matter_id or matter_id != _case_id(root):
+            raise HTTPException(409, detail="review_active_matter_mismatch")
+        scope = {**identity, "matter_id": matter_id}
+        try:
+            _local_agent_audit_store(root).record(action + "_requested", scope=scope, binding_sha256=hashlib.sha256(request.url.path.encode()).hexdigest())
+        except Exception:
+            raise HTTPException(409, detail="review_audit_unavailable") from None
+        return root, scope
+
+    def _review_result(root, scope, action, result):
+        if active_case_root() is None or Path(active_case_root()) != root:
+            raise HTTPException(409, detail="review_active_matter_changed")
+        try:
+            head = result.get("history_head") or {}
+            if head.get("recovered_interrupted_commit") or head.get("valid") is False:
+                event = "document_review_integrity_blocked" if head.get("valid") is False else "document_review_recovery_observed"
+                _local_agent_audit_store(root).record(event, scope=scope, binding_sha256=str(head.get("head_sha256") or hashlib.sha256(action.encode()).hexdigest()))
+            _local_agent_audit_store(root).record(action + "_completed", scope=scope, binding_sha256=hashlib.sha256(str(result.get("decision_id") or result.get("request_id") or result.get("document_id") or action).encode()).hexdigest())
+        except Exception:
+            raise HTTPException(409, detail="review_audit_unavailable_reload_history") from None
+        return {**result, "matter_id": scope["matter_id"]}
+
+    # Shared by the matter-addressed authority router; aliases must not use a
+    # weaker identity/audit path than the actual production desktop endpoints.
+    app.state.private_review_access = _review_access
+    app.state.private_review_result = _review_result
+
     @app.post("/api/document-workspace/documents/{document_id}/review/prepare")
     def document_workspace_review_prepare(
         document_id: str,
         payload: WorkspaceReviewPrepareRequest,
+        request: Request,
     ) -> dict[str, Any]:
         try:
-            case_root = _workspace_case_root()
+            case_root, scope = _review_access(request, "document_review_prepare")
             document = get_workspace_document(case_root, document_id)
             source_ids = []
             for row in document.get("source_refs") or []:
@@ -11474,13 +11809,14 @@ if FastAPI is not None:
                     "blockers": ["active_authority_product_unavailable_or_unverified"],
                     "review_required": True,
                 }
-            return prepare_review_request(
+            result = prepare_review_request(
                 case_root,
                 document_id,
                 authority_result=authority_result,
                 facts=payload.facts,
                 records=load_case_search_records(case_root),
             )
+            return _review_result(case_root, scope, "document_review_prepare", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11490,10 +11826,12 @@ if FastAPI is not None:
     def document_workspace_review_commit(
         document_id: str,
         payload: WorkspaceReviewCommitRequest,
+        request: Request,
     ) -> dict[str, Any]:
         try:
-            return commit_review_decision(
-                _workspace_case_root(),
+            case_root, scope = _review_access(request, "document_review_commit")
+            result = commit_review_decision(
+                case_root,
                 document_id,
                 request_id=payload.request_id,
                 confirmation_token=payload.confirmation_token,
@@ -11505,6 +11843,7 @@ if FastAPI is not None:
                 notes=payload.notes,
                 claim_annotations=payload.claim_annotations,
             )
+            return _review_result(case_root, scope, "document_review_commit", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11512,32 +11851,36 @@ if FastAPI is not None:
 
     @app.get("/api/document-workspace/review-queue")
     def document_workspace_review_queue(
-        include_completed: bool = False, limit: int = 200
+        request: Request, include_completed: bool = False, limit: int = 200
     ) -> dict[str, Any]:
         try:
-            return build_reviewer_queue(
-                _workspace_case_root(),
+            case_root, scope = _review_access(request, "document_review_queue")
+            result = build_reviewer_queue(
+                case_root,
                 include_completed=bool(include_completed),
                 limit=limit,
             )
+            return _review_result(case_root, scope, "document_review_queue", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
             _raise_review_error(exc)
 
     @app.get("/api/document-workspace/documents/{document_id}/reviews")
-    def document_workspace_review_history(document_id: str) -> dict[str, Any]:
+    def document_workspace_review_history(document_id: str, request: Request) -> dict[str, Any]:
         try:
-            return list_review_history(_workspace_case_root(), document_id)
+            case_root, scope = _review_access(request, "document_review_history")
+            return _review_result(case_root, scope, "document_review_history", list_review_history(case_root, document_id))
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
             _raise_review_error(exc)
 
     @app.get("/api/document-workspace/documents/{document_id}/reviews/verify")
-    def document_workspace_review_verify(document_id: str) -> dict[str, Any]:
+    def document_workspace_review_verify(document_id: str, request: Request) -> dict[str, Any]:
         try:
-            return verify_review_ledger(_workspace_case_root(), document_id)
+            case_root, scope = _review_access(request, "document_review_verify")
+            return _review_result(case_root, scope, "document_review_verify", verify_review_ledger(case_root, document_id))
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11605,15 +11948,14 @@ if FastAPI is not None:
         return public
 
     @app.get("/api/reviewed-filing-packet/status")
-    def reviewed_filing_packet_status(document_id: str = "") -> dict[str, Any]:
-        case_root = active_case_root()
-        if case_root is None:
-            return {
-                "status": "blocked",
-                "blockers": ["active_matter_unavailable"],
-                "review_required": True,
-            }
-        store = ReviewedFilingPacketStore(case_root)
+    def reviewed_filing_packet_status(request: Request, document_id: str = "") -> dict[str, Any]:
+        case_root, scope = _review_access(request, "filing_packet_status")
+        try:
+            store = ReviewedFilingPacketStore(case_root)
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except ReviewedFilingPacketError as exc:
+            _raise_filing_packet_error(exc)
         result: dict[str, Any] = {"status": "available", "review_required": True}
         if document_id:
             try:
@@ -11632,19 +11974,21 @@ if FastAPI is not None:
                 _raise_review_error(exc)
             except ReviewedFilingPacketError as exc:
                 _raise_filing_packet_error(exc)
-        return result
+        return _review_result(case_root, scope, "filing_packet_status", result)
 
     @app.post("/api/reviewed-filing-packet/documents/{document_id}/diff")
     def reviewed_filing_packet_diff(
-        document_id: str, payload: FilingPacketDiffRequest
+        document_id: str, payload: FilingPacketDiffRequest, request: Request
     ) -> dict[str, Any]:
         try:
-            return build_incremental_review_diff(
-                _workspace_case_root(),
+            case_root, scope = _review_access(request, "filing_packet_diff")
+            result = build_incremental_review_diff(
+                case_root,
                 document_id,
                 base_revision_id=payload.base_revision_id,
                 target_revision_id=payload.target_revision_id,
             )
+            return _review_result(case_root, scope, "filing_packet_diff", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11653,9 +11997,11 @@ if FastAPI is not None:
             _raise_filing_packet_error(exc)
 
     @app.get("/api/reviewed-filing-packet/documents/{document_id}/assignments")
-    def reviewed_filing_packet_assignments(document_id: str) -> dict[str, Any]:
+    def reviewed_filing_packet_assignments(document_id: str, request: Request) -> dict[str, Any]:
         try:
-            return ReviewedFilingPacketStore(_workspace_case_root()).assignments_for(document_id)
+            case_root, scope = _review_access(request, "filing_assignment_read")
+            result = ReviewedFilingPacketStore(case_root).assignments_for(document_id)
+            return _review_result(case_root, scope, "filing_assignment_read", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewedFilingPacketError as exc:
@@ -11663,10 +12009,11 @@ if FastAPI is not None:
 
     @app.post("/api/reviewed-filing-packet/documents/{document_id}/assignments")
     def reviewed_filing_packet_assign(
-        document_id: str, payload: FilingPacketAssignmentRequest
+        document_id: str, payload: FilingPacketAssignmentRequest, request: Request
     ) -> dict[str, Any]:
         try:
-            return ReviewedFilingPacketStore(_workspace_case_root()).assign(
+            case_root, scope = _review_access(request, "filing_assignment_write")
+            result = ReviewedFilingPacketStore(case_root).assign(
                 document_id,
                 reviewer_label=payload.reviewer_label,
                 role=payload.role,
@@ -11675,6 +12022,26 @@ if FastAPI is not None:
                 exclusive=payload.exclusive,
                 note=payload.note,
             )
+            return _review_result(case_root, scope, "filing_assignment_write", result)
+        except DocumentWorkspaceError as exc:
+            _raise_workspace_error(exc)
+        except ReviewedFilingPacketError as exc:
+            _raise_filing_packet_error(exc)
+
+    @app.post("/api/reviewed-filing-packet/documents/{document_id}/assignments/migrate")
+    def reviewed_filing_assignment_migrate(
+        document_id: str, payload: FilingAssignmentMigrationRequest, request: Request
+    ) -> dict[str, Any]:
+        from legal.review.assignment_migration import migrate
+
+        try:
+            case_root, scope = _review_access(request, "filing_assignment_migrate")
+            result = migrate(
+                ReviewedFilingPacketStore(case_root), document_id,
+                expected_revision_id=payload.expected_revision_id,
+                original_sha256=payload.original_sha256, confirmed=payload.confirmed,
+            )
+            return _review_result(case_root, scope, "filing_assignment_migrate", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewedFilingPacketError as exc:
@@ -11682,10 +12049,10 @@ if FastAPI is not None:
 
     @app.post("/api/reviewed-filing-packet/documents/{document_id}/build")
     def reviewed_filing_packet_build(
-        document_id: str, payload: FilingPacketBuildRequest
+        document_id: str, payload: FilingPacketBuildRequest, request: Request
     ) -> dict[str, Any]:
         try:
-            case_root = _workspace_case_root()
+            case_root, scope = _review_access(request, "filing_packet_build")
             authority_status = AuthorityProductService().status()
             current_authority_build_id = (
                 str(authority_status.get("build_id") or "")
@@ -11706,7 +12073,7 @@ if FastAPI is not None:
                 current_records=load_case_search_records(case_root),
             )
             result["artifacts"] = _public_filing_packet_artifacts(case_root, result)
-            return result
+            return _review_result(case_root, scope, "filing_packet_build", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11715,9 +12082,11 @@ if FastAPI is not None:
             _raise_filing_packet_error(exc)
 
     @app.get("/api/reviewed-filing-packet/verify")
-    def reviewed_filing_packet_verify(build_id: str) -> dict[str, Any]:
+    def reviewed_filing_packet_verify(build_id: str, request: Request) -> dict[str, Any]:
         try:
-            return ReviewedFilingPacketStore(_workspace_case_root()).verify(build_id)
+            case_root, scope = _review_access(request, "filing_packet_verify")
+            result = ReviewedFilingPacketStore(case_root).verify(build_id)
+            return _review_result(case_root, scope, "filing_packet_verify", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewedFilingPacketError as exc:
@@ -11831,14 +12200,8 @@ if FastAPI is not None:
         return public
 
     @app.get("/api/authority-change-impact/status")
-    def authority_change_impact_status(document_id: str = "") -> dict[str, Any]:
-        case_root = active_case_root()
-        if case_root is None:
-            return {
-                "status": "blocked",
-                "blockers": ["active_matter_unavailable"],
-                "review_required": True,
-            }
+    def authority_change_impact_status(request: Request, document_id: str = "") -> dict[str, Any]:
+        case_root, scope = _review_access(request, "authority_impact_status")
         try:
             store = _authority_impact_store(case_root)
             result = store.list_generations()
@@ -11847,20 +12210,25 @@ if FastAPI is not None:
                     active = store.active(document_id=document_id)
                     active["artifacts"] = _public_authority_impact_artifacts(case_root, active)
                     result["active"] = active
-                except AuthorityImpactError:
+                except AuthorityImpactError as exc:
                     result["active"] = None
-            return result
+                    if exc.code not in {"authority_impact_record_unavailable", "authority_impact_active_document_mismatch"}:
+                        result["blockers"] = sorted(set(result.get("blockers", [])) | {exc.code})
+                        result["status"] = "blocked"
+            return _review_result(case_root, scope, "authority_impact_status", result)
         except AuthorityImpactError as exc:
             _raise_authority_impact_error(exc)
 
     @app.post("/api/authority-change-impact/analyze")
-    def authority_change_impact_analyze(payload: AuthorityImpactAnalyzeRequest) -> dict[str, Any]:
+    def authority_change_impact_analyze(payload: AuthorityImpactAnalyzeRequest, request: Request) -> dict[str, Any]:
         try:
-            return _authority_impact_store(_workspace_case_root()).analyze_document(
+            case_root, scope = _review_access(request, "authority_impact_document_analyze")
+            result = _authority_impact_store(case_root).analyze_document(
                 payload.document_id,
                 payload.base_build_id,
                 payload.target_build_id,
             )
+            return _review_result(case_root, scope, "authority_impact_document_analyze", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11869,17 +12237,18 @@ if FastAPI is not None:
             _raise_authority_impact_error(exc)
 
     @app.post("/api/authority-change-impact/build")
-    def authority_change_impact_build(payload: AuthorityImpactBuildRequest) -> dict[str, Any]:
+    def authority_change_impact_build(payload: AuthorityImpactBuildRequest, request: Request) -> dict[str, Any]:
         try:
-            case_root = _workspace_case_root()
+            case_root, scope = _review_access(request, "authority_impact_packet_build")
             result = _authority_impact_store(case_root).build(
                 payload.document_id,
                 payload.base_build_id,
                 payload.target_build_id,
                 approved=payload.approved,
+                expected_revision_id=payload.expected_revision_id,
             )
             result["artifacts"] = _public_authority_impact_artifacts(case_root, result)
-            return result
+            return _review_result(case_root, scope, "authority_impact_packet_build", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11888,7 +12257,7 @@ if FastAPI is not None:
             _raise_authority_impact_error(exc)
 
     @app.post("/api/authority-change-impact/matter/analyze")
-    def authority_change_impact_matter_analyze(payload: AuthorityImpactMatterRequest) -> dict[str, Any]:
+    def authority_change_impact_matter_analyze(payload: AuthorityImpactMatterRequest, request: Request) -> dict[str, Any]:
         """Create a source-overlap revalidation queue for the active matter.
 
         This is deliberately an analysis-only path: it never decides that a
@@ -11896,16 +12265,16 @@ if FastAPI is not None:
         changed.  The durable access receipt contains no document prose.
         """
         try:
-            case_root = _workspace_case_root()
+            case_root, scope = _review_access(request, "authority_impact_matter_analyze")
             store = _authority_impact_store(case_root)
             result = store.analyze_matter(payload.base_build_id, payload.target_build_id)
             result["access_receipt"] = store.record_access(
                 action="matter_impact_analyze",
-                actor_role="local_owner",
-                tenant_id="local",
+                actor_role=scope["role"],
+                tenant_id=scope["tenant_id"],
                 audit_event_id=secrets.token_hex(16),
             )
-            return result
+            return _review_result(case_root, scope, "authority_impact_matter_analyze", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except ReviewLedgerError as exc:
@@ -11914,9 +12283,11 @@ if FastAPI is not None:
             _raise_authority_impact_error(exc)
 
     @app.get("/api/authority-change-impact/verify")
-    def authority_change_impact_verify(build_id: str) -> dict[str, Any]:
+    def authority_change_impact_verify(build_id: str, request: Request) -> dict[str, Any]:
         try:
-            return _authority_impact_store(_workspace_case_root()).verify(build_id)
+            case_root, scope = _review_access(request, "authority_impact_verify")
+            result = _authority_impact_store(case_root).verify(build_id)
+            return _review_result(case_root, scope, "authority_impact_verify", result)
         except DocumentWorkspaceError as exc:
             _raise_workspace_error(exc)
         except AuthorityImpactError as exc:

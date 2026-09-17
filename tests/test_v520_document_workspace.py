@@ -15,6 +15,7 @@ from legal.documents.workspace import (
     find_preserved_source,
     list_documents,
     propose_revision,
+    read_document_revision,
     request_soft_delete,
     restore_document,
     save_imported_source,
@@ -66,13 +67,8 @@ def test_revision_workflow_is_immutable_and_confirmation_gated(tmp_path: Path) -
     assert committed["original_revision_id"] == created["current_revision_id"]
     assert committed["current_revision_id"] == proposal["revision_id"]
     assert committed["original_preserved"] is True
-    original = json.loads(
-        (
-            workspace_paths(case_root).documents
-            / created["document_id"]
-            / "revisions"
-            / f"{created['current_revision_id']}.json"
-        ).read_text(encoding="utf-8")
+    original = read_document_revision(
+        case_root, created["document_id"], created["current_revision_id"]
     )
     assert original["content"] == "Original line\nSecond line"
     assert original["status"] == "committed"

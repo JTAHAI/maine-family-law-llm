@@ -123,6 +123,58 @@ def verify_evidence_output(answer: str, sources: tuple[ContextSource, ...]) -> d
     return report
 
 
+def verify_selected_evidence_spans(rows: tuple, sources: tuple[ContextSource, ...]) -> dict:
+    """Check structured original-character spans, independently of model text.
+
+    This avoids parsing nested quotation delimiters. It does NOT normalize
+    mismatched text or verify relevance/meaning. Only one exact, non-sensitive
+    span per approved private record is accepted in this narrow mode.
+    """
+    blockers, spans, represented = [], [], set()
+    keys = {"source_id", "reference", "start_offset", "end_offset",
+            "source_text_sha256", "quote_sha256", "status"}
+    valid_shape = isinstance(rows, tuple) and 1 <= len(rows) <= 24
+    if not valid_shape:
+        blockers.append("evidence_review_selected_spans_invalid")
+    if not sources or any(source.lane != "private_record" for source in sources):
+        blockers.append("evidence_review_private_records_required")
+    for row in rows if valid_shape else ():
+        if not isinstance(row, dict) or set(row) != keys:
+            blockers.append("evidence_review_selected_spans_invalid")
+            continue
+        index, start, end = row["reference"], row["start_offset"], row["end_offset"]
+        if (any(type(value) is not int for value in (index, start, end))
+                or not 1 <= index <= len(sources) or index in represented):
+            blockers.append("evidence_review_selected_spans_invalid")
+            continue
+        source = sources[index - 1]
+        if (not 0 <= start < end <= len(source.text) or end - start > 600
+                or row["source_id"] != source.source_id or row["status"] != "exact"
+                or row["source_text_sha256"] != sha256(source.text.encode("utf-8")).hexdigest()
+                or row["quote_sha256"] != sha256(source.text[start:end].encode("utf-8")).hexdigest()
+        ):
+            blockers.append("evidence_review_selected_source_changed")
+            continue
+        if overlaps_protected_span(start, end, source.text, source.metadata):
+            blockers.append("evidence_review_sensitive_quote_withheld")
+            continue
+        represented.add(index)
+        spans.append(dict(row))
+    if represented != set(range(1, len(sources) + 1)):
+        blockers.append("evidence_review_all_records_required")
+    report = {
+        "schema_version": "evidence_selected_spans_boundary_v1",
+        "status": "withheld" if blockers else "quoted_spans_bound_review_required",
+        "display_mode": "withheld" if blockers else "verified_extracts_only",
+        "review_required": True, "factual_claims_verified": False,
+        "legal_claims_verified": False, "relevance_verified": False,
+        "source_spans": [] if blockers else spans, "suppressed_spans": [],
+        "partial_extracts_available": False, "blockers": sorted(set(blockers)),
+    }
+    report["report_sha256"] = sha256(canonical_json(report)).hexdigest()
+    return report
+
+
 def render_verified_evidence_extracts(
     report: dict,
     sources: tuple[ContextSource, ...],
@@ -161,12 +213,33 @@ def render_verified_evidence_extracts(
         if report.get("blockers")
         else ""
     )
-    return (
-        "Evidence Review — model-selected record excerpts\n\n"
-        + "\n\n".join(extracts)
-        + partial_notice
-        + "\n\nThese excerpts match the approved records. The model's other narrative "
+    selection_notice = (
+        "These excerpts match the approved records exactly. This mode selects one passage "
+        "per record; it does not check every passage or verify relevance, facts, or law. "
+        "Open each source to check surrounding context, corrections, and missing information. "
+        "A record's statement is not an established fact."
+        if report.get("schema_version") in {
+            "evidence_selected_spans_boundary_v1", "compact_selected_extracts_v1"
+        }
+        else "These excerpts match the approved records. The model's other narrative "
         "was withheld because its factual conclusions were not verified. Open each source "
         "to check surrounding context, differences, and missing information. A record's "
-        "statement is not an established fact.\n\nReview required."
+        "statement is not an established fact."
+    )
+    ranked = report.get("schema_version") == "evidence_ranked_spans_boundary_v1"
+    if ranked:
+        selection_notice = (
+            "These are up to three candidate passages per record, not an answer or finding. "
+            "Their text matches the approved records exactly, but relevance is unknown. "
+            "The ranker always returns candidates, even when none answers the question; "
+            "it cannot establish that information is present or absent. Open each source "
+            "to inspect the full context, corrections, and other passages before selecting "
+            "anything for your work. Facts, law, and completeness have not been verified."
+        )
+    return (
+        ("Evidence Review — candidate passages to inspect\n\n" if ranked
+         else "Evidence Review — model-selected record excerpts\n\n")
+        + "\n\n".join(extracts)
+        + partial_notice
+        + "\n\n" + selection_notice + "\n\nReview required."
     )

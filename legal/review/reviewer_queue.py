@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from legal.documents.workspace import list_documents
-from .review_ledger import list_pending_review_packets, list_review_history
+from .review_ledger import list_review_history
 
 MAX_QUEUE_ITEMS = 500
 
@@ -19,14 +19,17 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
         document_id = str(document.get("document_id") or "")
         if not document_id:
             continue
-        history = list_review_history(case_root, document_id)
-        pending = list_pending_review_packets(case_root, document_id)
+        history = list_review_history(case_root, document_id, include_pending_packets=True)
+        pending = history["pending_packets"]
         latest = history.get("latest") or {}
-        current_revision = str(document.get("current_revision_id") or "")
+        current_revision = str(history.get("current_revision_id") or "")
         latest_revision = str(latest.get("revision_id") or "")
         latest_gate = latest.get("filing_gate") if isinstance(latest.get("filing_gate"), dict) else {}
-        blockers = list(latest_gate.get("blockers") or [])
-        if pending.get("count"):
+        blockers = list(history.get("blockers") or []) + list(latest_gate.get("blockers") or [])
+        ready = bool(latest_gate.get("filing_ready") and latest_revision == current_revision and history.get("storage_authenticated"))
+        if history.get("storage_authenticated") is False:
+            queue_status = "review_history_incomplete"
+        elif pending.get("count"):
             queue_status = "awaiting_reviewer"
         elif latest and latest_revision != current_revision:
             queue_status = "stale_review_after_revision_change"
@@ -34,7 +37,7 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
             queue_status = "changes_requested"
         elif latest.get("decision") == "reject":
             queue_status = "rejected"
-        elif latest_gate.get("filing_ready"):
+        elif ready:
             queue_status = "filing_gate_passed"
         elif latest.get("decision") == "approve_review":
             queue_status = "review_complete_blocked"
@@ -54,15 +57,16 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
             "latest_decision": latest.get("decision"),
             "latest_decision_status": latest.get("status"),
             "latest_review_revision_id": latest_revision,
-            "filing_ready": bool(latest_gate.get("filing_ready")),
+            "filing_ready": ready,
             "blockers": blockers[:100],
             "packet_summary": packet,
             "updated_at": document.get("updated_at") or document.get("created_at"),
-            "review_required": not bool(latest_gate.get("filing_ready")),
+            "review_required": not ready,
         }
         items.append(item)
 
     priority = {
+        "review_history_incomplete": -1,
         "awaiting_reviewer": 0,
         "stale_review_after_revision_change": 1,
         "changes_requested": 2,

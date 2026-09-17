@@ -108,6 +108,66 @@ def test_local_agent_requires_exact_manifest_approval_and_produces_receipt():
     assert payload["model"]["remote_providers_enabled"] is False
 
 
+def test_sentinel_output_without_an_approved_source_reference_is_withheld():
+    class SentinelWithoutReference(FakeLocalClient):
+        provider_id = "sentinel_ollama"
+
+        def generate_response(self, prompt: str) -> LocalModelResponse:
+            return LocalModelResponse(
+                text="A generic answer without a source reference. Review required.",
+                provider_id=self.provider_id,
+                model_id=self.model_name,
+                endpoint_class=self.endpoint.endpoint_class,
+                finish_reason="stop",
+            )
+
+    runtime = LocalAgentRuntime(SentinelWithoutReference())
+    manifest, _, _ = runtime.preview(
+        question="What does the source establish?", sources=[_source()], run_id="sentinel-reference-check"
+    )
+    result = runtime.run(
+        LocalAgentRunRequest(
+            question="What does the source establish?",
+            sources=(_source(),),
+            approved_manifest_sha256=manifest.manifest_sha256,
+            run_id="sentinel-reference-check",
+        )
+    )
+
+    assert result.status == "specialist_output_blocked_review_required"
+    assert "source_bound_model_references_required" in result.blockers
+
+
+def test_curated_reasoning_output_without_an_approved_source_reference_is_withheld():
+    class CuratedWithoutReference(FakeLocalClient):
+        provider_id = "curated_ollama_reasoning"
+
+        def generate_response(self, prompt: str) -> LocalModelResponse:
+            return LocalModelResponse(
+                text="A generic reply that did not cite the selected record. Review required.",
+                provider_id=self.provider_id,
+                model_id=self.model_name,
+                endpoint_class=self.endpoint.endpoint_class,
+                finish_reason="stop",
+            )
+
+    runtime = LocalAgentRuntime(CuratedWithoutReference())
+    manifest, _, _ = runtime.preview(
+        question="What does the source establish?", sources=[_source()], run_id="curated-reference-check"
+    )
+    result = runtime.run(
+        LocalAgentRunRequest(
+            question="What does the source establish?",
+            sources=(_source(),),
+            approved_manifest_sha256=manifest.manifest_sha256,
+            run_id="curated-reference-check",
+        )
+    )
+
+    assert result.status == "specialist_output_blocked_review_required"
+    assert "source_bound_model_references_required" in result.blockers
+
+
 def test_manifest_mismatch_blocks_before_model_execution():
     class ExplodingClient(FakeLocalClient):
         def generate_response(self, prompt: str):

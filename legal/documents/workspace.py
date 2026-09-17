@@ -27,6 +27,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from legal.documents import storage as workspace_storage
+from legal.security.durable_io import read_bounded_regular_file
+
 WORKSPACE_FOLDER = "19_DOCUMENT_WORKSPACE"
 INDEX_FILENAME = "document_index.json"
 AUDIT_FILENAME = "audit_log.jsonl"
@@ -204,6 +207,9 @@ def workspace_paths(case_root: Path, *, create: bool = True) -> WorkspacePaths:
     if resolved_case not in resolved_root.parents:
         raise DocumentWorkspaceError("workspace_path_escape", "The workspace escaped the active case.", status_code=409)
 
+    from legal.documents.migration import recover_pending
+    recover_pending(resolved_root)
+
     documents = resolved_root / "documents"
     sources = resolved_root / "sources"
     exports = resolved_root / "exports"
@@ -261,15 +267,39 @@ def _read_json(path: Path, fallback: Any) -> Any:
     if path.is_symlink():
         raise DocumentWorkspaceError("workspace_symlink_refused", "A workspace symlink was refused.", status_code=409)
     try:
-        raw = path.read_bytes()
+        raw = read_bounded_regular_file(path, max_bytes=workspace_storage.MAX_ENVELOPE)
     except OSError as exc:
         raise DocumentWorkspaceError("workspace_read_failed", "The local workspace could not be read.", status_code=500) from exc
-    if len(raw) > MAX_CONTENT_CHARS * 4:
-        raise DocumentWorkspaceError("workspace_index_too_large", "The workspace index is unexpectedly large.", status_code=409)
     try:
-        return json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise DocumentWorkspaceError("workspace_json_invalid", "The local workspace metadata is invalid.", status_code=409) from exc
+        return workspace_storage.decode(path, raw)
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        raise DocumentWorkspaceError(
+            "workspace_storage_unavailable",
+            "The draft could not be unlocked or verified. Keep the complete workspace "
+            "and original local key; no files were changed.",
+            status_code=409,
+        ) from exc
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    try:
+        encrypted = workspace_storage.encode(path, payload)
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        if str(exc) == "workspace_legacy_storage_migration_required":
+            raise DocumentWorkspaceError(
+                "workspace_legacy_storage_migration_required",
+                "This legacy workspace is read-only until its encryption migration is reviewed. "
+                "Existing documents are preserved; do not remove storage identity files "
+                "or overwrite the workspace.",
+                status_code=409,
+            ) from exc
+        raise DocumentWorkspaceError(
+            "workspace_storage_unavailable",
+            "The draft could not be encrypted. Nothing was written to this document file. "
+            "Keep the original local key and retry.",
+            status_code=409,
+        ) from exc
+    _atomic_write(path, encrypted)
 
 
 def _empty_index() -> dict[str, Any]:
@@ -289,7 +319,7 @@ def _write_index(paths: WorkspacePaths, payload: dict[str, Any]) -> None:
     payload = dict(payload)
     payload["schema_version"] = SCHEMA_VERSION
     payload["updated_at"] = _utc_now()
-    _atomic_write(paths.index, json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"))
+    _write_json(paths.index, payload)
 
 
 def _document_folder(paths: WorkspacePaths, document_id: str) -> Path:
@@ -323,7 +353,13 @@ def _write_revision(paths: WorkspacePaths, payload: dict[str, Any]) -> None:
     path = _revision_path(paths, str(payload["document_id"]), str(payload["revision_id"]))
     if path.exists():
         raise DocumentWorkspaceError("revision_exists", "The revision already exists.", status_code=409)
-    _atomic_write(path, json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"))
+    _write_json(path, payload)
+
+
+def read_document_revision(case_root: Path, document_id: str, revision_id: str) -> dict[str, Any]:
+    """Canonical, encryption-aware revision read for downstream review services."""
+    with _LOCK:
+        return _read_revision(workspace_paths(case_root), document_id, revision_id)
 
 
 def _last_audit_hash(path: Path) -> str:
@@ -571,7 +607,7 @@ def list_documents(case_root: Path, *, include_deleted: bool = False, limit: int
         return rows[:limit]
 
 
-def get_document(case_root: Path, document_id: str, *, include_content: bool = True) -> dict[str, Any]:
+def get_document(case_root: Path, document_id: str, *, include_content: bool = True, include_history: bool = True) -> dict[str, Any]:
     with _LOCK:
         paths = workspace_paths(case_root)
         index = _load_index(paths)
@@ -584,6 +620,8 @@ def get_document(case_root: Path, document_id: str, *, include_content: bool = T
             revision = _read_revision(paths, document_id, str(document["current_revision_id"]))
             result["content"] = revision["content"]
             result["content_sha256"] = revision["content_sha256"]
+        if not include_history:
+            return result
         revisions_dir = _document_folder(paths, document_id) / "revisions"
         history: list[dict[str, Any]] = []
         for path in sorted(revisions_dir.glob("*.json")):
@@ -708,7 +746,7 @@ def commit_revision(
         revision["status"] = "committed"
         revision["committed_at"] = _utc_now()
         revision.pop("confirmation_token_sha256", None)
-        _atomic_write(_revision_path(paths, document_id, revision_id), json.dumps(revision, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"))
+        _write_json(_revision_path(paths, document_id, revision_id), revision)
         document["current_revision_id"] = revision_id
         document["updated_at"] = revision["committed_at"]
         document["revision_count"] = int(document.get("revision_count") or 0) + 1
@@ -736,7 +774,7 @@ def reject_revision(case_root: Path, document_id: str, *, revision_id: str) -> d
         revision["status"] = "rejected"
         revision["rejected_at"] = _utc_now()
         revision.pop("confirmation_token_sha256", None)
-        _atomic_write(_revision_path(paths, document_id, revision_id), json.dumps(revision, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"))
+        _write_json(_revision_path(paths, document_id, revision_id), revision)
         document["pending_revision_ids"] = [value for value in document.get("pending_revision_ids") or [] if value != revision_id]
         document["updated_at"] = revision["rejected_at"]
         _write_index(paths, index)
@@ -865,6 +903,14 @@ def workspace_status(case_root: Path) -> dict[str, Any]:
         index = _load_index(paths)
         documents = list(index["documents"].values())
         audit = verify_audit_chain(case_root)
+        try:
+            storage_policy = workspace_storage.policy(paths.root)
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            raise DocumentWorkspaceError(
+                "workspace_migration_receipt_unavailable",
+                "The migration receipt could not be verified. Keep the workspace and original key.",
+                status_code=409,
+            ) from exc
         return {
             "schema_version": SCHEMA_VERSION,
             "document_count": sum(1 for item in documents if item.get("status") != "deleted"),
@@ -875,6 +921,7 @@ def workspace_status(case_root: Path) -> dict[str, Any]:
             "originals_preserved": True,
             "destructive_actions_approval_gated": True,
             "review_required_default": True,
+            "storage": storage_policy,
         }
 
 

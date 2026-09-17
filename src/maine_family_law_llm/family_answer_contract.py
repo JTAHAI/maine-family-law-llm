@@ -260,6 +260,56 @@ def _task_missing_information(intake: IntakeSummary) -> list[str]:
     return _clean_lines(gaps)
 
 
+def _safe_next_action(
+    intake: IntakeSummary, law_sources: list[dict[str, Any]], record_sources: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Choose one reversible, user-controlled next action for the first view.
+
+    This is intentionally navigation or human-help guidance, never a filing,
+    deadline calculation, contact with another person, or legal conclusion.
+    """
+
+    if "immediate_safety" in intake.urgency_flags or "urgent_child_safety" in intake.urgency_flags:
+        return {
+            "kind": "immediate_human_help",
+            "label": "Use immediate local help",
+            "reason": "A possible safety concern was identified. Chat cannot assess danger or take action for you.",
+            "action_id": "none",
+            "review_required": True,
+        }
+    if intake.task == "served_papers" and (not intake.docket_number or not intake.court):
+        return {
+            "kind": "review_form_header_sources",
+            "label": "Review the paper's header locally",
+            "reason": "Open the document workspace, run local OCR if needed, and compare any Court or Docket candidate with the original page before using it.",
+            "action_id": "open_documents_form_header",
+            "review_required": True,
+        }
+    if record_sources:
+        return {
+            "kind": "open_private_record_source",
+            "label": "Inspect the matching record",
+            "reason": "Read the original local record and its surrounding context before relying on any summary.",
+            "action_id": "open_evidence_records",
+            "review_required": True,
+        }
+    if law_sources:
+        return {
+            "kind": "open_legal_source",
+            "label": "Inspect the exact Maine source",
+            "reason": "Confirm the exact language, source date, and whether it applies to your situation.",
+            "action_id": "open_evidence_law",
+            "review_required": True,
+        }
+    return {
+        "kind": "refine_question",
+        "label": "Choose a focused question",
+        "reason": "No source established an answer yet. A specific paper, order paragraph, date, or issue helps the local search stay useful.",
+        "action_id": "open_starters",
+        "review_required": True,
+    }
+
+
 def _research_brief(
     *,
     question: str,
@@ -315,6 +365,128 @@ def _research_brief(
         "source_review_order": source_review_order,
         "open_issues": _clean_lines(open_issues)[:6],
         "review_standard": "Inspect the original source cards, confirm currentness and context, and do not treat retrieval rank or a source card as filing readiness.",
+    }
+
+
+def _conversation_workboard(
+    *,
+    intake: IntakeSummary,
+    law_sources: list[dict[str, Any]],
+    record_sources: list[dict[str, Any]],
+    missing: list[str],
+    child_relevant: bool,
+) -> dict[str, Any]:
+    """Create a local, reviewable map of the user's current work.
+
+    This is deliberately deterministic intake analysis rather than a model
+    opinion.  It keeps user-stated context, retrieved law, and private records
+    in separate lanes and never turns a date mention, issue label, or record
+    match into a finding, deadline, or recommended filing.
+    """
+
+    task_label = concise_intake_label(intake) or "Review the current question"
+    route = {
+        "label": "Conversation route",
+        "value": task_label,
+        "basis": "local_intake_analysis",
+        "review_state": "review_required",
+    }
+    stage = {
+        "label": "Case stage heard",
+        "value": (
+            str(intake.procedural_posture).replace("_", " ")
+            if intake.procedural_posture and intake.procedural_posture != "unknown"
+            else "Not established from this conversation"
+        ),
+        "basis": "user_prompt" if intake.procedural_posture != "unknown" else "unknown",
+        "review_state": "needs_official_paper" if intake.procedural_posture == "unknown" else "review_required",
+    }
+    goal = {
+        "label": "Question or goal heard",
+        "value": str(intake.user_goal or "Clarify the exact outcome or question you want help organizing."),
+        "basis": "user_prompt",
+        "review_state": "review_required",
+    }
+
+    date_candidates = [
+        {
+            "label": str(item.get("raw") or "Date mentioned"),
+            "kind": str(item.get("kind") or "mentioned_date"),
+            "normalized_date": str(item.get("normalized_date") or ""),
+            "basis": "user_prompt",
+            "review_state": "confirm_against_original_or_docket",
+        }
+        for item in intake.critical_dates
+        if isinstance(item, dict) and str(item.get("raw") or "").strip()
+    ][:6]
+    if not date_candidates and "possible_deadline" in intake.urgency_flags:
+        date_candidates.append(
+            {
+                "label": "A time-sensitive date may be involved",
+                "kind": "unverified",
+                "normalized_date": "",
+                "basis": "local_intake_analysis",
+                "review_state": "confirm_against_original_or_docket",
+            }
+        )
+
+    record_targets = [
+        {
+            "label": str(item),
+            "basis": "user_prompt",
+            "review_state": "locate_or_confirm",
+        }
+        for item in _clean_lines(intake.documents_mentioned)
+    ]
+    for item in _clean_lines(_task_missing_information(intake)):
+        if len(record_targets) >= 5:
+            break
+        record_targets.append(
+            {
+                "label": item,
+                "basis": "local_intake_analysis",
+                "review_state": "needed_for_review",
+            }
+        )
+
+    source_lanes = [
+        {
+            "lane": "Maine law",
+            "available": bool(law_sources),
+            "source_count": len(law_sources),
+            "source_ids": [str(item.get("source_id") or "") for item in law_sources[:6]],
+            "review_action": "Open the exact law source and confirm currentness and context.",
+        },
+        {
+            "lane": "Matter records",
+            "available": bool(record_sources),
+            "source_count": len(record_sources),
+            "source_ids": [str(item.get("source_id") or "") for item in record_sources[:6]],
+            "review_action": "Open the original record and surrounding context before relying on a match.",
+        },
+    ]
+
+    child_prompt = (
+        "For each proposed step, ask whether it improves safety, predictability, and routine without placing a child in the dispute."
+        if child_relevant
+        else "Add child-impact considerations only when they are relevant to the actual issue and supported by the record."
+    )
+    return {
+        "schema_version": "conversation_workboard_v1",
+        "analysis_type": "deterministic_local_intake_analysis",
+        "review_required": True,
+        "route": route,
+        "stage": stage,
+        "goal": goal,
+        "date_candidates": date_candidates,
+        "record_targets": record_targets[:5],
+        "open_questions": _clean_lines(missing)[:4],
+        "source_lanes": source_lanes,
+        "child_impact_prompt": child_prompt,
+        "boundary": (
+            "This workboard organizes the current conversation. It does not establish facts, calculate a deadline, "
+            "choose a filing, or determine what law applies."
+        ),
     }
 
 def render_legacy_answer(contract: dict[str, Any]) -> str:
@@ -585,6 +757,7 @@ def build_family_answer_contract(
         "intake": intake_summary.to_dict(),
         "intake_label": concise_intake_label(intake_summary),
         "what_this_means": meaning,
+        "safe_next_action": _safe_next_action(intake_summary, law_sources, record_sources),
         "what_to_do_right_now": now,
         "next_three_steps": next_steps,
         "what_to_gather": gather,
@@ -618,6 +791,13 @@ def build_family_answer_contract(
             missing=missing,
             grounding=grounding,
         ) if str(answer_style or "plain_language") == "research_brief" else {},
+        "conversation_workboard": _conversation_workboard(
+            intake=intake_summary,
+            law_sources=law_sources,
+            record_sources=record_sources,
+            missing=missing,
+            child_relevant=child_relevant,
+        ),
         "limits": [
             "Private records may support a factual statement about a matter; they are not legal authority.",
             "Legal authority may support a statement of law; it does not prove disputed family facts.",

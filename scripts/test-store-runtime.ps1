@@ -8,13 +8,15 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $env:PYTHONDONTWRITEBYTECODE = "1"
-$env:PYTHONPYCACHEPREFIX = Join-Path $env:TEMP "mfl-pycache-disabled"
 
 if (-not $RepoRoot) {
   $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 }
 . (Join-Path $PSScriptRoot "store-build-workspace.ps1")
 $null = Initialize-RepoBuildEnvironment $RepoRoot
+$smokeWorkspaceRoot = Resolve-RepoBuildDirectory (Join-Path $RepoRoot "dist\build-temp\frozen-smoke") $RepoRoot
+New-Item -ItemType Directory -Force -Path $smokeWorkspaceRoot | Out-Null
+$env:PYTHONPYCACHEPREFIX = Join-Path $smokeWorkspaceRoot "pycache"
 if (-not $RuntimeRoot) {
   $RuntimeRoot = Join-Path $RepoRoot "dist\store\runtime"
 }
@@ -39,8 +41,9 @@ $smokeArguments = @(
 )
 
 # Never attach qualification to the user's real Store profile or API state.
-# Only this newly created child receives the fictional QA profile.
-$qaLocalAppData = Join-Path ([System.IO.Path]::GetTempPath()) ("mfl-frozen-smoke-" + [Guid]::NewGuid().ToString("N"))
+# Keep the unique fictional QA profile inside the repository-owned build tree;
+# it is removed after the smoke test and never leaks into a system temp folder.
+$qaLocalAppData = Join-Path $smokeWorkspaceRoot ("mfl-frozen-smoke-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $qaLocalAppData | Out-Null
 $priorLocalAppData = $env:LOCALAPPDATA
 try {
@@ -149,7 +152,7 @@ Write-Host "Store runtime smoke passed. Evidence: $smokeJson"
   # Delete only the unique fictional profile created by this invocation. The
   # user's installed Store profile and all preserved evidence are out of scope.
   $ownedQaRoot = [System.IO.Path]::GetFullPath($qaLocalAppData)
-  $allowedQaParent = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+  $allowedQaParent = [System.IO.Path]::GetFullPath($smokeWorkspaceRoot).TrimEnd('\') + '\'
   if (-not $ownedQaRoot.StartsWith($allowedQaParent, [StringComparison]::OrdinalIgnoreCase) -or
       [System.IO.Path]::GetFileName($ownedQaRoot) -notmatch '^mfl-frozen-smoke-[0-9a-f]{32}$') {
     throw "Owned smoke profile containment validation failed."

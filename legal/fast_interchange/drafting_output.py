@@ -8,6 +8,7 @@ being mistaken for a verified fact or filing-ready work product.
 
 from __future__ import annotations
 
+import hmac
 import re
 from hashlib import sha256
 
@@ -134,6 +135,33 @@ def render_source_bound_draft(
 ) -> str:
     """Render only literal, rechecked record text plus host-owned cautions."""
 
+    # A verifier report is an internal integrity envelope, not an admission or
+    # signature. Never render a stale/mutated envelope or reinterpret a failed
+    # report as a successful one merely because it still contains some offsets.
+    if not isinstance(report, dict):
+        raise ValueError("drafting_report_invalid")
+    expected = sha256(
+        canonical_json({k: v for k, v in report.items() if k != "report_sha256"})
+    ).hexdigest()
+    if not isinstance(report.get("report_sha256"), str) or not hmac.compare_digest(
+        expected, report["report_sha256"]
+    ):
+        raise ValueError("drafting_report_invalid")
+    permitted_status = (
+        "partial_quoted_spans_bound_review_required"
+        if allow_partial
+        else "quoted_spans_bound_review_required"
+    )
+    if (
+        report.get("schema_version") != "drafting_output_boundary_v1"
+        or report.get("status") != permitted_status
+        or report.get("review_required") is not True
+        or report.get("filing_ready") is not False
+        or report.get("factual_claims_verified") is not False
+        or report.get("legal_claims_verified") is not False
+        or any(source.lane != "private_record" for source in sources)
+    ):
+        raise ValueError("drafting_report_invalid")
     if (report.get("blockers") and not allow_partial) or not report.get("source_spans"):
         raise ValueError("drafting_no_verified_extracts")
     if allow_partial and not report.get("partial_extracts_available"):
@@ -142,6 +170,10 @@ def render_source_bound_draft(
     seen: set[tuple[int, int, int]] = set()
     for span in report["source_spans"]:
         index, start, end = span["reference"], span["start_offset"], span["end_offset"]
+        if any(type(value) is not int for value in (index, start, end)) or not 1 <= index <= len(
+            sources
+        ):
+            raise ValueError("drafting_source_changed")
         source = sources[index - 1]
         if (
             source.source_id != span["source_id"]

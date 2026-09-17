@@ -18,13 +18,22 @@ import secrets
 import shutil
 import threading
 import uuid
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from legal.documents.workspace import get_document, structured_diff, workspace_paths
+from legal.documents.workspace import (
+    DocumentWorkspaceError,
+    get_document,
+    read_document_revision,
+    structured_diff,
+    workspace_paths,
+)
 from legal.drafting.filing_ready_gate import FilingReadyGate
-from legal.review.review_ledger import list_review_history, verify_review_ledger
+from legal.documents import storage
+from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
+from legal.review.review_ledger import ReviewLedgerError, list_review_history, read_review_request, verify_review_ledger
 
 SCHEMA_VERSION = "reviewed_filing_packet_v1"
 ALGORITHM_VERSION = "5.14.0-revision-diff-v1"
@@ -47,12 +56,30 @@ _FORM_RE = re.compile(r"\b(?:FM|PA|CV|PB)[ -]?\d{1,4}[A-Z]?\b", re.IGNORECASE)
 _LOCK = threading.RLock()
 
 
+class _AssignmentRows(list):
+    authenticated = False
+    migration = None
+    historical_count = 0
+    original_sha256 = ""
+    original_bytes = 0
+
+
 class ReviewedFilingPacketError(RuntimeError):
     def __init__(self, code: str, message: str, *, status_code: int = 400):
         super().__init__(message)
         self.code = code
         self.message = message
         self.status_code = status_code
+
+
+@contextmanager
+def _assignment_guard(path):
+    try:
+        storage._location(path)
+        with exclusive_file_lock(path):
+            yield
+    except (OSError, ValueError) as exc:
+        raise ReviewedFilingPacketError("assignment_storage_busy", "Assignment storage is busy or unavailable. Reload before retrying; existing records were preserved.", status_code=409) from exc
 
 
 def _utc_now() -> str:
@@ -131,20 +158,15 @@ def _line_tokens(text: str) -> set[str]:
     return {value for value in re.findall(r"[a-z0-9]+", text.casefold()) if len(value) > 2}
 
 
-def _revision_path(case_root: Path, document_id: str, revision_id: str) -> Path:
-    paths = workspace_paths(case_root)
-    document_id = _validate_id(document_id, "document_id")
-    revision_id = _validate_id(revision_id, "revision_id")
-    path = paths.documents / document_id / "revisions" / f"{revision_id}.json"
-    resolved = path.resolve(strict=True)
-    root = paths.documents.resolve(strict=True)
-    if root not in resolved.parents or resolved.is_symlink():
-        raise ReviewedFilingPacketError("revision_path_invalid", "The revision path is invalid.", status_code=409)
-    return resolved
-
-
 def _load_revision(case_root: Path, document_id: str, revision_id: str) -> dict[str, Any]:
-    payload = _read_json(_revision_path(case_root, document_id, revision_id))
+    try:
+        payload = read_document_revision(case_root, document_id, revision_id)
+    except DocumentWorkspaceError as exc:
+        raise ReviewedFilingPacketError(
+            "revision_storage_unavailable",
+            "The revision could not be unlocked or verified.",
+            status_code=409,
+        ) from exc
     if payload.get("document_id") != document_id or payload.get("revision_id") != revision_id:
         raise ReviewedFilingPacketError("revision_identity_mismatch", "The revision identity does not match its path.", status_code=409)
     content = str(payload.get("content") or "")
@@ -154,26 +176,15 @@ def _load_revision(case_root: Path, document_id: str, revision_id: str) -> dict[
 
 
 def _review_request(case_root: Path, document_id: str, request_id: str) -> dict[str, Any]:
-    paths = workspace_paths(case_root)
-    document_id = _validate_id(document_id, "document_id")
-    request_id = _validate_id(request_id, "request_id")
-    path = paths.root / "reviews" / document_id / "requests" / f"{request_id}.json"
-    resolved = path.resolve(strict=True)
-    review_root = (paths.root / "reviews").resolve(strict=True)
-    if review_root not in resolved.parents or resolved.is_symlink():
-        raise ReviewedFilingPacketError("review_request_path_invalid", "The review request path is invalid.", status_code=409)
-    request = _read_json(resolved)
-    stored = str(request.get("request_sha256") or "")
-    check = dict(request)
-    check.pop("request_sha256", None)
-    if not _SHA_RE.fullmatch(stored) or not hmac.compare_digest(stored, _sha(check)):
-        raise ReviewedFilingPacketError("review_request_hash_mismatch", "The review request failed its integrity check.", status_code=409)
-    return request
+    try:
+        return read_review_request(case_root, document_id, request_id)
+    except ReviewLedgerError as exc:
+        raise ReviewedFilingPacketError(exc.code, exc.message, status_code=exc.status_code) from exc
 
 
 def _latest_review_context(case_root: Path, document_id: str) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     history = list_review_history(case_root, document_id)
-    for decision in history.get("decisions") or []:
+    for decision in [history["latest"]] if history.get("latest") else []:
         request_id = str(decision.get("request_id") or "")
         if not _ID_RE.fullmatch(request_id):
             continue
@@ -287,25 +298,59 @@ class ReviewedFilingPacketStore:
         self.builds = self.root / "builds"
         self.assignments = self.root / "assignments.jsonl"
         self.active_pointer = self.root / "ACTIVE.json"
+        try:
+            storage._location(self.root / ".guard")
+        except (OSError, ValueError) as exc:
+            raise ReviewedFilingPacketError("filing_packet_storage_redirect_refused", "A redirected or inaccessible packet workspace was refused.", status_code=409) from exc
         for folder in (self.root, self.builds):
             if folder.exists() and folder.is_symlink():
                 raise ReviewedFilingPacketError("filing_packet_symlink_refused", "A filing-packet symlink was refused.", status_code=409)
             folder.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     def _assignment_rows(self) -> list[dict[str, Any]]:
+        from legal.review.assignment_migration import validate
+
+        try:
+            storage._location(self.assignments)
+        except (OSError, ValueError) as exc:
+            raise ReviewedFilingPacketError("assignment_storage_redirect_refused", "A redirected assignment ledger was refused.", status_code=409) from exc
         if not self.assignments.exists():
-            return []
-        if self.assignments.is_symlink():
-            raise ReviewedFilingPacketError("assignment_ledger_symlink_refused", "The assignment ledger symlink was refused.", status_code=409)
-        rows: list[dict[str, Any]] = []
-        previous = "0" * 64
-        for line_number, line in enumerate(self.assignments.read_text(encoding="utf-8").splitlines(), 1):
-            if not line.strip():
-                continue
+            rows = _AssignmentRows()
+            rows.authenticated = True
+            return rows
+        try:
+            storage._location(self.assignments)
+            raw = read_bounded_regular_file(self.assignments, max_bytes=storage.MAX_ENVELOPE)
             try:
-                row = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise ReviewedFilingPacketError("assignment_ledger_invalid", "The assignment ledger is invalid.", status_code=409) from exc
+                envelope = json.loads(raw)
+            except ValueError:
+                envelope = None
+            authenticated = isinstance(envelope, dict) and "storage_format" in envelope
+            migration = None
+            if authenticated:
+                payload = storage.decode(self.assignments, raw)
+                if payload.get("schema") == "encrypted_reviewer_assignments_v2" and set(payload) == {"schema", "events", "migration"}:
+                    migration = payload["migration"]
+                    validate(migration, payload["events"])
+                elif set(payload) != {"schema", "events"} or payload["schema"] != "encrypted_reviewer_assignments_v1":
+                    raise ValueError("assignment_schema_invalid")
+                events = payload["events"]
+            else:
+                events = [json.loads(line) for line in raw.splitlines() if line.strip()]
+            if not isinstance(events, list) or len(events) > MAX_ASSIGNMENTS:
+                raise ValueError("assignment_limit")
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            raise ReviewedFilingPacketError("assignment_storage_unverified", "Reviewer assignments could not be unlocked or verified. Preserve this workspace and its original key; no prior assignment can authorize a packet.", status_code=409) from exc
+        rows = _AssignmentRows()
+        rows.authenticated = authenticated
+        rows.migration = migration
+        rows.historical_count = migration["receipt"]["event_count"] if migration else 0
+        rows.original_sha256 = _sha(raw)
+        rows.original_bytes = len(raw)
+        previous = "0" * 64
+        for line_number, row in enumerate(events, 1):
+            if not isinstance(row, dict) or any(not _ID_RE.fullmatch(str(row.get(field) or "")) for field in ("event_id", "assignment_id", "document_id", "revision_id")):
+                raise ReviewedFilingPacketError("assignment_ledger_invalid", "The assignment ledger identity is invalid.", status_code=409)
             stored = str(row.get("entry_sha256") or "")
             payload = dict(row)
             payload.pop("entry_sha256", None)
@@ -316,10 +361,16 @@ class ReviewedFilingPacketStore:
         return rows
 
     def assignments_for(self, document_id: str) -> dict[str, Any]:
+        from legal.review.assignment_migration import preview
+
         document_id = _validate_id(document_id, "document_id")
-        rows = [row for row in self._assignment_rows() if row.get("document_id") == document_id]
+        document = get_document(self.case_root, document_id, include_history=False)
+        ledger = self._assignment_rows()
+        rows = [row for row in ledger if row.get("document_id") == document_id]
         active_by_assignment: dict[str, dict[str, Any]] = {}
-        for row in rows:
+        for row in ledger[ledger.historical_count:]:
+            if row.get("document_id") != document_id:
+                continue
             assignment_id = str(row.get("assignment_id") or "")
             if row.get("event") == "assigned":
                 active_by_assignment[assignment_id] = row
@@ -328,8 +379,12 @@ class ReviewedFilingPacketStore:
         return {
             "schema_version": "reviewer_assignment_ledger_v1",
             "document_id": document_id,
-            "active": list(active_by_assignment.values()),
+            "active": [row for row in active_by_assignment.values() if ledger.authenticated and row.get("revision_id") == document["current_revision_id"]],
             "history": list(reversed(rows))[:MAX_ASSIGNMENTS],
+            "storage_authenticated": ledger.authenticated,
+            "read_only": not ledger.authenticated,
+            "storage_notice": "New assignment labels and notes are encrypted. Legacy history is for inspection only and cannot authorize packets, even after migration. Confirmed migration preserves its exact original bytes inside encrypted storage. Keep the workspace and original protected key; older apps cannot open the encrypted ledger. Exported packets are separate, unencrypted copies.",
+            "migration": preview(self, ledger, document),
             "identity_notice": "Reviewer labels and roles are locally entered metadata; this application does not verify professional identity or licensure.",
             "review_required": True,
         }
@@ -345,7 +400,7 @@ class ReviewedFilingPacketStore:
         exclusive: bool = True,
         note: str = "",
     ) -> dict[str, Any]:
-        with _LOCK:
+        with _LOCK, _assignment_guard(self.root / ".assignments.lock"):
             document_id = _validate_id(document_id, "document_id")
             document = get_document(self.case_root, document_id)
             revision_id = _validate_id(expected_revision_id, "revision_id")
@@ -365,6 +420,10 @@ class ReviewedFilingPacketStore:
             if exclusive and conflicts:
                 raise ReviewedFilingPacketError("reviewer_assignment_conflict", "This revision already has an exclusive active reviewer assignment.", status_code=409)
             rows = self._assignment_rows()
+            if not rows.authenticated:
+                raise ReviewedFilingPacketError("legacy_assignment_migration_required", "Legacy assignments are read-only until a reviewed migration. No existing record was changed.", status_code=409)
+            if len(rows) >= MAX_ASSIGNMENTS:
+                raise ReviewedFilingPacketError("assignment_limit", "The reviewer-assignment safety limit has been reached.", status_code=409)
             previous = str(rows[-1].get("entry_sha256") or "0" * 64) if rows else "0" * 64
             assignment_id = uuid.uuid4().hex
             entry = {
@@ -384,10 +443,13 @@ class ReviewedFilingPacketStore:
                 "identity_verified": False,
             }
             entry["entry_sha256"] = _sha(entry)
-            with self.assignments.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(json.dumps(entry, sort_keys=True, ensure_ascii=False) + "\n")
-                handle.flush()
-                os.fsync(handle.fileno())
+            try:
+                payload = {"schema": "encrypted_reviewer_assignments_v1", "events": [*rows, entry]}
+                if rows.migration:
+                    payload.update(schema="encrypted_reviewer_assignments_v2", migration=rows.migration)
+                atomic_write_bytes(self.assignments, storage.encode(self.assignments, payload))
+            except (OSError, ValueError) as exc:
+                raise ReviewedFilingPacketError("assignment_save_unavailable", "The encrypted assignment could not be saved. Reload its history before retrying; existing records were preserved.", status_code=409) from exc
             return entry
 
     def _source_lifecycle(

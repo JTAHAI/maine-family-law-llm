@@ -1,0 +1,234 @@
+{
+  "files": [
+    {
+      "bytes": 9878,
+      "path": "app/api/local_ai_setup.py",
+      "sha256": "3f6915fd87a2dcbac501c2b34c5d68fbccebd95387205010e6cfa69811bd78e9"
+    },
+    {
+      "bytes": 13708,
+      "path": "app/api/security.py",
+      "sha256": "6740d515f448724559c92593faf3f97ce3524d0fab7a80ed7fdf0ea49f72acda"
+    },
+    {
+      "bytes": 16523,
+      "path": "app/services/local_agent_context_service.py",
+      "sha256": "3b2e5d37f58e8352371968ae57af4522948b0a246ca7a05b6c059627f3ec44df"
+    },
+    {
+      "bytes": 3176,
+      "path": "app/services/local_agent_run_service.py",
+      "sha256": "1c2350046e233d0fa837e30970e4ad05efa62fe9bacb36f5e98ccce337f19f58"
+    },
+    {
+      "bytes": 196,
+      "path": "configs/local_ai_catalog.json",
+      "sha256": "7f288fdd4784be1ccab8f9d4862a23966b7ecc151bdd09f16925479ad8dd2637"
+    },
+    {
+      "bytes": 1336,
+      "path": "legal/agent_runtime/__init__.py",
+      "sha256": "88de9e8c251aa50118913d13917af62fa826bdb4626dcbfbae228408038a697c"
+    },
+    {
+      "bytes": 12837,
+      "path": "legal/agent_runtime/contracts.py",
+      "sha256": "3786f58e23dc7d85ba09929886cfd74df1222a6b3f448ed930b10bf1647a13e6"
+    },
+    {
+      "bytes": 2902,
+      "path": "legal/agent_runtime/endpoint.py",
+      "sha256": "d30a4e0c19f094dcfb83981dab09bc26c2cdd8d22c871569903947e0a68551bf"
+    },
+    {
+      "bytes": 38531,
+      "path": "legal/agent_runtime/providers.py",
+      "sha256": "25f05577a1cf707d17fe35076d8572e9b5383065e1a59854ecb95c11f90f2f82"
+    },
+    {
+      "bytes": 3118,
+      "path": "legal/agent_runtime/qwen_review.py",
+      "sha256": "da875cc28a091f2f5e00baca9c6f8e4913b4ffe40527823adf2d5bdd367661bb"
+    },
+    {
+      "bytes": 35865,
+      "path": "legal/agent_runtime/runtime.py",
+      "sha256": "8c042916a8e1b3e2e8511aca04b20c7ff6808c389c8a930c426c50662089c9fe"
+    },
+    {
+      "bytes": 6340,
+      "path": "legal/agent_runtime/tools.py",
+      "sha256": "597aab8f2672a614f03f4d61a71cb55274116c5ee3dabf48f3c5f8e9e7a88451"
+    },
+    {
+      "bytes": 8859,
+      "path": "legal/fast_interchange/drafting_output.py",
+      "sha256": "3839594ab2a668132ab9828b850db34bf8676091d4f011218ac0d9c250e1c3f4"
+    },
+    {
+      "bytes": 11958,
+      "path": "legal/fast_interchange/evidence_output.py",
+      "sha256": "537cf6375771d6e38ddeceed1845c834c4d38954e94290bca2b8aefe71b12637"
+    },
+    {
+      "bytes": 4169,
+      "path": "legal/fast_interchange/specialists.py",
+      "sha256": "ed261d491d0933cddbdfc3d918baefc7a17bd6cb7fa9971566dc85cfd4e4de19"
+    },
+    {
+      "bytes": 388,
+      "path": "legal/local_ai/__init__.py",
+      "sha256": "66983a313fcefc3d8058236f4552eeb15ff39da230d76f3ad5e4c7cb83bed163"
+    },
+    {
+      "bytes": 11982,
+      "path": "legal/local_ai/catalog.py",
+      "sha256": "f0d1d28b4984c280550bce18b10992d2ccd460147d25a3f88792d7a550836375"
+    },
+    {
+      "bytes": 24006,
+      "path": "legal/local_ai/installer.py",
+      "sha256": "a13abaf8f69196371f57210d58489cf51d453717de645a7251d81c2965d99061"
+    },
+    {
+      "bytes": 11564,
+      "path": "legal/local_ai/setup.py",
+      "sha256": "e06982f705e29951c4657d62baf481f0f3925037b41e4945530028ce90698c84"
+    },
+    {
+      "bytes": 10258,
+      "path": "legal/model_orchestration/hardware.py",
+      "sha256": "cc3580fe11c2c936678301c9524bc477bae2eafb1f34386f3ca232c83fc04fc5"
+    },
+    {
+      "bytes": 11801,
+      "path": "legal/security/durable_io.py",
+      "sha256": "395c1fb29f2ba244f439e91cfd54ad6cbff282612248c203900a0851e6c7336b"
+    },
+    {
+      "bytes": 8670,
+      "path": "legal/security/injection_defense.py",
+      "sha256": "687340cbd0f4fd8dc9c01eceb9a9f72d91580ed01ae5790286b18462f29c705f"
+    },
+    {
+      "bytes": 4015,
+      "path": "legal/security/local_api_abuse_guard.py",
+      "sha256": "1247df126475dbd9588deb23ffb1ea629581ddff87963384361d53a70a288c1c"
+    },
+    {
+      "bytes": 11666,
+      "path": "legal/security/local_encryption.py",
+      "sha256": "52314b584e1e02cedfcb9a860f617361580fe1cad7efdcae1ff77f7f70f7fa42"
+    },
+    {
+      "bytes": 6225,
+      "path": "legal/security/local_request_firewall.py",
+      "sha256": "2c8e1bc9178aadbdfdf279a0a389b3e5f81f063a68b08b9453e1509b8880eb39"
+    },
+    {
+      "bytes": 4154,
+      "path": "legal/security/prompt_injection.py",
+      "sha256": "7e59685179f74335d157ce2037b03eb5dbcc183cdff54cd7badb6abbb34a6a0a"
+    },
+    {
+      "bytes": 3274,
+      "path": "legal/security/protected_spans.py",
+      "sha256": "9a2a7c8cafc0ba41f22c2ec06b26b754c8528c4c59b9db2d4f9e960f72bb2250"
+    },
+    {
+      "bytes": 3565,
+      "path": "legal/security/strict_json.py",
+      "sha256": "603866f043ea469cb5c6f32182f8d3ba951d23a345161c06b4f5015a0d55d2c8"
+    },
+    {
+      "bytes": 729697,
+      "path": "maine_family_law_llm/api.py",
+      "sha256": "3e3b4043e1a6dd6be9fb45197752e590702fdb52a7d0cd8c52e8d130097bcbf5"
+    },
+    {
+      "bytes": 254535,
+      "path": "maine_family_law_llm/ui/workbench.css",
+      "sha256": "9d93d3c27a66cab086840ae06ec251278f1c9df85a8efa8681cfbe802f5d446b"
+    },
+    {
+      "bytes": 226356,
+      "path": "maine_family_law_llm/ui/workbench.html",
+      "sha256": "382c533ade551340ea50c2d2507abcd8fe7d499980a2301d4e3271f4443b54d6"
+    },
+    {
+      "bytes": 1539067,
+      "path": "maine_family_law_llm/ui/workbench.js",
+      "sha256": "8fcbb54bcb4e02519ce29a48ea85b2d912e3a622a6228ad91bbdfe58dbf54ea0"
+    },
+    {
+      "bytes": 2412,
+      "path": "scripts/verify_local_ai_setup_reuse.py",
+      "sha256": "dc84da0d4dfb53dd076d5d0987d87d3f80c591bb90d05cf220a1354c447c70ce"
+    },
+    {
+      "bytes": 11548,
+      "path": "scripts/verify_qwen_frozen_workflow.py",
+      "sha256": "31dbd2fd58cfeb75cfc2c04b9a2909eeeedc2b0ef045a7376241a7deca6c5787"
+    },
+    {
+      "bytes": 729697,
+      "path": "src/maine_family_law_llm/api.py",
+      "sha256": "3e3b4043e1a6dd6be9fb45197752e590702fdb52a7d0cd8c52e8d130097bcbf5"
+    },
+    {
+      "bytes": 254535,
+      "path": "src/maine_family_law_llm/ui/workbench.css",
+      "sha256": "9d93d3c27a66cab086840ae06ec251278f1c9df85a8efa8681cfbe802f5d446b"
+    },
+    {
+      "bytes": 226356,
+      "path": "src/maine_family_law_llm/ui/workbench.html",
+      "sha256": "382c533ade551340ea50c2d2507abcd8fe7d499980a2301d4e3271f4443b54d6"
+    },
+    {
+      "bytes": 1539067,
+      "path": "src/maine_family_law_llm/ui/workbench.js",
+      "sha256": "8fcbb54bcb4e02519ce29a48ea85b2d912e3a622a6228ad91bbdfe58dbf54ea0"
+    },
+    {
+      "bytes": 7389,
+      "path": "tests/test_curated_qwen_api_real.py",
+      "sha256": "ec70625287e0f727534c12b9961630a9a474c65ed10e05c8a5a4a6bdd5fabf26"
+    },
+    {
+      "bytes": 11615,
+      "path": "tests/test_local_ai_installer.py",
+      "sha256": "fd149b9e09e8382cd3638f5a460b33c2e7d2fc775fa9b6746e64a3f1b24b856f"
+    },
+    {
+      "bytes": 10066,
+      "path": "tests/test_local_ai_setup.py",
+      "sha256": "b413b849e189a6635d95ece2005f0fe6083f7974b9c266c36925b89906415e53"
+    },
+    {
+      "bytes": 8197,
+      "path": "tests/test_qwen_review_hardening.py",
+      "sha256": "3e9feed44135733fb00946ae6b50e545f26ba2b112f3a6d67da6cb6146fd74f0"
+    },
+    {
+      "bytes": 11061,
+      "path": "tests/test_v540_local_agent_api_ui.py",
+      "sha256": "07fb2aac2d9c9b6a242851d499489f67cfd83b14b9ab6f22c1dd89a461d5a961"
+    },
+    {
+      "bytes": 8421,
+      "path": "tests/test_v540_local_agent_http_adapters.py",
+      "sha256": "f175d75149338fb9b7cc8715bbafd86d2367ef6f2f2300b871abe1612236a6a1"
+    },
+    {
+      "bytes": 9616,
+      "path": "tests/test_v540_local_agent_runtime.py",
+      "sha256": "e0518545817640fb3e97fa26d094b2b14019786e6987ebb8c3b5f02860f472b4"
+    }
+  ],
+  "schema_version": "nh_direct_copy_donor_inventory_v1",
+  "product_version": "9.0.1",
+  "dependency_closure_complete": false,
+  "head": "82364d869b4d2d427b93f32b812e857d28cc3e38",
+  "source": "current_dirty_working_tree"
+}

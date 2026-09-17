@@ -1,3 +1,21 @@
+## v9.0.1 — Guided local AI setup in chat
+
+- Chat checks hardware, disk space, Ollama and the selected 4B or 8B model.
+- Reuses existing components; downloads only missing components after consent.
+- Verifies the pinned installer hash and publisher, pins model manifests, and runs a fictional source-review test before reporting ready.
+- Shows progress, safe stop/retry and a Use in chat action. No command line required.
+- Models remain optional general-purpose assistance, not certified legal specialists. All record output requires review.
+- Cold-install, installed-MSIX and WACK qualification are not inferred from reuse tests.
+
+## v9.0.0 — Source-bound local 4B and 8B assistance
+
+- Product version: 9.0.0. Microsoft Store package target: 9.0.0.0; build 56.
+- Optional local Qwen evidence review and drafting select exact, source-attributed record quotations; unsupported model prose is withheld.
+- Fresh approval binds model, task, matter, session and selected sources. Hardware checks reserve system memory; requests release model residency when finished.
+- Saved-context restoration is collapsed within the chat instead of displacing its messages.
+- Ollama and model weights are separate installations. No legal-quality, installed-package, WACK or Enterprise certification is claimed.
+- Full details: [9.0.0 release notes](RELEASE_NOTES_v9.0.0.md).
+
 ## v8.0.2 — Chat and Windows packaging reliability
 
 - Product version: 8.0.2. Microsoft Store package target: 8.0.2.0.

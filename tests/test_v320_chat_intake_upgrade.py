@@ -51,6 +51,42 @@ def test_served_answer_is_tailored_and_has_no_raw_citation_appendix() -> None:
     assert "Citation appendix" not in rendered
     assert len(contract["next_three_steps"]) == 3
     assert contract["intake"]["task"] == "served_papers"
+    assert contract["safe_next_action"] == {
+        "kind": "review_form_header_sources",
+        "label": "Review the paper's header locally",
+        "reason": "Open the document workspace, run local OCR if needed, and compare any Court or Docket candidate with the original page before using it.",
+        "action_id": "open_documents_form_header",
+        "review_required": True,
+    }
+
+
+def test_safe_next_action_prefers_exact_source_and_never_files_or_contacts() -> None:
+    contract = build_family_answer_contract(
+        question="What does this statute say?",
+        legacy_answer="Read the exact source.",
+        citations=[
+            {
+                "source_id": "fictional-statute",
+                "title": "Fictional Maine statute",
+                "snippet": "Fictional source text.",
+                "metadata": {"source_lane": "legal_authority", "official": True},
+            }
+        ],
+        search_mode="maine_law",
+    )
+    action = contract["safe_next_action"]
+    assert action["action_id"] == "open_evidence_law"
+    assert action["kind"] == "open_legal_source"
+    assert "file" not in action["reason"].lower()
+
+    safety = build_family_answer_contract(
+        question="Someone may be unsafe",
+        legacy_answer="",
+        citations=[],
+        search_mode="maine_law",
+    )["safe_next_action"]
+    assert safety["action_id"] == "none"
+    assert safety["kind"] == "immediate_human_help"
 
 
 def _write_case_manifest(case_root: Path, source_path: Path, evidence_id: str = "REC-001") -> None:
@@ -197,6 +233,8 @@ def test_ui_surfaces_intake_and_record_match_provenance() -> None:
     assert "Locator:" in js
     assert "local OCR-derived; verify against page image" in js
     assert "session_id: localSessionId" in js
+    assert "Your next safest action" in js
+    assert "data-safe-next-action" in js
 
 
 def test_source_card_audit_question_is_not_mistaken_for_followup() -> None:

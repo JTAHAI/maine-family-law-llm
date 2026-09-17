@@ -308,7 +308,7 @@ def test_production_ui_shows_source_check_limitations_and_mirrors_match():
     assert "Array.isArray(payload.blockers) ? payload.blockers : []" in text
     assert "localAgentCitationsWithVerifierSpans" in text
     assert "quotations partially checked — review required" in text
-    assert "source_span_preview: snippet.slice(relativeStart, relativeEnd)" in text
+    assert "source_span_preview: sourceTextAtCodePoints(snippet, relativeStart, relativeEnd)" in text
 
 
 def test_status_on_missing_authority_store_does_not_create_directories(tmp_path, monkeypatch):
