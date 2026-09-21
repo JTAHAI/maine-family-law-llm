@@ -150,6 +150,20 @@ def test_security_privacy_fortress_matter_access_enforces_tenant_and_role(tmp_pa
 
 def test_security_privacy_api_routes_are_loopback_only_and_review_required(monkeypatch, tmp_path: Path) -> None:
     project_root, _matter_root, _store, matter_dir = _make_matter_store(tmp_path)
+    # Keep this synthetic matter outside its configured project root even when
+    # a release runner intentionally places all temporary artifacts under the
+    # checkout's dist/qa directory. The production boundary remains the same:
+    # a real matter store must never be inside its actual source checkout.
+    monkeypatch.setenv("MFL_PROJECT_ROOT", str(project_root))
+    # The route resolves its injection policy relative to the configured
+    # project root. Materialize only this non-private policy fixture in the
+    # synthetic project rather than pointing the test back at the real source
+    # root (which would invalidate the external-matter-store exercise).
+    policy_target = project_root / "configs" / "maine_llm_injection_defense_policy.json"
+    policy_target.parent.mkdir()
+    policy_target.write_bytes(
+        (Path(__file__).resolve().parents[1] / "configs" / "maine_llm_injection_defense_policy.json").read_bytes()
+    )
     monkeypatch.setattr(api_module, "active_case_root", lambda: matter_dir)
     monkeypatch.setenv("MFL_SECURITY_BACKUP_ROOT", str(tmp_path / "security-backups"))
     monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "unit-test-encryption-key")

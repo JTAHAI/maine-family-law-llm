@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -20,6 +21,21 @@ TRAINING = [
     "review_required_exports",
     "feedback_and_error_reporting",
 ]
+
+
+def _synthetic_source_root(tmp_path: Path) -> Path:
+    """Keep release-operation fixtures in repo-local QA storage safely.
+
+    Production correctly rejects release/pilot stores inside its source root.
+    The test's temporary root is deliberately repo-local, so model an external
+    source root rather than weakening that production boundary.
+    """
+
+    root = tmp_path / "synthetic-source-repository"
+    (root / "legal").mkdir(parents=True, exist_ok=True)
+    (root / "pyproject.toml").write_text("[project]\nname = 'synthetic-maintenance-test'\n", encoding="utf-8")
+    shutil.copytree(Path.cwd() / "configs", root / "configs", dirs_exist_ok=True)
+    return root
 
 
 def _headers() -> dict[str, str]:
@@ -88,8 +104,10 @@ def test_release_maintenance_api_surface_drives_the_pilot_and_real_matter_workfl
     eval_root = tmp_path / "eval"
     _seed_case_root(case_root)
 
+    source_root = _synthetic_source_root(tmp_path)
     monkeypatch.setattr(api_module, "active_case_root", lambda: case_root)
-    monkeypatch.setenv("MFL_PROJECT_ROOT", str(Path.cwd()))
+    monkeypatch.setattr(api_module, "_release_hardening_repo_root", lambda: source_root)
+    monkeypatch.setenv("MFL_PROJECT_ROOT", str(source_root))
     monkeypatch.setenv("MAINE_FAMILY_LAW_PILOT_ROOT", str(pilot_root))
     monkeypatch.setenv("MAINE_FAMILY_LAW_RELEASE_ROOT", str(release_root))
     monkeypatch.setenv("MAINE_FAMILY_LAW_BACKUP_ROOT", str(backup_root))

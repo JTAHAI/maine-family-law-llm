@@ -73,6 +73,29 @@ class _LocalModelHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def do_GET(self) -> None:  # noqa: N802 - stdlib handler contract
+        self.server.seen_requests.append((self.path, None))  # type: ignore[attr-defined]
+        if self.path != "/api/tags":
+            self.send_error(404)
+            return
+        raw = json.dumps(
+            {
+                "models": [
+                    {
+                        "name": "qwen3:4b",
+                        "digest": "sha256:" + "a" * 64,
+                        "size": 2_500_000_000,
+                        "modified_at": "2026-09-20T00:00:00Z",
+                    }
+                ]
+            }
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002
         return
 
@@ -117,7 +140,7 @@ def test_curated_qwen_route_allows_only_4b_or_8b_and_checks_completion_identity(
     path, payload = local_model_server.seen_requests[-1]
     assert path == "/api/generate"
     assert payload["model"] == "qwen3:4b"
-    assert payload["options"]["num_predict"] == 2048
+    assert payload["options"]["num_predict"] == 768
     assert payload["options"]["num_ctx"] == 8192
     assert payload["think"] is False
     assert payload["raw"] is True
@@ -125,6 +148,18 @@ def test_curated_qwen_route_allows_only_4b_or_8b_and_checks_completion_identity(
     with pytest.raises(LocalModelError) as denied:
         CuratedOllamaReasoningClient(model_name="unreviewed-model", endpoint=endpoint)
     assert denied.value.code == "curated_ollama_model_not_allowed"
+
+
+def test_curated_qwen_binds_a_single_installed_loopback_artifact_identity(local_model_server):
+    endpoint = f"http://127.0.0.1:{local_model_server.server_port}"
+    client = CuratedOllamaReasoningClient(model_name="qwen3:4b", endpoint=endpoint, timeout_seconds=5)
+    identity = client.refresh_artifact_identity()
+    assert identity["digest"] == "sha256:" + "a" * 64
+    assert identity["size_bytes"] == 2_500_000_000
+    assert identity["network_used"] is False
+    assert len(identity["identity_sha256"]) == 64
+    assert client.model_binding["artifact_identity_status"] == "verified_installed_loopback"
+    assert local_model_server.seen_requests[-1][0] == "/api/tags"
 
 
 def test_curated_qwen_default_transport_refuses_redirects():

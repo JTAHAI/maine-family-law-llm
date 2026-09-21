@@ -2070,7 +2070,31 @@
       if (!raw) return '';
       try {
         const parsed = new URL(raw);
-        return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+        const isHttp = parsed.protocol === 'https:' || parsed.protocol === 'http:';
+        const host = String(parsed.hostname || '').replace(/\.$/, '').toLowerCase();
+        const isLocalHost = host === 'localhost' || host === '0.0.0.0' || host === '::1' || host === '[::1]' || /^127(?:\.\d{1,3}){3}$/.test(host);
+        return isHttp && host && !parsed.username && !parsed.password && !isLocalHost ? parsed.href : '';
+      } catch (err) {
+        return '';
+      }
+    }
+
+    // A source-preview link may point to a public site after the user expressly
+    // clicks it.  The pre-run "official authority" provenance lane is narrower:
+    // it may only describe the host-verified Maine authority domains accepted by
+    // the server.  Keep this client check aligned with the server-side verifier
+    // so an injected or stale source card cannot acquire an official-looking
+    // external link in the approval dialog.
+    function safeOfficialMaineAuthorityUrl(value) {
+      const admitted = safeExternalUrl(value);
+      if (!admitted) return '';
+      try {
+        const parsed = new URL(admitted);
+        const host = String(parsed.hostname || '').replace(/\.$/, '').toLowerCase();
+        const officialHosts = new Set(['legislature.maine.gov', 'www.courts.maine.gov', 'courts.maine.gov']);
+        return parsed.protocol === 'https:' && officialHosts.has(host) && (!parsed.port || parsed.port === '443')
+          ? parsed.href
+          : '';
       } catch (err) {
         return '';
       }
@@ -7097,7 +7121,12 @@
       const lane = normalizedSourceLane(item);
       const binding = recordOpenBinding(item);
       const pageNumber = Number(meta.page_number || item?.page_number || 0);
-      const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
+      // Authority cards created for the local-model approval path retain their
+      // admitted public URL under `official_source_url`.  Keep that route
+      // inspectable after the result is rendered, rather than making a person
+      // reopen the pre-run dialog to reach the same source.
+      const sourceUrl = item?.url || meta.url || meta.official_url || meta.official_source_url;
+      const url = lane === 'legal_authority' ? safeOfficialMaineAuthorityUrl(sourceUrl) : safeExternalUrl(sourceUrl);
       sourcePreviewOwner = owner || sourcePreviewOwner;
       sourcePreviewPinned = Boolean(pin);
       sourcePreviewTitle.textContent = title;
@@ -7194,7 +7223,8 @@
         const citation = item.citation || meta.citation_hint || '';
         const sourceId = sourceIdentity(item);
         const pageNumber = Number(meta.page_number || item.page_number || 0);
-        const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
+        const sourceUrl = item?.url || meta.url || meta.official_url;
+        const url = lane === 'legal_authority' ? safeOfficialMaineAuthorityUrl(sourceUrl) : safeExternalUrl(sourceUrl);
         const binding = recordOpenBinding(item);
         const previewId = `source-preview-${index}`;
         const freshness = String(meta.freshness_status || meta.currentness_status || 'unknown').toLowerCase();
@@ -8387,16 +8417,24 @@
     function applyLocalAgentProviderState({refreshPreview = false} = {}) {
       if (!localAgentProvider) return;
       if (localAgentProvider.value === 'curated_ollama_reasoning') {
+        const availableTasks = new Set(['evidence_review', 'authority_review', 'drafting']);
+        Array.from(localAgentTask?.options || []).forEach((option) => {
+          option.disabled = !availableTasks.has(option.value);
+          option.hidden = !availableTasks.has(option.value);
+        });
+        if (localAgentTask && !availableTasks.has(localAgentTask.value)) localAgentTask.value = 'authority_review';
         localAgentEndpoint.value = 'http://127.0.0.1:11434';
         localAgentEndpoint.readOnly = true;
         localAgentModel.readOnly = false;
         if (!['qwen3:4b', 'qwen3:8b'].includes(String(localAgentModel.value || ''))) localAgentModel.value = 'qwen3:4b';
       } else if (localAgentProvider.value === 'ollama') {
+        Array.from(localAgentTask?.options || []).forEach((option) => { option.disabled = false; option.hidden = false; });
         localAgentEndpoint.value = 'http://127.0.0.1:11434';
         localAgentEndpoint.readOnly = false;
         localAgentModel.readOnly = false;
         if (!localAgentModel.value || localAgentModel.value === 'local-model' || localAgentModel.value === 'Configured by this device' || ['qwen3:4b', 'qwen3:8b'].includes(String(localAgentModel.value || ''))) localAgentModel.value = 'qwen2.5:7b';
       } else if (localAgentProvider.value === 'sentinel_ollama') {
+        Array.from(localAgentTask?.options || []).forEach((option) => { option.disabled = false; option.hidden = false; });
         // The Sentinel route is deliberately configured by the local app host.
         // Do not let a browser value select an endpoint or model.
         localAgentEndpoint.value = 'Configured by this device';
@@ -8404,9 +8442,11 @@
         localAgentModel.value = 'Configured by this device';
         localAgentModel.readOnly = true;
       } else if (localAgentProvider.value === 'fast_interchange_local') {
+        Array.from(localAgentTask?.options || []).forEach((option) => { option.disabled = false; option.hidden = false; });
         localAgentEndpoint.readOnly = false;
         syncFastInterchangeModelSelection();
       } else {
+        Array.from(localAgentTask?.options || []).forEach((option) => { option.disabled = false; option.hidden = false; });
         localAgentEndpoint.value = 'http://127.0.0.1:1234';
         localAgentEndpoint.readOnly = false;
         localAgentModel.readOnly = false;
@@ -9531,6 +9571,29 @@
       const receipt = payload?.provenance_receipt || {};
       if (!receipt.receipt_sha256) return '';
       const validation = payload?.output_validation || {};
+      const coverage = Array.isArray(validation.coverage) ? validation.coverage : [];
+      const coverageLabels = {
+        selected_excerpt: 'selected an excerpt',
+        not_relevant: 'marked no excerpt as relevant',
+        insufficient_context: 'marked context insufficient',
+        unprocessed: 'marked unprocessed',
+      };
+      const coverageDetails = coverage.map((row) => {
+        const reference = Number(row?.reference);
+        const label = coverageLabels[row?.state];
+        return Number.isInteger(reference) && reference > 0 && label
+          ? `Source [${reference}] — model ${label}.`
+          : '';
+      }).filter(Boolean);
+      const admission = payload?.model?.admission || {};
+      const artifactIdentity = admission?.artifact_identity || {};
+      const boundTask = String(payload?.model?.specialist_task_contract?.task || admission?.capability || '').trim();
+      const artifactLine = artifactIdentity?.digest && artifactIdentity?.identity_sha256
+        ? `Installed artifact: <code>${escapeHtml(artifactIdentity.tag || payload?.model?.model_id || 'local model')}</code> · <code>${escapeHtml(String(artifactIdentity.digest).slice(0, 20))}…</code>`
+        : 'Installed artifact identity was not recorded for this result.';
+      const taskLine = boundTask
+        ? `Task boundary: ${escapeHtml(boundTask.replace(/_/g, ' '))} · source-bound · review required.`
+        : 'Task boundary was not recorded. Treat this local output as unverified analytical work product.';
       const spans = Array.isArray(validation.source_spans) ? validation.source_spans : [];
       const blockers = [...new Set([
         ...(Array.isArray(validation.blockers) ? validation.blockers : []),
@@ -9549,13 +9612,14 @@
         <details><summary>Source-check details</summary>
           ${blockers.length ? `<ul>${blockers.map(code => `<li>${escapeHtml(code)}</li>`).join('')}</ul>` : ''}
           <ul>${spans.map(span => `<li>Source [${escapeHtml(span.reference)}] · ${escapeHtml(span.status)} · approved-excerpt offsets ${escapeHtml(span.start_offset)}–${escapeHtml(span.end_offset)}</li>`).join('')}</ul>
+          ${coverageDetails.length ? `<p><strong>Coverage labels — model suggestions, not proof:</strong> ${escapeHtml(coverageDetails.join(' '))} A source with no excerpt is not established absent or irrelevant.</p>` : ''}
           <p>Legal claims are not verified. Human review remains required.</p>
         </details></section>` : '';
       return `${boundary}<div class="local-agent-receipt"><strong>Hash-bound provenance receipt</strong><br>
         Answer <code>${escapeHtml(String(receipt.answer_sha256 || '').slice(0, 20))}…</code> ·
         Context <code>${escapeHtml(String(receipt.context_manifest_sha256 || '').slice(0, 20))}…</code> ·
         Receipt <code>${escapeHtml(receipt.receipt_sha256)}</code><br>
-        <span class="muted">Model output is analytical work product only. Review required.</span></div>`;
+        <span class="muted">${artifactLine}<br>${taskLine}<br>Artifact integrity does not certify legal quality. Model output is analytical work product only. Review required.</span></div>`;
     }
 
     function authoritySourceIds(payload) {
@@ -9699,6 +9763,7 @@
         fast_interchange_generation_timeout: 'The local model exceeded its time limit. No new answer was accepted. Your original records and answer are unchanged. You can inspect the selected sources without the model. Wait for other local work to finish or select fewer passages, then refresh the preview and approve a new run.',
         fast_interchange_compact_model_integrity_failed: 'The local model files do not match the verified inventory or could not be verified. No model answer was accepted. Your original records and answer are unchanged. Inspect the selected sources without the model. Restore the original verified model package, then refresh the preview and approve a new run. Do not edit its receipt to bypass this check.',
         fast_interchange_compact_python_network_denied: 'The local research worker attempted a Python network operation. The operation was blocked and this run’s output was discarded. Your original records and answer are unchanged. Keep Local-only on. Repair or replace the local model runtime, then refresh the preview and approve a new run. This safeguard is not OS-level isolation.',
+        local_model_timeout: 'The selected local model exceeded its time limit. No answer was accepted; your records are unchanged. Select fewer passages, or choose the lower-memory 4B option for a new review if the 8B option was slow on this device.',
         fast_interchange_worker_start_timeout: 'The specialist did not become healthy in time and was stopped safely.'
       };
       return explanations[error?.safeCode] || error?.message || 'The local model action could not complete.';
@@ -9783,6 +9848,10 @@
         if (preview.model_admission?.production_admitted === false) {
           localAgentPreviewSummary.innerHTML += '<p class="status-bad"><strong>Research model — not approved for production use.</strong> Successful execution does not establish legal quality or release readiness. Review every candidate against its exact source.</p>';
         }
+        const artifactIdentity = preview.model_admission?.artifact_identity || null;
+        if (artifactIdentity?.digest && artifactIdentity?.identity_sha256) {
+          localAgentPreviewSummary.innerHTML += `<p><strong>Installed model checked:</strong> ${escapeHtml(artifactIdentity.tag || preview.model?.model_id || 'local model')} · ${escapeHtml(String(artifactIdentity.digest).slice(0, 19))}…<br><small>This exact local artifact is bound to this approval. If it changes before or during the run, the result is withheld. This integrity check does not certify legal quality.</small></p>`;
+        }
         if (preview.model_admission?.output_mode === 'typed_source_field_review') {
           const fields = {clock_time:'Time', calendar_date:'Date', money:'Amount'};
           const bases = {source_field:'Literal source field — not proof an event happened', reported_event:'Reported-event wording — not an established finding'};
@@ -9831,28 +9900,47 @@
             : `Headroom preflight passed using ${lane}. This checks current device headroom only; it does not prove the model is installed, legally qualified, or appropriate for a filing.`;
           localAgentPreviewSummary.innerHTML += `<p class="${blockers.length ? 'status-bad' : 'status-good'}"><strong>Before local Qwen runs:</strong> ${escapeHtml(hardwareMessage)}</p>`;
         }
+        const contextBudget = preview.context_budget || {};
+        if (contextBudget.status === 'context_too_large') {
+          localAgentPreviewSummary.innerHTML += `<p class="status-bad"><strong>Source packet needs to be smaller.</strong> This task would send ${Number(contextBudget.used_bytes || 0).toLocaleString()} bytes, but this local profile permits ${Number(contextBudget.maximum_bytes || 0).toLocaleString()}. Nothing was sent. Select shorter passages or fewer records, then rebuild the preview.</p>`;
+        } else if (contextBudget.status === 'ready_for_approval') {
+          localAgentPreviewSummary.innerHTML += `<p class="status-good"><strong>Exact packet fits this local task.</strong> ${Number(contextBudget.remaining_bytes || 0).toLocaleString()} bytes remain after the question, source instructions, and output contract.</p>`;
+        }
         const modelSourceCards = Array.isArray(preview.model_source_cards) ? preview.model_source_cards : preview.source_cards;
-        localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
+        localAgentContextList.innerHTML = (manifest.entries || []).map((entry) => {
+          const sourceCard = modelSourceCards?.[Number(entry.index) - 1] || {};
+          const sourceMetadata = sourceCard?.metadata || {};
+          const officialUrl = String(sourceMetadata.official_source_url || '');
+          const admittedOfficialUrl = safeOfficialMaineAuthorityUrl(officialUrl);
+          const authorityProvenance = entry.lane === 'legal_authority'
+            ? `<small><strong>Authority provenance:</strong> ${admittedOfficialUrl ? `<a href="${escapeHtml(admittedOfficialUrl)}" rel="noopener noreferrer" target="_blank">Open official source</a>` : 'Official URL unavailable; this authority context cannot be approved.'} · jurisdiction ${escapeHtml(sourceMetadata.jurisdiction || 'unknown')} · retrieved ${escapeHtml(sourceMetadata.retrieved_at || 'unknown')} · parser ${escapeHtml(sourceMetadata.parser_status || 'unknown')}. Opening a source is your choice.</small>`
+            : '';
+          return `<article class="local-agent-context-item ${entry.lane === 'private_record' ? 'is-private' : 'is-authority'} ${entry.instruction_like_text_detected ? 'is-quarantined' : ''}">
           <header><span class="context-index">${escapeHtml(entry.index)}</span><strong>${escapeHtml(entry.title)}</strong><span class="badge ${entry.lane === 'private_record' ? 'warn' : 'good'}">${entry.lane === 'private_record' ? 'Private record' : 'Maine law'}</span>${entry.instruction_like_text_detected ? '<span class="badge warn">instructions quarantined</span>' : ''}</header>
           <small>${escapeHtml(entry.locator || entry.source_id)} · ${Number(entry.char_count || 0).toLocaleString()} characters · SHA-256 ${escapeHtml(String(entry.content_sha256 || '').slice(0, 18))}…</small>
           <p>${escapeHtml(entry.preview || '')}</p>
           <small>Freshness: ${escapeHtml(entry.freshness_status || 'unknown')} · Review required</small>
+          ${authorityProvenance}
           <details><summary>Exact source text supplied to the model</summary><pre class="source-excerpt">${escapeHtml(modelSourceCards?.[Number(entry.index) - 1]?.snippet || '')}</pre></details>
-        </article>`).join('');
+        </article>`;
+        }).join('');
         localAgentSecurityReport.textContent = JSON.stringify({
           manifest_sha256: manifest.manifest_sha256,
           exact_context_sha256: manifest.exact_context_sha256,
           injection_report: preview.injection_report,
           model: preview.model,
-          admission: preview.model_admission
+          admission: preview.model_admission,
+          context_budget: contextBudget
         }, null, 2);
-        localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length);
+        localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || preview.hardware_readiness?.blockers?.length || contextBudget.status === 'context_too_large');
         localAgentStatus.textContent = preview.injection_report?.direct_prompt_blocked
           ? 'Run blocked: the user prompt attempted to override protected instructions.'
           : quarantinedSources > 0
           ? 'Instruction-like source text was quarantined and masked from the model. Review the original record directly, then rebuild a narrower source selection if needed.'
           : preview.hardware_readiness?.blockers?.length
           ? 'Run blocked before model load: this machine does not currently have verified safe headroom. The source-backed app remains available.'
+          : contextBudget.status === 'context_too_large'
+          ? 'Run blocked before model load: select shorter passages or fewer records, then rebuild the exact source preview.'
           : 'Nothing has been transmitted. Review the source list, then approve the exact hash.';
       } catch (err) {
         if (requestEpoch !== localAgentRequestEpoch) return;
@@ -9888,7 +9976,7 @@
         if (saved.endpoint) localAgentEndpoint.value = saved.endpoint;
         if (saved.model) localAgentModel.value = saved.model;
       } catch (err) {}
-      if (!savedProvider && ['evidence_review', 'drafting'].includes(String(payload.local_agent_task || ''))) {
+      if (!savedProvider && ['evidence_review', 'authority_review', 'drafting'].includes(String(payload.local_agent_task || ''))) {
         localAgentProvider.value = 'curated_ollama_reasoning';
       }
       applyLocalAgentProviderState();
@@ -10008,7 +10096,8 @@
       const citation = item?.citation || meta.citation_hint || '';
       const snippet = item?.snippet || item?.text_excerpt || meta.text_excerpt || meta.description || '';
       const pageNumber = Number(meta.page_number || item?.page_number || 0);
-      const url = safeExternalUrl(item?.url || meta.url || meta.official_url);
+      const sourceUrl = item?.url || meta.url || meta.official_url;
+      const url = lane === 'law' ? safeOfficialMaineAuthorityUrl(sourceUrl) : safeExternalUrl(sourceUrl);
       const binding = recordOpenBindingForPayload(item, payload);
       const duplicateCopies = Math.max(1, Number(meta.duplicate_copy_count || 1));
       const normalizationBadge = meta.match_normalization === 'hyphen_or_ocr_alias'

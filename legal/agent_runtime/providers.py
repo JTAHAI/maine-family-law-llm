@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from hashlib import sha256
 import json
 import os
 import re
@@ -24,6 +25,7 @@ _SENTINEL_DEFAULT_PRIMARY = "qwen3:14b"
 _SENTINEL_DEFAULT_FALLBACK = "qwen3:8b"
 _SENTINEL_ALLOWED_GATEWAY_PATHS = {"", "/", "/api/chat"}
 _CURATED_OLLAMA_REASONING_MODELS = frozenset({"qwen3:4b", "qwen3:8b"})
+_CURATED_QWEN_SOURCE_BOUND_TASKS = frozenset({"evidence_review", "authority_review", "drafting"})
 
 
 def _loopback_no_redirect_opener() -> Callable[..., Any]:
@@ -58,6 +60,11 @@ class QwenEvidenceResponse(LocalModelResponse):
     """Candidate record quotes for evidence review or source-bound drafting."""
 
     excerpts: tuple[dict[str, Any], ...] = ()
+    review_flags: tuple[dict[str, Any], ...] = ()
+    draft_sections: tuple[dict[str, Any], ...] = ()
+    # Evidence Review may inventory a record without selecting text from it.
+    # This is a review cue, never a completeness or relevance determination.
+    coverage: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -201,6 +208,48 @@ class _BoundedHttpClient:
             raise LocalModelError("local_model_invalid_payload", "The local model returned an unsupported response shape.")
         return decoded
 
+    def get_json(self, path: str) -> dict[str, Any]:
+        """Read a bounded loopback-only JSON capability without ambient proxies."""
+
+        request = Request(
+            self.endpoint.url(path),
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "MaineFamilyLawLLM-LocalAgent/1",
+                **self.extra_headers,
+            },
+            method="GET",
+        )
+        try:
+            with self.opener(request, timeout=self.timeout_seconds) as response:
+                declared = response.headers.get("Content-Length") if getattr(response, "headers", None) else None
+                if declared:
+                    try:
+                        declared_size = int(declared)
+                    except ValueError:
+                        declared_size = 0
+                    if declared_size > self.max_response_bytes:
+                        raise LocalModelError("local_model_response_too_large", "The local model response exceeded its size limit.")
+                raw = response.read(self.max_response_bytes + 1)
+        except LocalModelError:
+            raise
+        except HTTPError as exc:
+            code = "local_model_http_retryable" if exc.code == 429 or exc.code >= 500 else "local_model_http_error"
+            raise LocalModelError(code, f"Local model returned HTTP {exc.code}.") from exc
+        except URLError as exc:
+            raise LocalModelError("local_model_unavailable", "The loopback local model server is unavailable.") from exc
+        except TimeoutError as exc:
+            raise LocalModelError("local_model_timeout", "The loopback local model request timed out.") from exc
+        if len(raw) > self.max_response_bytes:
+            raise LocalModelError("local_model_response_too_large", "The local model response exceeded its size limit.")
+        try:
+            decoded = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise LocalModelError("local_model_invalid_json", "The local model returned invalid JSON.") from exc
+        if not isinstance(decoded, dict):
+            raise LocalModelError("local_model_invalid_payload", "The local model returned an unsupported response shape.")
+        return decoded
+
 
 def _validate_prompt_model(prompt: str, model_name: str) -> tuple[str, str]:
     clean_prompt = str(prompt or "").replace("\x00", "")
@@ -312,7 +361,15 @@ class CuratedOllamaReasoningClient(OllamaLocalClient):
 
         if capability is not None and capability not in SPECIALIST_TASKS:
             raise LocalModelError("curated_ollama_task_invalid", "Choose a supported review task.")
+        if capability is not None and capability not in _CURATED_QWEN_SOURCE_BOUND_TASKS:
+            raise LocalModelError(
+                "curated_qwen_task_not_available",
+                "Local Qwen currently offers only exact-source Evidence Review, Authority Review, and Drafting workflows.",
+            )
         self.capability = capability
+        from .task_profiles import task_profile
+
+        profile = task_profile(task=capability, model_name=clean_model) if capability else None
         self.model_binding = {
             "kind": "curated_local_general_reasoning",
             "model_class": "reasoning_4b" if clean_model == "qwen3:4b" else "reasoning_8b",
@@ -322,14 +379,218 @@ class CuratedOllamaReasoningClient(OllamaLocalClient):
             "review_required": True,
             "network_used": False,
             "task": capability,
-            "execution_policy_revision": "qwen-source-review-v6",
-            "output_mode": "model_selected_exact_record_quotes" if capability in {"evidence_review", "drafting"} else "unverified_review",
-            "context_tokens": 8192,
-            "max_prompt_bytes": 5000,
+            "execution_policy_revision": "qwen-source-review-v8",
+            "output_mode": profile["output_mode"] if profile else "unverified_review",
+            "context_tokens": profile["context_tokens"] if profile else 8192,
+            "max_prompt_bytes": profile["max_prompt_bytes"] if profile else 5000,
+            "task_profile": profile,
+            "artifact_identity": None,
+            "artifact_identity_status": "not_checked",
+        }
+        self._cancel = Event()
+
+    def refresh_artifact_identity(self) -> dict[str, Any]:
+        """Bind the approved request to the exact locally installed tag digest.
+
+        This queries only Ollama's loopback inventory.  It does not download,
+        inspect a model file path, or imply that the model is legally qualified.
+        The API invokes it at preview, dispatch, and immediately after a result
+        so a mutable tag cannot silently inherit a prior approval.
+        """
+
+        payload = self._http.get_json("/api/tags")
+        models = payload.get("models")
+        if not isinstance(models, list):
+            raise LocalModelError(
+                "curated_ollama_inventory_invalid",
+                "The local Qwen inventory could not be verified.",
+            )
+        candidates = [
+            row for row in models
+            if isinstance(row, dict)
+            and str(row.get("name") or row.get("model") or "") == self.model_name
+        ]
+        if len(candidates) != 1:
+            raise LocalModelError(
+                "curated_ollama_model_not_installed",
+                "The selected local Qwen model is not installed exactly once.",
+            )
+        row = candidates[0]
+        raw_digest = str(row.get("digest") or "").strip().casefold()
+        # Ollama's loopback API has emitted both a bare 64-hex digest and the
+        # RFC-style ``sha256:<hex>`` form across versions. Normalize only
+        # those two exact encodings; a short prefix is never an identity.
+        digest = (
+            "sha256:" + raw_digest
+            if re.fullmatch(r"[a-f0-9]{64}", raw_digest)
+            else raw_digest
+        )
+        if not re.fullmatch(r"sha256:[a-f0-9]{64}", digest):
+            raise LocalModelError(
+                "curated_ollama_artifact_digest_invalid",
+                "The selected local Qwen model has no verifiable artifact digest.",
+            )
+        size = row.get("size")
+        if type(size) is not int or size <= 0:
+            raise LocalModelError(
+                "curated_ollama_artifact_size_invalid",
+                "The selected local Qwen model has no valid installed size.",
+            )
+        identity = {
+            "schema_version": "ollama_local_artifact_identity_v1",
+            "tag": self.model_name,
+            "digest": digest,
+            "size_bytes": size,
+            "modified_at": str(row.get("modified_at") or "")[:128] or None,
+            "inventory": "loopback_ollama_api_tags",
+            "network_used": False,
+        }
+        identity["identity_sha256"] = sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        self.model_binding["artifact_identity"] = identity
+        self.model_binding["artifact_identity_status"] = "verified_installed_loopback"
+        return identity
+
+    def _structured_contract_suffix(self) -> str:
+        """Return the exact task contract counted by prompt-budget preflight.
+
+        Drafting may organize host-verified extracts into a small, fixed
+        outline.  It cannot provide a model-authored narrative, label a fact as
+        proven, or add a section heading outside the host's neutral vocabulary.
+        """
+
+        if self.capability not in _CURATED_QWEN_SOURCE_BOUND_TASKS:
+            return ""
+        source_kind = "official authority source" if self.capability == "authority_review" else "record"
+        suffix = (
+            "\nOUTPUT CONTRACT: Return only the required JSON object with excerpts. For EACH selected "
+            + source_kind
+            + " copy one relevant exact passage from its body, including the complete sentence "
+            "and any adjacent qualification or negation. reference is that source's numeric index. "
+            "Do not copy host metadata. You may optionally add review_flags using only the provided "
+            "kind and references fields. Do not produce conclusions, findings, summaries or new text."
+        )
+        if self.capability == "drafting":
+            suffix += (
+                " You may optionally add draft_sections with only a permitted neutral heading and "
+                "references to selected excerpts. Do not add section prose or factual characterizations."
+            )
+        elif self.capability == "evidence_review":
+            suffix += (
+                " You may optionally add coverage with one fixed review state for every source when "
+                "you do not select an excerpt. Coverage is an inventory suggestion, not proof that a "
+                "record is irrelevant or that information is absent."
+            )
+        return suffix
+
+    def _structured_output_schema(self) -> dict[str, Any]:
+        """Return the constrained JSON schema for the active host workflow."""
+
+        properties: dict[str, Any] = {
+            "excerpts": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 24,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["reference", "quote"],
+                    "properties": {
+                        "reference": {"type": "integer", "minimum": 1, "maximum": 24},
+                        "quote": {"type": "string", "minLength": 1, "maxLength": 1200},
+                    },
+                },
+            },
+            "review_flags": {
+                "type": "array",
+                "maxItems": 12,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["kind", "references"],
+                    "properties": {
+                        "kind": {
+                            "type": "string",
+                            "enum": [
+                                "possible_conflict",
+                                "possible_agreement",
+                                "missing_material",
+                                "proposal_not_acceptance",
+                                "qualification",
+                                "record_difference",
+                            ],
+                        },
+                        "references": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 4,
+                            "items": {"type": "integer", "minimum": 1, "maximum": 24},
+                        },
+                    },
+                },
+            },
+        }
+        if self.capability == "drafting":
+            properties["draft_sections"] = {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["heading", "references"],
+                    "properties": {
+                        "heading": {
+                            "type": "string",
+                            "enum": [
+                                "background",
+                                "record_difference",
+                                "support_gaps",
+                                "requested_review",
+                            ],
+                        },
+                        "references": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 6,
+                            "items": {"type": "integer", "minimum": 1, "maximum": 24},
+                        },
+                    },
+                },
+            }
+        elif self.capability == "evidence_review":
+            properties["coverage"] = {
+                "type": "array",
+                "maxItems": 24,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["reference", "state"],
+                    "properties": {
+                        "reference": {"type": "integer", "minimum": 1, "maximum": 24},
+                        "state": {
+                            "type": "string",
+                            "enum": [
+                                "selected_excerpt",
+                                "not_relevant",
+                                "insufficient_context",
+                                "unprocessed",
+                            ],
+                        },
+                    },
+                },
+            }
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["excerpts"],
+            "properties": properties,
         }
 
     def generate_response(self, prompt: str) -> LocalModelResponse:
         prompt, model = _validate_prompt_model(prompt, self.model_name)
+        if self._cancel.is_set():
+            raise LocalModelError("local_model_generation_canceled", "Generation canceled; no answer was accepted.")
         # Conservatively fit even byte-level tokenization plus the output budget.
         # Never let the engine silently discard the beginning of approved context.
         if len(prompt.encode("utf-8")) > 5000:
@@ -340,22 +601,14 @@ class CuratedOllamaReasoningClient(OllamaLocalClient):
         if re.search(r"<\|[^>]*\|>", prompt):
             raise LocalModelError("curated_ollama_reserved_token", "Select passages without model control tokens.")
         extra = {}
-        if self.capability in {"evidence_review", "drafting"}:
-            prompt += (
-                "\nOUTPUT CONTRACT: Return only the required JSON object with excerpts. For EACH selected "
-                "record copy one relevant exact passage from its body, including the complete sentence "
-                "and any adjacent qualification or negation. reference is that record's numeric index. "
-                "Do not copy host metadata. Do not produce conclusions, findings, summaries or new text."
+        if self.capability in _CURATED_QWEN_SOURCE_BOUND_TASKS:
+            prompt += self._structured_contract_suffix()
+            extra["format"] = self._structured_output_schema()
+        if len(prompt.encode("utf-8")) > int(self.model_binding["max_prompt_bytes"]):
+            raise LocalModelError(
+                "curated_ollama_context_too_large",
+                "Select shorter passages so every approved source and task instruction fits this local review.",
             )
-            extra["format"] = {
-                "type": "object", "additionalProperties": False, "required": ["excerpts"],
-                "properties": {"excerpts": {"type": "array", "minItems": 1, "maxItems": 24,
-                    "items": {"type": "object", "additionalProperties": False,
-                        "required": ["reference", "quote"], "properties": {
-                            "reference": {"type": "integer", "minimum": 1, "maximum": 24},
-                            "quote": {"type": "string", "minLength": 1, "maxLength": 3000},
-                        }}}},
-            }
         body = self._http.post_json(
             "/api/generate",
             {
@@ -370,10 +623,25 @@ class CuratedOllamaReasoningClient(OllamaLocalClient):
                 # Release this request's weights/KV state on modest hardware.
                 # Otherwise idle 4B residency can prevent the 8B preflight.
                 "keep_alive": 0,
-                "options": {"temperature": 0.0, "top_p": 0.9, "num_predict": 2048, "num_ctx": 8192},
+                "options": {
+                    "temperature": 0.0,
+                    "top_p": 0.9,
+                    # Bound generation by the profile that was included in
+                    # the approval binding; a source-selection task does not
+                    # need a long free-form response.
+                    "num_predict": int(
+                        (self.model_binding.get("task_profile") or {}).get("max_output_tokens", 768)
+                    ),
+                    "num_ctx": 8192,
+                },
                 **extra,
             },
         )
+        if self._cancel.is_set():
+            # urllib cannot safely terminate a shared Ollama server request.
+            # The run is nevertheless canceled: no completed response can be
+            # accepted or rendered after the user cancels it.
+            raise LocalModelError("local_model_generation_canceled", "Generation canceled; no answer was accepted.")
         if str(body.get("model") or "") != model:
             raise LocalModelError(
                 "curated_ollama_runtime_identity_mismatch",
@@ -413,22 +681,111 @@ class CuratedOllamaReasoningClient(OllamaLocalClient):
             usage=usage,
             finish_reason="stop",
         )
-        if self.capability in {"evidence_review", "drafting"}:
+        if self.capability in _CURATED_QWEN_SOURCE_BOUND_TASKS:
             try:
                 document = json.loads(text)
                 excerpts = document["excerpts"]
-                if set(document) != {"excerpts"} or not isinstance(excerpts, list) or not 1 <= len(excerpts) <= 24:
+                flags = document.get("review_flags", [])
+                sections = document.get("draft_sections", [])
+                coverage = document.get("coverage", [])
+                permitted_fields = {"excerpts", "review_flags"}
+                if self.capability == "drafting":
+                    permitted_fields.add("draft_sections")
+                elif self.capability == "evidence_review":
+                    permitted_fields.add("coverage")
+                if set(document) - permitted_fields or not isinstance(excerpts, list) or not 1 <= len(excerpts) <= 24:
                     raise ValueError("invalid excerpts")
                 for item in excerpts:
                     if (not isinstance(item, dict) or set(item) != {"reference", "quote"}
                         or type(item["reference"]) is not int or not 1 <= item["reference"] <= 24
-                        or not isinstance(item["quote"], str) or not 1 <= len(item["quote"]) <= 3000):
+                        or not isinstance(item["quote"], str) or not 1 <= len(item["quote"]) <= 1200):
                         raise ValueError("invalid excerpt")
+                allowed_flags = {"possible_conflict", "possible_agreement", "missing_material", "proposal_not_acceptance", "qualification", "record_difference"}
+                if not isinstance(flags, list) or len(flags) > 12:
+                    raise ValueError("invalid flags")
+                for flag in flags:
+                    refs = flag.get("references") if isinstance(flag, dict) else None
+                    if (not isinstance(flag, dict) or set(flag) != {"kind", "references"}
+                        or flag.get("kind") not in allowed_flags or not isinstance(refs, list)
+                        or not 1 <= len(refs) <= 4 or any(type(ref) is not int or not 1 <= ref <= 24 for ref in refs)):
+                        raise ValueError("invalid flag")
+                headings = {"background", "record_difference", "support_gaps", "requested_review"}
+                if not isinstance(sections, list) or len(sections) > 8:
+                    raise ValueError("invalid draft sections")
+                if self.capability != "drafting" and sections:
+                    raise ValueError("draft sections unavailable")
+                for section in sections:
+                    refs = section.get("references") if isinstance(section, dict) else None
+                    if (
+                        not isinstance(section, dict)
+                        or set(section) != {"heading", "references"}
+                        or section.get("heading") not in headings
+                        or not isinstance(refs, list)
+                        or not 1 <= len(refs) <= 6
+                        or len(set(refs)) != len(refs)
+                        or any(type(ref) is not int or not 1 <= ref <= 24 for ref in refs)
+                    ):
+                        raise ValueError("invalid draft section")
+                coverage_states = {"selected_excerpt", "not_relevant", "insufficient_context", "unprocessed"}
+                if not isinstance(coverage, list) or len(coverage) > 24:
+                    raise ValueError("invalid coverage")
+                if self.capability != "evidence_review" and coverage:
+                    raise ValueError("coverage unavailable")
+                coverage_refs = []
+                for item in coverage:
+                    if (
+                        not isinstance(item, dict)
+                        or set(item) != {"reference", "state"}
+                        or type(item.get("reference")) is not int
+                        or not 1 <= item["reference"] <= 24
+                        or item.get("state") not in coverage_states
+                    ):
+                        raise ValueError("invalid coverage")
+                    coverage_refs.append(item["reference"])
+                if len(set(coverage_refs)) != len(coverage_refs):
+                    raise ValueError("invalid coverage")
             except (ValueError, KeyError, TypeError) as exc:
                 raise LocalModelError("local_model_invalid_payload", "The model did not return verifiable excerpts.") from exc
             fields["text"] = "Selected record excerpts " + " ".join(f'[{item["reference"]}]' for item in excerpts)
-            return QwenEvidenceResponse(**fields, excerpts=tuple(excerpts))
+            return QwenEvidenceResponse(
+                **fields,
+                excerpts=tuple(excerpts),
+                review_flags=tuple(flags),
+                draft_sections=tuple(sections),
+                coverage=tuple(coverage),
+            )
         return LocalModelResponse(**fields)
+
+    def prompt_budget(self, prompt: str) -> dict[str, int | str | bool]:
+        """Report the exact conservative byte budget used by this provider."""
+
+        suffix = self._structured_contract_suffix()
+        used = len((str(prompt) + suffix).encode("utf-8"))
+        maximum = int(self.model_binding["max_prompt_bytes"])
+        return {
+            "schema_version": "curated_qwen_prompt_budget_v1",
+            "used_bytes": used,
+            "maximum_bytes": maximum,
+            "remaining_bytes": max(0, maximum - used),
+            "within_budget": used <= maximum,
+        }
+
+    def cancel(self) -> dict[str, Any]:
+        """Cancel acceptance of this run and request immediate model release.
+
+        A local Ollama request is a shared service operation, so this method
+        never kills the service.  It marks the run canceled before the response
+        can render and asks Ollama not to keep the model resident afterwards.
+        """
+
+        self._cancel.set()
+        try:
+            self._http.post_json("/api/generate", {"model": self.model_name, "keep_alive": 0, "stream": False})
+        except LocalModelError:
+            # The state cancellation is still effective even if the loopback
+            # runtime has already stopped or declines an unload request.
+            pass
+        return {"status": "canceling", "review_required": True, "transport": "response_discard_and_unload_request"}
 
 
 def _sentinel_configured_models(environment: dict[str, str] | None = None) -> tuple[str, str]:

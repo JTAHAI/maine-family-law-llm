@@ -123,12 +123,20 @@ def verify_evidence_output(answer: str, sources: tuple[ContextSource, ...]) -> d
     return report
 
 
-def verify_selected_evidence_spans(rows: tuple, sources: tuple[ContextSource, ...]) -> dict:
+def verify_selected_evidence_spans(
+    rows: tuple,
+    sources: tuple[ContextSource, ...],
+    *,
+    coverage: tuple = (),
+    allow_multiple_per_record: bool = False,
+) -> dict:
     """Check structured original-character spans, independently of model text.
 
     This avoids parsing nested quotation delimiters. It does NOT normalize
-    mismatched text or verify relevance/meaning. Only one exact, non-sensitive
-    span per approved private record is accepted in this narrow mode.
+    mismatched text or verify relevance/meaning. The established default is
+    one exact, non-sensitive span per approved private record. A host-owned
+    structured-review contract may explicitly opt into multiple *distinct*
+    spans per record after it has supplied a complete coverage inventory.
     """
     blockers, spans, represented = [], [], set()
     keys = {"source_id", "reference", "start_offset", "end_offset",
@@ -143,12 +151,15 @@ def verify_selected_evidence_spans(rows: tuple, sources: tuple[ContextSource, ..
             blockers.append("evidence_review_selected_spans_invalid")
             continue
         index, start, end = row["reference"], row["start_offset"], row["end_offset"]
-        if (any(type(value) is not int for value in (index, start, end))
-                or not 1 <= index <= len(sources) or index in represented):
+        if (
+            any(type(value) is not int for value in (index, start, end))
+            or not 1 <= index <= len(sources)
+            or (index in represented and not allow_multiple_per_record)
+        ):
             blockers.append("evidence_review_selected_spans_invalid")
             continue
         source = sources[index - 1]
-        if (not 0 <= start < end <= len(source.text) or end - start > 600
+        if (not 0 <= start < end <= len(source.text) or end - start > 1200
                 or row["source_id"] != source.source_id or row["status"] != "exact"
                 or row["source_text_sha256"] != sha256(source.text.encode("utf-8")).hexdigest()
                 or row["quote_sha256"] != sha256(source.text[start:end].encode("utf-8")).hexdigest()
@@ -158,9 +169,43 @@ def verify_selected_evidence_spans(rows: tuple, sources: tuple[ContextSource, ..
         if overlaps_protected_span(start, end, source.text, source.metadata):
             blockers.append("evidence_review_sensitive_quote_withheld")
             continue
+        key = (index, start, end)
+        if any((item["reference"], item["start_offset"], item["end_offset"]) == key for item in spans):
+            blockers.append("evidence_review_selected_spans_invalid")
+            continue
         represented.add(index)
         spans.append(dict(row))
-    if represented != set(range(1, len(sources) + 1)):
+    coverage_rows = []
+    if coverage:
+        coverage_states = {"selected_excerpt", "not_relevant", "insufficient_context", "unprocessed"}
+        coverage_by_reference = {}
+        for row in coverage:
+            if (
+                not isinstance(row, dict)
+                or set(row) != {"reference", "state"}
+                or type(row.get("reference")) is not int
+                or not 1 <= row["reference"] <= len(sources)
+                or row.get("state") not in coverage_states
+                or row["reference"] in coverage_by_reference
+            ):
+                blockers.append("evidence_review_coverage_invalid")
+                continue
+            coverage_by_reference[row["reference"]] = row["state"]
+        if set(coverage_by_reference) != set(range(1, len(sources) + 1)):
+            blockers.append("evidence_review_coverage_incomplete")
+        for reference in represented:
+            if coverage_by_reference.get(reference) != "selected_excerpt":
+                blockers.append("evidence_review_coverage_selected_excerpt_required")
+        for reference, state in coverage_by_reference.items():
+            if state == "selected_excerpt" and reference not in represented:
+                blockers.append("evidence_review_coverage_excerpt_missing")
+        coverage_rows = [
+            {"reference": reference, "state": coverage_by_reference[reference]}
+            for reference in sorted(coverage_by_reference)
+        ]
+    elif represented != set(range(1, len(sources) + 1)):
+        # Legacy callers retain the conservative all-record requirement unless
+        # they explicitly supply the complete, fixed-vocabulary inventory.
         blockers.append("evidence_review_all_records_required")
     report = {
         "schema_version": "evidence_selected_spans_boundary_v1",
@@ -169,6 +214,10 @@ def verify_selected_evidence_spans(rows: tuple, sources: tuple[ContextSource, ..
         "review_required": True, "factual_claims_verified": False,
         "legal_claims_verified": False, "relevance_verified": False,
         "source_spans": [] if blockers else spans, "suppressed_spans": [],
+        "coverage": coverage_rows,
+        "coverage_complete": bool(coverage_rows) and not any(
+            code.startswith("evidence_review_coverage_") for code in blockers
+        ),
         "partial_extracts_available": False, "blockers": sorted(set(blockers)),
     }
     report["report_sha256"] = sha256(canonical_json(report)).hexdigest()
@@ -214,8 +263,8 @@ def render_verified_evidence_extracts(
         else ""
     )
     selection_notice = (
-        "These excerpts match the approved records exactly. This mode selects one passage "
-        "per record; it does not check every passage or verify relevance, facts, or law. "
+            "These excerpts match the approved records exactly. This mode may select more than one "
+            "passage per record; it does not check every passage or verify relevance, facts, or law. "
         "Open each source to check surrounding context, corrections, and missing information. "
         "A record's statement is not an established fact."
         if report.get("schema_version") in {
@@ -236,10 +285,49 @@ def render_verified_evidence_extracts(
             "to inspect the full context, corrections, and other passages before selecting "
             "anything for your work. Facts, law, and completeness have not been verified."
         )
+    flag_text = []
+    flag_labels = {
+        "possible_conflict": "The model flagged the cited passages for a possible conflict.",
+        "possible_agreement": "The model flagged the cited passages for possible agreement.",
+        "missing_material": "The model flagged these passages for a possible missing-material review.",
+        "proposal_not_acceptance": "The model flagged these passages as proposal/acceptance material to review.",
+        "qualification": "The model flagged a qualification or limitation to review.",
+        "record_difference": "The model flagged a possible difference between the cited records.",
+    }
+    for flag in report.get("task_review_flags", []):
+        if not isinstance(flag, dict) or flag.get("status") != "model_suggestion_review_required":
+            continue
+        refs = flag.get("references")
+        if not isinstance(refs, list) or not refs:
+            continue
+        label = flag_labels.get(flag.get("kind"))
+        if label:
+            flag_text.append(label + " " + " ".join(f"[{ref}]" for ref in refs))
+    flags_notice = ("\n\nModel review cues — not findings:\n" + "\n".join(flag_text)) if flag_text else ""
+    coverage_labels = {
+        "selected_excerpt": "selected an excerpt",
+        "not_relevant": "marked no excerpt as relevant",
+        "insufficient_context": "marked the source context insufficient",
+        "unprocessed": "marked the source unprocessed",
+    }
+    coverage_text = []
+    for row in report.get("coverage", []):
+        if not isinstance(row, dict) or type(row.get("reference")) is not int:
+            continue
+        label = coverage_labels.get(row.get("state"))
+        if label:
+            coverage_text.append(f"Source [{row['reference']}] — model {label}.")
+    coverage_notice = (
+        "\n\nSource coverage labels — model suggestions, not completeness proof:\n"
+        + "\n".join(coverage_text)
+        + "\nA source marked with no excerpt does not establish that information is absent or irrelevant."
+        if coverage_text
+        else ""
+    )
     return (
         ("Evidence Review — candidate passages to inspect\n\n" if ranked
          else "Evidence Review — model-selected record excerpts\n\n")
         + "\n\n".join(extracts)
-        + partial_notice
+        + partial_notice + flags_notice + coverage_notice
         + "\n\n" + selection_notice + "\n\nReview required."
     )

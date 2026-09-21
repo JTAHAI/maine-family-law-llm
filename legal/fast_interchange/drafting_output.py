@@ -167,6 +167,7 @@ def render_source_bound_draft(
     if allow_partial and not report.get("partial_extracts_available"):
         raise ValueError("drafting_no_verified_partial_extracts")
     extracts: list[str] = []
+    extracts_by_reference: dict[int, list[str]] = {}
     seen: set[tuple[int, int, int]] = set()
     for span in report["source_spans"]:
         index, start, end = span["reference"], span["start_offset"], span["end_offset"]
@@ -184,19 +185,85 @@ def render_source_bound_draft(
             raise ValueError("drafting_source_changed")
         key = (index, start, end)
         if key not in seen:
-            extracts.append(f'"{source.text[start:end]}" [{index}]')
+            extract = f'"{source.text[start:end]}" [{index}]'
+            extracts.append(extract)
+            extracts_by_reference.setdefault(index, []).append(extract)
             seen.add(key)
+    heading_labels = {
+        "background": "Background record material",
+        "record_difference": "Record differences to review",
+        "support_gaps": "Support gaps to review",
+        "requested_review": "Requested review material",
+    }
+    organized_sections: list[str] = []
+    organized_references: set[int] = set()
+    for section in report.get("task_outline_sections", []):
+        if (
+            not isinstance(section, dict)
+            or section.get("status") != "model_organization_review_required"
+            or section.get("heading") not in heading_labels
+            or not isinstance(section.get("references"), list)
+        ):
+            raise ValueError("drafting_report_invalid")
+        refs = section["references"]
+        if not refs or len(set(refs)) != len(refs) or any(
+            type(ref) is not int or ref not in extracts_by_reference for ref in refs
+        ):
+            raise ValueError("drafting_report_invalid")
+        organized_sections.append(
+            heading_labels[section["heading"]] + ":\n\n" + "\n\n".join(
+                extract for ref in refs for extract in extracts_by_reference[ref]
+            )
+        )
+        organized_references.update(refs)
+    unorganized = [
+        extract
+        for ref, values in extracts_by_reference.items()
+        if ref not in organized_references
+        for extract in values
+    ]
+    outline_intro = (
+        "Working outline — model-organized review material, not findings:\n\n"
+        + "\n\n".join(organized_sections)
+        + (
+            "\n\nOther selected record material:\n\n" + "\n\n".join(unorganized)
+            if unorganized
+            else ""
+        )
+        if organized_sections
+        else "The supplied records state:\n\n" + "\n\n".join(extracts)
+    )
     partial_notice = (
         "\n\nSome model-selected text was withheld because it was inexact, sensitive, "
         "or otherwise failed verification."
         if report.get("blockers")
         else ""
     )
+    cue_labels = {
+        "possible_conflict": "Possible record difference to resolve",
+        "possible_agreement": "Possible agreement language to check",
+        "missing_material": "Possible missing material to locate",
+        "proposal_not_acceptance": "Proposal/acceptance wording to review",
+        "qualification": "Qualification or limitation to preserve",
+        "record_difference": "Possible record difference to resolve",
+    }
+    cues = []
+    for flag in report.get("task_review_flags", []):
+        if not isinstance(flag, dict) or flag.get("status") != "model_suggestion_review_required":
+            continue
+        refs = flag.get("references")
+        label = cue_labels.get(flag.get("kind"))
+        if label and isinstance(refs, list) and refs:
+            cues.append(f"- {label}: " + " ".join(f"[{ref}]" for ref in refs))
+    cue_section = (
+        "\n\nWorking-outline review cues — not findings:\n" + "\n".join(cues)
+        if cues
+        else ""
+    )
     return (
         "Drafting Assistant — source-bound working material\n\n"
-        "The supplied records state:\n\n"
-        + "\n\n".join(extracts)
-        + partial_notice
+        + outline_intro
+        + partial_notice + cue_section
         + "\n\nThis is a working extract, not a factual finding, legal conclusion, or "
         "filing-ready draft. The model's other prose was withheld. Open each source, "
         "check surrounding context, add missing support, and revise the wording before use."

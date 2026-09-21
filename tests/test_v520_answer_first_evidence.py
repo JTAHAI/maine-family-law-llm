@@ -48,7 +48,18 @@ def test_external_source_links_reject_active_or_file_schemes() -> None:
     js = read_workbench_asset("workbench.js")
     assert "function safeExternalUrl(value)" in js
     assert "parsed.protocol === 'https:' || parsed.protocol === 'http:'" in js
-    assert "safeExternalUrl(item?.url || meta.url || meta.official_url)" in js
+    assert "!parsed.username && !parsed.password && !isLocalHost" in js
+    assert "safeOfficialMaineAuthorityUrl(sourceUrl)" in js
+    assert "safeExternalUrl(sourceUrl)" in js
+
+
+def test_local_agent_official_authority_provenance_link_matches_server_host_policy() -> None:
+    js = read_workbench_asset("workbench.js")
+    assert "function safeOfficialMaineAuthorityUrl(value)" in js
+    assert "parsed.protocol === 'https:' && officialHosts.has(host) && (!parsed.port || parsed.port === '443')" in js
+    assert "legislature.maine.gov" in js
+    assert "www.courts.maine.gov" in js
+    assert "const admittedOfficialUrl = safeOfficialMaineAuthorityUrl(officialUrl);" in js
 
 
 def test_source_preview_becomes_large_centered_modal_when_pinned() -> None:

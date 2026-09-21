@@ -114,6 +114,7 @@ def test_curated_qwen_cannot_be_redirected_by_a_browser_endpoint(monkeypatch):
     runtime = api._local_agent_runtime_from_request(
         api.LocalAgentPreviewRequest(
             question="Fictional question",
+            task="evidence_review",
             provider="curated_ollama_reasoning",
             endpoint="http://127.0.0.1:19999",
             model="qwen3:4b",
@@ -121,6 +122,29 @@ def test_curated_qwen_cannot_be_redirected_by_a_browser_endpoint(monkeypatch):
     )
     assert runtime.client.provider_id == "curated_ollama_reasoning"
     assert seen["endpoint"] == "http://127.0.0.1:11434"
+
+
+def test_curated_qwen_canonical_api_rejects_unavailable_specialist_tasks(bound_host, monkeypatch):
+    """A crafted API request cannot bypass the UI's curated-task availability filter."""
+
+    from legal.agent_runtime.providers import build_local_client
+
+    monkeypatch.setattr(api, "build_local_client", build_local_client)
+    response = bound_host["client"].post(
+        "/api/local-agent/preview",
+        headers=bound_host["headers"],
+        json={
+            **bound_host["body"],
+            "provider": "curated_ollama_reasoning",
+            "endpoint": "http://127.0.0.1:19999",
+            "model": "qwen3:4b",
+            "task": "parenting_plan_review",
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "curated_qwen_task_not_available"
+    assert detail["loopback_only"] is True
 
 
 def test_curated_qwen_hardware_preflight_uses_ram_or_gpu_headroom(monkeypatch):
@@ -160,6 +184,40 @@ def test_curated_qwen_hardware_preflight_uses_ram_or_gpu_headroom(monkeypatch):
     assert blocked["gpu_lane_system_memory_reserve_bytes"] == 2 * 1024**3
 
 
+def test_local_agent_cancel_is_matter_scoped_and_withholds_a_pre_dispatch_run(bound_host, monkeypatch):
+    class CancelableClient(FakeClient):
+        model_binding = {"artifact_identity": {"identity_sha256": "a" * 64}}
+
+        def __init__(self):
+            self.cancel_calls = 0
+
+        def cancel(self):
+            self.cancel_calls += 1
+            return {"status": "canceled"}
+
+    client = CancelableClient()
+    monkeypatch.setattr(api, "build_local_client", lambda **_kwargs: client)
+    prepared = preview(bound_host)
+    canceled = bound_host["client"].post(
+        "/api/local-agent/cancel",
+        headers=bound_host["headers"],
+        json={
+            "matter_id": bound_host["body"]["matter_id"],
+            "run_id": prepared["context_manifest"]["run_id"],
+        },
+    )
+    assert canceled.status_code == 200, canceled.text
+    assert canceled.json()["status"] == "canceled"
+    assert canceled.json()["review_required"] is True
+    assert client.cancel_calls == 1
+
+    blocked = bound_host["client"].post(
+        "/api/local-agent/run", json=approved_body(bound_host, prepared), headers=bound_host["headers"]
+    )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == "fast_interchange_generation_canceled"
+
+
 def test_local_agent_run_uses_exact_preview_hash(bound_host):
     prepared = preview(bound_host)
     response = bound_host["client"].post(
@@ -171,6 +229,39 @@ def test_local_agent_run_uses_exact_preview_hash(bound_host):
     assert result["local_agent_result"] is True
     assert result["provenance_receipt"]["citation_refs"] == [1]
     assert result["provenance_receipt"]["context_manifest_sha256"] == prepared["context_manifest"]["manifest_sha256"]
+
+
+def test_local_agent_withholds_a_result_when_the_bound_local_artifact_changes(bound_host, monkeypatch):
+    class IdentityBoundClient(FakeClient):
+        provider_id = "curated_ollama_reasoning"
+        model_name = "qwen3:4b"
+
+        def __init__(self):
+            self.model_binding = {"artifact_identity": None}
+            self.refresh_calls = 0
+
+        def refresh_artifact_identity(self):
+            self.refresh_calls += 1
+            digest = "a" * 64 if self.refresh_calls == 1 else "b" * 64
+            identity = {"identity_sha256": digest, "digest": "sha256:" + digest}
+            self.model_binding["artifact_identity"] = identity
+            return identity
+
+    clients = []
+
+    def build(**_kwargs):
+        client = IdentityBoundClient()
+        clients.append(client)
+        return client
+
+    monkeypatch.setattr(api, "build_local_client", build)
+    prepared = preview(bound_host)
+    response = bound_host["client"].post(
+        "/api/local-agent/run", json=approved_body(bound_host, prepared), headers=bound_host["headers"],
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "local_agent_model_artifact_changed"
+    assert len(clients) == 2
 
 
 def test_managed_specialist_worker_requires_explicit_local_admin(bound_host, monkeypatch):
@@ -240,12 +331,29 @@ def test_workbench_surfaces_local_agent_manifest_review_and_actions():
     assert "SENTINEL configured local route" in html
     assert "curated_ollama_reasoning" in html
     assert "Local Qwen reasoning (4B / 8B)" in html
-    default_selection = js.split("if (!savedProvider && ['evidence_review', 'drafting']", 1)[1].split('}', 1)[0]
+    assert "Qwen3 4B — recommended first; lower memory, but may take time" in html
+    assert "Qwen3 8B — larger; may be slower and a late result is withheld" in html
+    assert "A result that cannot finish is withheld—this app never silently switches models." in html
+    default_selection = js.split("if (!savedProvider && ['evidence_review', 'authority_review', 'drafting']", 1)[1].split('}', 1)[0]
     assert "localAgentProvider.value = 'curated_ollama_reasoning'" in default_selection
     assert "fast_interchange_local" not in default_selection
     assert "qwen3:4b" in html
     assert "qwen3:8b" in html
     assert "Before local Qwen runs" in js
+    assert "Installed model checked:" in js
+    assert "If it changes before or during the run, the result is withheld." in js
+    assert "Installed artifact:" in js
+    assert "Task boundary:" in js
+    assert "Artifact integrity does not certify legal quality." in js
+    assert "Coverage labels — model suggestions, not proof:" in js
+    assert "A source with no excerpt is not established absent or irrelevant." in js
+    assert "local_model_timeout:" in js
+    assert "choose the lower-memory 4B option for a new review" in js
+    assert "option.hidden = !availableTasks.has(option.value);" in js
+    assert "Authority provenance:" in js
+    assert "Open official source" in js
+    assert "const admittedOfficialUrl = safeOfficialMaineAuthorityUrl(officialUrl);" in js
+    assert "Opening a source is your choice." in js
     assert "Configured by this device" in js
     assert "MAINE_FAST_INTERCHANGE_WORKER_TOKEN" not in html
     assert 'id="local-agent-worker-confirm"' in html

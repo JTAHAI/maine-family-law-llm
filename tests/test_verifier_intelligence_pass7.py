@@ -1,6 +1,6 @@
 from legal.drafting.filing_ready_gate import FilingReadyGate
 from legal.verifiers import ClaimSupportVerifier, LegalOutputVerifier, QuoteSpanVerifier, SourceAuthorityIndex
-from legal.verifiers.authority_status_verifier import AuthorityStatusVerifier
+from legal.verifiers.authority_status_verifier import AuthorityStatusVerifier, is_official_maine_https_url
 
 
 def test_quote_verifier_reports_exact_fuzzy_and_missing_statuses():
@@ -63,6 +63,7 @@ def test_authority_status_verifier_checks_domain_freshness_and_jurisdiction():
     verifier = AuthorityStatusVerifier()
 
     official = verifier.verify_url("https://legislature.maine.gov/statutes/19-a/title19-Asec1653.html")
+    downgraded = verifier.verify_url("http://legislature.maine.gov/statutes/19-a/title19-Asec1653.html")
     unknown = verifier.verify_url("https://example.com/maine-custody-summary")
     mismatch = verifier.verify_source(
         {
@@ -75,8 +76,19 @@ def test_authority_status_verifier_checks_domain_freshness_and_jurisdiction():
 
     assert official.verified is True
     assert official.status == "verified_official_maine"
+    assert downgraded.verified is False
+    assert downgraded.status == "stale_unknown"
     assert unknown.verified is False
     assert mismatch.status == "jurisdiction_mismatch"
+
+
+def test_local_model_authority_url_boundary_requires_normal_official_https_url():
+    assert is_official_maine_https_url(
+        "https://legislature.maine.gov/statutes/19-a/title19-Asec1653.html"
+    )
+    assert not is_official_maine_https_url("http://legislature.maine.gov/statutes/19-a/")
+    assert not is_official_maine_https_url("https://legislature.maine.gov@evil.example/path")
+    assert not is_official_maine_https_url("https://legislature.maine.gov:444/path")
 
 
 def test_legal_output_verifier_blocks_fake_citations_missing_quotes_and_unsupported_claims():

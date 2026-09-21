@@ -4512,6 +4512,9 @@ if FastAPI is not None:
                 timeout_seconds=120,
                 capability=payload.task,
             )
+            refresh_identity = getattr(client, "refresh_artifact_identity", None)
+            if callable(refresh_identity):
+                refresh_identity()
         except (ValueError, LocalModelError) as exc:
             detail = getattr(exc, "code", None) or str(exc)
             raise HTTPException(
@@ -4609,6 +4612,9 @@ if FastAPI is not None:
                 sources=sources,
                 run_id=payload.run_id,
             )
+            context_budget = runtime.context_budget(question=payload.question, sources=selected)
+            if context_budget.get("status") == "context_too_large":
+                raise LocalAgentContextError("local_agent_context_budget_exceeded", 409)
             # Keep the original source cards for normal record review, while
             # giving the approval dialog a separate, exact copy of the packet
             # that will be sent to the local model.  A quarantined record is
@@ -4670,6 +4676,7 @@ if FastAPI is not None:
             "review_required": True,
             "model_admission": getattr(runtime.client, "model_binding", {}),
             "hardware_readiness": hardware_readiness,
+            "context_budget": context_budget,
             "cancellation_supported": bool(
                 not hardware_readiness["blockers"]
                 and hasattr(runtime.client, "model_binding")
@@ -4798,6 +4805,12 @@ if FastAPI is not None:
         try:
             sources, cards = _local_agent_context_service().resolve(payload.source_refs)
             binding = _local_agent_binding(payload, scope, runtime)
+            artifact_identity = dict(
+                (getattr(runtime.client, "model_binding", {}) or {}).get("artifact_identity") or {}
+            )
+            artifact_identity_sha256 = str(artifact_identity.get("identity_sha256") or "")
+            if callable(getattr(runtime.client, "refresh_artifact_identity", None)) and not artifact_identity_sha256:
+                raise LocalAgentContextError("local_agent_model_artifact_identity_required", 503)
             manifest = _local_agent_approvals.consume(payload.approval_token, binding, payload.approved_manifest_sha256)
             audit_store = _local_agent_audit_store(root)
             audit_store.record("dispatch", scope=scope, binding_sha256=local_agent_digest(binding))
@@ -4815,6 +4828,11 @@ if FastAPI is not None:
                 matter_id=payload.matter_id, run_id=payload.run_id,
                 manifest_created_at=manifest["created_at"],
             ))
+            refresh_identity = getattr(runtime.client, "refresh_artifact_identity", None)
+            if callable(refresh_identity):
+                resolved_identity = refresh_identity()
+                if str(resolved_identity.get("identity_sha256") or "") != artifact_identity_sha256:
+                    raise LocalAgentContextError("local_agent_model_artifact_changed")
             audit = audit_store.record("result", scope=scope, binding_sha256=local_agent_digest(binding),
                                        receipt_sha256=result.provenance_receipt.receipt_sha256)
             current_root = active_case_root()
@@ -4826,11 +4844,15 @@ if FastAPI is not None:
             if controlled_run:
                 canceled = _local_agent_runs.finish(payload.run_id, scope, failed=result.status != "completed_review_required")
                 controlled_run = False
-                if canceled or "fast_interchange_generation_canceled" in result.warnings:
+                if canceled or any(code in result.warnings for code in {
+                    "fast_interchange_generation_canceled", "local_model_generation_canceled"
+                }):
                     _local_agent_audit_store(root).record("canceled", scope=scope, binding_sha256=local_agent_digest(binding))
                     raise LocalAgentContextError("fast_interchange_generation_canceled")
         except LocalAgentContextError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+        except LocalModelError as exc:
+            raise HTTPException(status_code=503, detail=exc.code) from exc
         finally:
             if controlled_run:
                 _local_agent_runs.finish(payload.run_id, scope, failed=True)

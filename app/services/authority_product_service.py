@@ -697,7 +697,12 @@ class AuthorityProductService:
         snapshot = snapshot_rows[0] if len(snapshot_rows) == 1 else None
         metadata = parsed_row.get("metadata") if isinstance(parsed_row.get("metadata"), dict) else {}
         fetch_metadata = metadata.get("fetch_metadata") if isinstance(metadata.get("fetch_metadata"), dict) else {}
-        source_url = str(parsed_row.get("source_url_or_path") or metadata.get("source_url_or_path") or "").strip()
+        source_url = str(
+            parsed_row.get("source_url_or_path")
+            or metadata.get("source_url_or_path")
+            or (snapshot or {}).get("official_source_url")
+            or ""
+        ).strip()
         if not source_url.startswith(("https://", "http://")):
             source_url = ""
         source_span = parsed_row.get("source_span") if isinstance(parsed_row.get("source_span"), dict) else {}
@@ -733,7 +738,7 @@ class AuthorityProductService:
             "snapshot_source_id": snapshot_id,
             "authority_kind": parsed_row.get("authority_kind"),
             "source_class": parsed_row.get("source_class"),
-            "jurisdiction": parsed_row.get("jurisdiction"),
+            "jurisdiction": parsed_row.get("jurisdiction") or (snapshot or {}).get("jurisdiction"),
             "citation": parsed_row.get("citation"),
             "parser_status": parsed_row.get("parser_status") or parser_audit.get("status"),
             "parser_name": parser_audit.get("parser_name"),

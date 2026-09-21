@@ -197,8 +197,9 @@ def test_specialist_hardware_block_explains_safe_ram_headroom_without_enabling_l
     assert "The specialist will remain off until that headroom is available." in script
     assert (
         "localAgentRun.disabled = Boolean(preview.injection_report?.direct_prompt_blocked || "
-        "preview.hardware_readiness?.blockers?.length);"
+        "preview.hardware_readiness?.blockers?.length || contextBudget.status === 'context_too_large');"
     ) in script
+    assert "Source packet needs to be smaller." in script
     assert "hardware.execution_accelerator || accelerator" in script
     assert "CPU fallback selected" in script
     assert "Available RAM could not be confirmed or is exhausted" in script

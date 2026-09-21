@@ -22,6 +22,30 @@ OFFICIAL_MAINE_DOMAINS = {"legislature.maine.gov", "www.courts.maine.gov", "cour
 FEDERAL_DOMAINS = {"uscode.house.gov", "www.law.cornell.edu", "supreme.justia.com"}
 
 
+def is_official_maine_https_url(url: str) -> bool:
+    """Return true only for a normal HTTPS URL on an admitted Maine host.
+
+    This is intentionally narrower than ``verify_url``.  It is used at the
+    local-model authority boundary, where a displayed provenance URL must not
+    be an arbitrary web address, an HTTP downgrade, or a credential-bearing
+    lookalike URL merely because an upstream manifest calls it official.
+    """
+
+    try:
+        parsed = urlparse(str(url or ""))
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.casefold() == "https"
+        and parsed.hostname is not None
+        and parsed.hostname.rstrip(".").casefold() in OFFICIAL_MAINE_DOMAINS
+        and parsed.username is None
+        and parsed.password is None
+        and port in {None, 443}
+    )
+
+
 @dataclass(frozen=True)
 class AuthorityStatusResult:
     status: AuthorityVerificationStatus
@@ -51,8 +75,8 @@ class AuthorityStatusVerifier:
         return self.verify_url(url).status
 
     def verify_url(self, url: str) -> AuthorityStatusResult:
-        host = urlparse(url).netloc.lower()
-        if host in OFFICIAL_MAINE_DOMAINS:
+        host = (urlparse(url).hostname or "").rstrip(".").casefold()
+        if is_official_maine_https_url(url):
             if "lawcourt" in url.lower() or "/sjc/" in url.lower():
                 return AuthorityStatusResult(
                     status="verified_maine_law_court",

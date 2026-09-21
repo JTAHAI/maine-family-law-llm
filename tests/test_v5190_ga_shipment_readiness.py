@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -28,9 +29,27 @@ def _policy(path: Path) -> Path:
     return path
 
 
+def _synthetic_source_root(tmp_path: Path) -> Path:
+    """Make ``tmp_path/release`` external without weakening production guards.
+
+    Release evidence must never be stored below the real source checkout.  CI
+    directs pytest scratch space into ``dist/qa`` to keep it recoverable and
+    private, so tests need a small logical source root rather than relying on
+    the host's default temp directory being outside the checkout.
+    """
+
+    root = tmp_path / "synthetic-source-repository"
+    (root / "legal").mkdir(parents=True, exist_ok=True)
+    (root / "pyproject.toml").write_text("[project]\nname = 'synthetic-release-test'\n", encoding="utf-8")
+    shutil.copytree(Path.cwd() / "configs", root / "configs", dirs_exist_ok=True)
+    return root
+
+
 def _store(tmp_path: Path) -> GAShipmentReadinessStore:
     return GAShipmentReadinessStore(
-        Path.cwd(), tmp_path / "release", policy_path=_policy(tmp_path / "policy.json")
+        _synthetic_source_root(tmp_path),
+        tmp_path / "release",
+        policy_path=_policy(tmp_path / "policy.json"),
     )
 
 
@@ -91,7 +110,9 @@ def _qualify_channel(store: GAShipmentReadinessStore) -> None:
 
 
 def test_v519_status_is_fail_closed_without_external_root(tmp_path: Path):
-    store = GAShipmentReadinessStore(Path.cwd(), None, policy_path=_policy(tmp_path / "policy.json"))
+    store = GAShipmentReadinessStore(
+        _synthetic_source_root(tmp_path), None, policy_path=_policy(tmp_path / "policy.json")
+    )
     status = store.status()
     assert status["status"] == "blocked"
     assert "release_root_not_configured" in status["blockers"]
@@ -206,6 +227,7 @@ def test_v519_packet_is_immutable_and_tamper_evident(tmp_path: Path):
 
 def test_v519_api_and_ui_surface_are_available(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("MAINE_FAMILY_LAW_RELEASE_ROOT", str(tmp_path / "release"))
+    monkeypatch.setattr(api_module, "_release_hardening_repo_root", lambda: _synthetic_source_root(tmp_path))
     client = TestClient(api_module.app)
     blocked = client.get("/api/ga-shipment-readiness/status")
     assert blocked.status_code == 200
@@ -235,6 +257,7 @@ def test_v519_api_and_ui_surface_are_available(tmp_path: Path, monkeypatch: pyte
 
 def test_v519_api_rejects_absolute_distribution_reference(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("MAINE_FAMILY_LAW_RELEASE_ROOT", str(tmp_path / "release"))
+    monkeypatch.setattr(api_module, "_release_hardening_repo_root", lambda: _synthetic_source_root(tmp_path))
     client = TestClient(api_module.app)
     client.post("/api/ga-shipment-readiness/shipments", json={
         "shipment_id": "v5-19-0-ga1", "version": PRODUCT_VERSION,

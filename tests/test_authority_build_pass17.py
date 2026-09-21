@@ -25,6 +25,20 @@ class StaticFetcher:
         )
 
 
+def _synthetic_project_root(tmp_path: Path) -> Path:
+    """Keep fixture authority data external to its synthetic source checkout.
+
+    Release QA keeps pytest artifacts under ``dist/qa`` in the real checkout.
+    The auditor must continue rejecting a real authority store there, but these
+    fixture tests exercise an external-store data product and therefore need a
+    separate synthetic project root.
+    """
+
+    root = tmp_path / "synthetic-source-repository"
+    root.mkdir(exist_ok=True)
+    return root
+
+
 def _record(
     official_store: Path,
     *,
@@ -113,7 +127,7 @@ def test_pass17_authority_build_auditor_accepts_valid_external_manifest(tmp_path
         "require_manifest_hash_matches_snapshot": True,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is True
     assert report.total_records == 2
@@ -153,7 +167,7 @@ def test_pass17_authority_build_allows_only_explicitly_quarantined_nonrequired_s
         "require_manifest_hash_matches_snapshot": True,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is True
     assert not report.blockers
@@ -204,7 +218,7 @@ def test_pass17_authority_build_blocks_non_object_manifest_rows(tmp_path):
         "require_manifest_hash_matches_snapshot": False,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is False
     assert "manifest_record_not_object" in report.blockers
@@ -245,7 +259,7 @@ def test_pass17_authority_build_blocks_duplicate_source_ids(tmp_path):
         "require_manifest_hash_matches_snapshot": True,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is False
     assert "duplicate_source_id" in report.blockers
@@ -293,7 +307,7 @@ def test_pass17_authority_build_blocks_snapshot_path_outside_official_store(tmp_
         "require_manifest_hash_matches_snapshot": True,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is False
     assert "snapshot_path_outside_official_store" in report.blockers
@@ -337,7 +351,7 @@ def test_pass17_authority_build_blocks_invalid_timestamp_and_parser_audit_mismat
         "require_manifest_hash_matches_snapshot": True,
     }
 
-    report = AuthorityBuildAuditor(project_root=Path.cwd(), data_root=tmp_path, policy=policy).run()
+    report = AuthorityBuildAuditor(project_root=_synthetic_project_root(tmp_path), data_root=tmp_path, policy=policy).run()
 
     assert report.production_ready is False
     assert "retrieved_timestamp_invalid" in report.blockers

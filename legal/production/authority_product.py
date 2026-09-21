@@ -239,6 +239,13 @@ class AuthorityProductPublisher(_AuthorityProductBase):
                 )
                 continue
             seen_source_ids.add(source_id)
+            source_url = str(row.get("source_url_or_path") or "").strip()
+            # The immutable build may retain a public provenance URL, never a
+            # local ingestion path.  A source row without one is still
+            # materialized for auditing, but downstream authority-only views
+            # must fail closed instead of calling it an official drill-down.
+            if not source_url.startswith(("https://", "http://")):
+                source_url = ""
             raw_snapshot = row.get("snapshot_path")
             if not raw_snapshot:
                 blockers.append("authority_snapshot_path_missing")
@@ -276,6 +283,8 @@ class AuthorityProductPublisher(_AuthorityProductBase):
                         "size": snapshot.stat().st_size,
                         "freshness_status": row.get("freshness_status"),
                         "retrieved_at": row.get("retrieved_at"),
+                        "jurisdiction": row.get("jurisdiction"),
+                        "official_source_url": source_url or None,
                     }
                 )
             except (OSError, ValueError) as exc:

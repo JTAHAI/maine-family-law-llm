@@ -19,6 +19,7 @@ from legal.agent_runtime.contracts import MAX_ITEM_CHARS, ContextSource, canonic
 from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock
 from legal.security.local_encryption import LocalEnvelopeEncryptor
 from legal.security.strict_json import strict_json_load_path
+from legal.verifiers.authority_status_verifier import is_official_maine_https_url
 
 
 def digest(value: Any) -> str:
@@ -79,6 +80,24 @@ class LocalAgentContextService:
                     continue  # An index ID shared by several sections is not an exact source.
                 raw = candidates[0]
                 text = str(raw.get("text") or raw.get("body") or raw.get("instructions") or "")
+                lineage = authority.authority_lineage(
+                    str(raw.get("record_id") or raw.get("source_id") or source_id)
+                )
+                official = dict(lineage.get("official_source") or {})
+                parsed_node = dict(lineage.get("parsed_node") or {})
+                official_url = str(official.get("url") or "")
+                jurisdiction = str(parsed_node.get("jurisdiction") or "").casefold()
+                if (
+                    lineage.get("status") != "lineage_observed"
+                    or official.get("admitted") is not True
+                    or not is_official_maine_https_url(official_url)
+                    or jurisdiction != "maine"
+                ):
+                    # An immutable build alone is not enough to describe a
+                    # selected passage as fresh official Maine authority.
+                    # Keep this context unavailable until its public source
+                    # provenance is complete and inspectable.
+                    continue
                 rows[source_id] = {
                     "source_id": str(raw.get("record_id") or raw.get("source_id")),
                     "text": text,
@@ -91,6 +110,14 @@ class LocalAgentContextService:
                     "authority_status": "verified_immutable_source_not_current_law_determination",
                     "build_id": active.build_id,
                     "build_manifest_sha256": manifest_hash,
+                    "metadata": {
+                        "official_source_url": official_url,
+                        "jurisdiction": "maine",
+                        "retrieved_at": (lineage.get("retrieval_event") or {}).get("retrieved_at"),
+                        "parser_status": parsed_node.get("parser_status"),
+                        "snapshot_sha256": (lineage.get("snapshot") or {}).get("sha256"),
+                        "authority_build_id": active.build_id,
+                    },
                 }
             return rows
         except (OSError, ValueError, TypeError, KeyError) as exc:
@@ -239,6 +266,7 @@ class LocalAgentContextService:
                     row.get("authority_status") or "private_record_not_legal_authority"
                 ),
                 freshness_status=str(row.get("freshness_status") or "unknown"),
+                metadata=dict(row.get("metadata") or {}),
             )
             sources.append(source)
             cards.append(
@@ -255,6 +283,12 @@ class LocalAgentContextService:
                         "freshness_status": source.freshness_status,
                         "record_open_token": ref.record_token,
                         "source_hash": ref.source_sha256,
+                        "official_source_url": source.metadata.get("official_source_url"),
+                        "jurisdiction": source.metadata.get("jurisdiction"),
+                        "retrieved_at": source.metadata.get("retrieved_at"),
+                        "parser_status": source.metadata.get("parser_status"),
+                        "snapshot_sha256": source.metadata.get("snapshot_sha256"),
+                        "authority_build_id": source.metadata.get("authority_build_id"),
                     },
                     "review_required": True,
                 }
