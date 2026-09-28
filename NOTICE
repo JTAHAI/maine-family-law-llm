@@ -1,9 +1,14 @@
-﻿Maine Family Law LLM
+Maine Family Law LLM
 Copyright 2026 Justin Tahai
+Copyright (c) project contributors.
 
-This product concept and repository are distributed with attribution under the Apache License 2.0.
+Maine Family Law LLM project direction and original product concept by Justin Tahai.
 
-Required attribution:
-"Maine Family Law LLM project direction and original product concept by Justin Tahai."
+The project-authored source code and documentation in this repository are
+licensed under the Apache License, Version 2.0. See LICENSE.md.
 
-See LICENSE and ATTRIBUTION.md.
+Third-party components retain their own licenses and notices. See
+THIRD_PARTY_NOTICES.md, licenses/, and ATTRIBUTION.md.
+
+This NOTICE is informational and does not modify the Apache License 2.0.
+See NOTICE.md for source, data, and safety boundaries.
