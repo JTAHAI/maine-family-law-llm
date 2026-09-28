@@ -6,7 +6,7 @@ version: 9.0.1
 date-released: 2026-08-23
 authors:
   - name: Maine Family Law LLM contributors
-license: other
+license: Apache-2.0
 repository-code: https://github.com/JTAHAI/maine-family-law-llm
 url: https://github.com/JTAHAI/maine-family-law-llm
 abstract: Local-first Maine family-law legal-information workbench for official-source research, exact citation and quote verification, privacy-aware record review, OCR derivatives, corpus organization, fail-closed filing gates, and review-required drafting support.
