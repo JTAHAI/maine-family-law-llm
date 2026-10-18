@@ -1,6 +1,6 @@
 # Maine Family Law LLM
 
-[![Version](https://img.shields.io/badge/source-v8.0.0-0A6E75)](docs/RELEASE_NOTES_v8.0.0.md)
+[![Version](https://img.shields.io/badge/source-v9.0.1-0A6E75)](docs/RELEASE_NOTES_v9.0.1.md)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-306998)](pyproject.toml)
 [![Local first](https://img.shields.io/badge/default-local--only-17324D)](docs/privacy.md)
 [![Review required](https://img.shields.io/badge/output-review_required-BB6B38)](docs/safety.md)
@@ -10,20 +10,20 @@ Maine Family Law LLM is an open-source, local-first Windows workbench for Maine 
 
 It is not a lawyer, does not provide legal advice, and does not turn model confidence into legal authority. Official Maine sources, exact source spans, citation and quote checks, factual support, privacy review, and human review remain separate gates.
 
-[Project site](https://jtahai.github.io/maine-family-law-llm/) · [Download v7 from Microsoft Store](https://apps.microsoft.com/detail/9NV67WCQW0DM) · [v8 release notes](docs/RELEASE_NOTES_v8.0.0.md) · [Safety](docs/safety.md) · [Privacy](docs/privacy.md)
+[Project site](https://jtahai.github.io/maine-family-law-llm/) · [Download the current published Store package](https://apps.microsoft.com/detail/9NV67WCQW0DM) · [v9.0.1 release notes](docs/RELEASE_NOTES_v9.0.1.md) · [Safety](docs/safety.md) · [Privacy](docs/privacy.md)
 
 ## Release truth
 
 | Surface | Current status |
 | --- | --- |
-| Source branch | `main`, product version `8.0.0` |
-| Windows package target | `8.0.0.0`, x64, `en-us` |
-| Current Microsoft Store listing | v7 is published and available as a free Windows download |
-| Current source release | v8.0.0 on `main` |
-| v7 package | Distributed through the official Microsoft Store listing |
+| Source branch | `main`, product version `9.0.1` |
+| Windows package target | `9.0.1.0`, build 57, x64, `en-us` |
+| Current Microsoft Store listing | v7 is the last repository-verified published Store package |
+| Current source release | v9.0.1 on `main` |
+| Optional local AI | Consent-bound Ollama/Qwen3 4B or 8B setup; general-purpose assistance, not admitted Maine-law specialists |
 | Enterprise GA | Blocked pending real attorney-reviewed evaluation, controlled pilot evidence, and organizational sign-offs |
 
-See [the public v7 release status](docs/RELEASE_STATUS_v7.0.0.md) for Store availability, source evidence, and the separate Enterprise-GA boundary.
+See [the public v7 release status](docs/RELEASE_STATUS_v7.0.0.md) for the last repository-verified Store availability record, and [the v9.0.1 release notes](docs/RELEASE_NOTES_v9.0.1.md) for current source/package evidence and limitations.
 
 ## Verified core public scope
 
@@ -75,7 +75,7 @@ These capabilities do not send records, file documents, modify external calendar
 
 ## Verified v8 Add-on Studio
 
-The v8 source freeze adds 20 matter-scoped, local-only add-ons. Every add-on now completes a meaningful action through the service, canonical protected API, production desktop UI, and frozen executable. Each result remains review-required and supports exact-result inspection, guarded artifact access where applicable, immutable review decisions, and audit-chain verification:
+The v8 source freeze added 20 matter-scoped, local-only add-ons. Every add-on completes a meaningful action through the service, canonical protected API, production desktop UI, and frozen executable. Each result remains review-required and supports exact-result inspection, guarded artifact access where applicable, immutable review decisions, and audit-chain verification:
 
 - native Whisper transcription with a pinned, hash-verified bundled engine and model;
 - OCR correction, communications import, evidence relationship graphs, and local model management;
@@ -95,6 +95,12 @@ Additional core capabilities still under qualification include:
 
 The feature catalog keeps readiness evidence visible; code presence alone is never represented as end-to-end acceptance.
 
+## v9 optional local AI boundary
+
+v9 adds consent-bound setup and use of optional local Qwen3 4B or 8B models through Ollama. The app checks current memory and disk headroom, explains the choices, asks before downloading, reuses matching installed components, and exposes safe stop/retry and explicit **Use in chat** controls after fictional source-review checks.
+
+The optional models are general-purpose local assistants. They are not represented as trained, certified, or admitted Maine-law specialists. Evidence review and drafting remain bounded by selected-record approval, exact-source matching, quotation checks, route-bound task profiles, provenance receipts, and visible `review_required` status. The MSIX does not contain Ollama or Qwen weights.
+
 ## Why this is different from a generic chatbot
 
 The workbench separates three lanes:
@@ -109,7 +115,7 @@ A legal claim fails closed when its source is missing, stale, wrong-jurisdiction
 
 Private matter data does not belong in this repository. Runtime matter stores, authority snapshots, parsed authority products, retrieval indexes, OCR caches, logs, credentials, model caches, evaluation stores, and generated work product remain outside the source tree and MSIX.
 
-The standard runtime binds its local API to loopback. Local-only mode forbids silent provider discovery, telemetry, model downloads, background updates, arbitrary URL requests, and remote fallback.
+The standard runtime binds its local API to loopback. Local-only mode forbids silent provider discovery, telemetry, model downloads, background updates, arbitrary URL requests, and remote fallback. Optional local-model installation is a separate, explicit, user-approved network action.
 
 Read [Privacy](docs/privacy.md), [Safety and data boundaries](docs/safety.md), and [MSIX privacy boundaries](docs/MSIX_PRIVACY_BOUNDARIES.md) before using private records.
 
@@ -158,19 +164,23 @@ python -m pytest --collect-only -q
 python -m pytest
 ```
 
-The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The v8 Add-on Studio acceptance run added 31 passing focused tests with one unrelated conditional skip, plus production-browser and frozen-runtime journeys across all 20 add-ons. Those results describe the tested source and frozen runtime; Store availability and enterprise validation remain distinct evidence layers.
+The v7 closure run collected 1,234 tests: 1,220 passed, 14 documented Windows skips, and no failures or errors. The v8 Add-on Studio acceptance run added 31 passing focused tests with one unrelated conditional skip, plus production-browser and frozen-runtime journeys across all 20 add-ons.
+
+The v9.0.1 release record reports 214 distinct focused setup, provider, UI, version, and packaging tests across two suites, live component-reuse checks, and final frozen-API exercises with both supported model sizes. It does not claim a full-repository v9.0.1 regression. The October 18, 2026 filing-gate hardening pass additionally completed 118 targeted tests on both the pull request and merged `main`, with public-source preflight, dependency-floor checks, `pip-audit`, chat-library evidence, and a Windows-installer artifact build all passing.
+
+These results describe their exact tested source and runtime boundaries; Store availability, clean installed-package qualification, legal quality, attorney review, controlled pilots, and Enterprise GA remain distinct evidence layers.
 
 ## Package status
 
-The canonical build produces:
+The current Windows package target is:
 
 ```text
-MaineFamilyLawLLM_8.0.0.0_x64.msix
+MaineFamilyLawLLM_9.0.1.0_x64.msix
 ```
 
-The full-tier v8.0.0.0 MSIX candidate passed its canonical frozen-runtime smoke, bundled-engine inventory, private-data audit, sealed-payload audit, and archive audit. Its SHA-256 is `a4afe2372d737c6cbcc598b99be8dea6c1f0a7e0baaf497145201b8468abfa86`; it is an unsigned candidate for the Microsoft Store signing and distribution process. WACK and installed-package qualification remain separate evidence steps, and the published v7 package remains the current Store download until Microsoft distributes v8.
+v9.0.1 packaging checks cover the declared package identity, privacy boundaries, required engine inventory, sealed payload, manifest, and frozen API paths. The merged October 18 hardening commit also produced a successful Windows-installer workflow artifact. A real clean-Windows missing-component download/install, installed-MSIX upgrade, WACK, Microsoft Store publication of v9.0.1, attorney validation, and Enterprise qualification are not claimed by those checks.
 
-The package includes Fast Interchange runtime support but no legal model weights or adapters. Any future model pack must be user-initiated, versioned, rights-cleared, hash-verified, admitted, and explicitly activated; development-only adapters never establish current law or bypass review.
+The MSIX contains the app and essential offline engines, not Ollama or Qwen model weights. Optional local-model setup is user-initiated, versioned, pinned, hash/publisher checked, and explicitly activated. General-purpose model output never establishes current law or bypasses exact-source, verifier, privacy, or human-review gates.
 
 ## Repository map
 
@@ -196,7 +206,7 @@ Release-critical controls include:
 - untrusted document/prompt/OCR/tool instructions treated as data;
 - loopback origin/session protections;
 - encrypted private sidecars and hash-chained audit events;
-- fail-closed filing/export gates;
+- fail-closed filing/export gates that require underlying verifier evidence;
 - no private data, authority stores, credentials, logs, caches, or test residue in the MSIX.
 
 Please report security issues through the process in [SECURITY.md](SECURITY.md), not through a public issue containing sensitive details.
