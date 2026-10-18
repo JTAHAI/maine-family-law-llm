@@ -55,7 +55,7 @@ def _complete_gate_payload() -> dict:
 
 
 def test_public_filing_ready_check_cannot_self_attest_human_review():
-    response = filing_ready(_complete_gate_payload())
+    response = filing_ready(_complete_gate_payload(), x_user_role="reviewer")
 
     assert response["filing_ready"] is False
     assert response["review_required"] is True
