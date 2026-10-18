@@ -67,12 +67,14 @@ CLAIM_PASS_STATUSES = {"supported"}
 class FilingReadyGate:
     """Final export gate for review-required Maine family-law work product.
 
-    The gate never treats an attorney override as a pass. Overrides are logged in
-    the immutable gate report while filing-ready export remains blocked unless
+    Caller-supplied summary booleans are vetoes only. A true summary never
+    substitutes for the underlying authority, citation, quote, claim, fact,
+    procedure, form, or privacy evidence. The gate never treats an attorney
+    override as a pass. Overrides are logged while export remains blocked unless
     every mandatory check is independently satisfied.
     """
 
-    gate_version = "pass38-filing-ready-hardening-v1"
+    gate_version = "pass38-filing-ready-hardening-v2"
 
     def evaluate(self, payload: dict[str, Any]) -> dict[str, Any]:
         blockers: list[str] = []
@@ -86,37 +88,63 @@ class FilingReadyGate:
                 blockers.append(check)
 
         # Keep compatibility with the earlier verifier-intelligence gates.
+        # These legacy summary fields can block a result, but a true value does
+        # not replace the evidence required by the derived checks above.
         for check in PASS7_MANDATORY_CHECKS:
             if check in payload and not payload.get(check, False):
                 blockers.append(check)
 
         verification_report = payload.get("verification_report") or {}
-        # A verifier report's ``blockers`` collection is authoritative.  An
-        # unrecognized blocker must fail closed instead of being silently
-        # downgraded because a caller supplied optimistic summary booleans.
-        for blocker in verification_report.get("blockers", []):
-            value = str(blocker).strip()
-            if value:
-                blockers.append(value)
+        if isinstance(verification_report, dict):
+            # A verifier report's ``blockers`` collection is authoritative. An
+            # unrecognized blocker must fail closed instead of being silently
+            # downgraded because a caller supplied optimistic summary booleans.
+            for blocker in verification_report.get("blockers", []):
+                value = str(blocker).strip()
+                if value:
+                    blockers.append(value)
+        else:
+            blockers.append("verification_report_invalid")
 
         blockers.extend(derived["blockers"])
-        blockers.extend(str(item) for item in (payload.get("workflow_blockers") or []) if str(item))
-        blockers.extend(str(item) for item in (payload.get("review_annotation_blockers") or []) if str(item))
+        blockers.extend(
+            str(item) for item in (payload.get("workflow_blockers") or []) if str(item)
+        )
+        blockers.extend(
+            str(item)
+            for item in (payload.get("review_annotation_blockers") or [])
+            if str(item)
+        )
         procedure_report = payload.get("procedure_posture_report") or {}
-        blockers.extend(str(item) for item in (procedure_report.get("blockers") or []) if str(item))
+        if isinstance(procedure_report, dict):
+            blockers.extend(
+                str(item) for item in (procedure_report.get("blockers") or []) if str(item)
+            )
         forms_report = payload.get("forms_report") or {}
-        blockers.extend(str(item) for item in (forms_report.get("blockers") or []) if str(item))
+        if isinstance(forms_report, dict):
+            blockers.extend(
+                str(item) for item in (forms_report.get("blockers") or []) if str(item)
+            )
         findings_report = payload.get("findings_review") or payload.get("findings_report") or {}
-        blockers.extend(str(item) for item in (findings_report.get("blockers") or []) if str(item))
+        if isinstance(findings_report, dict):
+            blockers.extend(
+                str(item) for item in (findings_report.get("blockers") or []) if str(item)
+            )
         privacy_report = payload.get("privacy_report") or payload.get("privacy_review") or {}
-        blockers.extend(str(item) for item in (privacy_report.get("blockers") or []) if str(item))
+        if isinstance(privacy_report, dict):
+            blockers.extend(
+                str(item) for item in (privacy_report.get("blockers") or []) if str(item)
+            )
 
-        if payload.get("review_required", True) and not payload.get("human_review_complete", False):
+        if payload.get("review_required", True) and not payload.get(
+            "human_review_complete", False
+        ):
             blockers.append("human_review_complete")
 
         blockers = sorted(set(blockers))
         override_record = self._build_override_record(payload, blockers)
         filing_ready = len(blockers) == 0
+        review_required = not filing_ready
         export_status = "allowed" if filing_ready else "blocked"
         if override_record and not filing_ready:
             export_status = "blocked_override_logged"
@@ -133,7 +161,7 @@ class FilingReadyGate:
         gate_report["immutable_report_hash"] = self._hash_report(gate_report)
         blocker_panel = {
             "panel_title": "Filing gate blockers",
-            "review_required": True,
+            "review_required": review_required,
             "filing_ready": filing_ready,
             "export_status": export_status,
             "blockers": blockers,
@@ -143,7 +171,7 @@ class FilingReadyGate:
         return {
             "filing_ready": filing_ready,
             "blockers": blockers,
-            "review_required": not payload.get("human_review_complete", False),
+            "review_required": review_required,
             "export_status": export_status,
             "mandatory_checks": mandatory_results,
             "gate_report": gate_report,
@@ -153,7 +181,9 @@ class FilingReadyGate:
             "blocker_panel": blocker_panel,
         }
 
-    def _check_value(self, payload: dict[str, Any], check: str, derived: dict[str, Any]) -> bool:
+    def _check_value(
+        self, payload: dict[str, Any], check: str, derived: dict[str, Any]
+    ) -> bool:
         if check in payload:
             return bool(payload.get(check)) and bool(derived["checks"].get(check, False))
         for alias in LEGACY_CHECK_ALIASES.get(check, []):
@@ -179,36 +209,46 @@ class FilingReadyGate:
         return {"checks": checks, "blockers": blockers}
 
     def _authority_verified(self, payload: dict[str, Any], blockers: list[str]) -> bool:
-        declared = bool(payload.get("authority_verified")) if "authority_verified" in payload else None
+        declared = (
+            bool(payload.get("authority_verified")) if "authority_verified" in payload else None
+        )
         authorities = payload.get("authority_matrix") or payload.get("authorities") or []
-        if not authorities:
-            if declared is not None:
-                return declared
+        if not isinstance(authorities, list) or not authorities:
             blockers.append("authority_matrix_missing")
             return False
         ok = True
         for item in authorities:
+            if not isinstance(item, dict):
+                blockers.append("authority_matrix_invalid")
+                ok = False
+                continue
             status = str(item.get("authority_status", item.get("status", "")))
             if status not in VERIFIED_AUTHORITY_STATUSES:
-                blockers.append(f"authority_not_verified:{item.get('source_id') or item.get('citation') or 'unknown'}")
+                identifier = item.get("source_id") or item.get("citation") or "unknown"
+                blockers.append(f"authority_not_verified:{identifier}")
                 ok = False
         return ok and declared is not False
 
     def _citations_resolved(self, payload: dict[str, Any], blockers: list[str]) -> bool:
         declared = None
         if "citations_resolved" in payload or "citations_verified" in payload:
-            declared = bool(payload.get("citations_resolved", payload.get("citations_verified")))
+            declared = bool(
+                payload.get("citations_resolved", payload.get("citations_verified"))
+            )
         report = payload.get("citation_report") or []
-        if not report:
-            if declared is not None:
-                return declared
+        if not isinstance(report, list) or not report:
             blockers.append("citation_report_missing")
             return False
         ok = True
         for row in report:
+            if not isinstance(row, dict):
+                blockers.append("citation_report_invalid")
+                ok = False
+                continue
             status = str(row.get("status", row.get("resolution_status", ""))).lower()
             if status not in {"resolved", "verified", "found", "supported"}:
-                blockers.append(f"citation_unresolved:{row.get('citation') or row.get('source_id') or 'unknown'}")
+                identifier = row.get("citation") or row.get("source_id") or "unknown"
+                blockers.append(f"citation_unresolved:{identifier}")
                 ok = False
         return ok and declared is not False
 
@@ -217,33 +257,38 @@ class FilingReadyGate:
         if "quotes_found" in payload or "quote_spans_verified" in payload:
             declared = bool(payload.get("quotes_found", payload.get("quote_spans_verified")))
         report = payload.get("quote_report") or []
-        if not report:
-            if declared is not None:
-                return declared
+        if not isinstance(report, list) or not report:
             blockers.append("quote_report_missing")
             return False
         ok = True
         for row in report:
+            if not isinstance(row, dict):
+                blockers.append("quote_report_invalid")
+                ok = False
+                continue
             status = str(row.get("match_type", row.get("status", ""))).lower()
             start = row.get("start_offset", row.get("start"))
             end = row.get("end_offset", row.get("end"))
             if status not in QUOTE_PASS_STATUSES or start is None or end is None:
-                blockers.append(f"quote_span_not_found:{row.get('source_id') or row.get('citation') or 'unknown'}")
+                identifier = row.get("source_id") or row.get("citation") or "unknown"
+                blockers.append(f"quote_span_not_found:{identifier}")
                 ok = False
         return ok and declared is not False
 
-    def _legal_claims_supported(self, payload: dict[str, Any], blockers: list[str]) -> bool:
+    def _legal_claims_supported(
+        self, payload: dict[str, Any], blockers: list[str]
+    ) -> bool:
         declared = None
         if "legal_claims_supported" in payload or "claims_supported" in payload:
-            declared = bool(payload.get("legal_claims_supported", payload.get("claims_supported")))
+            declared = bool(
+                payload.get("legal_claims_supported", payload.get("claims_supported"))
+            )
         report = payload.get("claim_support_report") or payload.get("claim_report") or {}
         claims = report.get("claims", []) if isinstance(report, dict) else report
         if not isinstance(claims, list):
             blockers.append("claim_support_report_invalid")
             return False
         if not claims:
-            if declared is not None:
-                return declared
             blockers.append("claim_support_report_missing")
             return False
         ok = True
@@ -254,99 +299,144 @@ class FilingReadyGate:
                 continue
             status = str(row.get("support_status", row.get("status", ""))).lower()
             if status not in CLAIM_PASS_STATUSES or row.get("supported") is False:
-                blockers.append(f"claim_not_supported:{row.get('claim_id') or row.get('claim') or 'unknown'}")
+                identifier = row.get("claim_id") or row.get("claim") or "unknown"
+                blockers.append(f"claim_not_supported:{identifier}")
                 ok = False
         return ok and declared is not False
 
     def _facts_mapped(self, payload: dict[str, Any], blockers: list[str]) -> bool:
         declared = None
         if "facts_mapped_to_evidence" in payload or "facts_verified" in payload:
-            declared = bool(payload.get("facts_mapped_to_evidence", payload.get("facts_verified")))
+            declared = bool(
+                payload.get("facts_mapped_to_evidence", payload.get("facts_verified"))
+            )
         mappings = payload.get("fact_to_evidence_map") or payload.get("evidence_map") or []
-        if not mappings:
-            if declared is not None:
-                return declared
+        if not isinstance(mappings, list) or not mappings:
             blockers.append("fact_to_evidence_map_missing")
             return False
         ok = True
         for row in mappings:
+            if not isinstance(row, dict):
+                blockers.append("fact_to_evidence_map_invalid")
+                ok = False
+                continue
             source_ids = row.get("source_document_ids") or row.get("evidence_document_ids") or []
             source_id = row.get("source_document_id") or row.get("evidence_document_id")
             span = row.get("span") or row.get("source_span") or {}
-            has_span = (span.get("start_offset") is not None and span.get("end_offset") is not None) or (
-                row.get("start_offset") is not None and row.get("end_offset") is not None
+            if not isinstance(span, dict):
+                span = {}
+            nested_span = (
+                span.get("start_offset") is not None
+                and span.get("end_offset") is not None
             )
+            direct_span = (
+                row.get("start_offset") is not None
+                and row.get("end_offset") is not None
+            )
+            has_span = nested_span or direct_span
+            identifier = row.get("fact_id") or row.get("fact") or "unknown"
             if not (source_id or source_ids) or not has_span:
-                blockers.append(f"fact_not_mapped:{row.get('fact_id') or row.get('fact') or 'unknown'}")
+                blockers.append(f"fact_not_mapped:{identifier}")
                 ok = False
             support_status = str(row.get("support_status") or "supported").strip().lower()
             if support_status != "supported" or row.get("supported") is False:
                 blockers.append(
-                    f"fact_not_supported:{row.get('fact_id') or row.get('fact') or 'unknown'}:{support_status or 'unknown'}"
+                    f"fact_not_supported:{identifier}:{support_status or 'unknown'}"
                 )
                 ok = False
             if bool(row.get("allegation_promoted_to_finding")):
-                blockers.append(
-                    f"allegation_promoted_to_finding:{row.get('fact_id') or row.get('fact') or 'unknown'}"
-                )
+                blockers.append(f"allegation_promoted_to_finding:{identifier}")
                 ok = False
         return ok and declared is not False
 
     def _procedure_checked(self, payload: dict[str, Any], blockers: list[str]) -> bool:
-        declared = bool(payload.get("procedure_posture_checked")) if "procedure_posture_checked" in payload else None
+        declared = (
+            bool(payload.get("procedure_posture_checked"))
+            if "procedure_posture_checked" in payload
+            else None
+        )
         report = payload.get("procedure_posture_report") or payload.get("posture_report") or {}
+        if not isinstance(report, dict) or not report:
+            blockers.append("procedure_posture_report_missing")
+            return False
         if report.get("blockers"):
             return False
-        if report.get("status") in {"checked", "pass", "verified"} or report.get("procedural_posture"):
+        if report.get("status") in {"checked", "pass", "verified"} or report.get(
+            "procedural_posture"
+        ):
             return declared is not False
-        if declared is not None:
-            return declared
-        blockers.append("procedure_posture_report_missing")
+        blockers.append("procedure_posture_report_incomplete")
         return False
 
     def _forms_current(self, payload: dict[str, Any], blockers: list[str]) -> bool:
         declared = None
         if "forms_current" in payload or "form_freshness_verified" in payload:
-            declared = bool(payload.get("forms_current", payload.get("form_freshness_verified")))
+            declared = bool(
+                payload.get("forms_current", payload.get("form_freshness_verified"))
+            )
         forms_report = payload.get("forms_report") or payload.get("form_freshness_report") or {}
+        if not isinstance(forms_report, dict) or not forms_report:
+            blockers.append("forms_freshness_report_missing")
+            return False
         stale_forms = forms_report.get("stale_forms", [])
         unknown_forms = forms_report.get("unknown_forms", [])
-        if forms_report and not stale_forms and not unknown_forms and not forms_report.get("blockers"):
+        if not stale_forms and not unknown_forms and not forms_report.get("blockers"):
             return declared is not False
         if stale_forms:
             blockers.extend(f"stale_form:{form_id}" for form_id in stale_forms)
         if unknown_forms:
             blockers.extend(f"unknown_form_freshness:{form_id}" for form_id in unknown_forms)
-        if not forms_report and declared is not None:
-            return declared
-        if not forms_report:
-            blockers.append("forms_freshness_report_missing")
         return False
 
     def _privacy_reviewed(self, payload: dict[str, Any], blockers: list[str]) -> bool:
         complete = payload.get("privacy_review_complete") is True
         report = payload.get("privacy_report") or payload.get("privacy_review") or {}
+        if not isinstance(report, dict) or not report:
+            blockers.append("privacy_report_missing")
+            return False
         if report.get("blockers"):
             return False
-        if not complete:
+        report_complete = (
+            report.get("status") in {"checked", "complete", "pass", "verified"}
+            or report.get("complete") is True
+            or report.get("privacy_review_complete") is True
+        )
+        if not complete or not report_complete:
             blockers.append("privacy_review_incomplete")
             return False
         return True
 
-    def _build_override_record(self, payload: dict[str, Any], blockers: list[str]) -> dict[str, Any] | None:
+    def _build_override_record(
+        self, payload: dict[str, Any], blockers: list[str]
+    ) -> dict[str, Any] | None:
         override = payload.get("attorney_override") or payload.get("override")
         if not override:
             return None
+        if not isinstance(override, dict):
+            return {
+                "requested": True,
+                "requested_by": "unknown_attorney",
+                "reason": "invalid_override_record",
+                "requested_at": datetime.now(timezone.utc).isoformat(),
+                "blockers_at_override": blockers,
+                "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
+            }
         return {
             "requested": True,
-            "requested_by": override.get("requested_by", override.get("attorney_id", "unknown_attorney")),
+            "requested_by": override.get(
+                "requested_by", override.get("attorney_id", "unknown_attorney")
+            ),
             "reason": override.get("reason", "not_provided"),
-            "requested_at": override.get("requested_at", datetime.now(timezone.utc).isoformat()),
+            "requested_at": override.get(
+                "requested_at", datetime.now(timezone.utc).isoformat()
+            ),
             "blockers_at_override": blockers,
             "effect": "logged_only_export_remains_blocked_unless_all_gate_checks_pass",
         }
 
     def _hash_report(self, report: dict[str, Any]) -> str:
-        stable = {k: v for k, v in report.items() if k != "immutable_report_hash"}
-        blob = json.dumps(stable, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+        stable = {key: value for key, value in report.items() if key != "immutable_report_hash"}
+        blob = json.dumps(
+            stable, sort_keys=True, separators=(",", ":"), default=str
+        ).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()

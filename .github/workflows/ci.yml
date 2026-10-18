@@ -13,12 +13,12 @@ jobs:
           python-version: '3.11'
       - name: Local doctor
         run: python scripts/doctor-local-repo.py --repo-root . --json
-      - name: Public source pre-push gate
-        run: python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_ci.json
       - name: Install
         run: python -m pip install ".[api,dev]"
       - name: Remove package build artifacts
         run: python scripts/clean-local-artifacts.py --repo-root . --json
+      - name: Public source pre-push gate
+        run: python scripts/run-public-source-preflight.py --repo-root . --require-ready --output docs/external-evidence/public_source_pre_push_gate_ci.json
       - name: Offline dependency floor gate
         run: python scripts/check-dependency-security.py --strict-optional
       - name: Current advisory audit
@@ -35,12 +35,15 @@ jobs:
           tests/test_retrieval_stack_pass5.py
           tests/test_matter_ingestion_pass9.py
           tests/test_chat_library_v187_input_clear_and_routing.py
+          tests/test_filing_ready_gate.py
+          tests/test_filing_ready_endpoint.py
           tests/test_pass48_51_launch_evidence_gates.py
           tests/test_pass48_51_launch_evidence_starter_kit.py
           tests/test_enterprise_release_control_v206.py
           tests/test_attorney_sandbox_review_kit_v193.py
           tests/test_public_source_pre_push_gate_v191.py
           tests/test_git_safe_push_v192.py
+          tests/test_qwen_task_specialization.py
           tests/test_v510_dependency_security.py
           tests/test_v510_workflow_skill_registry.py
           tests/test_v510_matter_inventory_and_classification.py
