@@ -1,5 +1,27 @@
 # Changelog
 
+## 9.0.1 - Consent-bound local model setup and fail-closed release hardening
+
+- Added in-chat, explicit-consent setup for optional Ollama-backed Qwen3 4B and 8B models with component reuse, memory and multi-volume disk checks, pinned manifests, publisher/hash verification, progress, cancellation, safe retry, and a fictional source-review check before activation.
+- Kept model weights outside the MSIX and prohibited silent downloads. The optional models remain general-purpose assistants, not admitted or certified Maine-law specialists.
+- Preserved exact-source approval, route-bound task profiles, bounded requests, quotation/source verification, provenance receipts, review-required output, and local-only default behavior.
+- Corrected Windows PowerShell module discovery and browser JSON request headers; both installed model sizes completed the four bounded frozen task paths recorded for the release.
+- Hardened the filing-ready gate so optimistic summary booleans cannot substitute for authority, citation, quote, claim, fact, procedure, form, privacy, or authenticated human-review evidence. The public assessment endpoint can no longer self-attest human review.
+- Removed connector probe contamination, repaired CI dependency/cleanup ordering, expanded filing-gate and current Qwen regression coverage, and restored green pull-request and merged-main workflows.
+- Focused, frozen-runtime, CI, and installer-build evidence do not establish a full-repository regression, clean installed-MSIX/WACK qualification, legal quality, attorney validation, controlled pilot evidence, or Enterprise GA.
+
+## 9.0.0 - Optional source-bound local Qwen review and drafting
+
+- Added optional Qwen3 4B/8B selected-record evidence review and quote-based working-draft organization through a loopback-only Ollama provider path.
+- Added exact source matching, route-bound approval, task-profile hashes, bounded prompts/outputs, memory reserve checks, artifact identity, cancellation/late-result controls, residency release, and collapsed in-chat restoration.
+- Kept model analysis separate from official authority and private-record evidence. General model weights are not legally qualified specialists, and all results remain review-required.
+
+## 8.0.2 - Local private-record startup maintenance
+
+- Removed an unrelated authority-store initialization dependency from browser-session private-record chat while preserving legal-source admission requirements.
+- Made build smoke run once and clean its owned fictional runtime profile.
+- Retained the boundary that build, test, and frozen-UI evidence do not substitute for installed-package, WACK, legal-quality, attorney, pilot, or Enterprise qualification.
+
 ## 8.0.1 - Reliability and specialist integration safeguards
 
 - Hardened source-bound specialist task instructions, reference validation, worker memory monitoring, and cancellation. Unadmitted model outputs remain blocked.
