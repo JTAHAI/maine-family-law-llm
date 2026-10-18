@@ -48,7 +48,7 @@ jobs:
           @{ status = 'NOT_EVALUATED'; clean_install = 'not_run'; installed_offline = 'not_run'; wack = 'not_run'; reason = 'Unsigned Store candidate; isolated signed installation qualification is a separate required step.' } | ConvertTo-Json | Set-Content -LiteralPath dist/store/evidence/ci-installation-status.json
 
       - name: Upload Store artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maine-family-law-llm-msix
           path: |
