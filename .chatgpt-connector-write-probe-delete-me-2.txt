@@ -1,1 +1,0 @@
-temporary connector write probe; safe to delete
