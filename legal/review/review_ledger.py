@@ -742,6 +742,17 @@ def list_review_history(case_root: Path, document_id: str, *, include_pending_pa
     latest = rows[0] if rows and verified["valid"] else None
     current_revision = str(get_document(case_root, document_id, include_history=False).get("current_revision_id") or "")
     latest_is_current = bool(latest and latest.get("revision_id") == current_revision)
+    # A historical gate result cannot speak for current authority and record
+    # bytes. Only the packet build/download performs that live verification.
+    snapshot_passed = bool(latest_is_current and latest.get("filing_gate", {}).get("filing_ready"))
+    filing_recheck = None
+    if snapshot_passed:
+        matter_id = hashlib.sha256(str(case_root.resolve()).encode("utf-8")).hexdigest()[:16]
+        filing_recheck = (
+            "current_sources_recheck_required"
+            if reviewer_binding_current(latest.get("filing_reviewer_binding"), matter_id=matter_id)
+            else "trusted_filing_reviewer_missing_or_revoked"
+        )
     return {
         "schema_version": SCHEMA_VERSION,
         "document_id": document_id,
@@ -752,12 +763,13 @@ def list_review_history(case_root: Path, document_id: str, *, include_pending_pa
         "latest": latest,
         "current_revision_id": current_revision,
         "latest_is_current": latest_is_current,
+        "filing_recheck_required": filing_recheck,
         "storage_authenticated": verified["valid"],
         "history_head": verified.get("history_head", {"status": "unavailable", "valid": False}),
         "authenticated_decision_ids": [row.get("decision_id") for row in rows if row.authenticated],
         "storage_notice": "New review packets and decisions are encrypted. Legacy plaintext history is preserved for inspection only and cannot authorize export. If history cannot be authenticated, create a new working draft for a fresh review. Exports and other sidecars are outside this encryption boundary.",
         "blockers": verified["blockers"],
-        "review_required": not bool(latest_is_current and latest.get("filing_gate", {}).get("filing_ready")),
+        "review_required": True,
     }
 
 

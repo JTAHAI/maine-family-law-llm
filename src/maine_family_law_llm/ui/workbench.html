@@ -580,6 +580,10 @@ contact schedule"></textarea></label>
         <div class="document-review-heading"><div><span>Evidence &amp; filing review</span><strong>Sign the exact revision and reports</strong></div><span class="badge warn" id="document-review-ledger-status">Not reviewed</span></div>
         <p>Enter material facts one per line. The host maps them to already-indexed private records and binds that report to the current revision and Maine-authority verification receipt.</p>
         <label>Facts to verify<textarea id="document-review-facts" rows="4" placeholder="On 01/03/2026 the child changed schools.&#10;The current order requires…"></textarea></label>
+        <label>Filing reviewer credential (optional)<input type="password" id="document-filing-credential" maxlength="64" autocomplete="off" aria-describedby="document-filing-credential-help"/></label>
+        <p id="document-filing-credential-help" class="field-hint">Enter the credential issued for this matter before preparing, recording, or downloading a filing review. Leave it blank for ordinary notes. It is cleared after use and is not saved.</p>
+        <label>Exact quotes and source IDs<textarea id="document-filing-quotes" rows="2" maxlength="8000" placeholder="source-id | Exact quoted text (one per line)"></textarea></label>
+        <label>Additional legal claims and source IDs<textarea id="document-filing-claims" rows="2" maxlength="8000" placeholder="source-id | Exact sentence from the draft (one per line)"></textarea></label>
         <button class="secondary" disabled id="document-review-prepare" type="button">Build revision-bound review packet</button>
         <div class="document-review-packet" id="document-review-packet">No review packet prepared.</div>
         <div class="document-claim-annotations" id="document-claim-annotations">Claim-by-claim review controls appear after a packet is built.</div>
@@ -590,9 +594,6 @@ contact schedule"></textarea></label>
         </div>
         <label>Review notes<textarea id="document-review-notes" rows="3" maxlength="4000"></textarea></label>
         <label class="document-review-attestation"><input id="document-review-attested" type="checkbox"/> I reviewed this exact revision, its authority report, fact-to-record map, and listed blockers.</label>
-        <label>Filing reviewer credential (optional)<input type="password" id="document-filing-credential" maxlength="64" autocomplete="off" aria-describedby="document-filing-credential-help"/></label>
-        <p id="document-filing-credential-help" class="field-hint">Use a credential provisioned for this matter before preparing a filing review. Leave it blank for ordinary notes and working drafts. The credential is used only for this local request and is not saved.</p>
-        <label>Exact quotes and source IDs<textarea id="document-filing-quotes" rows="2" maxlength="8000" placeholder="source-id | Exact quoted text (one per line)"></textarea></label>
         <label class="document-review-attestation"><input id="document-filing-privacy" type="checkbox"/> I checked this draft for confidential information and approved this exact text for export.</label>
         <button class="primary-action" disabled id="document-review-commit" type="button">Record immutable review decision</button>
         <div class="document-review-history" id="document-review-history">No review decisions recorded.</div>

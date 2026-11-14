@@ -1612,6 +1612,7 @@
     const documentFilingCredential = document.getElementById('document-filing-credential');
     const documentFilingPrivacy = document.getElementById('document-filing-privacy');
     const documentFilingQuotes = document.getElementById('document-filing-quotes');
+    const documentFilingClaims = document.getElementById('document-filing-claims');
     const documentReviewCommit = document.getElementById('document-review-commit');
     const documentReviewHistory = document.getElementById('document-review-history');
     const findingsFormsStatusBadge = document.getElementById('findings-forms-status-badge');
@@ -3804,6 +3805,7 @@
       if (documentFilingCredential) documentFilingCredential.value = '';
       if (documentFilingPrivacy) documentFilingPrivacy.checked = false;
       if (documentFilingQuotes) documentFilingQuotes.value = '';
+      if (documentFilingClaims) documentFilingClaims.value = '';
       if (filingPacketReviewerLabel) filingPacketReviewerLabel.value = '';
       if (filingPacketReviewerRole) filingPacketReviewerRole.value = 'other_reviewer';
       if (filingPacketApproved) filingPacketApproved.checked = false;
@@ -4034,7 +4036,7 @@
         documentClaimAnnotations.textContent = 'No material legal claims were extracted for individual annotation.';
         return;
       }
-      documentClaimAnnotations.innerHTML = `<div class="document-claim-annotations-head"><strong>Claim-by-claim review</strong><span>${rows.length} claim(s)</span></div>${rows.map((row) => `<article data-review-claim="${escapeHtml(row.claim_id || '')}"><div><strong>${escapeHtml(row.statement || '')}</strong><span class="badge ${String(row.support_status || '').includes('supported') ? 'good' : 'warn'}">${escapeHtml(String(row.support_status || 'unverified').replaceAll('_', ' '))}</span></div><div class="document-claim-annotation-fields"><label>Reviewer finding<select data-claim-status><option value="">Choose…</option><option value="accepted">Accepted as supported</option><option value="not_material">Not material</option><option value="needs_revision">Needs revision</option><option value="unsupported">Unsupported</option><option value="contradicted">Contradicted</option><option value="needs_authority">Needs authority</option><option value="needs_fact_support">Needs fact support</option></select></label><label>Claim note<input data-claim-note maxlength="2000" placeholder="Why this claim passes or remains blocked"/></label></div><small>${escapeHtml((row.source_ids || []).join(' · ') || 'No source IDs supplied with this claim')}</small></article>`).join('')}`;
+      documentClaimAnnotations.innerHTML = `<div class="document-claim-annotations-head"><strong>Claim-by-claim review</strong><span>${rows.length} claim(s)</span></div>${rows.map((row) => `<article data-review-claim="${escapeHtml(row.claim_id || '')}"><div><strong>${escapeHtml(row.statement || '')}</strong><span class="badge ${row.support_status === 'supported' ? 'good' : 'warn'}">${escapeHtml(String(row.support_status || 'unverified').replaceAll('_', ' '))}</span></div><div class="document-claim-annotation-fields"><label>Reviewer finding<select data-claim-status><option value="">Choose…</option><option value="accepted">Accepted as supported</option><option value="not_material">Not material</option><option value="needs_revision">Needs revision</option><option value="unsupported">Unsupported</option><option value="contradicted">Contradicted</option><option value="needs_authority">Needs authority</option><option value="needs_fact_support">Needs fact support</option></select></label><label>Claim note<input data-claim-note maxlength="2000" placeholder="Why this claim passes or remains blocked"/></label></div><small>${escapeHtml((row.source_ids || []).join(' · ') || 'No source IDs supplied with this claim')}</small></article>`).join('')}`;
     }
 
     function collectClaimAnnotations() {
@@ -4095,9 +4097,12 @@
           : {...row, status: 'unverified history — review required', filing_gate: {filing_ready: false}});
       const latest = payload?.latest_is_current ? payload.latest : null;
       if (documentReviewLedgerStatus) {
-        const ready = Boolean(latest?.filing_gate?.filing_ready);
-        documentReviewLedgerStatus.className = `badge ${ready ? 'good' : 'warn'}`;
-        documentReviewLedgerStatus.textContent = latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : rows.length ? 'History not authenticated — review required' : 'Not reviewed';
+        documentReviewLedgerStatus.className = 'badge warn';
+        documentReviewLedgerStatus.textContent = payload?.filing_recheck_required === 'current_sources_recheck_required'
+          ? 'Review recorded — recheck before export'
+          : payload?.filing_recheck_required === 'trusted_filing_reviewer_missing_or_revoked'
+            ? 'Filing reviewer no longer authorized'
+            : latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : rows.length ? 'History not authenticated — review required' : 'Not reviewed';
       }
       if (!documentReviewHistory) return;
       documentReviewHistory.innerHTML = rows.length ? rows.map((row) => { const annotations = Array.isArray(row.claim_annotations) ? row.claim_annotations : []; return `<article><div><strong>${escapeHtml(String(row.decision || 'review').replaceAll('_', ' '))}</strong><span class="badge ${row?.filing_gate?.filing_ready ? 'good' : 'warn'}">${escapeHtml(String(row.status || 'review').replaceAll('_', ' '))}</span></div><small>${escapeHtml(row.committed_at || '')} · revision ${escapeHtml(String(row.revision_id || '').slice(0, 8))} · ${escapeHtml(row?.reviewer?.name || '')}</small>${row.notes ? `<p>${escapeHtml(row.notes)}</p>` : ''}${annotations.length ? `<details><summary>${annotations.length} claim finding(s)</summary><ul>${annotations.map((item) => `<li><strong>${escapeHtml(item.claim_id || '')}</strong>: ${escapeHtml(String(item.status || '').replaceAll('_', ' '))}${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('')}</ul></details>` : ''}<code>${escapeHtml(String(row.decision_sha256 || '').slice(0, 24))}…</code></article>`; }).join('') : 'No review decisions recorded.';
@@ -4153,12 +4158,16 @@
       const facts = String(documentReviewFacts?.value || '').split(/\r?\n/).map((row) => row.trim()).filter(Boolean).slice(0, 128);
       setDocumentWorkspaceStatus('Building a revision-bound authority and evidence review packet…');
       try {
-        const quotes = String(documentFilingQuotes?.value || '').split(/\r?\n/).filter((line) => line.trim()).map((line) => {
+        const sourceLines = (field) => String(field?.value || '').split(/\r?\n/).filter((line) => line.trim()).map((line) => {
           const separator = line.indexOf('|');
-          if (separator < 1) throw new Error('Enter each quote as source ID | exact quoted text.');
-          return {source_id: line.slice(0, separator).trim(), quoted_text: line.slice(separator + 1).trim()};
+          const id = separator > 0 ? line.slice(0, separator).trim() : '';
+          const statement = separator > 0 ? line.slice(separator + 1).trim() : '';
+          if (!id || !statement) throw new Error('Enter each quote or additional claim as source ID | exact text.');
+          return [id, statement];
         });
-        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({facts, quotes, claims: [], auto_extract_claims: true})});
+        const quotes = sourceLines(documentFilingQuotes).map(([source_id, quoted_text]) => ({source_id, quoted_text}));
+        const claims = sourceLines(documentFilingClaims).map(([id, claim]) => ({claim, source_ids: [id]}));
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({facts, quotes, claims, auto_extract_claims: true})});
         if (owner !== documentWorkspaceState.storageMatterId || payload.matter_id !== owner || documentWorkspaceState.active?.document_id !== active.document_id || documentWorkspaceState.active?.current_revision_id !== payload.packet?.revision_id) return;
         documentWorkspaceState.reviewRequest = payload;
         renderDocumentReviewPacket(payload);
@@ -4188,6 +4197,7 @@
       if (documentReviewCommit?.disabled || prepared.matter_id !== documentWorkspaceState.storageMatterId || prepared.packet?.document_id !== active.document_id || prepared.packet?.revision_id !== active.current_revision_id) return;
       const reviewerName = documentReviewerName?.value.trim() || '';
       if (!reviewerName && !prepared.packet?.filing_reviewer_authenticated) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
+      if (prepared.packet?.filing_reviewer_authenticated && !documentFilingCredential?.value.trim()) { setDocumentWorkspaceStatus('Re-enter the credential for this matter to record the filing decision.', 'bad'); documentFilingCredential?.focus(); return; }
       const decision = documentReviewDecision?.value || 'approve_review';
       const attested = Boolean(documentReviewAttested?.checked);
       if (decision === 'approve_review' && !attested) { setDocumentWorkspaceStatus('Review completion requires the exact-revision attestation.', 'bad'); return; }

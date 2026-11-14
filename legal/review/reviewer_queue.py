@@ -26,7 +26,9 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
         latest_revision = str(latest.get("revision_id") or "")
         latest_gate = latest.get("filing_gate") if isinstance(latest.get("filing_gate"), dict) else {}
         blockers = list(history.get("blockers") or []) + list(latest_gate.get("blockers") or [])
-        ready = bool(latest_gate.get("filing_ready") and latest_revision == current_revision and history.get("storage_authenticated"))
+        recheck = history.get("filing_recheck_required")
+        if recheck:
+            blockers.append(recheck)
         if history.get("storage_authenticated") is False:
             queue_status = "review_history_incomplete"
         elif pending.get("count"):
@@ -37,14 +39,14 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
             queue_status = "changes_requested"
         elif latest.get("decision") == "reject":
             queue_status = "rejected"
-        elif ready:
-            queue_status = "filing_gate_passed"
+        elif recheck == "current_sources_recheck_required":
+            queue_status = "review_recorded_recheck_before_export"
         elif latest.get("decision") == "approve_review":
             queue_status = "review_complete_blocked"
         else:
             queue_status = "needs_review_packet"
 
-        if not include_completed and queue_status == "filing_gate_passed":
+        if not include_completed and queue_status == "review_recorded_recheck_before_export":
             continue
         packet = (pending.get("packets") or [None])[0]
         item = {
@@ -57,11 +59,11 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
             "latest_decision": latest.get("decision"),
             "latest_decision_status": latest.get("status"),
             "latest_review_revision_id": latest_revision,
-            "filing_ready": ready,
+            "filing_ready": False,
             "blockers": blockers[:100],
             "packet_summary": packet,
             "updated_at": document.get("updated_at") or document.get("created_at"),
-            "review_required": not ready,
+            "review_required": True,
         }
         items.append(item)
 
@@ -73,7 +75,7 @@ def build_reviewer_queue(case_root: Path, *, include_completed: bool = False, li
         "review_complete_blocked": 3,
         "needs_review_packet": 4,
         "rejected": 5,
-        "filing_gate_passed": 9,
+        "review_recorded_recheck_before_export": 9,
     }
     items.sort(key=lambda row: (priority.get(str(row["queue_status"]), 8), str(row.get("updated_at") or ""), str(row["document_id"])), reverse=False)
     items = items[:limit]

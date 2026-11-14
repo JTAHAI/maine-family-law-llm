@@ -12,7 +12,7 @@ from maine_family_law_llm import api
 from test_v55_immutable_authority_product import _fixture_data_root
 
 
-def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
+def build_filing_fixture(tmp_path):
     root = _fixture_data_root(tmp_path)
     phrase = "The court considers fictional stability factors."
     citation = "19-A M.R.S. § 1653"
@@ -40,9 +40,15 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     }]), encoding="utf-8")
     document = create_document(case, title="Fictional final order", content=f"{law}\n\nFindings of fact\n\n{fact}",
                                document_type="draft")
+    return root, case, document, source, fact, phrase, citation, card["source_id"]
+
+
+def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
+    root, case, document, source, fact, phrase, citation, source_id = build_filing_fixture(tmp_path)
     matter = api._case_id(case)
     for key, value in {
         "MAINE_FAMILY_LAW_DATA_ROOT": str(root),
+        "MFL_AUTHORITY_DATA_ROOT": str(root),
         "MFL_FILING_REVIEWER_ID": "fixture-reviewer",
         "MFL_FILING_REVIEWER_TENANT": "local-desktop",
         "MFL_FILING_REVIEWER_MATTER_ID": matter,
@@ -57,9 +63,10 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     auth = {"Authorization": "Bearer " + "a" * 64}
     doc_id = document["document_id"]
     review = f"/api/document-workspace/documents/{doc_id}/review"
-    args = {"facts": [fact], "quotes": [{"quoted_text": phrase, "source_id": card["source_id"]}],
-            "claims": [{"claim": citation + ".", "source_ids": [card["source_id"]]},
-                       {"claim": phrase, "source_ids": [card["source_id"]]}]}
+    args = {"facts": [fact], "auto_extract_claims": True,
+            "quotes": [{"quoted_text": phrase, "source_id": source_id}],
+            "claims": [{"claim": citation + ".", "source_ids": [source_id]},
+                       {"claim": phrase, "source_ids": [source_id]}]}
     assert client.post(review + "/prepare", json=args,
                        headers={**auth, "X-Tenant-Id": "other"}).status_code == 403
     prepared_raw = client.post(review + "/prepare", json=args, headers=auth)
@@ -78,6 +85,10 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     assert recorded.json()["reviewer"]["name"] == "fixture-reviewer"
     assert recorded.json()["reviewer"]["role"] != "attorney"
     assert client.post(review + "/commit", json=commit, headers=auth).status_code == 409
+    history_url = f"/api/document-workspace/documents/{doc_id}/reviews"
+    history = client.get(history_url).json()
+    assert history["review_required"] is True
+    assert history["filing_recheck_required"] == "current_sources_recheck_required"
     built = client.post(f"/api/reviewed-filing-packet/documents/{doc_id}/build", json={"approved": True})
     assert built.status_code == 200, built.text
     assert built.json()["packet"]["filing_ready"] is True, built.json()["packet"]["blockers"]
@@ -100,5 +111,6 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     assert AuthorityProductPublisher(data_root=root).publish(product_version="9.0.2").status == "pass"
     assert client.get(export["download_url"], headers=auth).status_code == 409
     monkeypatch.setenv("MFL_FILING_REVIEWER_BEARER_SHA256", hashlib.sha256(b"b" * 64).hexdigest())
+    assert client.get(history_url).json()["filing_recheck_required"] == "trusted_filing_reviewer_missing_or_revoked"
     assert client.get(export["download_url"], headers=auth).status_code == 403
     assert client.get(export["download_url"], headers={"Authorization": "Bearer " + "b" * 64}).status_code == 409
