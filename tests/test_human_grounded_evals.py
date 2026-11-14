@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -41,7 +42,9 @@ def test_two_independent_reviews_are_required_for_promotion(tmp_path: Path):
     assert review(ledger, "reviewer-1")["promotion_status"] == "awaiting_independent_reviews"
     assert review(ledger, "reviewer-2")["promotion_status"] == "promotion_eligible"
     ready = ledger.readiness(minimum_total=1, minimum_per_task=1)
-    assert ready["status"] == "pass"
+    assert ready["status"] == "blocked"
+    assert ready["promotion_eligible_count"] == 0
+    assert ready["practice_or_unauthenticated_candidate_count"] == 1
     assert ready["private_content_stored"] is False
 
 
@@ -90,3 +93,17 @@ def test_default_release_threshold_refuses_seed_scale_evidence(tmp_path: Path):
     readiness = ledger.readiness()
     assert readiness["status"] == "blocked"
     assert "human_eval_minimum_total_not_met" in readiness["blockers"]
+
+
+def test_plaintext_cannot_forge_release_review_and_ciphertext_cannot_move_tenants(tmp_path: Path):
+    ledger = HumanEvalLedger(tmp_path, tenant="tenant-a")
+    ledger.path.write_text(json.dumps({"schema": ledger.schema, "events": [], "cases": {"legacy": {
+        "data_class": "public_authority", "task": "grounded_research",
+        "promotion_status": "promotion_eligible", "adjudication": None,
+        "reviews": [{"reviewer_authenticated": True}, {"reviewer_authenticated": True}],
+    }}}), encoding="utf-8")
+    assert ledger.readiness(minimum_total=1, minimum_per_task=1)["promotion_eligible_count"] == 0
+    add_case(ledger)
+    assert "grounded_research" not in ledger.path.read_text(encoding="utf-8")
+    with pytest.raises(HumanEvalError, match="human_eval_storage_unverified"):
+        HumanEvalLedger(tmp_path, tenant="tenant-b").readiness()

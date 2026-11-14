@@ -27,7 +27,7 @@ from app.api.main import app as enterprise_app
 from app.api.local_gateway import LocalGatewayProtection
 from app.api.release_boundary import unsafe_legacy_path as _unsafe_legacy_path
 from app.api.release_boundary import production_request_active
-from app.api.security import audit_event, rbac_envelope, require_local_operator
+from app.api.security import audit_event, rbac_envelope, require_local_evaluation_reviewer, require_local_operator
 from legal.api_stability import ApiStabilityProgram
 from legal.evals.claim_support_metrics import ClaimSupportMetricRunner, REQUIRED_CLAIM_STATUS_LABELS
 from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner, REQUIRED_QUOTE_DECISIONS
@@ -213,7 +213,7 @@ def human_eval_ledger() -> HumanEvalLedger:
         os.environ.get("MFL_HUMAN_EVAL_ROOT")
         or Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "MaineFamilyLawLLM" / "human-evals"
     )
-    return HumanEvalLedger(root)
+    return HumanEvalLedger(root, tenant=os.environ.get("MFL_EVAL_OPERATOR_TENANT", ""))
 
 
 def claim_support_benchmark_paths() -> dict[str, Path | None]:
@@ -605,15 +605,19 @@ def _ensure_control_routes() -> None:
     ) -> dict[str, Any]:
         if str(x_user_role or "").strip().casefold() not in {"reviewer", "attorney", "admin"}:
             raise HTTPException(status_code=403, detail="reviewer_role_required")
-        return human_eval_ledger().readiness()
+        try:
+            return human_eval_ledger().readiness()
+        except HumanEvalError as exc:
+            raise HTTPException(status_code=409, detail=exc.code) from exc
 
     @local_app.post("/api/evals/human-grounded/cases", tags=["evaluations"])
     def human_eval_case_add(
         payload: dict[str, Any],
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() != "admin":
-            raise HTTPException(status_code=403, detail="admin_role_required")
+        require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="eval")
         try:
             return human_eval_ledger().add_case(payload)
         except HumanEvalError as exc:
@@ -623,12 +627,14 @@ def _ensure_control_routes() -> None:
     def human_eval_review(
         case_id: str,
         payload: dict[str, Any],
-        x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        request: Request,
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() not in {"attorney", "admin"}:
-            raise HTTPException(status_code=403, detail="attorney_role_required")
+        reviewer_id = require_local_evaluation_reviewer(request, tenant_id=x_tenant_id)
         try:
-            return human_eval_ledger().review(case_id, payload)
+            return human_eval_ledger().review(case_id, {
+                **payload, "reviewer_id": reviewer_id, "reviewer_role": "subject_matter_reviewer",
+            }, authenticated=True)
         except HumanEvalError as exc:
             raise HTTPException(status_code=409, detail=exc.code) from exc
 
@@ -636,12 +642,15 @@ def _ensure_control_routes() -> None:
     def human_eval_adjudicate(
         case_id: str,
         payload: dict[str, Any],
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() != "admin":
-            raise HTTPException(status_code=403, detail="admin_role_required")
+        require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="eval")
         try:
-            return human_eval_ledger().adjudicate(case_id, payload)
+            return human_eval_ledger().adjudicate(case_id, {
+                **payload, "reviewer_id": "local-eval-operator",
+            }, authenticated=True)
         except HumanEvalError as exc:
             raise HTTPException(status_code=409, detail=exc.code) from exc
 

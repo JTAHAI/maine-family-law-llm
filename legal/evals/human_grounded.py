@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock
+from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
+from legal.security.local_encryption import LocalEnvelopeEncryptor
+from legal.security.strict_json import strict_json_loads
 
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _ID = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}\Z")
 APPROVALS = {"approved", "approved_with_notes"}
+_MAX_LEDGER_BYTES = 16 * 1024 * 1024
+_ENVELOPE_SCHEMA = "maine_family_law_llm.human_eval_encrypted.v1"
 
 
 class HumanEvalError(ValueError):
@@ -41,8 +46,9 @@ class HumanEvalLedger:
 
     schema = "maine_family_law_llm.human_eval_ledger.v1"
 
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, *, tenant: str = ""):
         self.root = Path(root).expanduser().resolve()
+        self.tenant = tenant
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "human-eval-ledger.json"
         self.lock = self.root / ".human-eval-ledger.lock"
@@ -50,14 +56,50 @@ class HumanEvalLedger:
     def _read(self) -> dict[str, Any]:
         if not self.path.exists():
             return {"schema": self.schema, "cases": {}, "events": []}
-        value = json.loads(self.path.read_text(encoding="utf-8"))
+        try:
+            raw = read_bounded_regular_file(self.path, max_bytes=_MAX_LEDGER_BYTES)
+            value = strict_json_loads(raw, max_bytes=_MAX_LEDGER_BYTES, require_object=True)
+            authenticated_state = value.get("schema") == _ENVELOPE_SCHEMA
+            if authenticated_state:
+                bound = self._encryptor().decrypt_json(value["envelope"])
+                if bound["tenant"] != self.tenant or bound["root"] != str(self.root):
+                    raise ValueError
+                value = bound["payload"]
+            if not isinstance(value.get("cases"), dict) or not isinstance(value.get("events"), list):
+                raise ValueError
+            # Verify the original event chain before treating historic rows as
+            # practice. The flag below only changes case views, not events.
+            self._verify_events(value["events"])
+            for case in value["cases"].values():
+                if not isinstance(case.get("reviews"), list) or not isinstance(case.get("data_class"), str):
+                    raise ValueError
+                if not authenticated_state:
+                    for review in case["reviews"]:
+                        review["reviewer_authenticated"] = False
+                    if case.get("adjudication"):
+                        case["adjudication"]["reviewer_authenticated"] = False
+        except (OSError, KeyError, ValueError, AttributeError, TypeError) as exc:
+            raise HumanEvalError("human_eval_storage_unverified") from exc
         if value.get("schema") != self.schema:
             raise HumanEvalError("human_eval_schema_invalid")
-        self._verify_events(list(value.get("events") or []))
         return value
 
     def _write(self, state: dict[str, Any]) -> None:
-        atomic_write_bytes(self.path, _canonical(state), mode=0o600)
+        envelope = _canonical({
+            "schema": _ENVELOPE_SCHEMA,
+            "envelope": self._encryptor().encrypt_json({
+                "tenant": self.tenant, "root": str(self.root), "payload": state,
+            }),
+        })
+        if len(envelope) > _MAX_LEDGER_BYTES:
+            raise HumanEvalError("human_eval_storage_limit")
+        atomic_write_bytes(self.path, envelope, mode=0o600)
+
+    @staticmethod
+    def _encryptor() -> LocalEnvelopeEncryptor:
+        return LocalEnvelopeEncryptor(
+            os.environ.get("MAINE_MATTER_STORE_KEY") or LocalEnvelopeEncryptor.development_default
+        )
 
     def add_case(self, payload: dict[str, Any]) -> dict[str, Any]:
         case_id = _identifier(payload.get("case_id"), "case_id")
@@ -91,7 +133,7 @@ class HumanEvalLedger:
             self._write(state)
         return self.public_case(record)
 
-    def review(self, case_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def review(self, case_id: str, payload: dict[str, Any], *, authenticated: bool = False) -> dict[str, Any]:
         reviewer_id = _identifier(payload.get("reviewer_id"), "reviewer_id")
         role = str(payload.get("reviewer_role") or "").strip().casefold()
         if role not in {"attorney", "legal_aid_reviewer", "subject_matter_reviewer"}:
@@ -116,6 +158,7 @@ class HumanEvalLedger:
             review = {
                 "reviewer_id": reviewer_id,
                 "reviewer_role": role,
+                "reviewer_authenticated": authenticated is True,
                 "disposition": disposition,
                 "ratings": ratings,
                 "finding_codes": sorted(
@@ -137,8 +180,8 @@ class HumanEvalLedger:
             self._write(state)
         return self.public_case(record)
 
-    def adjudicate(self, case_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if not bool(payload.get("approved")):
+    def adjudicate(self, case_id: str, payload: dict[str, Any], *, authenticated: bool = False) -> dict[str, Any]:
+        if payload.get("approved") is not True:
             raise HumanEvalError("human_eval_adjudication_approval_required")
         with exclusive_file_lock(self.lock):
             state = self._read()
@@ -147,8 +190,12 @@ class HumanEvalLedger:
                 raise HumanEvalError("human_eval_case_not_found")
             if record["promotion_status"] != "adjudication_required":
                 raise HumanEvalError("human_eval_adjudication_not_required")
+            reviewer_id = _identifier(payload.get("reviewer_id"), "reviewer_id")
+            if any(review["reviewer_id"] == reviewer_id for review in record["reviews"]):
+                raise HumanEvalError("human_eval_adjudicator_not_independent")
             record["adjudication"] = {
-                "reviewer_id": _identifier(payload.get("reviewer_id"), "reviewer_id"),
+                "reviewer_id": reviewer_id,
+                "reviewer_authenticated": authenticated is True,
                 "disposition": str(payload.get("disposition") or "rejected").strip().casefold(),
                 "receipt_sha256": _hash_value(payload.get("receipt_sha256"), "receipt_sha256"),
                 "at": _now(),
@@ -171,7 +218,14 @@ class HumanEvalLedger:
     ) -> dict[str, Any]:
         state = self._read()
         cases = list(state["cases"].values())
-        eligible = [case for case in cases if case["promotion_status"] == "promotion_eligible"]
+        candidates = [case for case in cases if case["promotion_status"] == "promotion_eligible"]
+        eligible = [
+            case for case in candidates
+            if case["data_class"] != "synthetic"
+            and len(case.get("reviews", [])) >= 2
+            and all(row.get("reviewer_authenticated") is True for row in case["reviews"])
+            and (case["adjudication"] is None or case["adjudication"].get("reviewer_authenticated") is True)
+        ]
         tasks = required_tasks or sorted({str(case["task"]) for case in cases})
         task_counts = {task: sum(1 for case in eligible if case["task"] == task) for task in tasks}
         blockers: list[str] = []
@@ -190,6 +244,8 @@ class HumanEvalLedger:
             "status": "pass" if not blockers else "blocked",
             "case_count": len(cases),
             "promotion_eligible_count": len(eligible),
+            "practice_or_unauthenticated_candidate_count": len(candidates) - len(eligible),
+            "independent_release_approval_required": True,
             "consented_real_matter_count": consented,
             "task_counts": task_counts,
             "minimum_total": minimum_total,

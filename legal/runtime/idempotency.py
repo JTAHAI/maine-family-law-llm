@@ -41,6 +41,12 @@ _KEY_HEADER = "X-MFLL-Idempotency-Key"
 _STATUS_HEADER = "X-MFLL-Idempotency-Status"
 _KEY_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}")
 _MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_GOVERNANCE_OPERATOR_ROUTES = frozenset({
+    "/api/governance/policy-packs/draft", "/api/governance/reviews",
+    "/api/governance/activation", "/api/governance/rollback",
+    "/api/governance/expire", "/api/governance/supersede",
+    "/api/governance/exceptions", "/api/governance/sign-offs",
+})
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 _MAX_RESPONSE_BYTES = 512 * 1024
 _MAX_ENTRIES = 160
@@ -273,11 +279,11 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         # Never store/replay credentials or responses requiring current
         # capability checks. The owning route checks expiry and single use.
-        if request.url.path in {
+        if request.url.path in _GOVERNANCE_OPERATOR_ROUTES or request.url.path in {
             "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
         } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/",
                                           "/api/reviewed-filing-packet/", "/api/admin/",
-                                          "/api/authority-updates/")) or (
+                                          "/api/authority-updates/", "/api/evals/human-grounded/")) or (
             request.url.path.startswith("/api/document-workspace/documents/")
             and "/review/" in request.url.path
         ):

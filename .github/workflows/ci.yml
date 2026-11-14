@@ -43,6 +43,8 @@ jobs:
           tests/test_pass40_offline_authority_portability.py
           tests/test_pass161_admin_console_acceptance.py
           tests/test_pass164_signed_policy_pack_lifecycle_acceptance.py
+          tests/test_pass181_attorney_gold_task_preparation_acceptance.py
+          tests/test_governance_policy_center.py
           tests/test_pass196_200_enterprise_release_closure_acceptance.py
           tests/test_v5140_reviewed_filing_packet.py
           tests/test_official_fetch_transport.py

@@ -119,11 +119,11 @@ def test_exceptions_signoffs_and_diligence_packet_are_redacted(tmp_path: Path) -
     assert "password" not in serialized.casefold()
 
 
-def test_governance_api_roles_and_ui_markers(monkeypatch, tmp_path: Path) -> None:
+def test_governance_api_roles_and_ui_markers(monkeypatch, tmp_path: Path, governance_headers) -> None:
     monkeypatch.setenv("MFL_GOVERNANCE_EVIDENCE_ROOT", str(tmp_path / "governance-evidence"))
     client = TestClient(api_module.app)
     reviewer_headers = _headers("reviewer")
-    admin_headers = _headers("admin")
+    admin_headers = {**governance_headers, "host": "testserver"}
 
     controls = client.get("/api/governance/controls", headers=reviewer_headers)
     assert controls.status_code == 200
@@ -136,6 +136,7 @@ def test_governance_api_roles_and_ui_markers(monkeypatch, tmp_path: Path) -> Non
     )
     assert denied.status_code == 403
     assert denied.json()["detail"] == "admin_role_required"
+    assert client.post("/api/governance/policy-packs/draft", headers=_headers("admin"), json={}).status_code == 403
 
     drafted = client.post(
         "/api/governance/policy-packs/draft",
@@ -155,7 +156,7 @@ def test_governance_api_roles_and_ui_markers(monkeypatch, tmp_path: Path) -> Non
 
     sign_off = client.post(
         "/api/governance/sign-offs",
-        headers=reviewer_headers,
+        headers=admin_headers,
         json={
             "role": "product_owner",
             "build_release_id": "release-2026.08.08",

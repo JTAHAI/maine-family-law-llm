@@ -2309,7 +2309,8 @@
       const preservation = /^\/api\/admin\/(legal-holds|retention-plans)(?:\/|$)/.exec(url);
       const governance = url.startsWith('/api/admin/') && !preservation;
       const authorityOperator = /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
-      const operatorAction = preservation || governance || authorityOperator;
+      const evalOperator = url === '/api/evals/human-grounded/cases';
+      const operatorAction = preservation || governance || authorityOperator || evalOperator;
       const mutation = !operatorAction && isIdempotentMutation(url, options);
       const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
@@ -2322,7 +2323,8 @@
       if (operatorAction) {
         const input = document.getElementById(
           governance ? 'governance-operator-credential' : authorityOperator ? 'authority-bundle-credential'
-            : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
+            : evalOperator ? 'attorney-gold-credential'
+              : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
         );
         const token = input?.value.trim();
         if (input) input.value = '';
@@ -2333,7 +2335,7 @@
         }
         if (!/^[a-f0-9]{64}$/.test(token || '')) {
           input?.focus();
-          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : 'governance';
+          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : evalOperator ? 'evaluation' : 'governance';
           throw new Error(`Enter the ${lane} operator credential before continuing.`);
         }
         headers.set('Authorization', 'Bearer ' + token);
@@ -5334,6 +5336,15 @@
       const el = (id) => section.querySelector('#' + id);
       const value = (id) => String(el(id)?.value || '').trim();
       const result = el('attorney-gold-result');
+      const credentialLabel = document.createElement('label');
+      credentialLabel.textContent = 'Evaluation operator credential ';
+      const credential = document.createElement('input');
+      credential.type = 'password';
+      credential.id = 'attorney-gold-credential';
+      credential.maxLength = 64;
+      credential.autocomplete = 'off';
+      credentialLabel.append(credential);
+      el('attorney-gold-confirm').closest('label').before(credentialLabel);
       const adminHeaders = {'Content-Type':'application/json', 'X-User-Role':'admin'};
       const reviewerHeaders = {'X-User-Role':'reviewer'};
       const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Not attorney reviewed. The ledger stores hashes and reviewer metadata, not private prompts or answers.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };

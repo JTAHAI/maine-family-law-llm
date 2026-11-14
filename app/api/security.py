@@ -274,6 +274,34 @@ def require_local_operator(
     return configured
 
 
+def require_local_evaluation_reviewer(request: Request, *, tenant_id: str | None) -> str:
+    """Resolve a reviewer only from the operator's pinned credential roster."""
+    configured = os.environ.get("MFL_EVAL_OPERATOR_TENANT", "")
+    tenant = str(tenant_id or "")
+    headers = request.headers.getlist("authorization")
+    token = re.fullmatch(r"Bearer ([a-f0-9]{64})", headers[0]) if len(headers) == 1 else None
+    if (not _TENANT_ID_RE.fullmatch(tenant) or len(request.headers.getlist("x-tenant-id")) != 1
+            or not hmac.compare_digest(configured.encode(), tenant.encode()) or token is None):
+        raise HTTPException(403, detail="evaluation_reviewer_authentication_required")
+    raw = os.environ.get("MFL_EVAL_REVIEWERS_SHA256_JSON", "{}")
+    digest = hashlib.sha256(token[1].encode("ascii")).hexdigest()
+    try:
+        from legal.security.strict_json import strict_json_loads
+
+        roster = strict_json_loads(raw.encode("utf-8"), max_bytes=16_384, require_object=True)
+        configured_operator = os.environ.get("MFL_EVAL_OPERATOR_BEARER_SHA256", "")
+        if configured_operator and hmac.compare_digest(configured_operator, digest):
+            raise ValueError
+        matches = [reviewer_id for reviewer_id, verifier in roster.items()
+                   if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{2,99}", reviewer_id)
+                   and isinstance(verifier, str) and hmac.compare_digest(verifier.encode(), digest.encode())]
+        if len(matches) == 1:
+            return matches[0]
+    except ValueError:
+        pass
+    raise HTTPException(403, detail="evaluation_reviewer_authentication_required")
+
+
 def strict_json_bool(payload: dict[str, Any], field: str, *, default: bool) -> bool:
     """Read a safety-sensitive JSON boolean without truthy-string coercion."""
 

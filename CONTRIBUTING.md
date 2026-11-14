@@ -59,6 +59,14 @@ tenant-scoped operator credentials: `MFL_GOVERNANCE_OPERATOR_TENANT` /
 format and `local-desktop` for the shipped UI. Public authority status remains
 available without a credential.
 
+The human-grounded evaluation ledger uses `MFL_EVAL_OPERATOR_TENANT` and
+`MFL_EVAL_OPERATOR_BEARER_SHA256` for adding tasks and adjudicating. Set
+`MFL_EVAL_REVIEWERS_SHA256_JSON` to an object mapping independent, stable
+reviewer IDs to distinct credential digests. API review identity comes from
+that roster, never from the request body. Synthetic or unauthenticated
+historical reviews remain practice records and do not count toward release
+evaluation thresholds. A local credential is not evidence of licensure.
+
 For source-runtime browser proof, run
 `python -B scripts/run_trusted_filing_browser_proof.py <existing-qa-scratch>`
 from a test worktree with its `api,dev` dependencies installed. The QA scratch
