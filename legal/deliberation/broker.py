@@ -110,8 +110,6 @@ class DeliberationToolBroker:
         self.definitions = {definition.name: definition for definition in definitions}
         self.handlers: dict[str, Callable[[dict[str, Any], DeliberationContext], Any]] = {}
         self.tokens: dict[str, DeliberationToolToken] = {}
-        self.call_counts: dict[tuple[str, str], int] = {}
-        self.audit_log: list[DeliberationToolCallAudit] = []
         self._register_builtin_handlers()
 
     def _register_builtin_handlers(self) -> None:
@@ -193,12 +191,6 @@ class DeliberationToolBroker:
             raise PermissionError("run_cancelled")
         if tool_name not in context.allowed_tools:
             raise PermissionError(f"tool_not_permitted:{tool_name}")
-        per_tool_key = (context.run_id, tool_name)
-        self.call_counts[per_tool_key] = self.call_counts.get(per_tool_key, 0) + 1
-        if self.call_counts[per_tool_key] > definition.max_calls_per_run:
-            raise ValueError(f"tool_call_limit_exceeded:{tool_name}")
-        if len(self.audit_log) >= max(1, context.tool_call_limit):
-            raise ValueError("tool_call_budget_exhausted")
         if definition.requires_matter_scope and context.matter_id == "unknown":
             raise PermissionError(f"tool_matter_scope_required:{tool_name}")
         handler = self.handlers.get(tool_name)
@@ -216,7 +208,7 @@ class DeliberationToolBroker:
             raise ValueError("tool_result_too_large")
         duration_ms = max(1, int((time.perf_counter() - started) * 1000))
         audit = DeliberationToolCallAudit(
-            call_id=safe_identifier(f"{context.run_id}:{token.token_id}:{len(self.audit_log) + 1}", fallback="call"),
+            call_id=secrets.token_hex(16),
             run_id=context.run_id,
             worker_id=token.worker_id,
             tool_name=tool_name,
@@ -228,12 +220,15 @@ class DeliberationToolBroker:
             created_at=utc_now(),
             token_id=token.token_id,
         )
-        self.audit_log.append(audit)
         result["tool_audit"] = audit.as_dict()
         result["review_required"] = True
         result["read_only"] = True
         result["bound_run_id"] = context.run_id
         return result
+
+    def verify_final_claims(self, *, claims: list[str], context: DeliberationContext) -> dict[str, Any]:
+        """The host verifier is not a model-facing tool grant or billable tool call."""
+        return self._handle_verification_check_claims({"claims": claims}, context)
 
     def _sanitize_result(self, payload: Any) -> dict[str, Any]:
         if not isinstance(payload, dict):

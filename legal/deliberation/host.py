@@ -6,9 +6,10 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from legal.verifiers import LegalOutputVerifier, SourceAuthorityIndex
+from legal.verifiers import ClaimSupportVerifier, SourceAuthorityIndex
+from legal.verifiers.claim_support_verifier import extract_legal_claims
 from legal.verifiers.source_cards import SourceCardStore
 
 from .broker import DeliberationContext, DeliberationToolBroker
@@ -216,12 +217,14 @@ class DeliberationHost:
         preset_catalog: DeliberationPresetCatalog | None = None,
         worker_registry: dict[str, DeliberationWorker] | None = None,
         tool_broker: DeliberationToolBroker | None = None,
+        authority_verifier: Callable[..., dict[str, Any]] | None = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
         self.layout = external_deliberation_layout(root, project_root=self.project_root, create=True)
         self.state_machine = state_machine or DeliberationStateMachine()
         self.preset_catalog = preset_catalog or DeliberationPresetCatalog()
         self.tool_broker = tool_broker or DeliberationToolBroker()
+        self.authority_verifier = authority_verifier
         self.store = DeliberationRunStore(self.layout)
         self.workers = worker_registry or self._default_workers()
         self._lock = threading.RLock()
@@ -263,6 +266,8 @@ class DeliberationHost:
             worker_roles = [str(item) for item in (payload.get("worker_roles") or (preset.worker_roles if preset else [])) if str(item).strip()]
             source_lanes = [str(item) for item in (payload.get("source_lanes") or (preset.source_lanes if preset else [])) if str(item).strip()]
             run_id = safe_identifier(payload.get("run_id") or uuid.uuid4().hex, fallback="run")
+            if self.store.run_path(run_id).exists():
+                raise DeliberationHostError("run_already_exists", "Use a new run identifier.", status_code=409)
             run = DeliberationRun(
                 run_id=run_id,
                 matter_id=safe_identifier(payload.get("matter_id") or "unknown", fallback="matter"),
@@ -340,6 +345,7 @@ class DeliberationHost:
             last_error=str(payload.get("last_error") or ""),
             configuration_hash=str(payload.get("configuration_hash") or ""),
             tool_call_count=int(payload.get("tool_call_count") or 0),
+            tool_calls_by_name=dict(payload.get("tool_calls_by_name") or {}),
             worker_turn_count=int(payload.get("worker_turn_count") or 0),
             verifier_status=str(payload.get("verifier_status") or "review_required"),
             restart_count=int(payload.get("restart_count") or 0),
@@ -394,7 +400,7 @@ class DeliberationHost:
     def confirm_run(self, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
             run = self._load_or_raise(run_id)
-            if run.status not in {"draft_scope", "awaiting_local_confirmation"}:
+            if run.status != "draft_scope":
                 raise DeliberationHostError("invalid_run_state", f"Cannot confirm run from state {run.status}.", status_code=409)
             if payload.get("local_only") is not True:
                 raise DeliberationHostError("local_only_confirmation_required", "The deliberation host only accepts local-only confirmation.", status_code=409)
@@ -405,7 +411,13 @@ class DeliberationHost:
             excluded_records = [dict(row) for row in payload.get("excluded_records") or []]
             issue_filters = [str(item) for item in (payload.get("issue_filters") or []) if str(item).strip()]
             posture_filters = [str(item) for item in (payload.get("posture_filters") or []) if str(item).strip()]
-            allowed_tools = [str(item) for item in (payload.get("allowed_tools") or self.list_tools_by_preset(run.worker_set)) if str(item).strip()]
+            allowed_tools = payload.get("allowed_tools", self.list_tools_by_preset(run.worker_set))
+            if not isinstance(allowed_tools, list) or any(
+                not isinstance(name, str) or name not in self.tool_broker.definitions
+                for name in allowed_tools
+            ):
+                raise DeliberationHostError("tool_grant_invalid", "Select only recognized read-only tools.", status_code=422)
+            allowed_tools = list(dict.fromkeys(allowed_tools))
             scope = ScopeFreeze(
                 exact_question=str(payload.get("exact_question") or run.question),
                 included_records=included_records,
@@ -487,7 +499,8 @@ class DeliberationHost:
             return self._run_response(run)
 
     def get_run(self, run_id: str) -> dict[str, Any]:
-        return self._run_response(self._load_or_raise(run_id))
+        with self._lock:
+            return self._run_response(self._load_or_raise(run_id))
 
     def get_events(self, run_id: str) -> dict[str, Any]:
         run = self._load_or_raise(run_id)
@@ -510,14 +523,45 @@ class DeliberationHost:
             run = self._load_or_raise(run_id)
             if run.scope_freeze is None:
                 raise DeliberationHostError("scope_not_confirmed", "The scope must be confirmed before tool calls are allowed.", status_code=409)
+            if run.status not in {
+                "awaiting_local_confirmation", "queued", "running_independent", "aligning_claims",
+                "cross_review", "rebuttal", "omission_hunt",
+            } or run.cancellation_state != "active":
+                raise DeliberationHostError("tool_run_not_active", "This run no longer accepts tool calls.", status_code=409)
+            if tool_name not in run.scope_freeze.allowed_tools:
+                raise DeliberationHostError("tool_not_granted", "This tool is outside the confirmed scope.", status_code=403)
+            if run.tool_call_count >= run.limits.tool_call_limit:
+                raise DeliberationHostError("tool_call_budget_exhausted", "This run has used its tool budget.", status_code=409)
+            # Older ledgers have only the aggregate; charge unknown calls against
+            # any per-tool allowance rather than resetting the cap on upgrade.
+            uncategorized = max(0, run.tool_call_count - sum(run.tool_calls_by_name.values()))
+            tool_count = run.tool_calls_by_name.get(tool_name, 0)
+            definition = self.tool_broker.definitions.get(tool_name)
+            if definition is None or tool_count + uncategorized >= definition.max_calls_per_run:
+                raise DeliberationHostError("tool_call_budget_exhausted", "This run has used its budget for this tool.", status_code=409)
             worker_id = safe_identifier(str(payload.get("worker_id") or "worker"), fallback="worker")
+            if worker_id == "system_verifier" or (worker_id != "worker" and worker_id not in run.worker_set):
+                raise DeliberationHostError("tool_worker_not_granted", "This worker is outside the confirmed scope.", status_code=403)
             token_id = str(payload.get("tool_token") or payload.get("token") or "").strip()
-            if not token_id:
-                token = self.tool_broker.issue_token(run_id=run.run_id, matter_id=run.matter_id, worker_id=worker_id, tool_name=tool_name)
-                token_id = token.token_id
+            if token_id:
+                raise DeliberationHostError("tool_token_not_accepted", "Only the host issues tool grants.", status_code=403)
+            arguments = payload.get("args", payload)
+            if not isinstance(arguments, dict):
+                raise DeliberationHostError("tool_arguments_invalid", "Tool arguments must be an object.", status_code=422)
+            token = self.tool_broker.issue_token(run_id=run.run_id, matter_id=run.matter_id, worker_id=worker_id, tool_name=tool_name)
             context = self._tool_context(run)
-            result = self.tool_broker.invoke(token_id=token_id, tool_name=tool_name, payload=dict(payload.get("args") or payload), context=context)
             run.tool_call_count += 1
+            run.tool_calls_by_name[tool_name] = tool_count + 1
+            self.store.save_run(run)  # Reserve the budget even if dispatch is interrupted.
+            try:
+                result = self.tool_broker.invoke(token_id=token.token_id, tool_name=tool_name, payload=arguments, context=context)
+            except PermissionError as exc:
+                raise DeliberationHostError("tool_request_blocked", "The tool request did not pass scope checks.", status_code=403) from exc
+            except (OverflowError, TypeError, ValueError) as exc:
+                raise DeliberationHostError("tool_arguments_invalid", "The tool arguments or result exceeded the supported bounds.", status_code=422) from exc
+            finally:
+                self.tool_broker.tokens.pop(token.token_id, None)
+            result["tool_audit"].pop("token_id", None)
             self.store.append_tool_audit(run.run_id, result.get("tool_audit") or {})
             self._save_run(run)
             return result
@@ -572,7 +616,7 @@ class DeliberationHost:
             record_texts=record_texts,
             record_metadata=record_metadata,
             tool_call_limit=run.limits.tool_call_limit,
-            allowed_tools=set(scope.allowed_tools or [tool["name"] for tool in self.list_tools()]),
+            allowed_tools=set(scope.allowed_tools),
             cancellation_state=run.cancellation_state,
             source_cards=source_cards,
             authority_index=authority_index,
@@ -753,15 +797,11 @@ class DeliberationHost:
 
         run.status = self.state_machine.transition(run.status, "verifying")
         self.store.save_event(_event(run.run_id, "verification", run.status, "Verification begins", {"round": run.worker_turn_count}))
-        verifier_result = self.tool_broker.invoke(
-            token_id=self.tool_broker.issue_token(run_id=run.run_id, matter_id=run.matter_id, worker_id="system_verifier", tool_name="verification.check_claims").token_id,
-            tool_name="verification.check_claims",
-            payload={
-                "claims": [claim.canonical_claim for claim in run.claims],
-            },
+        verifier_result = self.tool_broker.verify_final_claims(
+            claims=[claim.canonical_claim for claim in run.claims],
             context=context,
         )
-        run.verifier_status = str(((verifier_result.get("verification_report") or {}).get("blockers") and "review_required") or "source_supported")
+        run.verifier_status = "review_required"
         run.status = self.state_machine.transition("verifying", "synthesizing")
         run.synthesis = self._synthesize(run, positions, worker_failures, verifier_result=verifier_result)
         run.review_status = "review_required"
@@ -831,7 +871,9 @@ class DeliberationHost:
                     changed = True
         entries: list[ClaimLedgerEntry] = []
         for family_id, family in sorted(families.items()):
-            verifier_status = self._claim_verifier_status(run, family["canonical_claim"], family["source_refs"])
+            verifier_status = self._claim_verifier_status(
+                run, family["canonical_claim"], family["source_refs"], claim_type=family["claim_type"],
+            )
             family["verifier_status"] = verifier_status
             family["history"].append({"round": len(positions), "worker_id": "verifier", "position": "verify", "summary": verifier_status})
             entries.append(
@@ -856,41 +898,47 @@ class DeliberationHost:
             )
         return entries, changed
 
-    def _claim_verifier_status(self, run: DeliberationRun, claim: str, source_refs: list[dict[str, Any]]) -> str:
+    def _claim_verifier_status(
+        self, run: DeliberationRun, claim: str, source_refs: list[dict[str, Any]], *, claim_type: str = "analysis",
+    ) -> str:
         if not run.scope_freeze:
             return "review_required"
-        verifier = LegalOutputVerifier(SourceAuthorityIndex.from_rows([]))
-        source_texts = {}
-        source_metadata = {}
-        for row in run.scope_freeze.included_authority_sources:
-            source_id = str(row.get("source_id") or "").strip()
-            if source_id:
-                source_texts[source_id] = str(row.get("text") or row.get("source_text") or "")
-                source_metadata[source_id] = dict(row)
-        for row in run.scope_freeze.included_records:
-            record_id = str(row.get("record_id") or row.get("source_id") or "").strip()
-            if record_id:
-                source_texts[record_id] = str(row.get("text") or row.get("text_excerpt") or row.get("content") or "")
-                source_metadata[record_id] = dict(row)
-        report = verifier.verify_output(
-            text=claim,
-            source_texts=source_texts,
-            source_metadata=source_metadata,
-            auto_extract_claims=False,
-            auto_extract_quotes=False,
+        context = self._tool_context(run)
+        referenced = {str(row.get("source_id") or "") for row in source_refs}
+        if not referenced or not referenced <= (set(context.source_texts) | set(context.record_texts)):
+            return "unverified"
+        legal_claim = claim_type.casefold() == "legal" or bool(extract_legal_claims(claim)) or bool(
+            context.authority_index.resolve_text(claim)
         )
-        blockers = report.get("blockers") or []
-        if blockers:
-            if any("citation_not_found" in blocker for blocker in blockers):
+        if legal_claim:
+            ids = sorted((referenced & context.source_texts.keys()) - context.record_texts.keys())
+            if not ids or self.authority_verifier is None:
                 return "unverified"
-            if any("claim_contradicted" in blocker for blocker in blockers):
-                return "contradicted"
-            return "review_required"
-        if any(row.get("status") == "contradicted" for row in report.get("claims") or []):
+            try:
+                admission = self.authority_verifier(
+                    text=claim, source_ids=ids, claims=[{"claim": claim, "source_ids": ids}],
+                    expected_jurisdiction=run.jurisdiction, auto_extract_claims=False,
+                )
+            except (OSError, ValueError, RuntimeError):
+                return "review_required"
+            report = admission.get("verification_report") or {}
+            rows = report.get("claims") or []
+            result = rows[0] if len(rows) == 1 else {}
+            blocked = admission.get("status") != "verified_pending_human_review" or bool(
+                admission.get("unavailable_source_ids") or admission.get("blockers") or report.get("blockers")
+            )
+        else:
+            ids = sorted(key for key in referenced - context.source_texts.keys() if context.record_texts.get(key, "").strip())
+            result = ClaimSupportVerifier().verify(claim, (context.record_texts[key] for key in ids), source_ids=ids)
+            blocked = False
+        if result.get("status") == "contradicted":
             return "contradicted"
-        if any(row.get("status") == "stale" for row in report.get("claims") or []):
+        if result.get("status") in {"stale", "jurisdiction_mismatch"}:
             return "stale_or_jurisdiction_risk"
-        return "source_supported" if source_refs else "evidence_supported"
+        span = result.get("best_span") or {}
+        if blocked or result.get("supported") is not True or not span.get("exact_phrase") or span.get("source_id") not in ids:
+            return "unverified"
+        return "source_supported" if legal_claim else "evidence_supported"
 
     def _synthesize(self, run: DeliberationRun, positions: list[dict[str, Any]], worker_failures: list[dict[str, Any]], *, verifier_result: dict[str, Any] | None = None) -> FinalSynthesis:
         scope_dict = run.scope_freeze.as_dict() if run.scope_freeze else {}
@@ -906,7 +954,7 @@ class DeliberationHost:
         for claim in run.claims:
             item = claim.as_dict()
             if claim.verifier_status in {"source_supported", "evidence_supported"}:
-                if claim.source_refs:
+                if claim.verifier_status == "source_supported":
                     verified_legal_support.append(item)
                 else:
                     verified_record_support.append(item)
@@ -928,12 +976,14 @@ class DeliberationHost:
             missing_information.append({"type": "missing_authority", "summary": "No authority sources were included in the frozen scope."})
         if worker_failures:
             missing_information.append({"type": "worker_failure", "summary": "One or more workers failed or returned malformed output."})
+        if (verifier_result or {}).get("verification_report", {}).get("blockers"):
+            missing_information.append({"type": "verifier_blockers", "summary": "The host found unresolved verification blockers. Review the cited sources and claims."})
         what_sources_establish = [
             {
                 "source_id": row.get("source_id"),
                 "title": row.get("title"),
-                "authority_status": row.get("authority_status"),
-                "freshness_status": row.get("freshness_status"),
+                "authority_status": "provided_reference_requires_review",
+                "freshness_status": "not_verified_in_scope_summary",
             }
             for row in (run.scope_freeze.included_authority_sources if run.scope_freeze else [])[:20]
         ]
@@ -967,7 +1017,6 @@ class DeliberationHost:
         return [tool["name"] for tool in self.list_tools()]
 
     def _run_response(self, run: DeliberationRun) -> dict[str, Any]:
-        self._save_run(run)
         hydrated = self._load_or_raise(run.run_id)
         return hydrated.as_dict() | {
             "events": [event.as_dict() for event in hydrated.events],

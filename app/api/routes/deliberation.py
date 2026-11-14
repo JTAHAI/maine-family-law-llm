@@ -7,13 +7,17 @@ from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.api.security import review_response
+from app.services.authority_product_service import AuthorityProductService
 from legal.deliberation.host import DeliberationHost, DeliberationHostError
 from legal.provider_connections import ProviderConnectionService
 from legal.provider_connections.service import ProviderConnectionError
 from legal.security.local_request_firewall import evaluate_local_request
 
 router = APIRouter(tags=["deliberation"])
-HOST = DeliberationHost(project_root=Path(__file__).resolve().parents[3])
+HOST = DeliberationHost(
+    project_root=Path(__file__).resolve().parents[3],
+    authority_verifier=lambda **kwargs: AuthorityProductService().verify_output(**kwargs),
+)
 PROVIDER_SERVICE = ProviderConnectionService(project_root=Path(__file__).resolve().parents[3], store_root=os.environ.get("MFL_PROVIDER_STORE_ROOT") or None)
 
 
