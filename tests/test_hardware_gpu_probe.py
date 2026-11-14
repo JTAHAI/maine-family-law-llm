@@ -1,3 +1,4 @@
+import subprocess
 from types import SimpleNamespace
 
 from legal.model_orchestration import hardware
@@ -5,10 +6,12 @@ from legal.model_orchestration import hardware
 
 def test_local_nvidia_probe_is_bounded_and_reports_available_vram(monkeypatch, tmp_path):
     calls = []
-    monkeypatch.setattr(hardware.platform, "platform", lambda: "synthetic-test-platform")
     monkeypatch.setattr(hardware.shutil, "which", lambda name: "nvidia-smi.exe")
+    real_run = subprocess.run
 
     def run(command, **kwargs):
+        if not isinstance(command, (list, tuple)) or not command or command[0] != "nvidia-smi.exe":
+            return real_run(command, **kwargs)
         calls.append((command, kwargs))
         return SimpleNamespace(
             stdout=(

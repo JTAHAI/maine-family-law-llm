@@ -58,7 +58,9 @@ def test_document_api_create_propose_commit_and_export(monkeypatch, tmp_path: Pa
     assert txt.status_code == 200
     assert b"Revised line" in txt.content
     assert txt.headers["x-mfll-filing-gate-status"] == "review_required"
-    assert txt.headers["x-mfll-filing-gate-blockers"] == "review_packet_missing"
+    # Even a reviewed revision's working-copy endpoint cannot produce the
+    # exact verified filing copy. The header identifies that stable boundary.
+    assert txt.headers["x-mfll-filing-gate-blockers"] == "working_copy_not_filing_export"
     word_session = client.post(f"/api/document-workspace/documents/{document_id}/export-sessions?format=docx")
     assert word_session.status_code == 200
     word = client.get(word_session.json()["download_url"])
@@ -66,6 +68,7 @@ def test_document_api_create_propose_commit_and_export(monkeypatch, tmp_path: Pa
     assert word.content.startswith(b"PK")
     assert word.headers["x-content-type-options"] == "nosniff"
     assert word.headers["x-mfll-filing-gate-status"] == "review_required"
+    assert word.headers["x-mfll-filing-gate-blockers"] == "working_copy_not_filing_export"
 
 
 def test_document_api_soft_delete_is_two_phase_and_restoreable(monkeypatch, tmp_path: Path) -> None:

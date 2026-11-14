@@ -38,7 +38,9 @@ def test_pass151_incremental_chunks_deduplicate_verify_and_restore_independently
     first = store.run_backup({"schedule_id": "daily_backup"})
     assert first["backup_format"] == "incremental_encrypted_chunks_v2"
     assert first["verified"] is True and first["restore_independent"] is True
-    assert first["new_chunk_count"] == first["chunk_count"]
+    # Repeated content can deduplicate within the first snapshot too.
+    assert first["new_chunk_count"] > 0
+    assert first["new_chunk_count"] + first["reused_chunk_count"] == first["chunk_count"]
 
     (matter / "changed.txt").write_text("fictional version two", encoding="utf-8")
     second = store.run_backup({"schedule_id": "daily_backup"})
