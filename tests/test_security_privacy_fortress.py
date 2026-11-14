@@ -213,6 +213,17 @@ def test_security_privacy_api_routes_are_loopback_only_and_review_required(monke
     assert any(str(item).startswith("direct_prompt_injection") for item in injection_payload["blockers"])
     assert "tool_not_allowed:filesystem_write" in injection_payload["blockers"]
 
+    without_csrf = {k: v for k, v in session_headers.items() if k != "X-CSRF-Token"}
+    rejected = client.post("/api/security/privacy/backup", headers=without_csrf, json={"approved": True})
+    assert rejected.status_code == 403
+    assert rejected.json()["detail"]["error"] == "csrf_token_required"
+    wrong_csrf = client.post(
+        "/api/security/privacy/backup",
+        headers={**session_headers, "X-CSRF-Token": "0" * 64},
+        json={"approved": True},
+    )
+    assert wrong_csrf.status_code == 403
+    assert wrong_csrf.json()["detail"]["error"] == "csrf_token_mismatch"
     backup = client.post("/api/security/privacy/backup", headers=session_headers, json={"approved": True})
     assert backup.status_code == 200
     assert backup.json()["status"] == "pass"

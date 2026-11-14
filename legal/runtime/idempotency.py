@@ -271,10 +271,11 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Any]) -> Response:  # type: ignore[override]
         if request.method.upper() not in _MUTATION_METHODS or not request.url.path.startswith("/api/") or request.url.path == "/ask/stream":
             return await call_next(request)
-        # A model result may contain private context whose capability has since
-        # expired/revoked. Never replay it around the route's live checks. The
-        # host's single-use approval prevents a retried request generating twice.
-        if request.url.path in {"/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel"} or request.url.path.startswith("/api/model-packs/"):
+        # Never store/replay credentials or responses requiring current
+        # capability checks. The owning route checks expiry and single use.
+        if request.url.path in {
+            "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
+        } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/")):
             response = await call_next(request)
             response.headers[_STATUS_HEADER] = "single_use_approval"
             return response

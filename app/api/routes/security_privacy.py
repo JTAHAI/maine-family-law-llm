@@ -126,6 +126,8 @@ def _require_session_capability(
     x_csrf_token: str | None,
 ) -> dict:
     _require_json_content_type(request)
+    if not x_csrf_token:
+        raise HTTPException(status_code=403, detail={"error": "csrf_token_required"})
     return validate_session_capability(
         str(x_session_token or ""),
         expected_user_role=str(x_user_role or "viewer"),

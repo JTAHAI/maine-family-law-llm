@@ -114,6 +114,7 @@ def test_pass137_session_mint_is_active_matter_bound_and_action_allowlisted(
             return matter
 
     monkeypatch.setattr(routes, "_main_api", lambda: _MainApi())
+    monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency-state"))
     client = TestClient(app)
     headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant"}
     valid = client.post(
@@ -126,6 +127,14 @@ def test_pass137_session_mint_is_active_matter_bound_and_action_allowlisted(
     assert session["resource_type"] == "matter"
     assert session["resource_id"] == "fictional-matter"
     assert session["single_use"] is True
+    # The generic mutation cache must not return an already-issued secret.
+    idempotent_headers = {**headers, "X-MFLL-Idempotency-Key": "fictional-capability-mint-1"}
+    options = {"headers": idempotent_headers, "json": {"action": "security_privacy_backup"}}
+    first = client.post("/api/security/privacy/session", **options)
+    second = client.post("/api/security/privacy/session", **options)
+    assert first.status_code == second.status_code == 200
+    assert first.headers["X-MFLL-Idempotency-Status"] == "single_use_approval"
+    assert second.json()["session"]["token"] != first.json()["session"]["token"]
     mismatch = client.post(
         "/api/security/privacy/session",
         headers=headers,
