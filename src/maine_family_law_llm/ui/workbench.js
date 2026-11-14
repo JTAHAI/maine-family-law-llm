@@ -2338,7 +2338,11 @@
         if (!/^[a-f0-9]{64}$/.test(token || '')) {
           input?.focus();
           const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : evalOperator ? 'evaluation' : modelOperator ? 'model' : 'governance';
-          throw new Error(`Enter the ${lane} operator credential before continuing.`);
+          throw Object.assign(new Error(`Enter the ${lane} operator credential before continuing.`), {
+            safeCode: 'local_operator_credential_required',
+            preserved: 'Nothing was sent or changed.',
+            recovery: 'Enter the operator credential for this action and retry.'
+          });
         }
         headers.set('Authorization', 'Bearer ' + token);
         options = {...options, redirect: 'error'};

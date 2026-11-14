@@ -4897,7 +4897,10 @@ if FastAPI is not None:
 
     @app.get("/api/authority/status")
     def local_authority_status() -> dict[str, Any]:
-        return AuthorityLibraryService().status()
+        try:
+            return AuthorityLibraryService().status()
+        except (ValueError, OSError):
+            return _authority_unavailable(active=False)
 
     @app.get("/api/authority/gaps")
     def local_authority_gaps(issue: str = "") -> dict[str, Any]:
@@ -5031,7 +5034,14 @@ if FastAPI is not None:
 
     @app.get("/api/authority/builds")
     def local_authority_builds(limit: int = 20) -> dict[str, Any]:
-        return AuthorityLibraryService().list_builds(limit=limit)
+        try:
+            return AuthorityLibraryService().list_builds(limit=limit)
+        except (ValueError, OSError):
+            return _authority_unavailable(builds=[])
+
+    def _authority_unavailable(**empty) -> dict[str, Any]:
+        return {"status": "blocked", "blockers": ["authority_store_unavailable_or_unverified"],
+                "review_required": True, **empty}
 
     @app.get("/api/authority/sources")
     def local_authority_sources(
@@ -5042,18 +5052,20 @@ if FastAPI is not None:
         limit: int = 100,
         offset: int = 0,
     ) -> dict[str, Any]:
-        return AuthorityLibraryService().list_sources(
-            query=query,
-            source_class=source_class,
-            freshness=freshness,
-            issue_tag=issue_tag,
-            limit=limit,
-            offset=offset,
-        )
+        try:
+            return AuthorityLibraryService().list_sources(
+                query=query, source_class=source_class, freshness=freshness,
+                issue_tag=issue_tag, limit=limit, offset=offset,
+            )
+        except (ValueError, OSError):
+            return _authority_unavailable(sources=[], total=0)
 
     @app.get("/api/authority/sources/{source_id}")
     def local_authority_source(source_id: str) -> dict[str, Any]:
-        return AuthorityLibraryService().get_source(source_id)
+        try:
+            return AuthorityLibraryService().get_source(source_id)
+        except (ValueError, OSError):
+            return _authority_unavailable()
 
     @app.get("/api/authority/sources/{source_id}/span")
     def local_authority_source_span(
@@ -5061,9 +5073,12 @@ if FastAPI is not None:
         start_offset: int | None = None,
         end_offset: int | None = None,
     ) -> dict[str, Any]:
-        return AuthorityLibraryService().get_source_span(
-            source_id, start_offset=start_offset, end_offset=end_offset
-        )
+        try:
+            return AuthorityLibraryService().get_source_span(
+                source_id, start_offset=start_offset, end_offset=end_offset
+            )
+        except (ValueError, OSError):
+            return _authority_unavailable()
 
     @app.get("/api/authority/update-report/{build_id}")
     def local_authority_update_report(build_id: str) -> dict[str, Any]:

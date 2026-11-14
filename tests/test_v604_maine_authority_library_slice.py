@@ -100,6 +100,20 @@ def test_authority_update_requires_network_ack_for_live_mode(monkeypatch: pytest
     assert "network_acknowledgement_required" in payload["blockers"]
 
 
+def test_production_authority_readers_report_invalid_root_as_blocked(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.api.production import app as production
+
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(Path(__file__).resolve().parent))
+    monkeypatch.delenv("MFL_AUTHORITY_DATA_ROOT", raising=False)
+    client = TestClient(production)
+    for path in ("status", "sources", "sources/fixture", "sources/fixture/span", "builds"):
+        response = client.get("/api/authority/" + path)
+        assert response.status_code == 200
+        assert response.json()["status"] == "blocked"
+        assert response.json()["blockers"] == ["authority_store_unavailable_or_unverified"]
+
+
 def test_official_fetcher_blocks_unapproved_redirects_and_oversized_or_mismatched_responses(monkeypatch: pytest.MonkeyPatch) -> None:
     target = SourceTarget(
         target_id="t",
