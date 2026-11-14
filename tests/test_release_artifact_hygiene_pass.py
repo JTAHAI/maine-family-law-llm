@@ -200,7 +200,7 @@ def test_source_archive_keeps_runtime_modules_and_only_the_pinned_binary_fixture
 
     archive = tmp_path / "source.zip"
     subprocess.run([
-        sys.executable, str(ROOT / "scripts/build-deterministic-source-release.py"),
+        sys.executable, "-S", str(ROOT / "scripts/build-deterministic-source-release.py"),
         "--repo-root", str(source), "--output", str(archive),
     ], check=True, capture_output=True, timeout=30)
     with zipfile.ZipFile(archive) as zf:
@@ -210,7 +210,7 @@ def test_source_archive_keeps_runtime_modules_and_only_the_pinned_binary_fixture
         assert f"ME_FM_LLM/{private_root}" not in zf.namelist()
         assert "ME_FM_LLM/data/fixtures/parser_regression/extra.bin" not in zf.namelist()
 
-    audit = [sys.executable, str(ROOT / "scripts/audit-source-zip-contents.py")]
+    audit = [sys.executable, "-S", str(ROOT / "scripts/audit-source-zip-contents.py")]
     subprocess.run([*audit, str(archive)], check=True, capture_output=True, timeout=30)
     tampered = tmp_path / "tampered.zip"
     with zipfile.ZipFile(archive) as clean, zipfile.ZipFile(tampered, "w") as bad:

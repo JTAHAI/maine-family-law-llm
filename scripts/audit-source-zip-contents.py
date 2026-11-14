@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 from zipfile import BadZipFile, ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from legal.security.source_archive_policy import (  # noqa: E402
+from scripts.source_archive_policy import (  # noqa: E402
     PARSER_FIXTURE,
     PARSER_FIXTURE_SIZE,
     is_pinned_parser_fixture,

@@ -1,4 +1,4 @@
-"""Shared, narrow exceptions for the public source ZIP builder and auditor."""
+"""Shared stdlib-only policy for the public source ZIP builder and auditor."""
 
 import hashlib
 from pathlib import PurePosixPath
