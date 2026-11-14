@@ -123,13 +123,15 @@ def read_bounded_regular_file(path: str | Path, *, max_bytes: int) -> bytes:
         path_stat = file_path.lstat()
     except OSError as exc:
         raise DurableIOError("file_unavailable") from exc
-    if stat.S_ISLNK(path_stat.st_mode) or not stat.S_ISREG(path_stat.st_mode):
+    if not stat.S_ISREG(path_stat.st_mode) or (
+        getattr(path_stat, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+    ):
         raise DurableIOError("regular_file_required")
     if path_stat.st_size > max_bytes:
         raise DurableIOError("maximum_bytes_exceeded")
 
     try:
-        descriptor = os.open(str(file_path), _open_flags())
+        descriptor = os.open(str(file_path), _open_flags() | getattr(os, "O_NONBLOCK", 0))
     except OSError as exc:
         raise DurableIOError("file_open_failed") from exc
     try:
@@ -142,12 +144,23 @@ def read_bounded_regular_file(path: str | Path, *, max_bytes: int) -> bytes:
             raise DurableIOError("maximum_bytes_exceeded")
         chunks: list[bytes] = []
         remaining = max_bytes + 1
+        file_remaining = fd_stat.st_size
         while remaining > 0:
-            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            # CPython allocates the requested buffer even for a short read.
+            # Small state files need only their known length and an EOF probe.
+            read_size = min(256 * 1024, remaining, file_remaining or 1)
+            chunk = os.read(descriptor, read_size)
             if not chunk:
                 break
+            if not file_remaining:
+                raise DurableIOError(
+                    "maximum_bytes_exceeded" if remaining == 1 else "file_size_changed"
+                )
             chunks.append(chunk)
             remaining -= len(chunk)
+            file_remaining -= len(chunk)
+        if file_remaining or os.fstat(descriptor).st_size != fd_stat.st_size:
+            raise DurableIOError("file_size_changed")
         raw = b"".join(chunks)
         if len(raw) > max_bytes:
             raise DurableIOError("maximum_bytes_exceeded")
