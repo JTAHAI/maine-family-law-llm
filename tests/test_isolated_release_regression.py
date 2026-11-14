@@ -126,3 +126,31 @@ def test_timeout_cleanup_failure_is_not_reported_as_clean(monkeypatch):
     process = SimpleNamespace(pid=123456, poll=lambda: None)
     with pytest.raises(RuntimeError, match="Unable to stop"):
         runner.stop_owned_test_process(process, {})
+
+
+def test_collection_timeout_retains_partial_log_and_failure_report(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    from scripts import run_isolated_release_regression as runner
+
+    output = tmp_path / "dist" / "report"
+    monkeypatch.setattr(runner, "ROOT", tmp_path)
+    monkeypatch.setattr(runner.sys, "argv", ["runner", "--output", str(output)])
+    monkeypatch.setattr(runner.subprocess, "check_output", lambda *args, **kwargs: "abc\n")
+
+    def timeout(command, log, seconds, env, *, cwd):
+        assert "--collect-only" in command
+        assert Path(env["TEMP"]).is_relative_to(output)
+        assert seconds == 600
+        log.write_text("tests/test_foo.py::test_partial\n", encoding="utf-8")
+        return {"exit_code": 1, "timed_out": True, "seconds": 600}
+
+    monkeypatch.setattr(runner, "run_command", timeout)
+    assert runner.main() == 1
+    result = json.loads((output / "summary.json").read_text(encoding="utf-8"))
+    assert result["status"] == "collection_timed_out"
+    assert result["collected"] == 1
+    assert result["collection_exit"] == 1
+    assert result["temporary_fixture_root_removed"] is True
+    assert "test_partial" in (output / "collection.log").read_text(encoding="utf-8")

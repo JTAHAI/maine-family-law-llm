@@ -216,26 +216,31 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--batch-tests", type=int, default=250)
     parser.add_argument("--batch-timeout", type=int, default=1800)
+    parser.add_argument("--collection-timeout", type=int, default=600)
     parser.add_argument("--snapshot-source", action="store_true")
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT / "dist") or output == ROOT / "dist":
         parser.error("Evidence must be a dedicated repository dist child")
-    if output.exists() or args.batch_tests < 1 or args.batch_timeout < 60:
+    if output.exists() or args.batch_tests < 1 or min(args.batch_timeout, args.collection_timeout) < 60:
         parser.error("Use a new evidence directory and positive batch limits")
     output.mkdir(parents=True)
     source_root, snapshot = snapshot_source(output) if args.snapshot_source else (ROOT, None)
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["PYTHONPATH"] = str(source_root) + os.pathsep + str(source_root / "src")
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
     collection_command = [sys.executable, "-m", "pytest", "-o", "addopts=", "--collect-only", "-q"]
-    collected = subprocess.run(
-        collection_command, cwd=source_root, env=env, capture_output=True, text=True, timeout=180
-    )
-    (output / "collection.log").write_text(collected.stdout + collected.stderr, encoding="utf-8")
+    collection_log = output / "collection.log"
+    with fixture_workspace(output) as collection_temp:
+        collection_env = {**env, "TEMP": collection_temp, "TMP": collection_temp, "TMPDIR": collection_temp}
+        collected = run_command(
+            collection_command, collection_log, args.collection_timeout, collection_env,
+            cwd=source_root,
+        )
     nodeids = [
         line.strip()
-        for line in collected.stdout.splitlines()
+        for line in collection_log.read_text(encoding="utf-8", errors="replace").splitlines()
         if line.startswith(("tests/", "tests\\")) and "::" in line
     ]
     report = {
@@ -247,7 +252,9 @@ def main() -> int:
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip(),
         "collection_command": collection_command,
-        "collection_exit": collected.returncode,
+        "collection_exit": collected["exit_code"],
+        "collection_timed_out": collected["timed_out"],
+        "collection_seconds": collected["seconds"],
         "collected": len(nodeids),
         "collection_sha256": hashlib.sha256("\n".join(nodeids).encode()).hexdigest(),
         "batches": [],
@@ -258,17 +265,20 @@ def main() -> int:
         "legal_or_installed_app_certification": False,
     }
     report_path = output / "summary.json"
-    if collected.returncode or not nodeids or len(nodeids) != len(set(nodeids)):
-        report["status"] = "collection_failed"
+    if collected["timed_out"] or collected["exit_code"] or not nodeids or len(nodeids) != len(set(nodeids)):
+        report["status"] = "collection_timed_out" if collected["timed_out"] else "collection_failed"
+        report["temporary_fixture_root_removed"] = not Path(collection_temp).exists()
         write_report(report_path, report)
         return 1
     write_report(output / "collection.json", {"nodeids": nodeids})
+    write_report(report_path, report)
     batches = partition_modules(nodeids, args.batch_tests)
     started = time.monotonic()
     # Owned, ephemeral fixture storage only; never reuse or delete user paths.
     with fixture_workspace(output) as temporary:
         env["TEMP"] = temporary
         env["TMP"] = temporary
+        env["TMPDIR"] = temporary
         for index, expected in enumerate(batches, 1):
             name = f"batch-{index:02d}"
             argfile = output / f"{name}.args"
