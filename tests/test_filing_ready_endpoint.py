@@ -1,4 +1,5 @@
 from app.api.routes.review import filing_ready
+from fastapi.testclient import TestClient
 
 
 def _complete_gate_payload() -> dict:
@@ -65,3 +66,21 @@ def test_public_filing_ready_check_cannot_self_attest_human_review():
     assert response["assessment_scope"] == (
         "request_payload_without_authenticated_review_ledger"
     )
+
+
+def test_filing_ready_http_rejects_malformed_report_without_server_error():
+    from app.api.main import app
+
+    payload = _complete_gate_payload()
+    payload["workflow_blockers"] = True
+    payload["verification_report"] = {"blockers": None}
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/filing-ready/check",
+            json=payload,
+            headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"},
+        )
+    assert response.status_code == 200
+    assert response.json()["filing_ready"] is False
+    assert "workflow_blockers_invalid" in response.json()["blockers"]
+    assert "verification_report_blockers_invalid" in response.json()["blockers"]

@@ -63,6 +63,31 @@ VERIFIED_AUTHORITY_STATUSES = {
 QUOTE_PASS_STATUSES = {"exact", "fuzzy", "quote_exact_match", "quote_fuzzy_match", "found"}
 CLAIM_PASS_STATUSES = {"supported"}
 
+BLOCKER_REPORTS = (
+    ("verification_report", "verification_report_invalid"),
+    ("procedure_posture_report", "procedure_posture_report_invalid"),
+    ("posture_report", "posture_report_invalid"),
+    ("forms_report", "forms_report_invalid"),
+    ("form_freshness_report", "form_freshness_report_invalid"),
+    ("findings_review", "findings_review_invalid"),
+    ("findings_report", "findings_report_invalid"),
+    ("privacy_report", "privacy_report_invalid"),
+    ("privacy_review", "privacy_review_invalid"),
+)
+
+
+def _valid_span(start: Any, end: Any) -> bool:
+    return type(start) is int and type(end) is int and 0 <= start < end
+
+
+def _append_blockers(value: Any, blockers: list[str], invalid_code: str) -> None:
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        blockers.append(invalid_code)
+        return
+    blockers.extend(item.strip() for item in value)
+
 
 class FilingReadyGate:
     """Final export gate for review-required Maine family-law work product.
@@ -74,7 +99,7 @@ class FilingReadyGate:
     every mandatory check is independently satisfied.
     """
 
-    gate_version = "pass38-filing-ready-hardening-v2"
+    gate_version = "pass38-filing-ready-hardening-v3"
 
     def evaluate(self, payload: dict[str, Any]) -> dict[str, Any]:
         blockers: list[str] = []
@@ -91,55 +116,23 @@ class FilingReadyGate:
         # These legacy summary fields can block a result, but a true value does
         # not replace the evidence required by the derived checks above.
         for check in PASS7_MANDATORY_CHECKS:
-            if check in payload and not payload.get(check, False):
+            if check in payload and payload[check] is not True:
                 blockers.append(check)
 
-        verification_report = payload.get("verification_report") or {}
-        if isinstance(verification_report, dict):
-            # A verifier report's ``blockers`` collection is authoritative. An
-            # unrecognized blocker must fail closed instead of being silently
-            # downgraded because a caller supplied optimistic summary booleans.
-            for blocker in verification_report.get("blockers", []):
-                value = str(blocker).strip()
-                if value:
-                    blockers.append(value)
-        else:
-            blockers.append("verification_report_invalid")
-
         blockers.extend(derived["blockers"])
-        blockers.extend(
-            str(item) for item in (payload.get("workflow_blockers") or []) if str(item)
-        )
-        blockers.extend(
-            str(item)
-            for item in (payload.get("review_annotation_blockers") or [])
-            if str(item)
-        )
-        procedure_report = payload.get("procedure_posture_report") or {}
-        if isinstance(procedure_report, dict):
-            blockers.extend(
-                str(item) for item in (procedure_report.get("blockers") or []) if str(item)
-            )
-        forms_report = payload.get("forms_report") or {}
-        if isinstance(forms_report, dict):
-            blockers.extend(
-                str(item) for item in (forms_report.get("blockers") or []) if str(item)
-            )
-        findings_report = payload.get("findings_review") or payload.get("findings_report") or {}
-        if isinstance(findings_report, dict):
-            blockers.extend(
-                str(item) for item in (findings_report.get("blockers") or []) if str(item)
-            )
-        privacy_report = payload.get("privacy_report") or payload.get("privacy_review") or {}
-        if isinstance(privacy_report, dict):
-            blockers.extend(
-                str(item) for item in (privacy_report.get("blockers") or []) if str(item)
-            )
-
-        if payload.get("review_required", True) and not payload.get(
-            "human_review_complete", False
-        ):
-            blockers.append("human_review_complete")
+        for field in ("workflow_blockers", "review_annotation_blockers"):
+            if field in payload:
+                _append_blockers(payload[field], blockers, f"{field}_invalid")
+        for field, invalid_code in BLOCKER_REPORTS:
+            if field not in payload:
+                continue
+            report = payload[field]
+            if not isinstance(report, dict):
+                blockers.append(invalid_code)
+            elif "blockers" in report:
+                _append_blockers(report["blockers"], blockers, f"{field}_blockers_invalid")
+        if "review_required" in payload and type(payload["review_required"]) is not bool:
+            blockers.append("review_required_invalid")
 
         blockers = sorted(set(blockers))
         override_record = self._build_override_record(payload, blockers)
@@ -184,14 +177,10 @@ class FilingReadyGate:
     def _check_value(
         self, payload: dict[str, Any], check: str, derived: dict[str, Any]
     ) -> bool:
-        if check in payload:
-            return bool(payload.get(check)) and bool(derived["checks"].get(check, False))
-        for alias in LEGACY_CHECK_ALIASES.get(check, []):
-            if alias in payload and not payload.get(alias):
-                return False
-            if alias in payload and payload.get(alias):
-                return bool(derived["checks"].get(check, False))
-        return bool(derived["checks"].get(check, False))
+        fields = (check, *LEGACY_CHECK_ALIASES.get(check, ()))
+        return derived["checks"][check] and all(
+            payload[field] is True for field in fields if field in payload
+        )
 
     def _derive_checks(self, payload: dict[str, Any]) -> dict[str, Any]:
         blockers: list[str] = []
@@ -204,7 +193,7 @@ class FilingReadyGate:
             "procedure_posture_checked": self._procedure_checked(payload, blockers),
             "forms_current": self._forms_current(payload, blockers),
             "privacy_review_complete": self._privacy_reviewed(payload, blockers),
-            "human_review_complete": bool(payload.get("human_review_complete", False)),
+            "human_review_complete": payload.get("human_review_complete") is True,
         }
         return {"checks": checks, "blockers": blockers}
 
@@ -269,7 +258,7 @@ class FilingReadyGate:
             status = str(row.get("match_type", row.get("status", ""))).lower()
             start = row.get("start_offset", row.get("start"))
             end = row.get("end_offset", row.get("end"))
-            if status not in QUOTE_PASS_STATUSES or start is None or end is None:
+            if status not in QUOTE_PASS_STATUSES or not _valid_span(start, end):
                 identifier = row.get("source_id") or row.get("citation") or "unknown"
                 blockers.append(f"quote_span_not_found:{identifier}")
                 ok = False
@@ -298,7 +287,7 @@ class FilingReadyGate:
                 ok = False
                 continue
             status = str(row.get("support_status", row.get("status", ""))).lower()
-            if status not in CLAIM_PASS_STATUSES or row.get("supported") is False:
+            if status not in CLAIM_PASS_STATUSES or row.get("supported", True) is not True:
                 identifier = row.get("claim_id") or row.get("claim") or "unknown"
                 blockers.append(f"claim_not_supported:{identifier}")
                 ok = False
@@ -325,21 +314,16 @@ class FilingReadyGate:
             span = row.get("span") or row.get("source_span") or {}
             if not isinstance(span, dict):
                 span = {}
-            nested_span = (
-                span.get("start_offset") is not None
-                and span.get("end_offset") is not None
-            )
-            direct_span = (
-                row.get("start_offset") is not None
-                and row.get("end_offset") is not None
-            )
-            has_span = nested_span or direct_span
+            if span:
+                has_span = _valid_span(span.get("start_offset"), span.get("end_offset"))
+            else:
+                has_span = _valid_span(row.get("start_offset"), row.get("end_offset"))
             identifier = row.get("fact_id") or row.get("fact") or "unknown"
             if not (source_id or source_ids) or not has_span:
                 blockers.append(f"fact_not_mapped:{identifier}")
                 ok = False
             support_status = str(row.get("support_status") or "supported").strip().lower()
-            if support_status != "supported" or row.get("supported") is False:
+            if support_status != "supported" or row.get("supported", True) is not True:
                 blockers.append(
                     f"fact_not_supported:{identifier}:{support_status or 'unknown'}"
                 )
@@ -361,9 +345,7 @@ class FilingReadyGate:
             return False
         if report.get("blockers"):
             return False
-        if report.get("status") in {"checked", "pass", "verified"} or report.get(
-            "procedural_posture"
-        ):
+        if report.get("status") in ("checked", "pass", "verified"):
             return declared is not False
         blockers.append("procedure_posture_report_incomplete")
         return False
@@ -380,8 +362,14 @@ class FilingReadyGate:
             return False
         stale_forms = forms_report.get("stale_forms", [])
         unknown_forms = forms_report.get("unknown_forms", [])
+        if not isinstance(stale_forms, list) or not isinstance(unknown_forms, list):
+            blockers.append("forms_freshness_report_invalid")
+            return False
         if not stale_forms and not unknown_forms and not forms_report.get("blockers"):
-            return declared is not False
+            if forms_report.get("status") in ("checked", "pass", "verified"):
+                return declared is not False
+            blockers.append("forms_freshness_report_incomplete")
+            return False
         if stale_forms:
             blockers.extend(f"stale_form:{form_id}" for form_id in stale_forms)
         if unknown_forms:
@@ -397,7 +385,7 @@ class FilingReadyGate:
         if report.get("blockers"):
             return False
         report_complete = (
-            report.get("status") in {"checked", "complete", "pass", "verified"}
+            report.get("status") in ("checked", "complete", "pass", "verified")
             or report.get("complete") is True
             or report.get("privacy_review_complete") is True
         )

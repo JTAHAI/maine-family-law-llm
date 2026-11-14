@@ -59,11 +59,13 @@ def filing_ready(
     gate_payload = dict(payload)
     client_claimed_human_review = gate_payload.get("human_review_complete") is True
     gate_payload["human_review_complete"] = False
-    workflow_blockers = [
-        str(item) for item in (gate_payload.get("workflow_blockers") or []) if str(item)
+    workflow_blockers = gate_payload.get("workflow_blockers", [])
+    if not isinstance(workflow_blockers, list):
+        workflow_blockers = ["workflow_blockers_invalid"]
+    gate_payload["workflow_blockers"] = [
+        *workflow_blockers,
+        "authenticated_human_review_record_required",
     ]
-    workflow_blockers.append("authenticated_human_review_record_required")
-    gate_payload["workflow_blockers"] = sorted(set(workflow_blockers))
 
     result = FilingReadyGate().evaluate(gate_payload)
     result["blocked_export_explanation"] = result.get("blockers", [])

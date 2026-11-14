@@ -55,6 +55,7 @@ def _complete_payload():
         ],
         "procedure_posture_report": {"status": "checked", "procedural_posture": "post_judgment"},
         "forms_report": {"status": "checked", "stale_forms": [], "unknown_forms": []},
+        "privacy_report": {"status": "checked", "blockers": []},
     }
 
 
