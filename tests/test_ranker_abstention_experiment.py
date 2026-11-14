@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from scripts import verify_ranker_abstention as experiment
+from scripts import acquire_compact_model_candidates as candidates
 from scripts.compact_ranker_abstention_challenge import CALIBRATION, EVALUATION
 
 
@@ -60,7 +61,10 @@ def test_evaluation_wrong_answers_and_abstentions_are_not_hidden():
 
 @pytest.mark.parametrize("failure", [None, "evaluation", "cleanup", "cutoff_tamper"])
 def test_cutoff_frozen_before_evaluation_and_failures_preserved(tmp_path, monkeypatch, failure):
-    monkeypatch.setattr(experiment, "OUTPUT", tmp_path)
+    monkeypatch.setattr(candidates, "ROOT", tmp_path)
+    output = tmp_path / "dist" / "abstention"
+    output.mkdir(parents=True)
+    monkeypatch.setattr(experiment, "OUTPUT", output)
     monkeypatch.setattr(experiment, "pinned_inventory", lambda *_: ())
 
     class Worker:
@@ -79,11 +83,11 @@ def test_cutoff_frozen_before_evaluation_and_failures_preserved(tmp_path, monkey
                 set(p) == {"source_id", "matter_id", "lane", "text"} for p in request["passages"]
             )
             if self.completed_requests == 16:
-                assert (tmp_path / "ranker-abstention-unit-cutoff.json").exists()
+                assert (output / "ranker-abstention-unit-cutoff.json").exists()
                 if failure == "evaluation":
                     raise ValueError("private exception must not be printed")
                 if failure == "cutoff_tamper":
-                    (tmp_path / "ranker-abstention-unit-cutoff.json").write_text("changed fixture")
+                    (output / "ranker-abstention-unit-cutoff.json").write_text("changed fixture")
             self.completed_requests += 1
             return [
                 {"source_index": 0, "relevance_score": 1.0},
@@ -96,7 +100,7 @@ def test_cutoff_frozen_before_evaluation_and_failures_preserved(tmp_path, monkey
 
     monkeypatch.setattr(experiment, "IsolatedCompactRanker", Worker)
     assert experiment.execute("unit") is (failure is None)
-    path = tmp_path / "ranker-abstention-unit.json"
+    path = output / "ranker-abstention-unit.json"
     report = json.loads(path.read_text())
     assert (
         not report["ga_ready"]
