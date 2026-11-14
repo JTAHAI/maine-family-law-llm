@@ -26,8 +26,9 @@ jobs:
       - name: Install test dependencies before collection
         shell: pwsh
         run: |
-          python -m pip install -e ".[api,dev]" "python-multipart>=0.0.20,<0.1"
+          python -m pip install -e ".[api,dev,release-hardening]" "python-multipart>=0.0.20,<0.1"
           if ($LASTEXITCODE -ne 0) { throw "Test dependency installation failed." }
+          python -m pip check
 
       - name: Run targeted tests
         shell: pwsh
@@ -55,4 +56,10 @@ jobs:
             dist/store/msix/*.msix
             dist/store/evidence/*.json
             dist/store/evidence/*.txt
-            dist/ci/targeted-tests.xml
+
+      - name: Retain Windows test results even if packaging is blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package-test-results-${{ github.sha }}
+          path: dist/ci/targeted-tests.xml
