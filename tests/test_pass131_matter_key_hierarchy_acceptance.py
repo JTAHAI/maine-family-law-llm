@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 import json
 from pathlib import Path
 
@@ -113,6 +115,25 @@ def test_canonical_key_routes_require_scope_admin_session_and_review(monkeypatch
     assert client.post("/api/security/privacy/matter-key/rotate", headers=reviewer_headers, json={}).status_code == 403
 
     action = "security_privacy_matter_key_enroll_recovery"
+    mint_body = {"action": action}
+    spoofed_admin = {**reviewer_headers, "X-User-Role": "admin"}
+    rejected = client.post("/api/security/privacy/session", headers=spoofed_admin, json=mint_body)
+    assert rejected.status_code == 403
+    operator_token = "d" * 64
+    monkeypatch.setenv("MFL_MATTER_KEY_ADMIN_TENANT", "local-desktop")
+    monkeypatch.setenv(
+        "MFL_MATTER_KEY_ADMIN_BEARER_SHA256",
+        hashlib.sha256(operator_token.encode("ascii")).hexdigest(),
+    )
+    operator = {**spoofed_admin, "Authorization": f"Bearer {operator_token}"}
+    wrong_tenant = client.post(
+        "/api/security/privacy/session",
+        headers={**operator, "X-Tenant-Id": "fictional-other"},
+        json=mint_body,
+    )
+    assert wrong_tenant.status_code == 403
+    minted = client.post("/api/security/privacy/session", headers=operator, json=mint_body)
+    assert minted.status_code == 200
     capability = mint_session_capability(
         user_role="admin", tenant_id="local-desktop", matter_id="matter-api", action=action
     )
@@ -123,9 +144,20 @@ def test_canonical_key_routes_require_scope_admin_session_and_review(monkeypatch
         "X-CSRF-Token": capability.csrf_token,
         "host": "testserver",
     }
-    enrolled = client.post(
+    rejected_operation = client.post(
         "/api/security/privacy/matter-key/enroll_recovery",
         headers=admin_headers,
+        json={"recovery_secret": "fictional-api-recovery-131", "approved": True},
+    )
+    assert rejected_operation.status_code == 403
+    enrolled = client.post(
+        "/api/security/privacy/matter-key/enroll_recovery",
+        headers={
+            **admin_headers,
+            "Authorization": operator["Authorization"],
+            "X-MFLL-Session-Token": minted.json()["session"]["token"],
+            "X-CSRF-Token": minted.json()["session"]["csrf_token"],
+        },
         json={"recovery_secret": "fictional-api-recovery-131", "approved": True},
     )
     assert enrolled.status_code == 200

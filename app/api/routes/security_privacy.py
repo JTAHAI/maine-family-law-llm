@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 import platform
+import re
 import sys
 from pathlib import Path
 
@@ -145,6 +148,23 @@ def _require_admin_role(x_user_role: str | None) -> None:
         raise HTTPException(status_code=403, detail={"error": "matter_key_admin_role_required"})
 
 
+def _require_matter_key_operator(
+    request: Request, x_user_role: str | None, x_tenant_id: str | None
+) -> None:
+    """Authorize maintenance with an operator credential, not a role header."""
+    _require_admin_role(x_user_role)
+    tenant = os.environ.get("MFL_MATTER_KEY_ADMIN_TENANT", "").strip()
+    expected = os.environ.get("MFL_MATTER_KEY_ADMIN_BEARER_SHA256", "").strip().lower()
+    values = request.headers.getlist("authorization")
+    match = re.fullmatch(r"Bearer ([a-fA-F0-9]{64})", values[0]) if len(values) == 1 else None
+    if (
+        not tenant or x_tenant_id != tenant or not re.fullmatch(r"[a-f0-9]{64}", expected)
+        or match is None
+        or not hmac.compare_digest(hashlib.sha256(match[1].encode("ascii")).hexdigest(), expected)
+    ):
+        raise HTTPException(status_code=403, detail={"error": "matter_key_operator_authentication_required"})
+
+
 def _support_bundle_inputs(payload: dict) -> dict:
     main_api = _main_api()
     return {
@@ -224,7 +244,7 @@ def manage_matter_key(
     x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
 ):
     _enforce_local_request(request)
-    _require_admin_role(x_user_role)
+    _require_matter_key_operator(request, x_user_role, x_tenant_id)
     allowed_operations = {
         "enroll_recovery",
         "rotate",
@@ -426,6 +446,8 @@ def mint_session(
     action = str(request_payload.get("action") or "security_privacy_write")
     if action not in _SESSION_ACTIONS:
         raise HTTPException(status_code=422, detail={"error": "session_action_not_allowlisted"})
+    if action.startswith("security_privacy_matter_key_"):
+        _require_matter_key_operator(request, x_user_role, x_tenant_id)
     capability = mint_session_capability(
         user_role=str(x_user_role or "viewer"),
         tenant_id=str(x_tenant_id or "tenant_unassigned"),

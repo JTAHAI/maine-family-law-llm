@@ -19,3 +19,15 @@ python scripts/build-enterprise-acceptance-evidence.py enterprise_acceptance_evi
 ```
 
 For Windows local testing under `C:\dev\ME_FM_LLM`, use `scripts/run-final-local-acceptance.ps1` after staging the external data root at `C:\dev\ME_FM_LLM_data`.
+
+### Privileged matter-key maintenance
+
+The loopback matter-key mutation and its capability-mint action require a
+separately provisioned maintenance credential. Configure the server process
+with `MFL_MATTER_KEY_ADMIN_TENANT` and `MFL_MATTER_KEY_ADMIN_BEARER_SHA256` (the
+SHA-256 of the ASCII representation of a random 32-byte hex token). Send the
+token as `Authorization: Bearer <token>` on both requests, with the matching
+tenant and admin role. Keep the token out of shell history, logs, and all
+repository files. Changing the configured digest revokes the old credential.
+Local research, working drafts, and matter-key status require no maintenance
+token. This credential is not an enterprise identity provider.
