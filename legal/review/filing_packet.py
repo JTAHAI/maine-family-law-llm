@@ -142,9 +142,7 @@ def _atomic_write(path: Path, data: bytes) -> None:
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.is_file() or path.is_symlink():
         raise ReviewedFilingPacketError("filing_packet_record_unavailable", "A filing-packet record is unavailable.", status_code=404)
-    raw = path.read_bytes()
-    if len(raw) > MAX_FILE_BYTES:
-        raise ReviewedFilingPacketError("filing_packet_record_too_large", "A filing-packet record is unexpectedly large.", status_code=409)
+    raw = _read_packet_file(path)
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -152,6 +150,15 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ReviewedFilingPacketError("filing_packet_record_invalid", "A filing-packet record is invalid.", status_code=409)
     return payload
+
+
+def _read_packet_file(path: Path) -> bytes:
+    try:
+        return read_bounded_regular_file(path, max_bytes=MAX_FILE_BYTES)
+    except OSError as exc:
+        raise ReviewedFilingPacketError(
+            "artifact_unavailable", "The filing-packet artifact could not be read safely.", status_code=409,
+        ) from exc
 
 
 def _line_tokens(text: str) -> set[str]:
@@ -468,6 +475,8 @@ class ReviewedFilingPacketStore:
         current_authority_build_id = _safe_text(current_authority_build_id, 128)
         if prior_build_id and current_authority_build_id and prior_build_id != current_authority_build_id:
             blockers.append(f"authority_generation_changed:{prior_build_id}:{current_authority_build_id}")
+        if prior_build_id and not current_authority_build_id:
+            blockers.append("authority_generation_unavailable")
         prior_sources = prior_authority.get("sources") or []
         checked: list[dict[str, Any]] = []
         for raw in prior_sources:
@@ -518,7 +527,9 @@ class ReviewedFilingPacketStore:
                 prior_hash = str(record.get("source_hash") or "")
                 if current_records is not None and record_id not in record_map:
                     blockers.append(f"fact_source_deleted_or_unavailable:{record_id or 'unknown'}")
-                elif record_id in record_map and prior_hash and record_map[record_id] and prior_hash != record_map[record_id]:
+                elif record_id in record_map and (not prior_hash or not record_map[record_id]):
+                    blockers.append(f"fact_source_hash_unavailable:{record_id}")
+                elif record_id in record_map and prior_hash != record_map[record_id]:
                     blockers.append(f"fact_source_hash_changed:{record_id}")
         return {
             "prior_authority_build_id": prior_build_id,
@@ -693,20 +704,24 @@ class ReviewedFilingPacketStore:
         if manifest.get("build_id") != build_id:
             blockers.append("manifest_build_id_mismatch")
         expected_names = {"reviewed-filing-packet.json", "reviewed-filing-packet.html", "reviewed-filing-packet-receipt.json"}
-        rows = manifest.get("files") or []
+        rows = manifest.get("files")
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            return {"status": "blocked", "build_id": build_id, "blockers": ["manifest_artifact_set_invalid"], "review_required": True}
         names = [str(row.get("name") or "") for row in rows if isinstance(row, dict)]
         if set(names) != expected_names or len(names) != len(set(names)):
             blockers.append("manifest_artifact_set_invalid")
         for row in rows:
-            name = Path(str(row.get("name") or "")).name
+            name = str(row.get("name") or "")
+            if name not in expected_names:
+                continue
             path = build_dir / name
             if not path.is_file() or path.is_symlink():
                 blockers.append(f"artifact_unavailable:{name}")
                 continue
-            raw = path.read_bytes()
+            raw = _read_packet_file(path)
             if _sha(raw) != str(row.get("sha256") or ""):
                 blockers.append(f"artifact_hash_mismatch:{name}")
-            if len(raw) != int(row.get("size_bytes") or -1):
+            if type(row.get("size_bytes")) is not int or len(raw) != row["size_bytes"]:
                 blockers.append(f"artifact_size_mismatch:{name}")
         packet = _read_json(build_dir / "reviewed-filing-packet.json")
         stored = str(packet.get("packet_sha256") or "")
@@ -729,6 +744,16 @@ class ReviewedFilingPacketStore:
             return verification
         build_dir = self.builds / build_id
         packet = _read_json(build_dir / "reviewed-filing-packet.json")
+        if not self._matches_current_revision(packet):
+            return {
+                "status": "stale", "build_id": build_id, "artifacts": [],
+                "packet": {
+                    "document_id": packet.get("document_id"), "revision_id": packet.get("revision_id"),
+                    "review_required": True, "filing_ready": False,
+                    "blockers": ["filing_packet_revision_changed"],
+                },
+                "verification": verification, "review_required": True,
+            }
         artifacts = []
         for name, media_type in {
             "reviewed-filing-packet.json": "application/json",
@@ -736,9 +761,29 @@ class ReviewedFilingPacketStore:
             "reviewed-filing-packet-receipt.json": "application/json",
         }.items():
             path = build_dir / name
-            raw = path.read_bytes()
+            raw = _read_packet_file(path)
             artifacts.append({"name": name, "sha256": _sha(raw), "size_bytes": len(raw), "media_type": media_type})
         return {"status": "pass", "build_id": build_id, "packet": packet, "artifacts": artifacts, "verification": verification, "review_required": True}
+
+    def _matches_current_revision(self, packet: dict[str, Any]) -> bool:
+        try:
+            document = get_document(self.case_root, str(packet.get("document_id") or ""))
+        except DocumentWorkspaceError:
+            return False
+        return (
+            document.get("current_revision_id") == packet.get("revision_id")
+            and document.get("content_sha256") == packet.get("document_content_sha256")
+        )
+
+    def read_current_artifact(self, build_id: str, filename: str) -> tuple[bytes, str, str]:
+        path, media_type = self.resolve_artifact(build_id, filename)
+        packet = _read_json(path.parent / "reviewed-filing-packet.json")
+        raw = _read_packet_file(path)
+        if not self._matches_current_revision(packet):
+            raise ReviewedFilingPacketError(
+                "filing_packet_revision_changed", "Rebuild the packet for the current revision.", status_code=409,
+            )
+        return raw, media_type, path.name
 
     def resolve_artifact(self, build_id: str, filename: str) -> tuple[Path, str]:
         allowed = {

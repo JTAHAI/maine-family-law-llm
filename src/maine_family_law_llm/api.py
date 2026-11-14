@@ -12130,20 +12130,21 @@ if FastAPI is not None:
         ):
             raise HTTPException(status_code=404, detail="filing_packet_artifact_not_available")
         try:
-            path, media_type = ReviewedFilingPacketStore(case_root).resolve_artifact(
+            raw, media_type, filename = ReviewedFilingPacketStore(case_root).read_current_artifact(
                 str(binding.get("build_id") or ""), str(binding.get("filename") or "")
             )
         except ReviewedFilingPacketError as exc:
             _raise_filing_packet_error(exc)
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        actual = hashlib.sha256(raw).hexdigest()
         if actual != str(binding.get("sha256") or ""):
             raise HTTPException(status_code=409, detail="filing_packet_artifact_hash_mismatch")
-        return FileResponse(
-            path,
-            filename=path.name,
+        return Response(
+            raw,
             media_type=media_type,
-            content_disposition_type="attachment",
-            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+            headers={
+                "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
         )
 
     def _raise_authority_impact_error(exc: AuthorityImpactError) -> None:
