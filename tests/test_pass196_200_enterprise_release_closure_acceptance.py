@@ -184,17 +184,48 @@ def test_candidate_bound_release_evidence_requires_actual_current_matching_bytes
         _write(trust_path, {"schema_version": "enterprise_ga_evidence_trust_v1", **trust})
         monkeypatch.setenv("MFL_ENTERPRISE_GA_EVIDENCE_TRUST_SHA256", _sha(trust_path))
 
+    approving_key = Ed25519PrivateKey.generate()
+
+    def authorize(*, signer=approving_key, **overrides):
+        now = datetime.now(UTC)
+        approval, trust = _signed({
+            "schema_version": "enterprise_ga_release_authorization_v1",
+            "candidate": candidate, "manifest_sha256": _sha(root / "enterprise_ga_evidence_manifest.json"),
+            "axes": ["store", "enterprise"], "decision": "approve_ga_eligibility",
+            "implementation_complete": True, "qualification_complete": True, "synthetic": False,
+            "issued_at": now.isoformat(), "expires_at": (now + timedelta(days=7)).isoformat(),
+            **overrides,
+        }, key=signer)
+        _write(root / "enterprise_ga_release_authorization.json", approval)
+        trust_path = root / "enterprise_ga_release_authority_trust.json"
+        _write(trust_path, {"schema_version": "enterprise_ga_release_authority_trust_v1", **trust})
+        monkeypatch.setenv("MFL_ENTERPRISE_GA_RELEASE_AUTHORITY_TRUST_SHA256", _sha(trust_path))
+
     seal()
     result = service.assemble(evidence_root=root).as_dict()
     assert result["candidate_identity_verified"] and result["attestation_verified"]
     assert set(result["byte_verified_evidence_categories"]) == set(REQUIRED_DECISION_EVIDENCE)
     assert result["ga_eligible"] is result["ga_shipped"] is False
+    authorize(signer=key)
+    assert "enterprise_ga_release_authority_not_independent" in service.assemble(evidence_root=root).blockers
+    authorize(expires_at=(datetime.now(UTC) - timedelta(days=1)).isoformat())
+    assert "enterprise_ga_release_authorization_date_invalid" in service.assemble(evidence_root=root).blockers
+    authorize()
+    approved = service.assemble(evidence_root=root).as_dict()
+    assert approved["status"] == "eligible"
+    assert approved["ga_eligible"] and approved["release_authorization_verified"]
+    assert approved["ga_shipped"] is False
+    monkeypatch.setenv("MFL_ENTERPRISE_GA_RELEASE_AUTHORITY_TRUST_SHA256", "0" * 64)
+    assert not service.assemble(evidence_root=root).as_dict()["ga_eligible"]
+    authorize()
     (root / "decision-evidence" / "live_authority.json").write_text("{}", encoding="utf-8")
     assert "enterprise_ga_evidence_bytes_unverified:live_authority" in service.assemble(evidence_root=root).blockers
     seal(invalid=("synthetic", True))
     assert "enterprise_ga_evidence_envelope_mismatch:live_authority" in service.assemble(evidence_root=root).blockers
     seal(invalid=("generated_at", (datetime.now(UTC) - timedelta(days=91)).isoformat()))
     assert "enterprise_ga_evidence_date_invalid:live_authority" in service.assemble(evidence_root=root).blockers
+    seal()
+    assert "enterprise_ga_release_authorization_candidate_mismatch" in service.assemble(evidence_root=root).blockers
     monkeypatch.setenv("MFL_GA_CANDIDATE_GIT_SHA", "c" * 40)
     mismatched = service.assemble(evidence_root=root)
     assert "enterprise_ga_candidate_identity_mismatch" in mismatched.blockers

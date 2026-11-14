@@ -276,8 +276,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if request.url.path in {
             "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
         } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/",
-                                          "/api/reviewed-filing-packet/", "/api/admin/legal-holds",
-                                          "/api/admin/retention-plans")) or (
+                                          "/api/reviewed-filing-packet/", "/api/admin/",
+                                          "/api/authority-updates/")) or (
             request.url.path.startswith("/api/document-workspace/documents/")
             and "/review/" in request.url.path
         ):

@@ -106,12 +106,20 @@ def test_pass40_production_routes_require_admin_and_use_selected_upload(monkeypa
     channel.install(_bundle(tmp_path / "signed-source", key))
     monkeypatch.setattr(production, "authority_update_channel", lambda: channel)
     client = TestClient(production.app)
+    token = "b" * 64
+    monkeypatch.setenv("MFL_AUTHORITY_OPERATOR_TENANT", "tenant-portability")
+    monkeypatch.setenv("MFL_AUTHORITY_OPERATOR_BEARER_SHA256", hashlib.sha256(token.encode()).hexdigest())
+    headers = {"X-User-Role": "admin", "X-Tenant-Id": "tenant-portability",
+               "X-MFLL-Idempotency-Key": "authority-export-fixture-001"}
 
     assert client.post("/api/authority-updates/export", json={}).status_code == 403
+    assert client.post("/api/authority-updates/export", json={}, headers=headers).status_code == 403
+    headers["Authorization"] = "Bearer " + token
+    assert client.post("/api/authority-updates/export", json={}, headers={**headers, "X-Tenant-Id": "other"}).status_code == 403
     exported = client.post(
         "/api/authority-updates/export",
         json={},
-        headers={"X-User-Role": "admin", "X-Tenant-Id": "tenant-portability"},
+        headers=headers,
     )
     assert exported.status_code == 200
     assert exported.json()["signature_verified"] is True
@@ -122,13 +130,15 @@ def test_pass40_production_routes_require_admin_and_use_selected_upload(monkeypa
     monkeypatch.setattr(production, "authority_update_channel", lambda: receiving)
     response = client.post(
         "/api/authority-updates/import-upload",
-        headers={"X-User-Role": "admin", "X-Tenant-Id": "tenant-portability"},
+        headers=headers,
         files={"bundle": (archive.name, archive.read_bytes(), "application/zip")},
     )
     assert response.status_code == 200
     assert response.json()["status"] == "imported_and_activated"
     assert response.json()["audit_event"]["action"] == "authority_bundle_upload_import"
     assert receiving.status()["active"]["bundle_id"] == "portable-authority-1"
+    monkeypatch.setenv("MFL_AUTHORITY_OPERATOR_BEARER_SHA256", hashlib.sha256(b"c" * 64).hexdigest())
+    assert client.post("/api/authority-updates/export", json={}, headers=headers).status_code == 403
 
 
 def test_pass40_production_ui_has_explicit_authorization_and_upload_path() -> None:

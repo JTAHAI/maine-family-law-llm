@@ -309,7 +309,7 @@
       section.className = 'rail-panel authority-bundle-portability';
       section.dataset.drawerPanel = 'setup';
       section.hidden = true;
-      section.innerHTML = '<div class="rail-title">Offline authority portability</div><p class="field-hint">Export or import an already signed, hash-verified authority bundle. The app never creates a signing key, changes the MSIX, or downloads authority data.</p><label class="document-intelligence-option"><input id="authority-bundle-admin-ack" type="checkbox"> I am authorized to manage signed authority bundles on this device</label><label for="authority-bundle-id">Bundle ID for export (leave blank for the active bundle)</label><input id="authority-bundle-id" maxlength="100" placeholder="active signed bundle"><div class="row"><button class="secondary" id="authority-bundle-status" type="button">Check bundle status</button><button class="secondary" id="authority-bundle-export" type="button">Export signed bundle</button></div><label for="authority-bundle-file">Signed portable archive to import</label><input accept=".authority-bundle.zip,application/zip" id="authority-bundle-file" type="file"><div class="row"><button class="secondary" id="authority-bundle-import" type="button">Verify and import selected archive</button></div><div aria-live="polite" class="status-strip" id="authority-bundle-result">No bundle operation loaded. Import and export stay local, require an explicit authorization acknowledgement, and remain review-required.</div>';
+      section.innerHTML = '<div class="rail-title">Offline authority portability</div><p class="field-hint">Export or import an already signed, hash-verified authority bundle. The app never creates a signing key, changes the MSIX, or downloads authority data.</p><label class="document-intelligence-option"><input id="authority-bundle-admin-ack" type="checkbox"> I am authorized to manage signed authority bundles on this device</label><label>Authority bundle operator credential <input id="authority-bundle-credential" type="password" maxlength="64" autocomplete="off"></label><p class="field-hint">Enter the issued credential before importing or exporting. It is not saved.</p><label for="authority-bundle-id">Bundle ID for export (leave blank for the active bundle)</label><input id="authority-bundle-id" maxlength="100" placeholder="active signed bundle"><div class="row"><button class="secondary" id="authority-bundle-status" type="button">Check bundle status</button><button class="secondary" id="authority-bundle-export" type="button">Export signed bundle</button></div><label for="authority-bundle-file">Signed portable archive to import</label><input accept=".authority-bundle.zip,application/zip" id="authority-bundle-file" type="file"><div class="row"><button class="secondary" id="authority-bundle-import" type="button">Verify and import selected archive</button></div><div aria-live="polite" class="status-strip" id="authority-bundle-result">No bundle operation loaded. Import and export stay local, require an explicit authorization acknowledgement, and remain review-required.</div>';
       const anchor = document.getElementById('authority-rule-history-run')?.closest('section') || host;
       anchor.insertAdjacentElement('afterend', section);
       authorityBundleAdminAck = section.querySelector('#authority-bundle-admin-ack');
@@ -2307,7 +2307,10 @@
     async function fetchJson(url, options = {}) {
       let res;
       const preservation = /^\/api\/admin\/(legal-holds|retention-plans)(?:\/|$)/.exec(url);
-      const mutation = !preservation && isIdempotentMutation(url, options);
+      const governance = url.startsWith('/api/admin/') && !preservation;
+      const authorityOperator = /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
+      const operatorAction = preservation || governance || authorityOperator;
+      const mutation = !operatorAction && isIdempotentMutation(url, options);
       const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
@@ -2316,18 +2319,24 @@
       if (/^\/api\/document-workspace\/(?:review-queue|documents\/[^/]+\/reviews?(?:\/|$))/.test(url) && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/reviewed-filing-packet/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/authority-change-impact/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
-      if (preservation) {
-        const input = document.getElementById(preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential');
+      if (operatorAction) {
+        const input = document.getElementById(
+          governance ? 'governance-operator-credential' : authorityOperator ? 'authority-bundle-credential'
+            : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
+        );
         const token = input?.value.trim();
         if (input) input.value = '';
-        const matter = String(corpusLibraryPayload?.active_case_id || '');
-        if (!matter) throw new Error('Open the matter you are authorized to manage.');
+        if (preservation) {
+          const matter = String(corpusLibraryPayload?.active_case_id || '');
+          if (!matter) throw new Error('Open the matter you are authorized to manage.');
+          headers.set('X-MFLL-Matter-Id', matter);
+        }
         if (!/^[a-f0-9]{64}$/.test(token || '')) {
           input?.focus();
-          throw new Error('Enter the preservation operator credential issued for this matter.');
+          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : 'governance';
+          throw new Error(`Enter the ${lane} operator credential before continuing.`);
         }
         headers.set('Authorization', 'Bearer ' + token);
-        headers.set('X-MFLL-Matter-Id', matter);
         options = {...options, redirect: 'error'};
       }
       if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {

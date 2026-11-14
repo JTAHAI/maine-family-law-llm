@@ -57,14 +57,14 @@ def test_pass164_signed_lifecycle_validates_activates_diffs_and_rolls_back_encry
         raise AssertionError("cross-tenant policy-pack access was not refused")
 
 
-def test_pass164_fails_closed_for_untrusted_signature_and_production_ui_route(tmp_path: Path, monkeypatch) -> None:
+def test_pass164_fails_closed_for_untrusted_signature_and_production_ui_route(tmp_path: Path, monkeypatch, governance_headers) -> None:
     monkeypatch.setenv("MFL_SIGNED_POLICY_PACK_ROOT", str(tmp_path / "state"))
     monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency"))
     client = TestClient(production_app)
     payload = {"pack_id": "pack_ui_001", "version": "1.0.0", "controls": CONTROLS}
     denied = client.post("/api/admin/policy-packs/draft", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"}, json=payload)
     assert denied.status_code == 403
-    headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "e" * 32, "X-MFLL-Idempotency-Key": "signed-policy-draft-001"}
+    headers = {**governance_headers, "X-MFLL-Client-Session": "e" * 32, "X-MFLL-Idempotency-Key": "signed-policy-draft-001"}
     drafted = client.post("/api/admin/policy-packs/draft", headers=headers, json=payload)
     assert drafted.status_code == 200, drafted.text
     validated = client.post("/api/admin/policy-packs/pack_ui_001/validate", headers={**headers, "X-MFLL-Idempotency-Key": "signed-policy-validate-001"})
@@ -75,3 +75,24 @@ def test_pass164_fails_closed_for_untrusted_signature_and_production_ui_route(tm
     assert activation.status_code == 200 and activation.json()["status"] == "blocked"
     for relative in ("src/maine_family_law_llm/ui/workbench.html", "maine_family_law_llm/ui/workbench.html", "src/maine_family_law_llm/ui/workbench.js", "maine_family_law_llm/ui/workbench.js"):
         assert "signed-policy-pack" in (ROOT / relative).read_text(encoding="utf-8")
+
+
+def test_policy_pack_cannot_activate_or_reactivate_with_a_removed_key(tmp_path, monkeypatch):
+    trust, private = _trust_config(tmp_path)
+    monkeypatch.setenv("MFL_POLICY_PACK_TRUST_CONFIG", str(trust))
+    store = SignedPolicyPackStore(tmp_path / "state", encryption_key="0123456789abcdef")
+    tenant = "fictional-tenant"
+    first = "pack_first_001"
+    second = "pack_second_001"
+    queued = "pack_queued_001"
+    approved = _approve(store, private, tenant_id=tenant, pack_id=first)
+    assert "signature_material" not in approved["policy_pack"]
+    assert store.activate(tenant_id=tenant, pack_id=first)["status"] == "active"
+    _approve(store, private, tenant_id=tenant, pack_id=second)
+    assert store.activate(tenant_id=tenant, pack_id=second)["status"] == "active"
+    _approve(store, private, tenant_id=tenant, pack_id=queued)
+    trust.write_text(json.dumps({"schema_version": "policy_pack_trust_v1", "trusted_keys": {}}), encoding="utf-8")
+    assert store.activate(tenant_id=tenant, pack_id=queued)["status"] == "blocked"
+    rolled = store.rollback(tenant_id=tenant, pack_id=second)
+    assert "prior_signed_policy_pack_not_eligible_for_reactivation" in rolled["policy_pack"]["rollback_blockers"]
+    assert store.diff(tenant_id=tenant, pack_id=first)["status"] == "superseded"

@@ -39,19 +39,19 @@ def test_pass163_requires_four_distinct_opaque_actors_and_encrypts_tenant_receip
     assert b"authority_owner_001" not in encrypted.read_bytes()
 
 
-def test_pass163_canonical_production_route_admin_scope_and_shipped_ui(tmp_path: Path, monkeypatch) -> None:
+def test_pass163_canonical_production_route_admin_scope_and_shipped_ui(tmp_path: Path, monkeypatch, governance_headers) -> None:
     monkeypatch.setenv("MFL_SEPARATION_OF_DUTIES_ROOT", str(tmp_path / "receipts"))
     monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency"))
     client = TestClient(production_app)
     payload = {"review_id": "sod_review_003", "approvals": _approvals()}
     denied = client.post("/api/admin/separation-of-duties", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"}, json=payload)
     assert denied.status_code == 403
-    accepted = client.post("/api/admin/separation-of-duties", headers={"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "c" * 32, "X-MFLL-Idempotency-Key": "separation-of-duties-001"}, json=payload)
+    accepted = client.post("/api/admin/separation-of-duties", headers={**governance_headers, "X-MFLL-Client-Session": "c" * 32, "X-MFLL-Idempotency-Key": "separation-of-duties-001"}, json=payload)
     assert accepted.status_code == 200, accepted.text
     body = accepted.json()
     assert body["independence_satisfied"] is True
     assert body["audit_receipt"]["receipt"]["review_required"] is True
-    blocked = client.post("/api/admin/separation-of-duties", headers={"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "d" * 32, "X-MFLL-Idempotency-Key": "separation-of-duties-002"}, json={"review_id": "sod_review_004", "approvals": _approvals(duplicate=True)})
+    blocked = client.post("/api/admin/separation-of-duties", headers={**governance_headers, "X-MFLL-Client-Session": "d" * 32, "X-MFLL-Idempotency-Key": "separation-of-duties-002"}, json={"review_id": "sod_review_004", "approvals": _approvals(duplicate=True)})
     assert blocked.status_code == 200 and blocked.json()["status"] == "blocked"
     for relative in ("src/maine_family_law_llm/ui/workbench.html", "maine_family_law_llm/ui/workbench.html", "src/maine_family_law_llm/ui/workbench.js", "maine_family_law_llm/ui/workbench.js"):
         assert "separation-of-duties" in (ROOT / relative).read_text(encoding="utf-8")

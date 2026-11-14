@@ -33,12 +33,12 @@ def test_pass169_foss_is_inert_and_commercial_entitlement_is_offline_signed_and_
     assert b"organization_001" not in encrypted.read_bytes()
 
 
-def test_pass169_production_route_requires_admin_and_foss_mode_stays_unlicensed(tmp_path: Path, monkeypatch) -> None:
+def test_pass169_production_route_requires_admin_and_foss_mode_stays_unlicensed(tmp_path: Path, monkeypatch, governance_headers) -> None:
     monkeypatch.setenv("MFL_OFFLINE_ENTITLEMENT_ROOT", str(tmp_path / "state")); monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency"))
     client = TestClient(production_app)
     denied = client.get("/api/admin/offline-entitlement", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"})
     assert denied.status_code == 403
-    headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "e" * 32}
+    headers = {**governance_headers, "X-MFLL-Client-Session": "e" * 32}
     status = client.get("/api/admin/offline-entitlement", headers=headers)
     assert status.status_code == 200 and status.json()["status"] == "foss_no_entitlement_required"
     for relative in ("src/maine_family_law_llm/ui/workbench.html", "maine_family_law_llm/ui/workbench.html", "src/maine_family_law_llm/ui/workbench.js", "maine_family_law_llm/ui/workbench.js"):

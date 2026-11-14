@@ -52,6 +52,13 @@ reviewer. The format is the same: SHA-256 of a fresh random 32-byte token
 encoded as lowercase ASCII hex. Enter the issued token in the preservation
 panel for each action; a role header or checkbox alone cannot authorize it.
 
+The governance console and signed authority-bundle operations use separate
+tenant-scoped operator credentials: `MFL_GOVERNANCE_OPERATOR_TENANT` /
+`MFL_GOVERNANCE_OPERATOR_BEARER_SHA256` and `MFL_AUTHORITY_OPERATOR_TENANT` /
+`MFL_AUTHORITY_OPERATOR_BEARER_SHA256`. Use independent tokens in the same
+format and `local-desktop` for the shipped UI. Public authority status remains
+available without a credential.
+
 For source-runtime browser proof, run
 `python -B scripts/run_trusted_filing_browser_proof.py <existing-qa-scratch>`
 from a test worktree with its `api,dev` dependencies installed. The QA scratch
@@ -67,5 +74,13 @@ Pin the expected SHA, version and MSIX digest independently with
 each category's manifest digest to `decision-evidence/<category>.json`. The
 signed manifest binds these evidence envelopes to the exact candidate. Run
 `python scripts/verify-ga-decision-evidence.py --evidence-root <external-root>`
-to inspect the result. Verified bytes are not approval; the verifier still
-returns a blocker until genuine external release authority is supported.
+to inspect the result. Verified bytes are not approval. Eligibility also
+requires `enterprise_ga_release_authorization.json` with schema
+`enterprise_ga_release_authorization_v1`, signed by a distinct release key.
+Pin its trust file, `enterprise_ga_release_authority_trust.json` (schema
+`enterprise_ga_release_authority_trust_v1`), through
+`MFL_ENTERPRISE_GA_RELEASE_AUTHORITY_TRUST_SHA256`. The authorization includes
+the exact candidate and manifest SHA-256, decision `approve_ga_eligibility`,
+axes `["store", "enterprise"]`, true implementation and qualification flags,
+`synthetic: false`, and timezone-aware `issued_at` and `expires_at` no more
+than 30 days apart. The verifier cannot submit or publish a release.

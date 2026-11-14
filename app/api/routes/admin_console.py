@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
 import os
-import re
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.security import review_response
+from app.api.security import require_local_operator, review_response
 from legal.governance.admin_console import AdminConsoleReceiptStore, build_admin_console_summary
 from legal.governance.role_policy_simulator import RolePolicySimulationError, RolePolicySimulationStore, simulate_role_policy
 from legal.governance.separation_of_duties import SeparationOfDutiesError, SeparationOfDutiesReceiptStore, evaluate_separation_of_duties
@@ -22,7 +19,6 @@ from legal.governance.organization_readiness import OrganizationReadinessDashboa
 from legal.security.local_request_firewall import evaluate_local_request
 
 router = APIRouter(tags=["admin", "enterprise-administration"])
-_OPERATOR_DIGEST = re.compile(r"[a-f0-9]{64}")
 
 
 def _root() -> Path:
@@ -35,31 +31,27 @@ def _local(request: Request) -> None:
         raise HTTPException(status_code=decision.status_code, detail=decision.code)
 
 
-def _admin(role: str | None, tenant_id: str | None) -> tuple[str, str]:
-    if str(role or "").strip().casefold() != "admin":
-        raise HTTPException(status_code=403, detail="admin_role_required")
-    tenant = str(tenant_id or "").strip()
-    if not tenant:
-        raise HTTPException(status_code=403, detail="tenant_scope_required")
-    return "admin", tenant
+def _governance_operator(request: Request, role: str | None, tenant: str | None) -> str:
+    _local(request)
+    return require_local_operator(request, role=role, tenant_id=tenant, lane="governance")
 
 
 def _wrap(endpoint: str, action: str, payload: dict) -> dict:
     response = review_response(endpoint, action, payload)
     preservation = "/api/admin/legal-holds" in endpoint or "/api/admin/retention-plans" in endpoint
-    response["rbac"] = {"enforced": True, "required_role": "admin", "tenant_scoped": True, "mode": "matter_scoped_preservation_credential" if preservation else "header_contract_replaceable_by_enterprise_auth_provider"}
+    response["rbac"] = {"enforced": True, "required_role": "admin", "tenant_scoped": True, "mode": "matter_scoped_preservation_credential" if preservation else "tenant_scoped_governance_credential"}
     return response
 
 
 @router.get("/admin/console", summary="Fetch the tenant-scoped administration review console")
 def admin_console(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     return _wrap("GET /api/admin/console", "admin_console_inspected", build_admin_console_summary(project_root=_root(), tenant_id=tenant))
 
 
 @router.post("/admin/console/refresh", summary="Record an encrypted tenant-scoped administration review receipt")
 def refresh_admin_console(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     summary = build_admin_console_summary(project_root=_root(), tenant_id=tenant)
     try:
         receipt = AdminConsoleReceiptStore().record(summary, tenant_id=tenant)
@@ -70,7 +62,7 @@ def refresh_admin_console(request: Request, x_user_role: str | None = Header(def
 
 @router.post("/admin/role-policy-simulations", summary="Simulate fictional role-policy decisions without changing authorization")
 def role_policy_simulation(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         simulation = simulate_role_policy(simulation_id=str(payload.get("simulation_id") or ""), fictional_roles=list(payload.get("fictional_roles") or []), permissions=list(payload.get("permissions") or []), tenant_id=tenant)
         receipt = RolePolicySimulationStore().record(simulation, tenant_id=tenant)
@@ -81,7 +73,7 @@ def role_policy_simulation(payload: dict, request: Request, x_user_role: str | N
 
 @router.post("/admin/separation-of-duties", summary="Evaluate independent approval references without performing approval actions")
 def separation_of_duties(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         evaluation = evaluate_separation_of_duties(review_id=str(payload.get("review_id") or ""), approvals=list(payload.get("approvals") or []), tenant_id=tenant)
         receipt = SeparationOfDutiesReceiptStore().record(evaluation, tenant_id=tenant)
@@ -105,18 +97,8 @@ def _active_matter_scope() -> str:
 
 def _preservation_operator(request: Request, role: str | None, tenant: str | None) -> tuple[str, str]:
     _local(request)
-    _role, requested_tenant = _admin(role, tenant)
-    config_tenant = os.environ.get("MFL_PRESERVATION_OPERATOR_TENANT", "")
+    config_tenant = require_local_operator(request, role=role, tenant_id=tenant, lane="preservation")
     config_matter = os.environ.get("MFL_PRESERVATION_OPERATOR_MATTER_ID", "")
-    expected = os.environ.get("MFL_PRESERVATION_OPERATOR_BEARER_SHA256", "")
-    provided = request.headers.getlist("authorization")
-    match = re.fullmatch(r"Bearer ([a-f0-9]{64})", provided[0]) if len(provided) == 1 else None
-    if not (
-        config_tenant and hmac.compare_digest(config_tenant.encode(), requested_tenant.encode())
-        and _OPERATOR_DIGEST.fullmatch(expected) and match
-        and hmac.compare_digest(hashlib.sha256(match[1].encode("ascii")).hexdigest(), expected)
-    ):
-        raise HTTPException(403, detail="preservation_operator_authentication_required")
     matter = _active_matter_scope()
     if (config_matter != matter or request.headers.getlist("x-mfll-matter-id") != [matter]):
         raise HTTPException(403, detail="preservation_operator_matter_mismatch")
@@ -149,7 +131,7 @@ def _organization_readiness() -> OrganizationReadinessDashboard:
 
 @router.post("/admin/policy-packs/draft", summary="Create an encrypted tenant-scoped policy-pack draft")
 def signed_policy_pack_draft(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().draft(tenant_id=tenant, pack_id=str(payload.get("pack_id") or ""), version=str(payload.get("version") or ""), controls=payload.get("controls"))
     except SignedPolicyPackError as exc:
@@ -159,7 +141,7 @@ def signed_policy_pack_draft(payload: dict, request: Request, x_user_role: str |
 
 @router.post("/admin/policy-packs/{pack_id}/validate", summary="Validate a signed policy-pack draft without activation")
 def signed_policy_pack_validate(pack_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().validate(tenant_id=tenant, pack_id=pack_id)
     except SignedPolicyPackError as exc:
@@ -169,7 +151,7 @@ def signed_policy_pack_validate(pack_id: str, request: Request, x_user_role: str
 
 @router.post("/admin/policy-packs/{pack_id}/approve", summary="Verify an externally signed policy-pack approval")
 def signed_policy_pack_approve(pack_id: str, payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().approve(tenant_id=tenant, pack_id=pack_id, signature=dict(payload.get("signature") or {}))
     except SignedPolicyPackError as exc:
@@ -179,7 +161,7 @@ def signed_policy_pack_approve(pack_id: str, payload: dict, request: Request, x_
 
 @router.post("/admin/policy-packs/{pack_id}/activate", summary="Activate only a validated externally signed policy pack")
 def signed_policy_pack_activate(pack_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().activate(tenant_id=tenant, pack_id=pack_id)
     except SignedPolicyPackError as exc:
@@ -189,7 +171,7 @@ def signed_policy_pack_activate(pack_id: str, request: Request, x_user_role: str
 
 @router.post("/admin/policy-packs/{pack_id}/expire", summary="Expire a tenant-scoped policy pack")
 def signed_policy_pack_expire(pack_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().expire(tenant_id=tenant, pack_id=pack_id)
     except SignedPolicyPackError as exc:
@@ -199,7 +181,7 @@ def signed_policy_pack_expire(pack_id: str, request: Request, x_user_role: str |
 
 @router.post("/admin/policy-packs/{pack_id}/rollback", summary="Roll back a tenant-scoped policy pack state")
 def signed_policy_pack_rollback(pack_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().rollback(tenant_id=tenant, pack_id=pack_id)
     except SignedPolicyPackError as exc:
@@ -209,7 +191,7 @@ def signed_policy_pack_rollback(pack_id: str, request: Request, x_user_role: str
 
 @router.get("/admin/policy-packs/{pack_id}/diff", summary="Inspect a hash-bound policy-pack diff")
 def signed_policy_pack_diff(pack_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _policy_packs().diff(tenant_id=tenant, pack_id=pack_id)
     except SignedPolicyPackError as exc:
@@ -289,7 +271,7 @@ def cancel_retention_plan(plan_id: str, request: Request, x_user_role: str | Non
 
 @router.get("/admin/audit-verification", summary="Verify tenant-scoped local governance audit chains")
 def audit_verification(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _audit_verification().verify(tenant_id=tenant, matter_scope=_active_matter_scope())
     except AuditVerificationError as exc:
@@ -299,7 +281,7 @@ def audit_verification(request: Request, x_user_role: str | None = Header(defaul
 
 @router.post("/admin/audit-verification/export", summary="Create an encrypted receipt for a scoped local audit report")
 def export_audit_verification(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         console = _audit_verification(); report = console.verify(tenant_id=tenant, matter_scope=_active_matter_scope()); result = console.export_scope_report(report, tenant_id=tenant)
     except AuditVerificationError as exc:
@@ -309,13 +291,13 @@ def export_audit_verification(request: Request, x_user_role: str | None = Header
 
 @router.get("/admin/configuration-export", summary="Build a privacy-safe tenant-scoped configuration manifest")
 def configuration_export(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     return _wrap("GET /api/admin/configuration-export", "configuration_manifest_built", _configuration_export().build(tenant_id=tenant))
 
 
 @router.post("/admin/configuration-export/verify", summary="Verify an external signature for the current configuration manifest")
 def verify_configuration_export(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _configuration_export().verify_and_receipt(manifest=dict(payload.get("manifest") or {}), tenant_id=tenant, signature=dict(payload.get("signature") or {}))
     except ConfigurationExportError as exc:
@@ -325,13 +307,13 @@ def verify_configuration_export(payload: dict, request: Request, x_user_role: st
 
 @router.get("/admin/offline-entitlement", summary="Inspect offline entitlement status without network or matter access")
 def offline_entitlement_status(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     return _wrap("GET /api/admin/offline-entitlement", "offline_entitlement_inspected", _offline_entitlement().status(tenant_id=tenant))
 
 
 @router.post("/admin/offline-entitlement/verify", summary="Verify a separately supplied offline entitlement")
 def verify_offline_entitlement(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         result = _offline_entitlement().verify_and_store(tenant_id=tenant, entitlement=dict(payload.get("entitlement") or {}))
     except OfflineEntitlementError as exc:
@@ -341,13 +323,13 @@ def verify_offline_entitlement(payload: dict, request: Request, x_user_role: str
 
 @router.get("/admin/organization-readiness", summary="Inspect separated organization readiness decisions")
 def organization_readiness(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     return _wrap("GET /api/admin/organization-readiness", "organization_readiness_inspected", _organization_readiness().build(tenant_id=tenant))
 
 
 @router.post("/admin/organization-readiness/refresh", summary="Record an encrypted organization readiness refresh receipt")
 def refresh_organization_readiness(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant = _governance_operator(request, x_user_role, x_tenant_id)
     try:
         dashboard = _organization_readiness(); result = dashboard.receipt(dashboard.build(tenant_id=tenant), tenant_id=tenant)
     except OrganizationReadinessError as exc:

@@ -248,6 +248,32 @@ def _path_is_within_prefix(path: str, prefix: str) -> bool:
     return path == prefix or path.startswith(prefix + "/")
 
 
+def require_local_operator(
+    request: Request, *, role: str | None, tenant_id: str | None, lane: str
+) -> str:
+    """Authenticate a separately provisioned, revocable offline operator."""
+    if str(role or "").strip().casefold() != "admin":
+        raise HTTPException(403, detail="admin_role_required")
+    tenant = str(tenant_id or "").strip()
+    if not _TENANT_ID_RE.fullmatch(tenant):
+        raise HTTPException(403, detail="tenant_scope_required")
+    prefix = f"MFL_{lane.upper()}_OPERATOR"
+    configured = os.environ.get(prefix + "_TENANT", "")
+    expected = os.environ.get(prefix + "_BEARER_SHA256", "")
+    headers = request.headers.getlist("authorization")
+    credential = re.fullmatch(r"Bearer ([a-f0-9]{64})", headers[0]) if len(headers) == 1 else None
+    if (
+        len(request.headers.getlist("x-tenant-id")) != 1
+        or len(request.headers.getlist("x-user-role")) != 1
+        or not hmac.compare_digest(configured.encode(), tenant.encode())
+        or not re.fullmatch(r"[a-f0-9]{64}", expected)
+        or credential is None
+        or not hmac.compare_digest(hashlib.sha256(credential[1].encode("ascii")).hexdigest(), expected)
+    ):
+        raise HTTPException(403, detail=f"{lane}_operator_authentication_required")
+    return configured
+
+
 def strict_json_bool(payload: dict[str, Any], field: str, *, default: bool) -> bool:
     """Read a safety-sensitive JSON boolean without truthy-string coercion."""
 

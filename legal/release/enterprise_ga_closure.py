@@ -45,6 +45,8 @@ _SIGNOFF_TRUST_FILENAME = "organizational_signoff_trust.json"
 _DECISION_FILENAME = "enterprise_ga_evidence_manifest.json"
 _DECISION_ATTESTATION_FILENAME = "enterprise_ga_evidence_attestation.json"
 _DECISION_TRUST_FILENAME = "enterprise_ga_evidence_trust.json"
+_RELEASE_AUTHORIZATION_FILENAME = "enterprise_ga_release_authorization.json"
+_RELEASE_AUTHORIZATION_TRUST_FILENAME = "enterprise_ga_release_authority_trust.json"
 _CANDIDATE_SHA = re.compile(r"^[0-9a-f]{40}$")
 _CANDIDATE_VERSION = re.compile(r"^[0-9]{1,5}(?:\.[0-9]{1,5}){2,3}$")
 
@@ -567,6 +569,8 @@ class EnterpriseDecisionReport:
     byte_verified_evidence_categories: list[str] = field(default_factory=list)
     candidate_identity_verified: bool = False
     attestation_verified: bool = False
+    release_authorization_verified: bool = False
+    external_evidence_complete: bool = False
     blockers: list[str] = field(default_factory=list)
     review_required: bool = True
 
@@ -578,8 +582,11 @@ class EnterpriseDecisionReport:
             "byte_verified_evidence_categories": self.byte_verified_evidence_categories,
             "candidate_identity_verified": self.candidate_identity_verified,
             "attestation_verified": self.attestation_verified, "blockers": sorted(set(self.blockers)), "review_required": self.review_required,
-            "implementation_complete": None, "qualification_complete": None,
-            "external_evidence_complete": False, "ga_eligible": False, "ga_shipped": False,
+            "release_authorization_verified": self.release_authorization_verified,
+            "implementation_complete": True if self.status == "eligible" else None,
+            "qualification_complete": True if self.status == "eligible" else None,
+            "external_evidence_complete": self.external_evidence_complete,
+            "ga_eligible": self.status == "eligible", "ga_shipped": False,
             "network_used": False, "automated_release_or_publication": False,
         }
 
@@ -617,6 +624,7 @@ class EnterpriseDecisionPacket:
             verified = False
         bound_categories: list[str] = []
         candidate_verified = False
+        authorization_verified = False
         if manifest.get("schema_version") == "enterprise_ga_evidence_manifest_v2":
             # The release operator pins the candidate independently of the evidence
             # bundle. A valid signature over a different release cannot be reused.
@@ -637,13 +645,73 @@ class EnterpriseDecisionPacket:
                 candidate_verified = True
                 bound_categories, file_blockers = _verify_decision_evidence_bytes(root, candidate, rows)
                 blockers.extend(file_blockers)
+                if not blockers:
+                    authorization_verified, authorization_blockers = _verify_release_authorization(
+                        root, candidate=candidate, manifest_sha256=manifest_hash, evidence_trust=trust,
+                    )
+                    blockers.extend(authorization_blockers)
         else:
             blockers.append("enterprise_ga_candidate_bound_manifest_required")
-        # This program intentionally has no authority to declare either a Store
-        # submission accepted or an organization released to Enterprise GA.
-        blockers.append("external_release_authority_decision_required")
+        if not authorization_verified and "external_release_authority_decision_required" not in blockers:
+            blockers.append("external_release_authority_decision_required")
         store = "STORE_GA_NOT_EVALUATED" if "store_qualification" not in present else "STORE_GA_BLOCKED"
-        return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision=store, enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", evidence_categories_present=sorted(present), byte_verified_evidence_categories=bound_categories, candidate_identity_verified=candidate_verified, attestation_verified=verified, blockers=blockers)
+        eligible = not blockers and authorization_verified
+        return EnterpriseDecisionReport(
+            status="eligible" if eligible else "blocked", generated_at=_now(),
+            store_ga_decision="STORE_GA_READY" if eligible else store,
+            enterprise_ga_decision="ENTERPRISE_GA_READY" if eligible else "ENTERPRISE_GA_BLOCKED",
+            evidence_categories_present=sorted(present),
+            byte_verified_evidence_categories=bound_categories,
+            candidate_identity_verified=candidate_verified, attestation_verified=verified,
+            release_authorization_verified=authorization_verified,
+            external_evidence_complete=len(bound_categories) == len(REQUIRED_DECISION_EVIDENCE),
+            blockers=blockers,
+        )
+
+
+def _verify_release_authorization(
+    root: Path, *, candidate: dict[str, str], manifest_sha256: str, evidence_trust: dict | None
+) -> tuple[bool, list[str]]:
+    """Require a separately pinned authority to authorize the exact reviewed release."""
+    payload = _load_object(root / _RELEASE_AUTHORIZATION_FILENAME, limit=256 * 1024)
+    if payload is None:
+        return False, ["external_release_authority_decision_required"]
+    trust, blockers = _load_pinned_trust(root, _RELEASE_AUTHORIZATION_TRUST_FILENAME)
+    _, signature_blockers = _verify_signed_payload(
+        payload=payload, trust=trust, expected_payload_schema="enterprise_ga_release_authorization_v1",
+        expected_trust_schema="enterprise_ga_release_authority_trust_v1", prefix="enterprise_ga_release_authorization",
+    )
+    blockers.extend(signature_blockers)
+    if blockers:
+        return False, blockers
+    signature = payload["signature"]
+    key_id = str(signature.get("key_id") or "").strip()
+    raw_key = base64.b64decode(trust["trusted_keys"][key_id], validate=True)
+    for value in (evidence_trust or {}).get("trusted_keys", {}).values():
+        try:
+            if raw_key == base64.b64decode(value, validate=True):
+                blockers.append("enterprise_ga_release_authority_not_independent")
+                break
+        except (TypeError, ValueError):
+            continue
+    if payload.get("candidate") != candidate or payload.get("manifest_sha256") != manifest_sha256:
+        blockers.append("enterprise_ga_release_authorization_candidate_mismatch")
+    if (payload.get("decision") != "approve_ga_eligibility"
+            or payload.get("synthetic") is not False
+            or payload.get("axes") != ["store", "enterprise"]
+            or payload.get("implementation_complete") is not True
+            or payload.get("qualification_complete") is not True):
+        blockers.append("enterprise_ga_release_authorization_incomplete")
+    try:
+        issued = datetime.fromisoformat(payload["issued_at"])
+        expires = datetime.fromisoformat(payload["expires_at"])
+        if issued.tzinfo is None or expires.tzinfo is None or not (
+            issued <= datetime.now(UTC) < expires <= issued + timedelta(days=30)
+        ):
+            raise ValueError
+    except (TypeError, ValueError, KeyError, OverflowError):
+        blockers.append("enterprise_ga_release_authorization_date_invalid")
+    return not blockers, blockers
 
 
 def _verify_decision_evidence_bytes(

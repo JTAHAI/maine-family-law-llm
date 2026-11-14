@@ -1028,6 +1028,8 @@ contact schedule"></textarea></label>
 <section aria-labelledby="admin-console-title" class="privacy-key-hierarchy local-admin-console">
 <div><span class="overlay-kicker">Enterprise administration</span><strong id="admin-console-title">Administration review console</strong></div>
 <p aria-live="polite" id="admin-console-status">Inspect this tenant’s role boundary, policy hashes, authority status, release-evidence status, and blocked-export reasons. This local app does not list or provision people.</p>
+<label>Governance operator credential <input id="governance-operator-credential" type="password" maxlength="64" autocomplete="off" aria-describedby="governance-operator-help"></label>
+<p class="field-hint" id="governance-operator-help">Enter the credential issued for this tenant before each governance action. It is cleared after use and is not saved. Legal holds and retention use their own credential.</p>
 <div class="overlay-actions"><label class="child-impact-toggle"><span class="switch"><input id="admin-console-ack" type="checkbox"><i></i></span> I am authorized to open this tenant-scoped admin review.</label><button class="secondary" id="admin-console-refresh" type="button">Refresh administration review</button><span class="status-badge review" id="admin-console-badge">Admin review required</span></div>
 <div class="overlay-meta" id="admin-console-results">No account directory, matter text, raw path, external request, export, or policy change is made. An explicit refresh stores only an encrypted, tenant-bound review receipt.</div>
 </section>
