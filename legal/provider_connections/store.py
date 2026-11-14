@@ -30,7 +30,7 @@ def _contains_forbidden_segment(path: Path, forbidden: Iterable[str]) -> str:
     for candidate in forbidden:
         folded = candidate.casefold()
         for part in parts:
-            if folded == part or folded in part or part in folded:
+            if folded in part:
                 return candidate
     return ""
 
@@ -63,14 +63,14 @@ def resolve_external_provider_root(
         raise ProviderStoreRootError("provider_store_symlink_refused", "The provider store root cannot be a symlink.")
 
     path = path.resolve()
-    if create:
-        path.mkdir(parents=True, exist_ok=True)
     forbidden = _contains_forbidden_segment(path, {"matter", "matter_store", "msix", "staging", "windows", "system32"})
     if forbidden:
         raise ProviderStoreRootError(
             "provider_store_inside_forbidden_root",
             f"The provider store root cannot live inside forbidden directory segment: {forbidden}.",
         )
+    if create:
+        path.mkdir(parents=True, exist_ok=True)
     return path
 
 

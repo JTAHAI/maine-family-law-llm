@@ -46,7 +46,7 @@ def _contains_forbidden_segment(path: Path, forbidden: Iterable[str]) -> str:
     for candidate in forbidden:
         folded = candidate.casefold()
         for part in parts:
-            if folded == part or folded in part or part in folded:
+            if folded in part:
                 return candidate
     return ""
 

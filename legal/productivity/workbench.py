@@ -879,10 +879,11 @@ class ProductivitySuiteStore:
                     referenced_chunks.add(digest)
                 except ProductivitySuiteError as exc:
                     blockers.append(exc.code)
-            if len(assembled) != int(row.get("size") or -1) or _digest(bytes(assembled)) != str(row.get("sha256") or ""):
+            size = row.get("size")
+            if type(size) is not int or len(assembled) != size or _digest(bytes(assembled)) != str(row.get("sha256") or ""):
                 blockers.append("backup_file_integrity_failed")
-        expected_count = int(package.get("file_count") or -1)
-        if expected_count != len(files):
+        expected_count = package.get("file_count")
+        if type(expected_count) is not int or expected_count != len(files):
             blockers.append("backup_file_count_mismatch")
         return {
             "status": "pass" if not blockers else "blocked",
