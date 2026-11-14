@@ -281,6 +281,7 @@ if (-not $Unsigned) {
 }
 Move-Item -LiteralPath $shortMsixPath -Destination $msixPath -Force
 & $storePython -B $hygiene verify-archive --msix-path $msixPath --seal $sealPath --output $archiveAudit
+if ($LASTEXITCODE -ne 0) { throw "Final MSIX archive did not match the sealed payload." }
 & $storePython -B (Join-Path $RepoRoot "scripts\analyze-msix-package-size.py") --package $msixPath --tier $FeatureTier --tier-config (Join-Path $RepoRoot "configs\store_feature_tiers.json") --output $sizeBudgetReport
 if ($LASTEXITCODE -ne 0) { throw "MSIX package-size tier budget validation failed." }
 
