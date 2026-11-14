@@ -590,6 +590,10 @@ contact schedule"></textarea></label>
         </div>
         <label>Review notes<textarea id="document-review-notes" rows="3" maxlength="4000"></textarea></label>
         <label class="document-review-attestation"><input id="document-review-attested" type="checkbox"/> I reviewed this exact revision, its authority report, fact-to-record map, and listed blockers.</label>
+        <label>Filing reviewer credential (optional)<input type="password" id="document-filing-credential" maxlength="64" autocomplete="off" aria-describedby="document-filing-credential-help"/></label>
+        <p id="document-filing-credential-help" class="field-hint">Use a credential provisioned for this matter before preparing a filing review. Leave it blank for ordinary notes and working drafts. The credential is used only for this local request and is not saved.</p>
+        <label>Exact quotes and source IDs<textarea id="document-filing-quotes" rows="2" maxlength="8000" placeholder="source-id | Exact quoted text (one per line)"></textarea></label>
+        <label class="document-review-attestation"><input id="document-filing-privacy" type="checkbox"/> I checked this draft for confidential information and approved this exact text for export.</label>
         <button class="primary-action" disabled id="document-review-commit" type="button">Record immutable review decision</button>
         <div class="document-review-history" id="document-review-history">No review decisions recorded.</div>
       </section>

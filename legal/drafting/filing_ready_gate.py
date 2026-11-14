@@ -60,7 +60,7 @@ VERIFIED_AUTHORITY_STATUSES = {
     "verified_public_api",
 }
 
-QUOTE_PASS_STATUSES = {"exact", "fuzzy", "quote_exact_match", "quote_fuzzy_match", "found"}
+QUOTE_PASS_STATUSES = {"exact", "exact_match", "fuzzy", "quote_exact_match", "quote_fuzzy_match", "found"}
 CLAIM_PASS_STATUSES = {"supported"}
 
 BLOCKER_REPORTS = (

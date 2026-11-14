@@ -1603,9 +1603,10 @@ class WorkspaceReviewCommitRequest(BaseModel):
     confirmation_token: str
     confirmed: StrictBool = False
     decision: str = "approve_review"
-    reviewer_name: str
+    reviewer_name: str = ""
     reviewer_role: str = "other_reviewer"
     attested: StrictBool = False
+    privacy_attested: StrictBool = False
     notes: str = ""
     claim_annotations: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -8311,35 +8312,13 @@ if FastAPI is not None:
             detail={"code": exc.code, "message": exc.message},
         ) from None
 
-    def _document_workspace_filing_gate_headers(
-        case_root: Path, document_id: str
-    ) -> dict[str, str]:
-        try:
-            packet = ReviewedFilingPacketStore(case_root).active(document_id=document_id)
-        except (DocumentWorkspaceError, ReviewedFilingPacketError):
-            return {
-                "X-MFLL-Filing-Gate-Status": "review_required",
-                "X-MFLL-Filing-Gate-Blockers": "review_packet_missing",
-            }
-        filing_gate = (packet.get("packet") or {}).get("filing_gate") or {}
-        blockers = [str(item) for item in (filing_gate.get("blockers") or []) if str(item)]
-        gate_report = (
-            filing_gate.get("gate_report") or filing_gate.get("immutable_gate_report") or {}
-        )
-        headers = {
-            "X-MFLL-Filing-Gate-Status": str(
-                filing_gate.get("export_status") or filing_gate.get("status") or "review_required"
-            ),
-            "X-MFLL-Filing-Gate-Blockers": ",".join(blockers) if blockers else "none",
+    def _document_workspace_filing_gate_headers(case_root: Path, document_id: str) -> dict[str, str]:
+        # Working copies can include unreviewed tracked operations or a
+        # provenance footer. Only the exact filing-copy route can grant export.
+        return {
+            "X-MFLL-Filing-Gate-Status": "review_required",
+            "X-MFLL-Filing-Gate-Blockers": "working_copy_not_filing_export",
         }
-        report_hash = str(
-            gate_report.get("immutable_report_hash")
-            or filing_gate.get("immutable_report_hash")
-            or ""
-        )
-        if report_hash:
-            headers["X-MFLL-Filing-Gate-Hash"] = report_hash
-        return headers
 
     def _raise_review_error(exc: ReviewLedgerError) -> None:
         raise HTTPException(
@@ -11768,13 +11747,22 @@ if FastAPI is not None:
             "review_required": True,
         }
 
-    def _review_access(request: Request, action: str):
+    def _review_access(request: Request, action: str, *, authenticate_filing: bool = False):
+        from legal.review.reviewer_identity import configured_filing_tenant
+
         identity = _require_local_dashboard_identity(request)
         root = _workspace_case_root()
         matter_id = str(request.headers.get("X-MFLL-Matter-Id") or "")
         if not matter_id or matter_id != _case_id(root):
             raise HTTPException(409, detail="review_active_matter_mismatch")
+        trusted_tenant = configured_filing_tenant(matter_id)
+        if trusted_tenant is not None and identity["tenant_id"] != trusted_tenant:
+            raise HTTPException(403, detail="review_tenant_scope_mismatch")
         scope = {**identity, "matter_id": matter_id}
+        if authenticate_filing:
+            # Check a supplied credential before writing to the tenant-bound
+            # audit chain. A rejected caller must not claim an empty chain.
+            _authenticated_filing_reviewer(request, scope)
         try:
             _local_agent_audit_store(root).record(action + "_requested", scope=scope, binding_sha256=hashlib.sha256(request.url.path.encode()).hexdigest())
         except Exception:
@@ -11794,6 +11782,17 @@ if FastAPI is not None:
             raise HTTPException(409, detail="review_audit_unavailable_reload_history") from None
         return {**result, "matter_id": scope["matter_id"]}
 
+    def _authenticated_filing_reviewer(request: Request, scope):
+        from legal.review.reviewer_identity import authenticate_reviewer
+
+        headers = request.headers.getlist("authorization")
+        if not headers:
+            return None
+        try:
+            return authenticate_reviewer(headers, tenant_id=scope["tenant_id"], matter_id=scope["matter_id"])
+        except ValueError as exc:
+            raise HTTPException(403, detail=str(exc)) from None
+
     # Shared by the matter-addressed authority router; aliases must not use a
     # weaker identity/audit path than the actual production desktop endpoints.
     app.state.private_review_access = _review_access
@@ -11806,7 +11805,8 @@ if FastAPI is not None:
         request: Request,
     ) -> dict[str, Any]:
         try:
-            case_root, scope = _review_access(request, "document_review_prepare")
+            case_root, scope = _review_access(request, "document_review_prepare", authenticate_filing=True)
+            reviewer = _authenticated_filing_reviewer(request, scope)
             document = get_workspace_document(case_root, document_id)
             source_ids = []
             for row in document.get("source_refs") or []:
@@ -11837,6 +11837,7 @@ if FastAPI is not None:
                 authority_result=authority_result,
                 facts=payload.facts,
                 records=load_case_search_records(case_root),
+                reviewer=reviewer,
             )
             return _review_result(case_root, scope, "document_review_prepare", result)
         except DocumentWorkspaceError as exc:
@@ -11851,7 +11852,8 @@ if FastAPI is not None:
         request: Request,
     ) -> dict[str, Any]:
         try:
-            case_root, scope = _review_access(request, "document_review_commit")
+            case_root, scope = _review_access(request, "document_review_commit", authenticate_filing=True)
+            reviewer = _authenticated_filing_reviewer(request, scope)
             result = commit_review_decision(
                 case_root,
                 document_id,
@@ -11864,6 +11866,8 @@ if FastAPI is not None:
                 attested=payload.attested,
                 notes=payload.notes,
                 claim_annotations=payload.claim_annotations,
+                reviewer=reviewer,
+                privacy_attested=payload.privacy_attested,
             )
             return _review_result(case_root, scope, "document_review_commit", result)
         except DocumentWorkspaceError as exc:
@@ -11986,7 +11990,16 @@ if FastAPI is not None:
                 try:
                     active = store.active(document_id=document_id)
                     if active.get("status") == "pass":
-                        active["artifacts"] = _public_filing_packet_artifacts(case_root, active)
+                        if (active.get("packet") or {}).get("filing_ready") is True:
+                            try:
+                                store.revalidate_filing(active["packet"], **_filing_source_context(case_root))
+                            except (ReviewedFilingPacketError, ReviewLedgerError):
+                                active = {
+                                    "status": "stale", "artifacts": [], "review_required": True,
+                                    "packet": {"filing_ready": False, "blockers": ["filing_packet_approval_stale"]},
+                                }
+                        if active.get("status") == "pass":
+                            active["artifacts"] = _public_filing_packet_artifacts(case_root, active)
                     result["active"] = active
                 except ReviewedFilingPacketError:
                     result["active"] = None
@@ -12069,30 +12082,36 @@ if FastAPI is not None:
         except ReviewedFilingPacketError as exc:
             _raise_filing_packet_error(exc)
 
+    def _filing_source_context(case_root: Path) -> dict[str, Any]:
+        current_authority_build_id = ""
+        manifest_sha = ""
+        current_forms = []
+        try:
+            service = AuthorityProductService()
+            authority_status = service.status()
+            if authority_status.get("status") == "pass":
+                current_authority_build_id = str(authority_status.get("build_id") or "")
+                manifest_sha = str(authority_status.get("authority_manifest_sha256") or "")
+            current_forms = list(service.list_forms(limit=500).get("forms") or [])
+        except (FileNotFoundError, ValueError, OSError):
+            current_authority_build_id = manifest_sha = ""
+        return {
+            "current_authority_build_id": current_authority_build_id,
+            "current_authority_manifest_sha256": manifest_sha,
+            "current_forms": current_forms,
+            "current_records": load_case_search_records(case_root),
+        }
+
     @app.post("/api/reviewed-filing-packet/documents/{document_id}/build")
     def reviewed_filing_packet_build(
         document_id: str, payload: FilingPacketBuildRequest, request: Request
     ) -> dict[str, Any]:
         try:
             case_root, scope = _review_access(request, "filing_packet_build")
-            authority_status = AuthorityProductService().status()
-            current_authority_build_id = (
-                str(authority_status.get("build_id") or "")
-                if authority_status.get("status") == "pass"
-                else ""
-            )
-            try:
-                current_forms = list(
-                    AuthorityProductService().list_forms(limit=500).get("forms") or []
-                )
-            except (FileNotFoundError, ValueError, OSError):
-                current_forms = []
             result = ReviewedFilingPacketStore(case_root).build(
                 document_id,
                 approved=payload.approved,
-                current_authority_build_id=current_authority_build_id,
-                current_forms=current_forms,
-                current_records=load_case_search_records(case_root),
+                **_filing_source_context(case_root),
             )
             result["artifacts"] = _public_filing_packet_artifacts(case_root, result)
             return _review_result(case_root, scope, "filing_packet_build", result)
@@ -12115,7 +12134,7 @@ if FastAPI is not None:
             _raise_filing_packet_error(exc)
 
     @app.get("/api/reviewed-filing-packet/artifacts/{token}")
-    def reviewed_filing_packet_artifact(token: str):
+    def reviewed_filing_packet_artifact(token: str, request: Request):
         _prune_filing_packet_artifacts()
         with _filing_packet_artifact_lock:
             binding = dict(_filing_packet_artifacts.get(str(token or "")) or {})
@@ -12130,9 +12149,18 @@ if FastAPI is not None:
         ):
             raise HTTPException(status_code=404, detail="filing_packet_artifact_not_available")
         try:
+            if binding.get("filename") == "verified-filing-copy.txt":
+                root, scope = _review_access(request, "filing_copy_download", authenticate_filing=True)
+                if root != case_root or _authenticated_filing_reviewer(request, scope) is None:
+                    raise HTTPException(403, detail="filing_reviewer_authentication_required")
             raw, media_type, filename = ReviewedFilingPacketStore(case_root).read_current_artifact(
-                str(binding.get("build_id") or ""), str(binding.get("filename") or "")
+                str(binding.get("build_id") or ""), str(binding.get("filename") or ""),
+                filing_context=lambda: _filing_source_context(case_root),
             )
+            if filename == "verified-filing-copy.txt":
+                _review_result(case_root, scope, "filing_copy_download", {"status": "pass"})
+        except (DocumentWorkspaceError, ReviewLedgerError):
+            raise HTTPException(409, detail="filing_packet_approval_stale") from None
         except ReviewedFilingPacketError as exc:
             _raise_filing_packet_error(exc)
         actual = hashlib.sha256(raw).hexdigest()
@@ -12143,6 +12171,7 @@ if FastAPI is not None:
             media_type=media_type,
             headers={
                 "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+                "X-MFLL-Filing-Gate-Status": "allowed" if filename == "verified-filing-copy.txt" else "review_required",
                 "Content-Disposition": f'attachment; filename="{filename}"',
             },
         )

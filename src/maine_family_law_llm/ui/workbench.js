@@ -1609,6 +1609,9 @@
     const documentReviewDecision = document.getElementById('document-review-decision');
     const documentReviewNotes = document.getElementById('document-review-notes');
     const documentReviewAttested = document.getElementById('document-review-attested');
+    const documentFilingCredential = document.getElementById('document-filing-credential');
+    const documentFilingPrivacy = document.getElementById('document-filing-privacy');
+    const documentFilingQuotes = document.getElementById('document-filing-quotes');
     const documentReviewCommit = document.getElementById('document-review-commit');
     const documentReviewHistory = document.getElementById('document-review-history');
     const findingsFormsStatusBadge = document.getElementById('findings-forms-status-badge');
@@ -2380,8 +2383,8 @@
       return String(candidate || fallback).replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 180) || fallback;
     }
 
-    async function downloadSessionBoundArtifact(url, fallbackName = 'review-required-artifact') {
-      const response = await fetch(url, {headers: localRequestHeaders(), cache: 'no-store'});
+    async function downloadSessionBoundArtifact(url, fallbackName = 'review-required-artifact', extraHeaders = {}) {
+      const response = await fetch(url, {headers: localRequestHeaders(extraHeaders), cache: 'no-store', redirect: 'error'});
       if (!response.ok) {
         let code = `local_http_${response.status}`;
         try {
@@ -2412,7 +2415,16 @@
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
       if (!link || !isSessionBoundArtifactUrl(link.getAttribute('href'))) return;
       event.preventDefault();
-      void downloadSessionBoundArtifact(link.href, link.download || 'review-required-artifact').catch((error) => {
+      let headers = {};
+      if (link.dataset.filingCredentialRequired === 'true') {
+        headers = takeFilingCredential({'X-MFLL-Matter-Id': documentWorkspaceState.storageMatterId || ''});
+        if (!headers.Authorization) {
+          setDocumentWorkspaceStatus('Re-enter the filing reviewer credential before downloading the exact copy.', 'warn');
+          documentFilingCredential?.focus();
+          return;
+        }
+      }
+      void downloadSessionBoundArtifact(link.href, link.download || 'review-required-artifact', headers).catch((error) => {
         showToast(safeErrorMessage(error, 'The local artifact could not be opened. The original record was preserved.'));
       });
     });
@@ -3789,6 +3801,9 @@
       if (documentReviewerRole) documentReviewerRole.value = 'other_reviewer';
       if (documentReviewDecision) documentReviewDecision.value = 'request_changes';
       if (documentReviewAttested) documentReviewAttested.checked = false;
+      if (documentFilingCredential) documentFilingCredential.value = '';
+      if (documentFilingPrivacy) documentFilingPrivacy.checked = false;
+      if (documentFilingQuotes) documentFilingQuotes.value = '';
       if (filingPacketReviewerLabel) filingPacketReviewerLabel.value = '';
       if (filingPacketReviewerRole) filingPacketReviewerRole.value = 'other_reviewer';
       if (filingPacketApproved) filingPacketApproved.checked = false;
@@ -4138,7 +4153,12 @@
       const facts = String(documentReviewFacts?.value || '').split(/\r?\n/).map((row) => row.trim()).filter(Boolean).slice(0, 128);
       setDocumentWorkspaceStatus('Building a revision-bound authority and evidence review packet…');
       try {
-        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({facts, quotes: [], claims: [], auto_extract_claims: true})});
+        const quotes = String(documentFilingQuotes?.value || '').split(/\r?\n/).filter((line) => line.trim()).map((line) => {
+          const separator = line.indexOf('|');
+          if (separator < 1) throw new Error('Enter each quote as source ID | exact quoted text.');
+          return {source_id: line.slice(0, separator).trim(), quoted_text: line.slice(separator + 1).trim()};
+        });
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({facts, quotes, claims: [], auto_extract_claims: true})});
         if (owner !== documentWorkspaceState.storageMatterId || payload.matter_id !== owner || documentWorkspaceState.active?.document_id !== active.document_id || documentWorkspaceState.active?.current_revision_id !== payload.packet?.revision_id) return;
         documentWorkspaceState.reviewRequest = payload;
         renderDocumentReviewPacket(payload);
@@ -4155,13 +4175,19 @@
       }
     }
 
+    function takeFilingCredential(headers = {}) {
+      const credential = documentFilingCredential?.value.trim() || '';
+      if (documentFilingCredential) documentFilingCredential.value = '';
+      return credential ? {...headers, Authorization: 'Bearer ' + credential} : headers;
+    }
+
     async function commitDocumentReview() {
       const active = documentWorkspaceState.active;
       const prepared = documentWorkspaceState.reviewRequest;
       if (!active?.document_id || !prepared?.request_id || !prepared?.confirmation_token) return;
       if (documentReviewCommit?.disabled || prepared.matter_id !== documentWorkspaceState.storageMatterId || prepared.packet?.document_id !== active.document_id || prepared.packet?.revision_id !== active.current_revision_id) return;
       const reviewerName = documentReviewerName?.value.trim() || '';
-      if (!reviewerName) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
+      if (!reviewerName && !prepared.packet?.filing_reviewer_authenticated) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
       const decision = documentReviewDecision?.value || 'approve_review';
       const attested = Boolean(documentReviewAttested?.checked);
       if (decision === 'approve_review' && !attested) { setDocumentWorkspaceStatus('Review completion requires the exact-revision attestation.', 'bad'); return; }
@@ -4171,7 +4197,7 @@
       if (documentReviewCommit) documentReviewCommit.disabled = true;
       setDocumentWorkspaceStatus('Encrypting and recording the exact-revision decision…');
       try {
-        const result = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/commit`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({request_id: prepared.request_id, confirmation_token: prepared.confirmation_token, confirmed: true, decision, reviewer_name: reviewerName, reviewer_role: documentReviewerRole?.value || 'other_reviewer', attested, notes: documentReviewNotes?.value || '', claim_annotations: collectClaimAnnotations()})});
+        const result = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/commit`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({request_id: prepared.request_id, confirmation_token: prepared.confirmation_token, confirmed: true, decision, reviewer_name: reviewerName, reviewer_role: documentReviewerRole?.value || 'other_reviewer', attested, privacy_attested: Boolean(documentFilingPrivacy?.checked), notes: documentReviewNotes?.value || '', claim_annotations: collectClaimAnnotations()})});
         if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         documentWorkspaceState.reviewRequest = null;
         if (documentReviewCommit) documentReviewCommit.disabled = true;
@@ -4180,7 +4206,7 @@
         if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         const blockers = result?.filing_gate?.blockers || [];
         renderDocumentReviewPacket({packet: {...prepared.packet, filing_gate_preflight: result.filing_gate}});
-        setDocumentWorkspaceStatus(blockers.length ? `Review recorded. Export remains blocked by ${blockers.length} gate item(s).` : 'Review recorded and all filing-gate checks passed.', blockers.length ? 'warn' : 'good');
+        setDocumentWorkspaceStatus(blockers.length ? `Review recorded. Export remains blocked by ${blockers.length} gate item(s).` : 'Review recorded. Build the packet to recheck current sources before downloading the exact filing copy.', 'warn');
       } catch (err) {
         setDocumentWorkspaceStatus(err.message + ' Reload review history before retrying; an earlier write may have been preserved.', 'bad');
         documentWorkspaceState.reviewRequest = null;
@@ -4293,7 +4319,7 @@
     }
 
     function filingPacketArtifactLinks(rows) {
-      return (Array.isArray(rows) ? rows : []).map((row) => `<a class="secondary compact-action" href="${escapeHtml(row.download_url || '#')}" download>${escapeHtml(String(row.name || 'artifact').replaceAll('-', ' '))}</a>`).join('');
+      return (Array.isArray(rows) ? rows : []).map((row) => `<a class="secondary compact-action" href="${escapeHtml(row.download_url || '#')}" download ${row.name === 'verified-filing-copy.txt' ? 'data-filing-credential-required="true"' : ''}>${escapeHtml(String(row.name || 'artifact').replaceAll('-', ' '))}</a>`).join('');
     }
 
     function renderFilingPacketStatus(payload) {

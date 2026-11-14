@@ -275,7 +275,11 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         # capability checks. The owning route checks expiry and single use.
         if request.url.path in {
             "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
-        } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/")):
+        } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/",
+                                          "/api/reviewed-filing-packet/")) or (
+            request.url.path.startswith("/api/document-workspace/documents/")
+            and "/review/" in request.url.path
+        ):
             response = await call_next(request)
             response.headers[_STATUS_HEADER] = "single_use_approval"
             return response

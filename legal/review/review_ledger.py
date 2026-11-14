@@ -14,7 +14,7 @@ import re
 import secrets
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 from pathlib import Path, PureWindowsPath
 from typing import Any, Iterable
@@ -24,8 +24,11 @@ from legal.documents import storage
 from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
 from legal.drafting.filing_ready_gate import FilingReadyGate
 from legal.drafting.findings_engine import Rule52BestInterestFindingsEngine
+from legal.document_intelligence.privacy import deterministic_privacy_review
+from legal.verifiers.claim_support_verifier import _sentence_spans
 from . import integrity
 from .procedure_intelligence import build_form_freshness_report, build_procedure_posture_report
+from .reviewer_identity import ReviewerPrincipal, reviewer_binding_current
 
 REVIEW_FOLDER = "reviews"
 SCHEMA_VERSION = "document_review_ledger_v2"
@@ -369,7 +372,7 @@ def _gate_payload(
     review_annotation_blockers: list[str] | None = None,
 ) -> dict[str, Any]:
     verification = authority_result.get("verification_report") or {}
-    authority_cards = authority_result.get("sources") or authority_result.get("source_cards") or []
+    authority_cards = verification.get("authorities") or authority_result.get("sources") or []
     citation_report = verification.get("citations") or []
     quote_report = verification.get("quotes") or []
     claim_report = {"claims": verification.get("claims") or []}
@@ -413,6 +416,41 @@ def _gate_payload(
     }
 
 
+def _filing_coverage(document: dict, gate: dict, fact_report: dict) -> list[str]:
+    """Every draft sentence must have a server-verified lane, or export stops."""
+    text = str(document.get("content") or "")
+    def clean(value: Any) -> str:
+        return " ".join(str(value or "").split())
+    claim_rows = gate["claim_support_report"]["claims"]
+    legal = {
+        clean(row.get("claim")) for row in claim_rows
+        if row.get("status") == "supported" and row.get("supported") is True
+    }
+    facts = {
+        clean(row["fact"]) for row in fact_report["facts"]
+        if any(item["match_type"] == "exact" and _TOKEN_RE.fullmatch(item["source_hash"])
+               for item in row["supporting_records"])
+    }
+    blockers = [
+        f"draft_assertion_not_covered:{index}"
+        for index, (_, _, sentence) in enumerate(_sentence_spans(text, limit=None), 1)
+        if clean(sentence).strip('"“”') not in legal | facts and clean(sentence) not in legal | facts
+        and clean(sentence).casefold() not in {"findings of fact", "conclusions of law"}
+    ]
+    quotes = re.findall(r'["“]([^"“”\n]+)["”]', text)
+    checked_quotes = {
+        row.get("quoted_text") for row in gate["quote_report"] if row.get("status") == "exact_match"
+        and row.get("verified") is True and row.get("source_id")
+    }
+    if any(quote not in checked_quotes for quote in quotes):
+        blockers.append("draft_quote_not_verified_exactly")
+    if text.count('"') % 2 or text.count("“") != text.count("”"):
+        blockers.append("draft_quotation_boundaries_unclear")
+    if any(not (row.get("pinpoint_support") or {}).get("supported") for row in gate["citation_report"]):
+        blockers.append("draft_citation_pinpoint_unverified")
+    return blockers
+
+
 @_synchronized
 def prepare_review_request(
     case_root: Path,
@@ -421,11 +459,23 @@ def prepare_review_request(
     authority_result: dict[str, Any],
     facts: Iterable[str] | None = None,
     records: Iterable[dict[str, Any]] | None = None,
+    reviewer: ReviewerPrincipal | None = None,
 ) -> dict[str, Any]:
     document = get_document(case_root, document_id, include_history=False)
     revision_id = _validate_id(str(document.get("current_revision_id") or ""), "revision_id")
     document_id = _validate_id(document_id, "document_id")
     fact_report = build_fact_evidence_report(facts, records)
+    if reviewer is not None:
+        # Lexical suggestions remain useful for ordinary working notes, but a
+        # filing fact needs an exact span and a valid original-byte digest.
+        for fact in fact_report["facts"]:
+            fact["supporting_records"] = [
+                row for row in fact["supporting_records"]
+                if row["match_type"] == "exact" and _TOKEN_RE.fullmatch(row["source_hash"])
+            ]
+            fact["status"] = "record_text_found" if fact["supporting_records"] else "unsupported"
+        fact_report["supported_count"] = sum(bool(row["supporting_records"]) for row in fact_report["facts"])
+        fact_report["unsupported_count"] = fact_report["fact_count"] - fact_report["supported_count"]
     procedure_report = build_procedure_posture_report(
         title=str(document.get("title") or ""),
         content=str(document.get("content") or ""),
@@ -451,6 +501,32 @@ def prepare_review_request(
         forms_report=forms_report,
         findings_report=findings_report,
     )
+    if reviewer is not None:
+        receipt = authority_result.get("verification_receipt") or {}
+        build_id = authority_result.get("authority_build_id")
+        manifest_hash = authority_result.get("authority_manifest_sha256", "")
+        # The only caller giving this path an authority result is the host's
+        # active-generation verifier. Bind its result to the re-read revision.
+        blockers = _filing_coverage(document, gate_payload, fact_report)
+        # The authority-only preview gate deliberately cannot authorize filing
+        # and does not receive this workspace's fact, form or privacy records.
+        # Derive its component checks from its actual verifier rows here.
+        for flag in ("authority_verified", "citations_resolved", "quotes_found", "legal_claims_supported"):
+            gate_payload.pop(flag, None)
+        if (not build_id or not _TOKEN_RE.fullmatch(str(manifest_hash))
+                or receipt.get("answer_sha256") != document.get("content_sha256")):
+            blockers.append("authority_receipt_not_bound_to_revision")
+        blockers.extend(str(code) for code in authority_result.get("blockers", []))
+        privacy = deterministic_privacy_review(
+            f"{document.get('title', '')}\n{document.get('content', '')}"
+        )
+        gate_payload["workflow_blockers"] = blockers
+        gate_payload["privacy_report"] = {
+            "status": "checked" if not privacy["finding_count"] else "blocked",
+            "finding_counts": privacy["finding_counts"],
+            "content_sha256": document["content_sha256"],
+            "blockers": ["draft_privacy_findings_need_redaction"] if privacy["finding_count"] else [],
+        }
     preflight = FilingReadyGate().evaluate(gate_payload)
     request_id = uuid.uuid4().hex
     token = secrets.token_hex(32)
@@ -471,6 +547,9 @@ def prepare_review_request(
         "review_required": True,
         "generated_at": _utc_now(),
     }
+    if reviewer is not None:
+        packet["privacy_preflight"] = gate_payload["privacy_report"]
+        packet["filing_reviewer_authenticated"] = True
     packet["packet_sha256"] = _sha(packet)
     request = {
         "schema_version": SCHEMA_VERSION,
@@ -483,6 +562,9 @@ def prepare_review_request(
         "packet": packet,
         "gate_payload": gate_payload,
     }
+    if reviewer is not None:
+        request["filing_reviewer_binding"] = reviewer.binding()
+        request["approval_expires_at"] = (datetime.now(UTC) + timedelta(minutes=30)).isoformat()
     root, requests, _ = _roots(case_root, document_id)
     try:
         integrity.initialize(root)
@@ -544,6 +626,8 @@ def commit_review_decision(
     attested: bool,
     notes: str = "",
     claim_annotations: Iterable[dict[str, Any]] | None = None,
+    reviewer: ReviewerPrincipal | None = None,
+    privacy_attested: bool = False,
 ) -> dict[str, Any]:
     if confirmed is not True:
         raise ReviewLedgerError("explicit_confirmation_required", "Explicit confirmation is required.", status_code=409)
@@ -555,10 +639,10 @@ def commit_review_decision(
     decision = str(decision or "").strip().lower()
     if decision not in ALLOWED_DECISIONS:
         raise ReviewLedgerError("invalid_review_decision", "Unsupported review decision.")
-    role = str(reviewer_role or "other_reviewer").strip().lower()
+    role = "other_reviewer" if reviewer else str(reviewer_role or "other_reviewer").strip().lower()
     if role not in ALLOWED_ROLES:
         raise ReviewLedgerError("invalid_reviewer_role", "Unsupported reviewer role.")
-    name = " ".join(_safe_text(reviewer_name, 160).split())
+    name = reviewer.reviewer_id if reviewer else " ".join(_safe_text(reviewer_name, 160).split())
     if not name:
         raise ReviewLedgerError("reviewer_name_required", "A reviewer name or local identifier is required.")
     if decision == "approve_review" and attested is not True:
@@ -581,8 +665,15 @@ def commit_review_decision(
     if not hmac.compare_digest(expected, hashlib.sha256(token.encode("utf-8")).hexdigest()):
         raise ReviewLedgerError("invalid_confirmation_token", "The confirmation token is invalid.", status_code=409)
     document = get_document(case_root, document_id, include_history=False)
-    if str(document.get("current_revision_id") or "") != str(request.get("revision_id") or ""):
+    if (document.get("current_revision_id") != request.get("revision_id")
+            or document.get("content_sha256") != request["packet"].get("document_content_sha256")):
         raise ReviewLedgerError("review_request_stale", "The document changed after this review packet was prepared.", status_code=409)
+    trusted_binding = request.get("filing_reviewer_binding")
+    if trusted_binding is not None or reviewer is not None:
+        if (reviewer is None or reviewer.binding() != trusted_binding
+                or not reviewer_binding_current(trusted_binding, matter_id=reviewer.matter_id)
+                or datetime.now(UTC) >= datetime.fromisoformat(request["approval_expires_at"])):
+            raise ReviewLedgerError("filing_review_identity_changed", "Prepare a new review with the currently authorized reviewer.", status_code=403)
 
     claim_rows = list((request.get("packet") or {}).get("claims_for_review") or [])
     normalized_annotations, annotation_blockers = _normalize_claim_annotations(claim_annotations, claim_rows)
@@ -591,9 +682,10 @@ def commit_review_decision(
         for claim in claim_rows:
             if bool(claim.get("material", True)) and str(claim.get("claim_id")) not in annotated_ids:
                 annotation_blockers.append(f"review_annotation_missing:{claim.get('claim_id')}")
-    human_complete = decision == "approve_review"
+    human_complete = decision == "approve_review" and reviewer is not None
     gate_payload = dict(request.get("gate_payload") or {})
     gate_payload["human_review_complete"] = human_complete
+    gate_payload["privacy_review_complete"] = human_complete and privacy_attested is True
     gate_payload["review_annotation_blockers"] = sorted(set(annotation_blockers))
     gate = FilingReadyGate().evaluate(gate_payload)
     status = {
@@ -621,6 +713,9 @@ def commit_review_decision(
         "committed_at": _utc_now(),
         "review_required": not bool(gate.get("filing_ready")),
     }
+    if reviewer is not None:
+        record["filing_reviewer_binding"] = reviewer.binding()
+        record["privacy_attested"] = privacy_attested is True
     record["decision_sha256"] = _sha(record)
     previous_request_sha256 = request["request_sha256"]
     request["status"] = "consumed"

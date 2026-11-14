@@ -31,3 +31,15 @@ tenant and admin role. Keep the token out of shell history, logs, and all
 repository files. Changing the configured digest revokes the old credential.
 Local research, working drafts, and matter-key status require no maintenance
 token. This credential is not an enterprise identity provider.
+
+For an offline filing reviewer, provision one operator-approved reviewer ID,
+tenant, and active matter ID through `MFL_FILING_REVIEWER_ID`,
+`MFL_FILING_REVIEWER_TENANT`, and `MFL_FILING_REVIEWER_MATTER_ID`. Set
+`MFL_FILING_REVIEWER_BEARER_SHA256` to the SHA-256 of the ASCII encoding of a
+fresh random 32-byte lowercase hex token. Give the token only to the authorized
+reviewer. Enter it in the workbench before preparing, recording and downloading
+the filing copy. Remove the configuration or rotate the token to revoke
+existing approvals. This authenticates the delegated credential; it does not
+establish professional licensure. The first authorized export is exact text
+only, with facts backed by verified staged TXT records; other formats remain
+review-required working copies.
