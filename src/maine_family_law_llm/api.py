@@ -4715,9 +4715,12 @@ if FastAPI is not None:
     def local_agent_worker_start(
         payload: LocalAgentWorkerControlRequest, request: Request
     ) -> dict[str, Any]:
+        from app.api.security import require_local_operator
+
         scope, root = _local_agent_scope(payload, request)
         if scope["role"] != "admin" or payload.user_confirmed is not True:
             raise HTTPException(status_code=403, detail="fast_interchange_local_admin_confirmation_required")
+        require_local_operator(request, role=scope["role"], tenant_id=scope["tenant_id"], lane="model")
         audit_store = _local_agent_audit_store(root)
         binding_sha256 = local_agent_digest(
             {"model_id": payload.model_id, "capability": payload.capability}
@@ -4755,9 +4758,12 @@ if FastAPI is not None:
     def local_agent_worker_stop(
         payload: LocalAgentWorkerControlRequest, request: Request
     ) -> dict[str, Any]:
+        from app.api.security import require_local_operator
+
         scope, root = _local_agent_scope(payload, request)
         if scope["role"] != "admin" or payload.user_confirmed is not True:
             raise HTTPException(status_code=403, detail="fast_interchange_local_admin_confirmation_required")
+        require_local_operator(request, role=scope["role"], tenant_id=scope["tenant_id"], lane="model")
         audit = _local_agent_audit_store(root).record(
             "worker_stopped",
             scope=scope,

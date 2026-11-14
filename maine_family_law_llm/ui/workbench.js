@@ -2310,7 +2310,8 @@
       const governance = url.startsWith('/api/admin/') && !preservation;
       const authorityOperator = /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
       const evalOperator = url === '/api/evals/human-grounded/cases';
-      const operatorAction = preservation || governance || authorityOperator || evalOperator;
+      const modelOperator = /^\/api\/local-agent\/worker\/(start|stop)$/.test(url);
+      const operatorAction = preservation || governance || authorityOperator || evalOperator || modelOperator;
       const mutation = !operatorAction && isIdempotentMutation(url, options);
       const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
@@ -2324,7 +2325,8 @@
         const input = document.getElementById(
           governance ? 'governance-operator-credential' : authorityOperator ? 'authority-bundle-credential'
             : evalOperator ? 'attorney-gold-credential'
-              : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
+              : modelOperator ? 'local-agent-worker-credential'
+                : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
         );
         const token = input?.value.trim();
         if (input) input.value = '';
@@ -2335,7 +2337,7 @@
         }
         if (!/^[a-f0-9]{64}$/.test(token || '')) {
           input?.focus();
-          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : evalOperator ? 'evaluation' : 'governance';
+          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : evalOperator ? 'evaluation' : modelOperator ? 'model' : 'governance';
           throw new Error(`Enter the ${lane} operator credential before continuing.`);
         }
         headers.set('Authorization', 'Bearer ' + token);

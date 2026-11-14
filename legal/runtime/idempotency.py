@@ -283,7 +283,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
         } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/",
                                           "/api/reviewed-filing-packet/", "/api/admin/",
-                                          "/api/authority-updates/", "/api/evals/human-grounded/")) or (
+                                          "/api/authority-updates/", "/api/evals/human-grounded/",
+                                          "/api/models/", "/api/local-agent/worker/")) or (
             request.url.path.startswith("/api/document-workspace/documents/")
             and "/review/" in request.url.path
         ):

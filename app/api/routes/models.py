@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.security import review_response
+from app.api.security import require_local_operator, review_response
 from legal.model_orchestration import AdaptiveRuntimePlanner, ModelControlCenter
 from legal.security.local_request_firewall import evaluate_local_request
 from maine_family_law_llm.prose_sentinel import prepare_training_admission
@@ -102,9 +102,10 @@ def import_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().import_model(payload)
     return review_response("POST /api/models/import", "import_model", _sanitize_payload(result))
 
@@ -129,6 +130,7 @@ def sentinel_training_admission(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     """Hash source cards for human review before a separate local model workflow.
 
@@ -139,7 +141,7 @@ def sentinel_training_admission(
     """
 
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     source_cards = payload.get("source_cards", [])
     if not isinstance(source_cards, list):
         raise HTTPException(status_code=422, detail="sentinel_source_cards_must_be_a_list")
@@ -160,9 +162,10 @@ def benchmark_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().benchmark_model(model_id, payload)
     return review_response(
         "POST /api/models/{model_id}/benchmark", "benchmark_model", _sanitize_payload(result)
@@ -175,9 +178,10 @@ def admit_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().admit_model(model_id, payload)
     return review_response(
         "POST /api/models/{model_id}/admit", "admit_model", _sanitize_payload(result)
@@ -190,9 +194,10 @@ def reject_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().reject_model(model_id, payload)
     return review_response(
         "POST /api/models/{model_id}/reject", "reject_model", _sanitize_payload(result)
@@ -205,9 +210,10 @@ def quarantine_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().quarantine_model(model_id, payload)
     return review_response(
         "POST /api/models/{model_id}/quarantine", "quarantine_model", _sanitize_payload(result)
@@ -234,9 +240,10 @@ def cancel_model(
     payload: dict,
     request: Request,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="model")
     result = _center().cancel_model(model_id, payload)
     return review_response(
         "POST /api/models/{model_id}/cancel", "cancel_model", _sanitize_payload(result)

@@ -76,7 +76,8 @@ def test_api_exposes_public_shell_and_nonexecuting_sentinel_boundary() -> None:
     assert packet["model_training_execution"] is False
 
 
-def test_model_management_api_exposes_the_same_sentinel_admission_boundary() -> None:
+def test_model_management_api_exposes_the_same_sentinel_admission_boundary(monkeypatch) -> None:
+    import hashlib
     import pytest
 
     pytest.importorskip("fastapi")
@@ -84,9 +85,11 @@ def test_model_management_api_exposes_the_same_sentinel_admission_boundary() -> 
 
     from app.api.main import app
 
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_TENANT", "sentinel-test")
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_BEARER_SHA256", hashlib.sha256(b"a" * 64).hexdigest())
     response = TestClient(app).post(
         "/api/models/family-model-9/sentinel-admission",
-        headers={"X-User-Role": "admin", "X-Tenant-Id": "sentinel-test"},
+        headers={"X-User-Role": "admin", "X-Tenant-Id": "sentinel-test", "Authorization": "Bearer " + "a" * 64},
         json={"source_cards": [{"source_id": "source-1", "snippet": "reviewable excerpt"}]},
     )
 

@@ -674,6 +674,8 @@ contact schedule"></textarea></label>
         <strong id="local-agent-worker-title">FAST INTERCHANGE worker</strong>
         <p>For an installed, admitted specialist only. The app checks this computer before loading it and never downloads a model.</p>
         <label><input id="local-agent-worker-confirm" type="checkbox"/> I authorize starting or stopping the selected specialist on this device.</label>
+        <label>Model operator credential <input id="local-agent-worker-credential" type="password" maxlength="64" autocomplete="off"></label>
+        <p class="field-hint">For starting or stopping an admitted specialist only. Core research and drafting do not require this credential.</p>
         <div class="row"><button class="primary-action" disabled id="local-agent-worker-start" type="button">Start selected specialist</button><button class="secondary" disabled id="local-agent-worker-stop" type="button">Stop specialist</button></div>
         <p id="local-agent-worker-status" role="status" aria-live="polite" aria-atomic="true">Worker status has not been checked.</p>
       </section>

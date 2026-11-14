@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from legal.agent_runtime import LocalAgentRuntime, LocalModelResponse, LoopbackEndpointPolicy
@@ -275,6 +276,11 @@ def test_managed_specialist_worker_requires_explicit_local_admin(bound_host, mon
         "/api/local-agent/worker/start", json=body, headers=bound_host["headers"]
     )
     assert denied.status_code == 403
+    admin_headers = {**bound_host["headers"], "X-User-Role": "admin"}
+    assert bound_host["client"].post("/api/local-agent/worker/start", json=body, headers=admin_headers).status_code == 403
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_TENANT", admin_headers["X-Tenant-Id"])
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_BEARER_SHA256", hashlib.sha256(b"a" * 64).hexdigest())
+    admin_headers["Authorization"] = "Bearer " + "a" * 64
 
     started = []
 
@@ -292,7 +298,7 @@ def test_managed_specialist_worker_requires_explicit_local_admin(bound_host, mon
     response = bound_host["client"].post(
         "/api/local-agent/worker/start",
         json=body,
-        headers={**bound_host["headers"], "X-User-Role": "admin"},
+        headers=admin_headers,
     )
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "running"

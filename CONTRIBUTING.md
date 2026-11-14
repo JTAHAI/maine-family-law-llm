@@ -59,6 +59,10 @@ tenant-scoped operator credentials: `MFL_GOVERNANCE_OPERATOR_TENANT` /
 format and `local-desktop` for the shipped UI. Public authority status remains
 available without a credential.
 
+Registry administration and starting or stopping an admitted specialist use
+`MFL_MODEL_OPERATOR_TENANT` and `MFL_MODEL_OPERATOR_BEARER_SHA256` with the
+same format. This does not grant model admission or release qualification.
+
 The human-grounded evaluation ledger uses `MFL_EVAL_OPERATOR_TENANT` and
 `MFL_EVAL_OPERATOR_BEARER_SHA256` for adding tasks and adjudicating. Set
 `MFL_EVAL_REVIEWERS_SHA256_JSON` to an object mapping independent, stable

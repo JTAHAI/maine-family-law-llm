@@ -159,9 +159,12 @@ def test_control_center_benchmark_quarantine_and_api_surface(tmp_path, monkeypat
     client = TestClient(app)
     response = client.get("/api/models/local-governance-bench-001", headers=_headers())
     health = client.get("/api/models/local-governance-bench-001/health", headers=_headers())
+    assert client.post("/api/models/local-governance-bench-001/benchmark", headers=_headers(), json={}).status_code == 403
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_TENANT", _headers()["X-Tenant-Id"])
+    monkeypatch.setenv("MFL_MODEL_OPERATOR_BEARER_SHA256", sha256(b"a" * 64).hexdigest())
     api_benchmark = client.post(
         "/api/models/local-governance-bench-001/benchmark",
-        headers=_headers(),
+        headers={**_headers(), "Authorization": "Bearer " + "a" * 64},
         json={"scores": {"smoke_f1": 1.0}, "evidence": {"dataset": "smoke", "evidence_hash": "benchmark-002"}},
     )
 

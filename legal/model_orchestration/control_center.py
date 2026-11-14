@@ -172,7 +172,7 @@ class ModelControlCenter:
             model_id,
             reviewer=str(payload.get("reviewer") or payload.get("admission_reviewer") or ""),
             reason=str(payload.get("reason") or payload.get("admission_reason") or ""),
-            production=bool(payload.get("production", False)),
+            production=payload.get("production") is True,
         )
         return {"status": "pass", "model": record.as_dict()}
 
