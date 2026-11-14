@@ -710,7 +710,7 @@ def run_pass50_51_offline_smoke() -> dict:
     blockers = []
     if release_candidate.status != "pass" or not release_candidate.release_candidate_frozen:
         blockers.append("release_candidate_fixture_failed")
-    if ga_shipment.status != "pass" or not ga_shipment.ga_shipped:
+    if ga_shipment.status != "pass" or not ga_shipment.shipment_manifest_validated or ga_shipment.ga_shipped:
         blockers.append("ga_shipment_fixture_failed")
     if blocked_candidate.status != "blocked":
         blockers.append("blocked_release_candidate_fixture_should_block")

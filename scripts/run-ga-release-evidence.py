@@ -74,7 +74,8 @@ def build_evidence(output_path: Path) -> dict:
         if release_candidate.status == "pass"
         and release_candidate.release_candidate_frozen
         and ga_shipment.status == "pass"
-        and ga_shipment.ga_shipped
+        and ga_shipment.shipment_manifest_validated
+        and not ga_shipment.ga_shipped
         and blocked_candidate.status == "blocked"
         and blocked_ga.status == "blocked"
         else "fail",
