@@ -20,6 +20,7 @@ from legal.production.authority_product import AuthorityProductPublisher, Author
 from legal.production.source_update_engine import SourceUpdateEngine
 from legal.authority_store.authority_layer import ParsedAuthorityIndexBuilder
 from legal.retrieval.index_builder import RetrievalIndexBuilder
+from legal.security.durable_io import exclusive_file_lock
 from app.services.authority_product_service import AuthorityProductService
 
 
@@ -987,9 +988,6 @@ class AuthorityLibraryService:
         if max_targets is not None:
             targets = targets[: max(0, int(max_targets))]
         job = AuthorityUpdateJob(job_id=uuid.uuid4().hex)
-        with self._lock:
-            self._jobs[job.job_id] = job
-            self._active_job_id = job.job_id
         if dry_run:
             job.status = "completed"
             job.started_at = _utc_now()
@@ -1004,6 +1002,17 @@ class AuthorityLibraryService:
             }
             return job.as_dict()
 
+        cls = type(self)
+        with self._lock:
+            active = self._jobs.get(cls._active_job_id)
+            if active and not active.finished_at:
+                return {
+                    "status": "blocked", "blockers": ["authority_update_already_running"],
+                    "review_required": True,
+                }
+            self._jobs[job.job_id] = job
+            cls._active_job_id = job.job_id
+
         def _run() -> None:
             job.status = "running"
             job.started_at = _utc_now()
@@ -1015,14 +1024,29 @@ class AuthorityLibraryService:
                     job.status = "canceled"
                     job.message = "Update canceled before publication."
                     return
+                failed_path = ingestor.write_failure_report()
+                if not ingested or ingestor.failed:
+                    job.status = "failed"
+                    job.message = "Authority refresh incomplete. The prior manifest and active build remain available."
+                    job.result = {
+                        "status": "partial",
+                        "blockers": ["authority_refresh_incomplete"],
+                        "target_count": len(targets),
+                        "ingested_count": len(ingested),
+                        "failed_count": len(ingestor.failed),
+                        "failed_sources_path": _mask_path(failed_path),
+                        "activation_performed": False,
+                        "review_required": True,
+                    }
+                    return
                 snapshot_manifest_path = ingestor.write_manifest([item.to_dict() for item in ingested])
                 # The ingestor keeps its working manifest beside snapshots, but
                 # every downstream authority gate reads the canonical external
                 # store location.  Promote the completed manifest atomically so
                 # an interrupted update cannot leave mixed generations behind.
                 manifest_path = root / "official_authority_store" / "source_manifest.json"
-                _atomic_write_json(manifest_path, _load_json(snapshot_manifest_path))
-                failed_path = ingestor.write_failure_report()
+                with exclusive_file_lock(manifest_path.parent / ".manifest.lock"):
+                    _atomic_write_json(manifest_path, _load_json(snapshot_manifest_path))
                 update_report = SourceUpdateEngine(data_root=root).run(write_report=True)
                 parsed_report = ParsedAuthorityStoreBuilder(data_root=root).build()
                 ParsedAuthorityIndexBuilder(data_root=root).build(write=True)
@@ -1058,7 +1082,8 @@ class AuthorityLibraryService:
             finally:
                 job.finished_at = _utc_now()
                 with self._lock:
-                    self._active_job_id = ""
+                    if cls._active_job_id == job.job_id:
+                        cls._active_job_id = ""
 
         thread = threading.Thread(target=_run, name=f"authority-update-{job.job_id}", daemon=True)
         thread.start()

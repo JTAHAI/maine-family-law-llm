@@ -93,6 +93,40 @@ def test_pass31_fixture_update_refuses_nonqualifying_authority_without_activatio
     assert job.result["publication"]["status"] == "blocked"
 
 
+def test_all_failed_refresh_preserves_manifest_and_active_pointer(monkeypatch, tmp_path):
+    from legal.connectors import load_official_source_targets
+    from legal.connectors.http_fetcher import OfficialSourceFetchError
+
+    root = tmp_path / "external-authority"
+    manifest = root / "official_authority_store" / "source_manifest.json"
+    manifest.parent.mkdir(parents=True)
+    prior = b'[{"source_id": "prior-source", "hash": "fictional"}]'
+    manifest.write_bytes(prior)
+    pointer = root / "authority_product" / "ACTIVE_BUILD.json"
+    pointer.parent.mkdir()
+    pointer.write_bytes(b'{"build_id": "prior"}')
+    source = load_official_source_targets()[0]
+    monkeypatch.setattr("app.services.authority_library_service.load_official_source_targets", lambda: [source])
+
+    def unavailable(target):
+        raise OfficialSourceFetchError(target=target, code="fixture_outage", message="Fictional outage.")
+
+    service = AuthorityLibraryService(data_root=root, repo_root=tmp_path / "source-repo")
+    monkeypatch.setattr(service, "_build_fetcher", lambda *a, **kw: SimpleNamespace(fetch=unavailable))
+    queued = service.update(fixture_mode=True)
+    deadline = time.monotonic() + 15
+    job = service.get_job(queued["job_id"])
+    while not job.finished_at and time.monotonic() < deadline:
+        time.sleep(0.02)
+
+    assert job.status == "failed"
+    assert manifest.read_bytes() == prior
+    assert pointer.read_bytes() == b'{"build_id": "prior"}'
+    assert job.result["blockers"] == ["authority_refresh_incomplete"]
+    failures = root / "official_authority_store" / "snapshots" / "failed_sources.json"
+    assert json.loads(failures.read_bytes())["failed_count"] == 1
+
+
 def test_pass31_canonical_activation_requires_role_acknowledgement_and_audit(monkeypatch) -> None:
     monkeypatch.setattr(
         authority_routes.AuthorityLibraryService,
