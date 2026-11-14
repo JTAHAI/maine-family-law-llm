@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import re
 import zipfile
 from dataclasses import dataclass, field
@@ -25,6 +26,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from legal.evals.external_eval_root import ExternalEvalRootError, resolve_external_eval_root
 from legal.ops.supply_chain import SupplyChainAuditor
+from legal.security.durable_io import read_bounded_regular_file
+from legal.security.strict_json import StrictJSONError, strict_json_loads
 
 
 _HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -85,14 +88,32 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _load_object(path: Path, *, limit: int = 4 * 1024 * 1024) -> dict[str, Any] | None:
+def _load_hashed_object(
+    path: Path, *, limit: int = 4 * 1024 * 1024
+) -> tuple[dict[str, Any] | None, str]:
     try:
-        if not path.is_file() or path.is_symlink() or path.stat().st_size > limit:
-            return None
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    return value if isinstance(value, dict) else None
+        raw = read_bounded_regular_file(path, max_bytes=limit)
+        value = strict_json_loads(raw, max_bytes=limit, require_object=True)
+    except (OSError, StrictJSONError):
+        return None, ""
+    return value, _digest(raw)
+
+
+def _load_object(path: Path, *, limit: int = 4 * 1024 * 1024) -> dict[str, Any] | None:
+    return _load_hashed_object(path, limit=limit)[0]
+
+
+def _load_pinned_trust(root: Path, filename: str) -> tuple[dict[str, Any] | None, list[str]]:
+    prefix = filename.removesuffix(".json")
+    # Set by the release operator from a separately trusted channel. Never
+    # derive this pin from a bundle submitted for verification.
+    pin = os.environ.get(f"MFL_{prefix.upper()}_SHA256", "").strip().lower()
+    if not _HASH.fullmatch(pin):
+        return None, [f"{prefix}_pin_required"]
+    trust, actual = _load_hashed_object(root / filename, limit=256 * 1024)
+    if trust is None or pin != actual:
+        return None, [f"{prefix}_pin_mismatch"]
+    return trust, []
 
 
 def _safe_external_root(root: str | Path | None, *, project_root: Path) -> tuple[Path | None, list[str]]:
@@ -426,11 +447,14 @@ class ReleaseReproducibilityGate:
         if root is None:
             return ReproducibilityReport(status="blocked", generated_at=_now(), blockers=blockers)
         runs_path = root / _REPRODUCIBILITY_FILENAME
-        runs = _load_object(runs_path)
+        runs, runs_hash = _load_hashed_object(runs_path)
         if runs is None or runs.get("schema_version") != "release_reproducibility_runs_v1":
             return ReproducibilityReport(status="blocked", generated_at=_now(), blockers=["release_reproducibility_runs_unavailable"])
         rows = runs.get("runs") if isinstance(runs.get("runs"), list) else []
         valid_rows = [row for row in rows if isinstance(row, dict) and str(row.get("status") or "").casefold() == "pass" and _SAFE_ID.fullmatch(str(row.get("run_id") or ""))]
+        run_ids = {str(row["run_id"]).casefold() for row in valid_rows}
+        if len(run_ids) != len(valid_rows):
+            blockers.append("release_reproducibility_duplicate_run_id")
         hashes = {str(row.get("package_sha256") or "").casefold() for row in valid_rows}
         payloads = {str(row.get("payload_manifest_sha256") or "").casefold() for row in valid_rows}
         sources = {str(row.get("source_sbom_sha256") or "").casefold() for row in valid_rows}
@@ -444,10 +468,11 @@ class ReleaseReproducibilityGate:
         if not source_match: blockers.append("release_reproducibility_source_sbom_mismatch")
         if not pinned: blockers.append("release_reproducibility_toolchain_not_pinned")
         attestation = _load_object(root / _REPRODUCIBILITY_ATTESTATION_FILENAME)
-        trust = _load_object(root / _REPRODUCIBILITY_TRUST_FILENAME, limit=256 * 1024)
+        trust, pin_blockers = _load_pinned_trust(root, _REPRODUCIBILITY_TRUST_FILENAME)
+        blockers.extend(pin_blockers)
         verified, signature_blockers = _verify_signed_payload(payload=attestation, trust=trust, expected_payload_schema="release_reproducibility_attestation_v1", expected_trust_schema="release_reproducibility_trust_v1", prefix="release_reproducibility_attestation")
         blockers.extend(signature_blockers)
-        if attestation is not None and str(attestation.get("runs_sha256") or "").casefold() != _file_hash(runs_path):
+        if attestation is not None and str(attestation.get("runs_sha256") or "").casefold() != runs_hash:
             blockers.append("release_reproducibility_attestation_runs_hash_mismatch")
         if attestation is not None and str(attestation.get("package_sha256") or "").casefold() != package_report.package_sha256:
             blockers.append("release_reproducibility_attestation_package_hash_mismatch")
@@ -504,7 +529,7 @@ class OrganizationalSignoffGate:
         if root is None:
             return OrganizationalSignoffReport(status="blocked", generated_at=_now(), blockers=blockers)
         bundle_path = root / _SIGNOFF_FILENAME
-        bundle = _load_object(bundle_path)
+        bundle, bundle_hash = _load_hashed_object(bundle_path)
         if bundle is None or bundle.get("schema_version") != "organizational_signoff_bundle_v1":
             return OrganizationalSignoffReport(status="blocked", generated_at=_now(), blockers=["organizational_signoff_bundle_unavailable"])
         approvals = bundle.get("approvals") if isinstance(bundle.get("approvals"), list) else []
@@ -518,10 +543,11 @@ class OrganizationalSignoffGate:
         missing = sorted(set(REQUIRED_SIGNOFF_LANES) - valid_lanes)
         blockers.extend(f"organizational_signoff_missing:{lane}" for lane in missing)
         attestation = _load_object(root / _SIGNOFF_ATTESTATION_FILENAME)
-        trust = _load_object(root / _SIGNOFF_TRUST_FILENAME, limit=256 * 1024)
+        trust, pin_blockers = _load_pinned_trust(root, _SIGNOFF_TRUST_FILENAME)
+        blockers.extend(pin_blockers)
         verified, signature_blockers = _verify_signed_payload(payload=attestation, trust=trust, expected_payload_schema="organizational_signoff_attestation_v1", expected_trust_schema="organizational_signoff_trust_v1", prefix="organizational_signoff_attestation")
         blockers.extend(signature_blockers)
-        if attestation is not None and str(attestation.get("bundle_sha256") or "").casefold() != _file_hash(bundle_path):
+        if attestation is not None and str(attestation.get("bundle_sha256") or "").casefold() != bundle_hash:
             blockers.append("organizational_signoff_attestation_bundle_hash_mismatch")
         # A local verifier cannot establish that the signing key holder held the
         # claimed organizational authority.  This remains an external decision.
@@ -546,6 +572,8 @@ class EnterpriseDecisionReport:
             "store_ga_decision": self.store_ga_decision, "enterprise_ga_decision": self.enterprise_ga_decision,
             "required_evidence_categories": list(REQUIRED_DECISION_EVIDENCE), "evidence_categories_present": self.evidence_categories_present,
             "attestation_verified": self.attestation_verified, "blockers": sorted(set(self.blockers)), "review_required": self.review_required,
+            "implementation_complete": None, "qualification_complete": None,
+            "external_evidence_complete": False, "ga_eligible": False, "ga_shipped": False,
             "network_used": False, "automated_release_or_publication": False,
         }
 
@@ -559,7 +587,7 @@ class EnterpriseDecisionPacket:
         if root is None:
             return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision="STORE_GA_NOT_EVALUATED", enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", blockers=blockers)
         manifest_path = root / _DECISION_FILENAME
-        manifest = _load_object(manifest_path)
+        manifest, manifest_hash = _load_hashed_object(manifest_path)
         if manifest is None or manifest.get("schema_version") != "enterprise_ga_evidence_manifest_v1":
             return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision="STORE_GA_NOT_EVALUATED", enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", blockers=["enterprise_ga_evidence_manifest_unavailable"])
         rows = manifest.get("evidence") if isinstance(manifest.get("evidence"), list) else []
@@ -572,10 +600,11 @@ class EnterpriseDecisionPacket:
                 present.add(category)
         blockers.extend(f"enterprise_ga_evidence_missing:{category}" for category in sorted(set(REQUIRED_DECISION_EVIDENCE) - present))
         attestation = _load_object(root / _DECISION_ATTESTATION_FILENAME)
-        trust = _load_object(root / _DECISION_TRUST_FILENAME, limit=256 * 1024)
+        trust, pin_blockers = _load_pinned_trust(root, _DECISION_TRUST_FILENAME)
+        blockers.extend(pin_blockers)
         verified, signature_blockers = _verify_signed_payload(payload=attestation, trust=trust, expected_payload_schema="enterprise_ga_evidence_attestation_v1", expected_trust_schema="enterprise_ga_evidence_trust_v1", prefix="enterprise_ga_evidence_attestation")
         blockers.extend(signature_blockers)
-        if attestation is not None and str(attestation.get("manifest_sha256") or "").casefold() != _file_hash(manifest_path):
+        if attestation is not None and str(attestation.get("manifest_sha256") or "").casefold() != manifest_hash:
             blockers.append("enterprise_ga_evidence_attestation_manifest_hash_mismatch")
         # This program intentionally has no authority to declare either a Store
         # submission accepted or an organization released to Enterprise GA.

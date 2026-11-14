@@ -95,9 +95,18 @@ def _closure_bundle(root: Path, package: Path) -> tuple[dict, Ed25519PrivateKey]
     return package_report, key
 
 
-def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_path: Path) -> None:
+def _pin_trust(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
+    for category in ("release_reproducibility", "organizational_signoff", "enterprise_ga_evidence"):
+        monkeypatch.setenv(
+            f"MFL_{category.upper()}_TRUST_SHA256",
+            _sha(root / f"{category}_trust.json"),
+        )
+
+
+def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; package_report, _key = _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     assert package_report["license_status"] == "pass"
     assert package_report["vulnerability_status"] == "pass"
     assert set(package_report["sbom_artifacts"]) == {"exact-source-sbom.json", "exact-msix-sbom.json"}
@@ -120,9 +129,10 @@ def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_
     assert "release_reproducibility_package_hash_mismatch" in blocked["blockers"]
 
 
-def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path) -> None:
+def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     tabletop = IncidentResponseProgram().tabletop("fictional_private_record_exposure")
     assert tabletop["status"] == "fictional_tabletop_completed_review_required"
     assert tabletop["operational_drill_verified"] is False
@@ -136,6 +146,33 @@ def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path
     assert decision["attestation_verified"] is True
     assert decision["store_ga_decision"] == "STORE_GA_BLOCKED"
     assert decision["enterprise_ga_decision"] == "ENTERPRISE_GA_BLOCKED"
+    assert decision["ga_eligible"] is decision["ga_shipped"] is False
+
+
+def test_evidence_suppliers_cannot_supply_their_own_trust_anchor(tmp_path, monkeypatch):
+    package = tmp_path / "Fictional_8.0.0.0_x64.msix"
+    _package(package)
+    external = tmp_path / "external-release-evidence"
+    _closure_bundle(external, package)
+    for category in ("release_reproducibility", "organizational_signoff", "enterprise_ga_evidence"):
+        monkeypatch.delenv(f"MFL_{category.upper()}_TRUST_SHA256", raising=False)
+    sbom = PackageSbomGate(project_root=ROOT).audit(package=package, evidence_root=external)
+    reports = [
+        ReleaseReproducibilityGate(project_root=ROOT).verify(evidence_root=external, package_report=sbom),
+        OrganizationalSignoffGate(project_root=ROOT).verify(evidence_root=external),
+        EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external),
+    ]
+    for report in reports:
+        assert report.attestation_verified is False
+        assert report.status == "blocked"
+        assert any(item.endswith("_trust_pin_required") for item in report.blockers)
+
+    _pin_trust(monkeypatch, external)
+    # A new, internally consistent but untrusted replacement bundle is refused.
+    _closure_bundle(external, package)
+    report = EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external)
+    assert report.attestation_verified is False
+    assert "enterprise_ga_evidence_trust_pin_mismatch" in report.blockers
 
 
 def test_pass196_200_production_routes_protect_tenant_and_redact_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -147,6 +184,7 @@ def test_pass196_200_production_routes_protect_tenant_and_redact_paths(tmp_path:
 
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     monkeypatch.setenv("MFL_RELEASE_CLOSURE_MSIX_PATH", str(package))
     monkeypatch.setenv("MFL_RELEASE_CLOSURE_EVIDENCE_ROOT", str(external))
     client = TestClient(app)
