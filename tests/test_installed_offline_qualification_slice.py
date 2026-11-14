@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import os
 import socket
 import subprocess
 import time
@@ -169,19 +171,49 @@ def test_presidio_worker_disables_public_suffix_network_refresh() -> None:
     assert "fallback_to_snapshot=True" in source
 
 
-def test_installed_runtime_api_launches_and_serves_feature_status() -> None:
-    resolution = resolve_installed_runtime_executable()
-    if not resolution.executable_path:
-        pytest.skip("No installed or bundled runtime executable is available.")
+def test_exact_frozen_runtime_api_launches_and_serves_feature_status(tmp_path: Path) -> None:
+    candidate = os.environ.get("MFL_QA_FROZEN_RUNTIME_EXE", "").strip()
+    if not candidate:
+        pytest.skip("No exact frozen candidate supplied; installed Store lifecycle is qualified separately.")
+    executable = Path(candidate).resolve(strict=True)
+    assert executable.name == "MaineFamilyLawLLM.exe"
+    assert executable.is_file()
+    with executable.open("rb") as stream:
+        assert hashlib.file_digest(stream, "sha256").hexdigest() == os.environ.get(
+            "MFL_QA_FROZEN_RUNTIME_SHA256"
+        ), "Frozen candidate SHA-256 missing or mismatched"
 
     port = _free_port()
     base_url = f"http://127.0.0.1:{port}"
+    profile = tmp_path / "isolated-profile"
+    profile.mkdir()
+    environment = {
+        name: value for name, value in os.environ.items()
+        if not name.startswith(("MFL_", "MAINE_"))
+    }
+    environment.update(
+        LOCALAPPDATA=str(profile),
+        MFL_RUNTIME_MODE="store",
+        MAINE_FAMILY_LAW_DATA_ROOT=str(profile / "data"),
+        MFL_AUTHORITY_DATA_ROOT=str(profile / "empty-authority"),
+        MFL_RUNTIME_STATE_ROOT=str(profile / "state"),
+        MFL_IDEMPOTENCY_STATE_ROOT=str(profile / "idempotency"),
+        MFL_VAULT_KEY_ROOT=str(profile / "vault"),
+        HTTP_PROXY="http://127.0.0.1:9",
+        HTTPS_PROXY="http://127.0.0.1:9",
+        ALL_PROXY="http://127.0.0.1:9",
+        NO_PROXY="localhost,127.0.0.1,::1",
+        TRANSFORMERS_OFFLINE="1",
+        HF_HUB_OFFLINE="1",
+    )
     process = subprocess.Popen(
-        [resolution.executable_path, "--serve-local-api", "--port", str(port)],
-        cwd=str(Path(resolution.executable_path).parent),
+        [str(executable), "--serve-local-api", "--port", str(port)],
+        cwd=str(executable.parent),
+        env=environment,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         text=True,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     try:
         health = _wait_for_json(f"{base_url}/api/health", timeout_s=180)
@@ -191,7 +223,6 @@ def test_installed_runtime_api_launches_and_serves_feature_status() -> None:
         # The current canonical local gateway reports ``ok`` for healthy
         # desktop operation; older runtime contracts used ready/degraded.
         assert health["status"] in {"ok", "ready", "degraded"}
-        assert resolution.executable_path.endswith("MaineFamilyLawLLM.exe")
         assert version["workbench_url"] == "/"
         assert doc_status["local_only"] is True
         assert "workbench" in root.lower()
