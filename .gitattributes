@@ -21,3 +21,5 @@
 *.ico binary
 *.pfx binary
 *.cer binary
+data/fixtures/parser_regression/rules_footnote_v1.txt text eol=lf
+data/fixtures/parser_regression/malformed_download_v1.bin -text
