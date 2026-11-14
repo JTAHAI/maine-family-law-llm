@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field, StrictBool
 
-from app.api.security import review_response, strict_json_bool
+from app.api.security import require_authority_operator, review_response, strict_json_bool
 from app.services import AuthorityLibraryService, AuthorityProductService
 
 router = APIRouter(tags=["authority"])
@@ -75,8 +75,7 @@ def authority_update_report(build_id: str):
 
 
 @router.post("/authority/update", summary="Update official Maine sources")
-def authority_update(payload: AuthorityUpdateRequest):
-    library = AuthorityLibraryService()
+def authority_update(payload: AuthorityUpdateRequest, request: Request):
     if payload.allow_live and not payload.dry_run and not payload.network_acknowledged:
         return review_response(
             "POST /api/authority/update",
@@ -88,7 +87,8 @@ def authority_update(payload: AuthorityUpdateRequest):
                 "message": "Live official-source updates require an explicit network acknowledgement.",
             },
         )
-    result = library.update(
+    require_authority_operator(request)
+    result = AuthorityLibraryService().update(
         dry_run=bool(payload.dry_run),
         source_classes=payload.source_classes,
         fixture_mode=bool(payload.fixture_mode),
@@ -100,7 +100,8 @@ def authority_update(payload: AuthorityUpdateRequest):
 
 
 @router.post("/authority/update/cancel", summary="Cancel the current authority update")
-def authority_update_cancel(payload: dict | None = None):
+def authority_update_cancel(request: Request, payload: dict | None = None):
+    require_authority_operator(request)
     job_id = str((payload or {}).get("job_id") or "").strip() or None
     result = AuthorityLibraryService().cancel_update(job_id)
     return review_response("POST /api/authority/update/cancel", "authority_update_cancel", result)
@@ -113,7 +114,7 @@ def authority_build_diff(build_id: str):
 
 
 @router.post("/authority/activate", summary="Explicitly activate a verified staged authority build")
-def authority_activate(payload: AuthorityBuildActivationRequest):
+def authority_activate(payload: AuthorityBuildActivationRequest, request: Request):
     if not payload.acknowledged:
         result = {
             "status": "blocked",
@@ -122,12 +123,13 @@ def authority_activate(payload: AuthorityBuildActivationRequest):
             "review_required": True,
         }
     else:
+        require_authority_operator(request)
         result = AuthorityLibraryService().activate_build(payload.build_id, operation="activate")
     return review_response("POST /api/authority/activate", "authority_build_activation", result)
 
 
 @router.post("/authority/rollback", summary="Explicitly restore a prior verified authority build")
-def authority_rollback(payload: AuthorityBuildActivationRequest):
+def authority_rollback(payload: AuthorityBuildActivationRequest, request: Request):
     if not payload.acknowledged:
         result = {
             "status": "blocked",
@@ -136,6 +138,7 @@ def authority_rollback(payload: AuthorityBuildActivationRequest):
             "review_required": True,
         }
     else:
+        require_authority_operator(request)
         result = AuthorityLibraryService().activate_build(payload.build_id, operation="rollback")
     return review_response("POST /api/authority/rollback", "authority_build_rollback", result)
 

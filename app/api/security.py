@@ -302,6 +302,13 @@ def require_local_evaluation_reviewer(request: Request, *, tenant_id: str | None
     raise HTTPException(403, detail="evaluation_reviewer_authentication_required")
 
 
+def require_authority_operator(request: Request) -> str:
+    return require_local_operator(
+        request, role=request.headers.get("X-User-Role"),
+        tenant_id=request.headers.get("X-Tenant-Id"), lane="authority",
+    )
+
+
 def strict_json_bool(payload: dict[str, Any], field: str, *, default: bool) -> bool:
     """Read a safety-sensitive JSON boolean without truthy-string coercion."""
 

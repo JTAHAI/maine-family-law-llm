@@ -186,7 +186,7 @@
       section.className = 'rail-panel authority-update-center';
       section.dataset.drawerPanel = 'setup';
       section.hidden = true;
-      section.innerHTML = '<div class="rail-title">Authority update center</div><p class="field-hint">An update stages a verified local build. It never changes the active build until you explicitly review and activate it.</p><label for="authority-build-select">Verified authority build</label><select id="authority-build-select"><option value="">Refresh to load local builds</option></select><label class="document-intelligence-option"><input id="authority-build-acknowledgement" type="checkbox"> I reviewed the source-hash diff and want to change the active build.</label><div class="row"><button class="secondary" id="authority-build-refresh" type="button">Refresh builds</button><button class="secondary" id="authority-build-activate" type="button">Activate selected build</button><button class="secondary" id="authority-build-rollback" type="button">Restore selected build</button></div><div aria-live="polite" class="status-strip" id="authority-build-result">Activation and restoration require a selected verified build and explicit review. Legal review remains required.</div>';
+      section.innerHTML = '<div class="rail-title">Authority update center</div><p class="field-hint">An update stages a verified local build. It never changes the active build until you explicitly review and activate it.</p><label>Authority update operator credential <input id="authority-update-credential" type="password" maxlength="64" autocomplete="off"></label><p class="field-hint">Enter the issued authority credential before an update, cancellation, activation or restore. It is not saved.</p><label for="authority-build-select">Verified authority build</label><select id="authority-build-select"><option value="">Refresh to load local builds</option></select><label class="document-intelligence-option"><input id="authority-build-acknowledgement" type="checkbox"> I reviewed the source-hash diff and want to change the active build.</label><div class="row"><button class="secondary" id="authority-build-refresh" type="button">Refresh builds</button><button class="secondary" id="authority-build-activate" type="button">Activate selected build</button><button class="secondary" id="authority-build-rollback" type="button">Restore selected build</button></div><div aria-live="polite" class="status-strip" id="authority-build-result">Activation and restoration require a selected verified build and explicit review. Legal review remains required.</div>';
       const anchor = document.getElementById('authority-gap-review')?.closest('section') || host;
       anchor.insertAdjacentElement('afterend', section);
       authorityBuildSelect = section.querySelector('#authority-build-select');
@@ -2308,7 +2308,8 @@
       let res;
       const preservation = /^\/api\/admin\/(legal-holds|retention-plans)(?:\/|$)/.exec(url);
       const governance = url.startsWith('/api/admin/') && !preservation;
-      const authorityOperator = /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
+      const authorityUpdate = /^\/api\/authority\/(update(?:\/cancel)?|activate|rollback)$/.test(url);
+      const authorityOperator = authorityUpdate || /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
       const evalOperator = url === '/api/evals/human-grounded/cases';
       const modelOperator = /^\/api\/local-agent\/worker\/(start|stop)$/.test(url);
       const operatorAction = preservation || governance || authorityOperator || evalOperator || modelOperator;
@@ -2323,7 +2324,7 @@
       if (url.startsWith('/api/authority-change-impact/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (operatorAction) {
         const input = document.getElementById(
-          governance ? 'governance-operator-credential' : authorityOperator ? 'authority-bundle-credential'
+          governance ? 'governance-operator-credential' : authorityOperator ? (authorityUpdate ? 'authority-update-credential' : 'authority-bundle-credential')
             : evalOperator ? 'attorney-gold-credential'
               : modelOperator ? 'local-agent-worker-credential'
                 : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
@@ -2345,6 +2346,7 @@
           });
         }
         headers.set('Authorization', 'Bearer ' + token);
+        if (authorityUpdate) headers.set('X-User-Role', 'admin');
         options = {...options, redirect: 'error'};
       }
       if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {
@@ -3150,12 +3152,12 @@
       if (!localWorkbenchOverlay) return;
       localWorkbenchReturnFocus = document.activeElement;
       openOverlay(localWorkbenchOverlay);
-      await loadLocalWorkbenchStatus();
       const dialog = localWorkbenchOverlay.querySelector('[role="dialog"]');
       if (dialog) {
         dialog.scrollTop = 0;
         dialog.focus({preventScroll: true});
       }
+      await loadLocalWorkbenchStatus();
     }
 
     function closeLocalWorkbench() {

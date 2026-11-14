@@ -5088,6 +5088,7 @@ if FastAPI is not None:
         dry_run: StrictBool = False
         fixture_mode: StrictBool = False
         allow_live: StrictBool = False
+        network_acknowledged: StrictBool = False
         force_refresh: StrictBool = False
         source_classes: list[str] = Field(default_factory=list)
         max_targets: int | None = None
@@ -5097,7 +5098,13 @@ if FastAPI is not None:
         acknowledged: StrictBool = False
 
     @app.post("/api/authority/update")
-    def local_authority_update(payload: AuthorityUpdateRequest) -> dict[str, Any]:
+    def local_authority_update(payload: AuthorityUpdateRequest, request: Request) -> dict[str, Any]:
+        from app.api.security import require_authority_operator
+
+        if payload.allow_live and not payload.dry_run and not payload.network_acknowledged:
+            return {"status": "blocked", "blockers": ["network_acknowledgement_required"],
+                    "review_required": True, "network_used": False}
+        require_authority_operator(request)
         return AuthorityLibraryService().update(
             dry_run=bool(payload.dry_run),
             source_classes=payload.source_classes,
@@ -5108,7 +5115,10 @@ if FastAPI is not None:
         )
 
     @app.post("/api/authority/update/cancel")
-    def local_authority_update_cancel(payload: dict | None = None) -> dict[str, Any]:
+    def local_authority_update_cancel(request: Request, payload: dict | None = None) -> dict[str, Any]:
+        from app.api.security import require_authority_operator
+
+        require_authority_operator(request)
         job_id = str((payload or {}).get("job_id") or "").strip() or None
         return AuthorityLibraryService().cancel_update(job_id)
 
@@ -5117,15 +5127,21 @@ if FastAPI is not None:
         return AuthorityLibraryService().compare_builds(build_id)
 
     @app.post("/api/authority/activate")
-    def local_authority_activate(payload: AuthorityBuildActivationRequest) -> dict[str, Any]:
+    def local_authority_activate(payload: AuthorityBuildActivationRequest, request: Request) -> dict[str, Any]:
+        from app.api.security import require_authority_operator
+
         if not payload.acknowledged:
             return {"status": "blocked", "build_id": payload.build_id, "blockers": ["authority_activation_acknowledgement_required"], "review_required": True}
+        require_authority_operator(request)
         return AuthorityLibraryService().activate_build(payload.build_id, operation="activate")
 
     @app.post("/api/authority/rollback")
-    def local_authority_rollback(payload: AuthorityBuildActivationRequest) -> dict[str, Any]:
+    def local_authority_rollback(payload: AuthorityBuildActivationRequest, request: Request) -> dict[str, Any]:
+        from app.api.security import require_authority_operator
+
         if not payload.acknowledged:
             return {"status": "blocked", "build_id": payload.build_id, "blockers": ["authority_rollback_acknowledgement_required"], "review_required": True}
+        require_authority_operator(request)
         return AuthorityLibraryService().activate_build(payload.build_id, operation="rollback")
 
     @app.post("/api/authority/citations/resolve")

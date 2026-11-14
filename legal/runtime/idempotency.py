@@ -47,6 +47,9 @@ _GOVERNANCE_OPERATOR_ROUTES = frozenset({
     "/api/governance/expire", "/api/governance/supersede",
     "/api/governance/exceptions", "/api/governance/sign-offs",
 })
+_AUTHORITY_OPERATOR_ROUTES = frozenset({
+    "/api/authority/update", "/api/authority/update/cancel", "/api/authority/activate", "/api/authority/rollback",
+})
 _MAX_STATE_BYTES = 4 * 1024 * 1024
 _MAX_RESPONSE_BYTES = 512 * 1024
 _MAX_ENTRIES = 160
@@ -279,7 +282,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         # Never store/replay credentials or responses requiring current
         # capability checks. The owning route checks expiry and single use.
-        if request.url.path in _GOVERNANCE_OPERATOR_ROUTES or request.url.path in {
+        if request.url.path in _GOVERNANCE_OPERATOR_ROUTES | _AUTHORITY_OPERATOR_ROUTES or request.url.path in {
             "/api/local-agent/preview", "/api/local-agent/run", "/api/local-agent/cancel",
         } or request.url.path.startswith(("/api/model-packs/", "/api/security/privacy/",
                                           "/api/reviewed-filing-packet/", "/api/admin/",
