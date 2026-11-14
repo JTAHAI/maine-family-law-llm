@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -194,7 +195,10 @@ def test_v580_api_and_ui_expose_queue_and_claim_annotations(monkeypatch, tmp_pat
     case.mkdir()
     document = create_document(case, title="Motion for Contempt", content="Motion for contempt. FM-001", document_type="motion")
     monkeypatch.setattr(api_module, "active_case_root", lambda: case)
-    monkeypatch.setattr(api_module.AuthorityProductService, "verify_output", lambda self, **kwargs: _authority_result())
+    monkeypatch.setattr(
+        api_module, "AuthorityProductService",
+        lambda: SimpleNamespace(verify_output=lambda **kwargs: _authority_result()),
+    )
     client = TestClient(api_module.app)
     client.headers.update({"X-User-Role": "reviewer", "X-Tenant-Id": "local-desktop", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Matter-Id": api_module._case_id(case)})
 

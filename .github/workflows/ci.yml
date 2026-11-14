@@ -97,7 +97,7 @@ jobs:
           "MFL_CI_TEST_PYTHON=$python" >> $env:GITHUB_ENV
           & $python -m pip install "torch>=2.5,<3" --index-url https://download.pytorch.org/whl/cpu
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $python -m pip install ".[api,dev,release-hardening,fast-interchange]" "python-multipart>=0.0.20,<0.1" "fpdf2>=2.8.0,<3"
+          & $python -m pip install ".[api,dev,release-hardening,fast-interchange]" "fpdf2>=2.8.0,<3"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $python -m pip check
       - name: Provision headless desktop test display
