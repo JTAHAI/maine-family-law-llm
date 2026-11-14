@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -19,6 +22,7 @@ from legal.governance.organization_readiness import OrganizationReadinessDashboa
 from legal.security.local_request_firewall import evaluate_local_request
 
 router = APIRouter(tags=["admin", "enterprise-administration"])
+_OPERATOR_DIGEST = re.compile(r"[a-f0-9]{64}")
 
 
 def _root() -> Path:
@@ -42,7 +46,8 @@ def _admin(role: str | None, tenant_id: str | None) -> tuple[str, str]:
 
 def _wrap(endpoint: str, action: str, payload: dict) -> dict:
     response = review_response(endpoint, action, payload)
-    response["rbac"] = {"enforced": True, "required_role": "admin", "tenant_scoped": True, "mode": "header_contract_replaceable_by_enterprise_auth_provider"}
+    preservation = "/api/admin/legal-holds" in endpoint or "/api/admin/retention-plans" in endpoint
+    response["rbac"] = {"enforced": True, "required_role": "admin", "tenant_scoped": True, "mode": "matter_scoped_preservation_credential" if preservation else "header_contract_replaceable_by_enterprise_auth_provider"}
     return response
 
 
@@ -96,6 +101,26 @@ def _active_matter_scope() -> str:
     if case_root is None:
         raise HTTPException(status_code=409, detail="active_matter_required")
     return str(local_api._case_id(Path(case_root)))
+
+
+def _preservation_operator(request: Request, role: str | None, tenant: str | None) -> tuple[str, str]:
+    _local(request)
+    _role, requested_tenant = _admin(role, tenant)
+    config_tenant = os.environ.get("MFL_PRESERVATION_OPERATOR_TENANT", "")
+    config_matter = os.environ.get("MFL_PRESERVATION_OPERATOR_MATTER_ID", "")
+    expected = os.environ.get("MFL_PRESERVATION_OPERATOR_BEARER_SHA256", "")
+    provided = request.headers.getlist("authorization")
+    match = re.fullmatch(r"Bearer ([a-f0-9]{64})", provided[0]) if len(provided) == 1 else None
+    if not (
+        config_tenant and hmac.compare_digest(config_tenant.encode(), requested_tenant.encode())
+        and _OPERATOR_DIGEST.fullmatch(expected) and match
+        and hmac.compare_digest(hashlib.sha256(match[1].encode("ascii")).hexdigest(), expected)
+    ):
+        raise HTTPException(403, detail="preservation_operator_authentication_required")
+    matter = _active_matter_scope()
+    if (config_matter != matter or request.headers.getlist("x-mfll-matter-id") != [matter]):
+        raise HTTPException(403, detail="preservation_operator_matter_mismatch")
+    return config_tenant, matter
 
 
 def _legal_holds() -> LegalHoldStore:
@@ -194,9 +219,9 @@ def signed_policy_pack_diff(pack_id: str, request: Request, x_user_role: str | N
 
 @router.get("/admin/legal-holds", summary="List active-matter legal-hold records")
 def legal_holds(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _legal_holds().list(tenant_id=tenant, matter_scope=_active_matter_scope())
+        result = _legal_holds().list(tenant_id=tenant, matter_scope=matter)
     except LegalHoldError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("GET /api/admin/legal-holds", "legal_holds_listed", result)
@@ -204,9 +229,9 @@ def legal_holds(request: Request, x_user_role: str | None = Header(default=None,
 
 @router.post("/admin/legal-holds", summary="Place an audited legal hold on selected active-matter artifacts")
 def place_legal_hold(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _legal_holds().place(tenant_id=tenant, matter_scope=_active_matter_scope(), hold_id=str(payload.get("hold_id") or ""), artifact_ids=list(payload.get("artifact_ids") or []), authority_ref=str(payload.get("authority_ref") or ""))
+        result = _legal_holds().place(tenant_id=tenant, matter_scope=matter, hold_id=str(payload.get("hold_id") or ""), artifact_ids=list(payload.get("artifact_ids") or []), authority_ref=str(payload.get("authority_ref") or ""))
     except LegalHoldError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("POST /api/admin/legal-holds", "legal_hold_placed", result)
@@ -214,9 +239,9 @@ def place_legal_hold(payload: dict, request: Request, x_user_role: str | None = 
 
 @router.post("/admin/legal-holds/{hold_id}/release", summary="Release an active-matter legal hold with explicit authority reference")
 def release_legal_hold(hold_id: str, payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _legal_holds().release(tenant_id=tenant, matter_scope=_active_matter_scope(), hold_id=hold_id, release_authority_ref=str(payload.get("release_authority_ref") or ""))
+        result = _legal_holds().release(tenant_id=tenant, matter_scope=matter, hold_id=hold_id, release_authority_ref=str(payload.get("release_authority_ref") or ""))
     except LegalHoldError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("POST /api/admin/legal-holds/{hold_id}/release", "legal_hold_released", result)
@@ -224,9 +249,9 @@ def release_legal_hold(hold_id: str, payload: dict, request: Request, x_user_rol
 
 @router.get("/admin/retention-plans", summary="List active-matter recoverable retention plans")
 def retention_plans(request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _retention().list(tenant_id=tenant, matter_scope=_active_matter_scope())
+        result = _retention().list(tenant_id=tenant, matter_scope=matter)
     except RetentionPolicyEngineError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("GET /api/admin/retention-plans", "retention_plans_listed", result)
@@ -234,9 +259,9 @@ def retention_plans(request: Request, x_user_role: str | None = Header(default=N
 
 @router.post("/admin/retention-plans/preview", summary="Preview a hold-aware retention plan without deleting artifacts")
 def preview_retention_plan(payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _retention().preview(tenant_id=tenant, matter_scope=_active_matter_scope(), plan_id=str(payload.get("plan_id") or ""), artifact_ids=list(payload.get("artifact_ids") or []), policy_ref=str(payload.get("policy_ref") or ""), recovery_window_days=payload.get("recovery_window_days"))
+        result = _retention().preview(tenant_id=tenant, matter_scope=matter, plan_id=str(payload.get("plan_id") or ""), artifact_ids=list(payload.get("artifact_ids") or []), policy_ref=str(payload.get("policy_ref") or ""), recovery_window_days=payload.get("recovery_window_days"))
     except (RetentionPolicyEngineError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("POST /api/admin/retention-plans/preview", "retention_plan_previewed", result)
@@ -244,9 +269,9 @@ def preview_retention_plan(payload: dict, request: Request, x_user_role: str | N
 
 @router.post("/admin/retention-plans/{plan_id}/apply", summary="Start a recoverable organization-approved retention window")
 def apply_retention_plan(plan_id: str, payload: dict, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _retention().apply(tenant_id=tenant, matter_scope=_active_matter_scope(), plan_id=plan_id, user_confirmed=payload.get("user_confirmed") is True)
+        result = _retention().apply(tenant_id=tenant, matter_scope=matter, plan_id=plan_id, user_confirmed=payload.get("user_confirmed") is True)
     except RetentionPolicyEngineError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("POST /api/admin/retention-plans/{plan_id}/apply", "retention_plan_apply_checked", result)
@@ -254,9 +279,9 @@ def apply_retention_plan(plan_id: str, payload: dict, request: Request, x_user_r
 
 @router.post("/admin/retention-plans/{plan_id}/cancel", summary="Cancel a recoverable retention plan")
 def cancel_retention_plan(plan_id: str, request: Request, x_user_role: str | None = Header(default=None, alias="X-User-Role"), x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id")):
-    _local(request); _role, tenant = _admin(x_user_role, x_tenant_id)
+    tenant, matter = _preservation_operator(request, x_user_role, x_tenant_id)
     try:
-        result = _retention().cancel(tenant_id=tenant, matter_scope=_active_matter_scope(), plan_id=plan_id)
+        result = _retention().cancel(tenant_id=tenant, matter_scope=matter, plan_id=plan_id)
     except RetentionPolicyEngineError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _wrap("POST /api/admin/retention-plans/{plan_id}/cancel", "retention_plan_cancelled", result)

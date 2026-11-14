@@ -44,6 +44,14 @@ establish professional licensure. The first authorized export is exact text
 only, with facts backed by verified staged TXT records; other formats remain
 review-required working copies.
 
+Legal holds and retention plans require a separate preservation operator
+credential. Configure `MFL_PRESERVATION_OPERATOR_TENANT` (use
+`local-desktop` for the shipped workbench), `MFL_PRESERVATION_OPERATOR_MATTER_ID`,
+and `MFL_PRESERVATION_OPERATOR_BEARER_SHA256` independently of the filing
+reviewer. The format is the same: SHA-256 of a fresh random 32-byte token
+encoded as lowercase ASCII hex. Enter the issued token in the preservation
+panel for each action; a role header or checkbox alone cannot authorize it.
+
 For source-runtime browser proof, run
 `python -B scripts/run_trusted_filing_browser_proof.py <existing-qa-scratch>`
 from a test worktree with its `api,dev` dependencies installed. The QA scratch

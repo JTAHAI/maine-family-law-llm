@@ -2306,7 +2306,8 @@
 
     async function fetchJson(url, options = {}) {
       let res;
-      const mutation = isIdempotentMutation(url, options);
+      const preservation = /^\/api\/admin\/(legal-holds|retention-plans)(?:\/|$)/.exec(url);
+      const mutation = !preservation && isIdempotentMutation(url, options);
       const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
@@ -2315,6 +2316,20 @@
       if (/^\/api\/document-workspace\/(?:review-queue|documents\/[^/]+\/reviews?(?:\/|$))/.test(url) && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/reviewed-filing-packet/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/authority-change-impact/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
+      if (preservation) {
+        const input = document.getElementById(preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential');
+        const token = input?.value.trim();
+        if (input) input.value = '';
+        const matter = String(corpusLibraryPayload?.active_case_id || '');
+        if (!matter) throw new Error('Open the matter you are authorized to manage.');
+        if (!/^[a-f0-9]{64}$/.test(token || '')) {
+          input?.focus();
+          throw new Error('Enter the preservation operator credential issued for this matter.');
+        }
+        headers.set('Authorization', 'Bearer ' + token);
+        headers.set('X-MFLL-Matter-Id', matter);
+        options = {...options, redirect: 'error'};
+      }
       if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {
         const supplied = String(options.idempotencyKey || '').trim();
         const key = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/.test(supplied) ? supplied : newLocalIdempotencyKey();

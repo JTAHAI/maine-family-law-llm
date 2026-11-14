@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -54,6 +55,12 @@ def test_pass166_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypat
     artifact_id = created.json()["document"]["document_id"]
     reviewer = client.post("/api/admin/retention-plans/preview", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"}, json={"plan_id": "plan_001", "artifact_ids": [artifact_id], "policy_ref": "fictional_policy_001", "recovery_window_days": 7})
     assert reviewer.status_code == 403
+    assert client.get("/api/admin/retention-plans", headers=headers).status_code == 403
+    matter = local_api._case_id(case_root)
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_TENANT", "fictional-tenant")
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_MATTER_ID", matter)
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_BEARER_SHA256", hashlib.sha256(b"a" * 64).hexdigest())
+    headers.update({"Authorization": "Bearer " + "a" * 64, "X-MFLL-Matter-Id": matter})
     preview = client.post("/api/admin/retention-plans/preview", headers={**headers, "X-MFLL-Idempotency-Key": "retention-preview-001"}, json={"plan_id": "plan_001", "artifact_ids": [artifact_id], "policy_ref": "fictional_policy_001", "recovery_window_days": 7})
     assert preview.status_code == 200, preview.text
     applied = client.post("/api/admin/retention-plans/plan_001/apply", headers={**headers, "X-MFLL-Idempotency-Key": "retention-apply-001"}, json={"user_confirmed": True})

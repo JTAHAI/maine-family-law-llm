@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -36,7 +37,15 @@ def test_pass165_production_hold_blocks_actual_document_workspace_delete_path(tm
     document_id = created.json()["document"]["document_id"]
     denied = client.post("/api/admin/legal-holds", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"}, json={"hold_id": "hold_001", "artifact_ids": [document_id], "authority_ref": "authority_001"})
     assert denied.status_code == 403
-    admin_headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Idempotency-Key": "hold-place-001"}
+    matter = local_api._case_id(case_root)
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_TENANT", "fictional-tenant")
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_MATTER_ID", matter)
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_BEARER_SHA256", hashlib.sha256(b"a" * 64).hexdigest())
+    admin_headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Idempotency-Key": "hold-place-001", "X-MFLL-Matter-Id": matter}
+    assert client.get("/api/admin/legal-holds", headers=admin_headers).status_code == 403
+    admin_headers["Authorization"] = "Bearer " + "a" * 64
+    assert client.get("/api/admin/legal-holds", headers={**admin_headers, "X-Tenant-Id": "other"}).status_code == 403
+    assert client.get("/api/admin/legal-holds", headers={**admin_headers, "X-MFLL-Matter-Id": "b" * 16}).status_code == 403
     placed = client.post("/api/admin/legal-holds", headers=admin_headers, json={"hold_id": "hold_001", "artifact_ids": [document_id], "authority_ref": "authority_001"})
     assert placed.status_code == 200, placed.text
     blocked = client.post(f"/api/document-workspace/documents/{document_id}/delete-request", headers={**local_headers, "X-MFLL-Idempotency-Key": "hold-delete-request-001"})
@@ -44,6 +53,9 @@ def test_pass165_production_hold_blocks_actual_document_workspace_delete_path(tm
     assert blocked.json()["detail"]["code"] == "legal_hold_active"
     released = client.post("/api/admin/legal-holds/hold_001/release", headers={**admin_headers, "X-MFLL-Idempotency-Key": "hold-release-001"}, json={"release_authority_ref": "release_001"})
     assert released.status_code == 200, released.text
+    monkeypatch.setenv("MFL_PRESERVATION_OPERATOR_BEARER_SHA256", hashlib.sha256(b"b" * 64).hexdigest())
+    revoked = client.post("/api/admin/legal-holds/hold_001/release", headers={**admin_headers, "X-MFLL-Idempotency-Key": "hold-release-001"}, json={"release_authority_ref": "release_001"})
+    assert revoked.status_code == 403
     request = client.post(f"/api/document-workspace/documents/{document_id}/delete-request", headers={**local_headers, "X-MFLL-Idempotency-Key": "hold-delete-request-002"})
     assert request.status_code == 200, request.text
     deleted = client.post(f"/api/document-workspace/documents/{document_id}/delete", headers={**local_headers, "X-MFLL-Idempotency-Key": "hold-delete-001"}, json={"confirmation_token": request.json()["confirmation_token"], "confirmed": True})
