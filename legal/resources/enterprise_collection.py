@@ -4,17 +4,16 @@ import hashlib
 import json
 import mimetypes
 import re
-import time
-import urllib.error
 import urllib.parse
-import urllib.request
-import urllib.robotparser
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from legal.connectors.base import SourceTarget
+from legal.connectors.http_fetcher import OfficialSourceFetchError, OfficialSourceFetcher
 from legal.data_boundaries.storage_layout import is_inside_project_repo
+from legal.security.durable_io import atomic_write_bytes
 
 
 def utc_now_iso() -> str:
@@ -218,8 +217,14 @@ class EnterpriseResourceCollector:
         self.manifest_path = self.resource_root / "resource_manifest.json"
         self.failed_resources_path = self.resource_root / "failed_resources.json"
         self.collection_report_path = self.resource_root / "collection_report.json"
-        self._last_fetch_by_host: dict[str, float] = {}
-        self._robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
+        self._fetcher = OfficialSourceFetcher(
+            timeout_seconds=self.timeout_seconds,
+            min_delay_seconds=self.delay_seconds,
+            max_retries=self.max_retries,
+            respect_robots_txt=self.respect_robots_txt,
+            user_agent=self.user_agent,
+            strict_content_type=True,
+        )
 
     def _validate_external_data_root(self) -> None:
         if not self.allow_repo_data_root and is_inside_project_repo(self.data_root, self.project_root):
@@ -278,44 +283,6 @@ class EnterpriseResourceCollector:
             expected_content_type=resource.get("expected_content_type"),
         )
 
-    def _request_for(self, url: str, expected_content_type: str | None) -> urllib.request.Request:
-        return urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": self.user_agent,
-                "Accept": expected_content_type or "*/*",
-            },
-        )
-
-    def _robots_url(self, url: str) -> str:
-        parsed = urllib.parse.urlparse(url)
-        return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, "/robots.txt", "", "", ""))
-
-    def _robots_parser(self, url: str) -> urllib.robotparser.RobotFileParser:
-        robots_url = self._robots_url(url)
-        if robots_url in self._robots_cache:
-            return self._robots_cache[robots_url]
-        parser = urllib.robotparser.RobotFileParser(robots_url)
-        try:
-            with urllib.request.urlopen(
-                self._request_for(robots_url, "text/plain"), timeout=self.timeout_seconds
-            ) as response:
-                parser.parse(response.read().decode("utf-8", errors="replace").splitlines())
-        except Exception:
-            parser.parse([])
-        self._robots_cache[robots_url] = parser
-        return parser
-
-    def _rate_limit(self, url: str) -> None:
-        parsed = urllib.parse.urlparse(url)
-        host = parsed.netloc.lower()
-        last = self._last_fetch_by_host.get(host)
-        if last is not None:
-            remaining = self.delay_seconds - (time.monotonic() - last)
-            if remaining > 0:
-                time.sleep(remaining)
-        self._last_fetch_by_host[host] = time.monotonic()
-
     def _target_path(self, resource: dict[str, Any], content_type: str | None) -> Path:
         source_class = sanitize_filename(str(resource.get("source_class", "unknown")))
         resource_id = sanitize_filename(str(resource.get("resource_id", "resource")))
@@ -323,82 +290,47 @@ class EnterpriseResourceCollector:
         return self.snapshot_root / source_class / resource_id / f"snapshot{ext}"
 
     def _fetch_resource(self, resource: dict[str, Any]) -> EnterpriseResourceRecord:
-        attempts: list[ResourceFetchAttempt] = []
         url = str(resource.get("url"))
         expected = resource.get("expected_content_type")
-        if self.respect_robots_txt and not self._robots_parser(url).can_fetch(self.user_agent, url):
-            return self._failure_record(resource, "robots_disallow", "robots.txt disallows this URL", attempts)
-        last_message = "not attempted"
-        for attempt_number in range(1, self.max_retries + 2):
-            started = time.monotonic()
-            try:
-                self._rate_limit(url)
-                request = self._request_for(url, expected)
-                with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                    content = response.read()
-                    elapsed = time.monotonic() - started
-                    content_type = response.headers.get("Content-Type")
-                    status_code = getattr(response, "status", None)
-                    attempts.append(
-                        ResourceFetchAttempt(
-                            attempt_number=attempt_number,
-                            status="success",
-                            message="fetched",
-                            elapsed_seconds=elapsed,
-                            status_code=status_code,
-                        )
-                    )
-                    snapshot_path = self._target_path(resource, content_type)
-                    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
-                    snapshot_path.write_bytes(content)
-                    digest = hashlib.sha256(content).hexdigest()
-                    return EnterpriseResourceRecord(
-                        resource_id=str(resource.get("resource_id")),
-                        source_class=str(resource.get("source_class")),
-                        jurisdiction=str(resource.get("jurisdiction", "unknown")),
-                        authority_level=str(resource.get("authority_level", "unknown")),
-                        title=str(resource.get("title", resource.get("resource_id"))),
-                        url=url,
-                        required_for_enterprise=bool(resource.get("required_for_enterprise", False)),
-                        status="downloaded",
-                        snapshot_path=str(snapshot_path),
-                        sha256=digest,
-                        bytes=len(content),
-                        content_type=content_type,
-                        retrieved_at=utc_now_iso(),
-                        parser_name=resource.get("parser_name"),
-                        expected_content_type=expected,
-                        final_url=response.geturl(),
-                        attempts=attempts,
-                    )
-            except urllib.error.HTTPError as exc:
-                elapsed = time.monotonic() - started
-                last_message = f"HTTP {exc.code}: {exc.reason}"
-                attempts.append(
-                    ResourceFetchAttempt(
-                        attempt_number=attempt_number,
-                        status="http_error",
-                        message=last_message,
-                        elapsed_seconds=elapsed,
-                        status_code=exc.code,
-                    )
-                )
-                if 400 <= exc.code < 500 and exc.code not in {408, 425, 429}:
-                    break
-            except Exception as exc:
-                elapsed = time.monotonic() - started
-                last_message = f"{type(exc).__name__}: {exc}"
-                attempts.append(
-                    ResourceFetchAttempt(
-                        attempt_number=attempt_number,
-                        status="network_error",
-                        message=last_message,
-                        elapsed_seconds=elapsed,
-                    )
-                )
-            if attempt_number <= self.max_retries:
-                time.sleep(min(30.0, max(0.0, self.delay_seconds) * (attempt_number + 1)))
-        return self._failure_record(resource, "fetch_failed", last_message, attempts)
+        target = SourceTarget(
+            target_id=str(resource.get("resource_id")),
+            source_class=str(resource.get("source_class")),
+            jurisdiction=str(resource.get("jurisdiction", "unknown")),
+            url=url,
+            parser_name=str(resource.get("parser_name") or ""),
+            expected_content_type=expected or "*/*",
+        )
+        try:
+            result = self._fetcher.fetch(target)
+        except OfficialSourceFetchError as exc:
+            attempts = [ResourceFetchAttempt(**item.as_dict()) for item in exc.attempts]
+            return self._failure_record(resource, exc.code, exc.message, attempts)
+        snapshot_path = self._target_path(resource, result.content_type)
+        if not snapshot_path.resolve().is_relative_to(self.snapshot_root.resolve()):
+            return self._failure_record(resource, "snapshot_path_refused", "Snapshot path escaped its root.", [])
+        try:
+            atomic_write_bytes(snapshot_path, result.content)
+        except OSError:
+            return self._failure_record(resource, "snapshot_write_failed", "Could not write the authority snapshot.", [])
+        return EnterpriseResourceRecord(
+            resource_id=target.target_id,
+            source_class=target.source_class,
+            jurisdiction=target.jurisdiction,
+            authority_level=str(resource.get("authority_level", "unknown")),
+            title=str(resource.get("title", target.target_id)),
+            url=url,
+            required_for_enterprise=bool(resource.get("required_for_enterprise", False)),
+            status="downloaded",
+            snapshot_path=str(snapshot_path),
+            sha256=result.sha256,
+            bytes=len(result.content),
+            content_type=result.content_type,
+            retrieved_at=result.retrieved_at.isoformat(),
+            parser_name=resource.get("parser_name"),
+            expected_content_type=expected,
+            final_url=result.final_url,
+            attempts=[ResourceFetchAttempt(**item) for item in result.fetch_metadata["attempts"]],
+        )
 
     def _failure_record(
         self,

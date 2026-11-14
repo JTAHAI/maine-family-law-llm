@@ -112,7 +112,9 @@ def test_official_fetcher_blocks_unapproved_redirects_and_oversized_or_mismatche
     with pytest.raises(Exception):
         handler.redirect_request(SourceTarget("t", "court_rules_index", "maine", "https://www.courts.maine.gov/rules/index.html", "maine_rules_index"), None, 302, "Found", {}, "https://example.com/")
 
-    fetcher = OfficialSourceFetcher(strict_content_type=True, max_response_bytes=8)
+    fetcher = OfficialSourceFetcher(
+        strict_content_type=True, max_response_bytes=8, respect_robots_txt=False,
+    )
 
     class _Response:
         headers = {"Content-Type": "text/html"}
