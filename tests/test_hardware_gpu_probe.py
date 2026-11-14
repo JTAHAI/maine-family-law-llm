@@ -5,6 +5,7 @@ from legal.model_orchestration import hardware
 
 def test_local_nvidia_probe_is_bounded_and_reports_available_vram(monkeypatch, tmp_path):
     calls = []
+    monkeypatch.setattr(hardware.platform, "platform", lambda: "synthetic-test-platform")
     monkeypatch.setattr(hardware.shutil, "which", lambda name: "nvidia-smi.exe")
 
     def run(command, **kwargs):

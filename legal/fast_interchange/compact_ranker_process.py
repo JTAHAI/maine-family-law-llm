@@ -56,12 +56,22 @@ def selected_runtime_site():
     Reject mixed environments instead of silently importing a second provider.
     """
     root = Path(psutil.__file__).resolve(strict=True).parent.parent
-    if root.name != "site-packages" or not (root.parents[1] / "pyvenv.cfg").is_file():
+    if root.name != "site-packages" or not any(
+        (parent / "pyvenv.cfg").is_file() for parent in root.parents[:3]
+    ):
         fail("reranker_selected_runtime_invalid")
     for name in ("torch", "transformers", "safetensors", "tokenizers", "cryptography", "numpy"):
-        if Path(metadata.distribution(name).locate_file("")).resolve(strict=True) != root:
+        try:
+            location = Path(metadata.distribution(name).locate_file("")).resolve(strict=True)
+        except (metadata.PackageNotFoundError, OSError):
+            fail("reranker_selected_runtime_dependency_unavailable")
+        if location != root:
             fail("reranker_mixed_runtime_forbidden")
     return root
+
+
+def _windows_research_entrypoint() -> bool:
+    return os.name == "nt" and not getattr(sys, "frozen", False)
 
 
 ERROR_PHASES = frozenset(
@@ -219,10 +229,10 @@ class IsolatedCompactRanker:
             fail("compact_worker_quarantined")
         if self._process is not None:
             return
-        if os.name != "nt" or getattr(sys, "frozen", False):
-            fail("reranker_research_python_entrypoint_required")
         if psutil.virtual_memory().available < MAX_RESIDENT_BYTES + 1024**3:
             fail("insufficient_available_memory")
+        if not _windows_research_entrypoint():
+            fail("reranker_research_python_entrypoint_required")
         for part in [self.scratch, *self.scratch.parents]:
             if part.is_symlink() or getattr(part, "is_junction", lambda: False)():
                 fail("artifact_link_forbidden")
@@ -292,7 +302,7 @@ class IsolatedCompactRanker:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 bufsize=0,
-                creationflags=subprocess.CREATE_NO_WINDOW | 0x00000004,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000) | 0x00000004,
             )
             self._job.attach_and_resume(self._process)
             self.worker_starts += 1

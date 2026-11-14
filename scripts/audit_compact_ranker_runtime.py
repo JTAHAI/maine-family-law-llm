@@ -189,7 +189,7 @@ def license_paths(dist, names):
     missing = []
     for declared in dist.metadata.get_all("License-File") or ():
         relative = Path(declared.replace("\\", "/"))
-        if relative.is_absolute() or ".." in relative.parts or not info:
+        if relative.is_absolute() or re.match(r"^[A-Za-z]:", declared) or ".." in relative.parts or not info:
             missing.append("unsafe_declared_license_path")
             continue
         choices = {f"{info}/licenses/{relative.as_posix()}", f"{info}/{relative.as_posix()}"}

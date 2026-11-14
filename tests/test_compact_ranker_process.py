@@ -230,6 +230,8 @@ def test_warm_setup_failure_always_releases_owned_worker(tmp_path, monkeypatch):
 
 def test_scrubbed_windows_worker_has_only_synthetic_profile(tmp_path, monkeypatch):
     engine, captured = worker(tmp_path), {}
+    monkeypatch.setattr("legal.fast_interchange.compact_ranker_process._windows_research_entrypoint", lambda: True)
+    monkeypatch.setattr("legal.fast_interchange.compact_ranker_process.selected_runtime_site", lambda: tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "fictional-secret")
     monkeypatch.setenv("HTTPS_PROXY", "http://fictional-proxy")
     monkeypatch.setenv("USERNAME", "fictional-real-user")

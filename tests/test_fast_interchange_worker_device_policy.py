@@ -36,6 +36,7 @@ def test_explicit_cpu_fallback_is_consistent_with_hardware_gate(monkeypatch):
 
 
 def test_launcher_cpu_policy_is_accepted_by_isolated_backend(monkeypatch):
+    monkeypatch.setattr("os.cpu_count", lambda: 8)
     environment = _device_environment({"recommended_accelerator": {"kind": "cpu"}})
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
@@ -47,6 +48,7 @@ def test_launcher_cpu_policy_is_accepted_by_isolated_backend(monkeypatch):
 
 
 def test_gpu_hint_with_cpu_only_runtime_preserves_admitted_fp32_fallback(monkeypatch):
+    monkeypatch.setattr("os.cpu_count", lambda: 8)
     environment = _device_environment({
         "recommended_accelerator": {"index": 1}, "execution_accelerator": {"kind": "cpu"},
         "quantization": "fp32",
