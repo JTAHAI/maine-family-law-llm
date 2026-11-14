@@ -451,6 +451,16 @@ def _filing_coverage(document: dict, gate: dict, fact_report: dict) -> list[str]
     return blockers
 
 
+def _filing_review_expired(request: dict[str, Any], now: datetime) -> bool:
+    if "filing_reviewer_binding" not in request:
+        return False
+    try:
+        expiration = datetime.fromisoformat(request["approval_expires_at"])
+        return expiration.tzinfo is None or now >= expiration
+    except (KeyError, ValueError, TypeError):
+        return True
+
+
 @_synchronized
 def prepare_review_request(
     case_root: Path,
@@ -460,12 +470,15 @@ def prepare_review_request(
     facts: Iterable[str] | None = None,
     records: Iterable[dict[str, Any]] | None = None,
     reviewer: ReviewerPrincipal | None = None,
+    reviewer_session_sha256: str = "",
 ) -> dict[str, Any]:
     document = get_document(case_root, document_id, include_history=False)
     revision_id = _validate_id(str(document.get("current_revision_id") or ""), "revision_id")
     document_id = _validate_id(document_id, "document_id")
     fact_report = build_fact_evidence_report(facts, records)
     if reviewer is not None:
+        if not _TOKEN_RE.fullmatch(reviewer_session_sha256):
+            raise ReviewLedgerError("filing_review_session_required", "Open the current local review session again.", status_code=403)
         # Lexical suggestions remain useful for ordinary working notes, but a
         # filing fact needs an exact span and a valid original-byte digest.
         for fact in fact_report["facts"]:
@@ -564,6 +577,7 @@ def prepare_review_request(
     }
     if reviewer is not None:
         request["filing_reviewer_binding"] = reviewer.binding()
+        request["filing_review_session_sha256"] = reviewer_session_sha256
         request["approval_expires_at"] = (datetime.now(UTC) + timedelta(minutes=30)).isoformat()
     root, requests, _ = _roots(case_root, document_id)
     try:
@@ -572,11 +586,7 @@ def prepare_review_request(
         raise ReviewLedgerError("review_history_head_required", "Existing review history has no authenticated head. Preserve it and create a new working draft for a fresh review.", status_code=409) from exc
     if not _verify_rows(root, _decision_rows(root / "decisions"))["valid"]:
         raise ReviewLedgerError("review_history_incomplete", "Review history is incomplete or changed. Preserve the complete workspace; no new review packet was created. Create a new working draft if a verified backup is unavailable.", status_code=409)
-    pending_count = sum(
-        1
-        for path in requests.glob("*.json")
-        if path.is_file() and not path.is_symlink() and _read(path, allow_legacy=True).get("status") == "pending"
-    )
+    pending_count = _pending_packets(document_id, requests)["count"]
     if pending_count >= MAX_PENDING_REQUESTS:
         raise ReviewLedgerError("pending_review_request_limit", "Too many pending review packets exist for this document.", status_code=409)
     request["request_sha256"] = _sha(request)
@@ -627,6 +637,7 @@ def commit_review_decision(
     notes: str = "",
     claim_annotations: Iterable[dict[str, Any]] | None = None,
     reviewer: ReviewerPrincipal | None = None,
+    reviewer_session_sha256: str = "",
     privacy_attested: bool = False,
 ) -> dict[str, Any]:
     if confirmed is not True:
@@ -670,10 +681,13 @@ def commit_review_decision(
         raise ReviewLedgerError("review_request_stale", "The document changed after this review packet was prepared.", status_code=409)
     trusted_binding = request.get("filing_reviewer_binding")
     if trusted_binding is not None or reviewer is not None:
+        stamped_session = str(request.get("filing_review_session_sha256") or "")
         if (reviewer is None or reviewer.binding() != trusted_binding
                 or not reviewer_binding_current(trusted_binding, matter_id=reviewer.matter_id)
-                or datetime.now(UTC) >= datetime.fromisoformat(request["approval_expires_at"])):
-            raise ReviewLedgerError("filing_review_identity_changed", "Prepare a new review with the currently authorized reviewer.", status_code=403)
+                or not _TOKEN_RE.fullmatch(reviewer_session_sha256)
+                or not hmac.compare_digest(reviewer_session_sha256, stamped_session)
+                or _filing_review_expired(request, datetime.now(UTC))):
+            raise ReviewLedgerError("filing_review_identity_changed", "Prepare a fresh review from this session with the currently authorized reviewer.", status_code=403)
 
     claim_rows = list((request.get("packet") or {}).get("claims_for_review") or [])
     normalized_annotations, annotation_blockers = _normalize_claim_annotations(claim_annotations, claim_rows)
@@ -783,6 +797,7 @@ def list_pending_review_packets(case_root: Path, document_id: str) -> dict[str, 
 def _pending_packets(document_id: str, requests: Path) -> dict[str, Any]:
     """Read once within the caller's lock; never retain plaintext between calls."""
     packets: list[dict[str, Any]] = []
+    now = datetime.now(UTC)
     for path in sorted(requests.glob("*.json")):
         if not path.is_file() or path.is_symlink():
             continue
@@ -791,6 +806,10 @@ def _pending_packets(document_id: str, requests: Path) -> dict[str, Any]:
             continue
         if not _request_integrity_valid(request):
             raise ReviewLedgerError("review_request_hash_mismatch", "A pending review request failed its integrity check.", status_code=409)
+        # An expired trusted request remains on disk for inspection. It cannot
+        # authorize output or consume a slot in the actionable queue forever.
+        if request.authenticated and _filing_review_expired(request, now):
+            continue
         packet = request.get("packet") or {}
         preflight = packet.get("filing_gate_preflight") or {}
         packets.append({

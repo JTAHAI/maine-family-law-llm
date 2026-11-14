@@ -2,12 +2,16 @@
 
 import hashlib
 import json
+from datetime import UTC, datetime, timedelta
+
+import pytest
 
 from fastapi.testclient import TestClient
 
 from app.api.production import app
 from legal.documents.workspace import create_document
 from legal.production import AuthorityProductPublisher
+from legal.review import review_ledger
 from legal.review.filing_packet import ReviewedFilingPacketStore
 from maine_family_law_llm import api
 from test_v55_immutable_authority_product import _fixture_data_root
@@ -42,6 +46,42 @@ def build_filing_fixture(tmp_path):
     document = create_document(case, title="Fictional final order", content=f"{law}\n\nFindings of fact\n\n{fact}",
                                document_type="draft")
     return root, case, document, source, fact, phrase, citation, card["source_id"]
+
+
+def test_expired_filing_review_drops_out_of_pending_queue_without_destroying_history(tmp_path, monkeypatch):
+    case = tmp_path / "fictional-case"
+    case.mkdir()
+    document = create_document(case, title="Fictional draft", content="Local notes only.")
+    matter = api._case_id(case)
+    for field, value in {
+        "ID": "fixture-reviewer", "TENANT": "local-desktop", "MATTER_ID": matter,
+        "BEARER_SHA256": hashlib.sha256(b"a" * 64).hexdigest(),
+    }.items():
+        monkeypatch.setenv(f"MFL_FILING_REVIEWER_{field}", value)
+    from legal.review.reviewer_identity import authenticate_reviewer
+    principal = authenticate_reviewer(["Bearer " + "a" * 64], tenant_id="local-desktop", matter_id=matter)
+    doc_id = document["document_id"]
+    session = "b" * 64
+    prepared = review_ledger.prepare_review_request(
+        case, doc_id, authority_result={}, reviewer=principal, reviewer_session_sha256=session,
+    )
+    assert review_ledger.list_pending_review_packets(case, doc_id)["count"] == 1
+
+    class Later(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime.now(tz) + timedelta(hours=1)
+
+    monkeypatch.setattr(review_ledger, "datetime", Later)
+    assert review_ledger.list_pending_review_packets(case, doc_id)["count"] == 0
+    assert review_ledger.read_review_request(case, doc_id, prepared["request_id"])["status"] == "pending"
+    with pytest.raises(review_ledger.ReviewLedgerError, match="Prepare a fresh review"):
+        review_ledger.commit_review_decision(
+            case, doc_id, request_id=prepared["request_id"], confirmation_token=prepared["confirmation_token"],
+            confirmed=True, decision="approve_review", reviewer_name="spoof", reviewer_role="attorney",
+            attested=True, reviewer=principal, reviewer_session_sha256=session,
+        )
+    assert review_ledger.list_review_history(case, doc_id)["decision_count"] == 0
 
 
 def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
@@ -81,6 +121,8 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
                               for row in prepared["packet"]["claims_for_review"]],
     }
     assert client.post(review + "/commit", json=commit).status_code == 403
+    other_session = {**auth, "X-MFLL-Client-Session": "d" * 32}
+    assert client.post(review + "/commit", json=commit, headers=other_session).status_code == 403
     recorded = client.post(review + "/commit", json=commit, headers=auth)
     assert recorded.status_code == 200, recorded.text
     assert recorded.json()["reviewer"]["name"] == "fixture-reviewer"
@@ -105,8 +147,7 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     assert not (build_dir / export["name"]).exists()
     working = client.post(f"/api/document-workspace/documents/{doc_id}/export-sessions").json()
     assert client.get(working["download_url"]).headers["X-MFLL-Filing-Gate-Status"] == "review_required"
-    headers = {**auth, "X-MFLL-Client-Session": "d" * 32}
-    assert client.get(export["download_url"], headers=headers).status_code == 404
+    assert client.get(export["download_url"], headers=other_session).status_code == 404
     # Stale index cannot keep a changed original eligible.
     source.write_text(fact + " altered", encoding="utf-8")
     assert client.get(export["download_url"], headers=auth).status_code == 409

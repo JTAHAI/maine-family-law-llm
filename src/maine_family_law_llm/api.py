@@ -11762,7 +11762,10 @@ if FastAPI is not None:
         if authenticate_filing:
             # Check a supplied credential before writing to the tenant-bound
             # audit chain. A rejected caller must not claim an empty chain.
-            _authenticated_filing_reviewer(request, scope)
+            principal = _authenticated_filing_reviewer(request, scope)
+            request.state.filing_reviewer = principal
+            if principal is not None:
+                scope.update(role="reviewer", reviewer_id=principal.reviewer_id)
         try:
             _local_agent_audit_store(root).record(action + "_requested", scope=scope, binding_sha256=hashlib.sha256(request.url.path.encode()).hexdigest())
         except Exception:
@@ -11806,7 +11809,7 @@ if FastAPI is not None:
     ) -> dict[str, Any]:
         try:
             case_root, scope = _review_access(request, "document_review_prepare", authenticate_filing=True)
-            reviewer = _authenticated_filing_reviewer(request, scope)
+            reviewer = request.state.filing_reviewer
             document = get_workspace_document(case_root, document_id)
             source_ids = []
             for row in document.get("source_refs") or []:
@@ -11838,6 +11841,7 @@ if FastAPI is not None:
                 facts=payload.facts,
                 records=load_case_search_records(case_root),
                 reviewer=reviewer,
+                reviewer_session_sha256=hashlib.sha256(scope["client_session_id"].encode("ascii")).hexdigest(),
             )
             return _review_result(case_root, scope, "document_review_prepare", result)
         except DocumentWorkspaceError as exc:
@@ -11853,7 +11857,7 @@ if FastAPI is not None:
     ) -> dict[str, Any]:
         try:
             case_root, scope = _review_access(request, "document_review_commit", authenticate_filing=True)
-            reviewer = _authenticated_filing_reviewer(request, scope)
+            reviewer = request.state.filing_reviewer
             result = commit_review_decision(
                 case_root,
                 document_id,
@@ -11867,6 +11871,7 @@ if FastAPI is not None:
                 notes=payload.notes,
                 claim_annotations=payload.claim_annotations,
                 reviewer=reviewer,
+                reviewer_session_sha256=hashlib.sha256(scope["client_session_id"].encode("ascii")).hexdigest(),
                 privacy_attested=payload.privacy_attested,
             )
             return _review_result(case_root, scope, "document_review_commit", result)
@@ -12161,7 +12166,7 @@ if FastAPI is not None:
         try:
             if binding.get("filename") == "verified-filing-copy.txt":
                 root, scope = _review_access(request, "filing_copy_download", authenticate_filing=True)
-                if root != case_root or _authenticated_filing_reviewer(request, scope) is None:
+                if root != case_root or request.state.filing_reviewer is None:
                     raise HTTPException(403, detail="filing_reviewer_authentication_required")
             raw, media_type, filename = ReviewedFilingPacketStore(case_root).read_current_artifact(
                 str(binding.get("build_id") or ""), str(binding.get("filename") or ""),
