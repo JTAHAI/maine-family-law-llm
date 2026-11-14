@@ -38,6 +38,8 @@ from legal.review.reviewer_identity import reviewer_binding_current
 
 SCHEMA_VERSION = "reviewed_filing_packet_v1"
 ALGORITHM_VERSION = "5.14.0-revision-diff-v1"
+FILING_COPY_NAME = "verified-filing-copy.txt"
+FILING_COPY_STORAGE = "derive_from_current_encrypted_revision"
 ROOT_FOLDER = "20_REVIEWED_FILING_PACKET"
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_ASSIGNMENTS = 2_000
@@ -679,7 +681,6 @@ class ReviewedFilingPacketStore:
                 current_records=current_records,
             )
             filing_gate = self._filing_gate(document, decision, review_request, lifecycle, ledger)
-            workflow_blockers = filing_gate.get("blockers") or []
             blockers = list(filing_gate.get("blockers") or [])
             packet = {
                 "schema_version": SCHEMA_VERSION,
@@ -696,7 +697,7 @@ class ReviewedFilingPacketStore:
                 "incremental_review": incremental,
                 "reviewer_assignments": assignments,
                 "source_lifecycle": lifecycle,
-                "workflow_blockers": sorted(set(workflow_blockers)),
+                "workflow_blockers": sorted(set(blockers)),
                 "filing_gate": filing_gate,
                 "bound_reports": {
                     "authority_verification": (review_packet or {}).get("authority_verification"),
@@ -715,7 +716,10 @@ class ReviewedFilingPacketStore:
                 "notice": "Unchanged prior approvals are historical references only and are never silently carried forward to a new revision.",
             }
             if filing_gate["filing_ready"]:
-                packet["filing_copy_sha256"] = _sha(document["content"].encode("utf-8"))
+                filing_copy = document["content"].encode("utf-8")
+                packet["filing_copy_sha256"] = _sha(filing_copy)
+                packet["filing_copy_size_bytes"] = len(filing_copy)
+                packet["filing_copy_storage"] = FILING_COPY_STORAGE
             identity_payload = _scrub_identity_payload(packet)
             build_id = _sha(identity_payload)[:24]
             packet["build_id"] = build_id
@@ -740,19 +744,17 @@ class ReviewedFilingPacketStore:
                     "document_content_sha256": packet["document_content_sha256"],
                     "review_decision_sha256": (decision or {}).get("decision_sha256"),
                     "review_ledger_head_sha256": ledger.get("head_sha256"),
-                "blockers": packet["blockers"],
-                "generated_at": packet["generated_at"],
-                "review_required": True,
-                "filing_gate_status": filing_gate.get("export_status"),
-            }
+                    "blockers": packet["blockers"],
+                    "generated_at": packet["generated_at"],
+                    "review_required": True,
+                    "filing_gate_status": filing_gate.get("export_status"),
+                }
                 receipt["receipt_sha256"] = _sha(receipt)
                 files = {
                     "reviewed-filing-packet.json": json_bytes,
                     "reviewed-filing-packet.html": html_bytes,
                     "reviewed-filing-packet-receipt.json": json.dumps(receipt, indent=2, sort_keys=True).encode("utf-8"),
                 }
-                if packet.get("filing_copy_sha256"):
-                    files["verified-filing-copy.txt"] = document["content"].encode("utf-8")
                 manifest_rows: list[dict[str, Any]] = []
                 for name, data in files.items():
                     _atomic_write(staging / name, data)
@@ -778,8 +780,14 @@ class ReviewedFilingPacketStore:
             blockers.append("manifest_build_id_mismatch")
         packet = _read_json(build_dir / "reviewed-filing-packet.json")
         expected_names = {"reviewed-filing-packet.json", "reviewed-filing-packet.html", "reviewed-filing-packet-receipt.json"}
-        if packet.get("filing_copy_sha256"):
-            expected_names.add("verified-filing-copy.txt")
+        if packet.get("filing_copy_storage") == FILING_COPY_STORAGE:
+            size = packet.get("filing_copy_size_bytes")
+            if (not _SHA_RE.fullmatch(str(packet.get("filing_copy_sha256") or ""))
+                    or packet.get("filing_copy_sha256") != packet.get("document_content_sha256")
+                    or type(size) is not int or not 0 < size <= MAX_FILE_BYTES):
+                blockers.append("filing_copy_identity_invalid")
+        elif packet.get("filing_copy_sha256"):
+            expected_names.add(FILING_COPY_NAME)
         rows = manifest.get("files")
         if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
             return {"status": "blocked", "build_id": build_id, "blockers": ["manifest_artifact_set_invalid"], "review_required": True}
@@ -839,8 +847,11 @@ class ReviewedFilingPacketStore:
             "reviewed-filing-packet.html": "text/html",
             "reviewed-filing-packet-receipt.json": "application/json",
         }
-        if packet.get("filing_copy_sha256"):
-            export_types["verified-filing-copy.txt"] = "text/plain"
+        if packet.get("filing_copy_storage") == FILING_COPY_STORAGE:
+            artifacts.append({"name": FILING_COPY_NAME, "sha256": packet["filing_copy_sha256"],
+                              "size_bytes": packet["filing_copy_size_bytes"], "media_type": "text/plain"})
+        elif packet.get("filing_copy_sha256"):
+            export_types[FILING_COPY_NAME] = "text/plain"
         for name, media_type in export_types.items():
             path = build_dir / name
             raw = _read_packet_file(path)
@@ -858,6 +869,21 @@ class ReviewedFilingPacketStore:
         )
 
     def read_current_artifact(self, build_id: str, filename: str, *, filing_context=None) -> tuple[bytes, str, str]:
+        if filename == FILING_COPY_NAME:
+            if not _BUILD_RE.fullmatch(build_id) or self.verify(build_id)["status"] != "pass":
+                raise ReviewedFilingPacketError("artifact_build_unverified", "The filing-packet build failed verification.", status_code=409)
+            packet = _read_json(self.builds / build_id / "reviewed-filing-packet.json")
+            if packet.get("filing_copy_storage") == FILING_COPY_STORAGE:
+                if filing_context is None or packet.get("filing_ready") is not True:
+                    raise ReviewedFilingPacketError("filing_packet_revalidation_required", "Revalidate this filing packet before download.", status_code=409)
+                self.revalidate_filing(packet, **filing_context())
+                document = get_document(self.case_root, packet["document_id"], include_history=False)
+                raw = document["content"].encode("utf-8")
+                if (document.get("current_revision_id") != packet["revision_id"]
+                        or _sha(raw) != packet["filing_copy_sha256"]
+                        or len(raw) != packet["filing_copy_size_bytes"]):
+                    raise ReviewedFilingPacketError("filing_copy_content_mismatch", "The filing copy differs from the approved revision.", status_code=409)
+                return raw, "text/plain", FILING_COPY_NAME
         path, media_type = self.resolve_artifact(build_id, filename)
         packet = _read_json(path.parent / "reviewed-filing-packet.json")
         raw = _read_packet_file(path)

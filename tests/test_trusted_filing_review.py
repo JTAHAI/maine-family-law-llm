@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.api.production import app
 from legal.documents.workspace import create_document
 from legal.production import AuthorityProductPublisher
+from legal.review.filing_packet import ReviewedFilingPacketStore
 from maine_family_law_llm import api
 from test_v55_immutable_authority_product import _fixture_data_root
 
@@ -93,12 +94,15 @@ def test_trusted_review_filing_download_and_revocation(tmp_path, monkeypatch):
     assert built.status_code == 200, built.text
     assert built.json()["packet"]["filing_ready"] is True, built.json()["packet"]["blockers"]
     export = next(row for row in built.json()["artifacts"] if row["name"] == "verified-filing-copy.txt")
+    build_dir = ReviewedFilingPacketStore(case).builds / built.json()["build_id"]
+    assert not (build_dir / export["name"]).exists()
     assert client.get(export["download_url"]).status_code == 403
     download = client.get(export["download_url"], headers=auth)
     assert download.status_code == 200, download.text
     assert download.headers["X-MFLL-Filing-Gate-Status"] == "allowed"
     assert download.content == document["content"].encode("utf-8")
     assert hashlib.sha256(download.content).hexdigest() == export["sha256"]
+    assert not (build_dir / export["name"]).exists()
     working = client.post(f"/api/document-workspace/documents/{doc_id}/export-sessions").json()
     assert client.get(working["download_url"]).headers["X-MFLL-Filing-Gate-Status"] == "review_required"
     headers = {**auth, "X-MFLL-Client-Session": "d" * 32}

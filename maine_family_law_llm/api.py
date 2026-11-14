@@ -11938,6 +11938,9 @@ if FastAPI is not None:
     def _public_filing_packet_artifacts(
         case_root: Path, result: dict[str, Any]
     ) -> list[dict[str, Any]]:
+        from legal.review.filing_packet import FILING_COPY_NAME, FILING_COPY_STORAGE, MAX_FILE_BYTES
+        from legal.security.durable_io import read_bounded_regular_file
+
         _prune_filing_packet_artifacts()
         store = ReviewedFilingPacketStore(case_root)
         public: list[dict[str, Any]] = []
@@ -11946,11 +11949,18 @@ if FastAPI is not None:
             if not isinstance(raw, dict):
                 continue
             name = str(raw.get("name") or "")
-            try:
-                path, media_type = store.resolve_artifact(build_id, name)
-            except ReviewedFilingPacketError:
-                continue
-            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            packet = result.get("packet") or {}
+            if name == FILING_COPY_NAME and packet.get("filing_copy_storage") == FILING_COPY_STORAGE:
+                # Not a disk artifact. read_current_artifact revalidates the
+                # ledger and current sources before producing the exact bytes.
+                actual = packet["filing_copy_sha256"]
+                media_type = "text/plain"
+            else:
+                try:
+                    path, media_type = store.resolve_artifact(build_id, name)
+                    actual = hashlib.sha256(read_bounded_regular_file(path, max_bytes=MAX_FILE_BYTES)).hexdigest()
+                except (ReviewedFilingPacketError, OSError):
+                    continue
             if str(raw.get("sha256") or "") and actual != str(raw.get("sha256") or ""):
                 continue
             token = secrets.token_hex(32)
