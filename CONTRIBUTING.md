@@ -43,3 +43,21 @@ existing approvals. This authenticates the delegated credential; it does not
 establish professional licensure. The first authorized export is exact text
 only, with facts backed by verified staged TXT records; other formats remain
 review-required working copies.
+
+For source-runtime browser proof, run
+`python -B scripts/run_trusted_filing_browser_proof.py <existing-qa-scratch>`
+from a test worktree with its `api,dev` dependencies installed. The QA scratch
+directory must be outside the test source worktree (use the owning checkout's
+`dist/qa`), and `MFL_PROOF_NODE_MODULES` must locate installed Playwright.
+The script uses Edge, starts a loopback listener, seeds a fictional matter and
+authority fixture, and shuts down the listener and browser on exit.
+
+The Enterprise GA evidence verifier accepts a candidate-bound v2 manifest.
+Pin the expected SHA, version and MSIX digest independently with
+`MFL_GA_CANDIDATE_GIT_SHA`, `MFL_GA_CANDIDATE_VERSION` and
+`MFL_GA_CANDIDATE_PACKAGE_SHA256`. Use the existing external trust pin, and bind
+each category's manifest digest to `decision-evidence/<category>.json`. The
+signed manifest binds these evidence envelopes to the exact candidate. Run
+`python scripts/verify-ga-decision-evidence.py --evidence-root <external-root>`
+to inspect the result. Verified bytes are not approval; the verifier still
+returns a blocker until genuine external release authority is supported.

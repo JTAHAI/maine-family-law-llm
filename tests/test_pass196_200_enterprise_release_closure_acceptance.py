@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -144,9 +145,60 @@ def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path
     decision = EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external).as_dict()
     assert set(decision["evidence_categories_present"]) == set(REQUIRED_DECISION_EVIDENCE)
     assert decision["attestation_verified"] is True
+    assert decision["candidate_identity_verified"] is False
+    assert not decision["byte_verified_evidence_categories"]
     assert decision["store_ga_decision"] == "STORE_GA_BLOCKED"
     assert decision["enterprise_ga_decision"] == "ENTERPRISE_GA_BLOCKED"
     assert decision["ga_eligible"] is decision["ga_shipped"] is False
+
+
+def test_candidate_bound_release_evidence_requires_actual_current_matching_bytes(tmp_path, monkeypatch):
+    root = tmp_path / "external-release-evidence"
+    candidate = {"git_sha": "a" * 40, "version": "9.0.1", "package_sha256": "b" * 64}
+    key = Ed25519PrivateKey.generate()
+    service = EnterpriseDecisionPacket(project_root=ROOT)
+    for field, value in candidate.items():
+        monkeypatch.setenv(f"MFL_GA_CANDIDATE_{field.upper()}", value)
+
+    def seal(*, invalid=None):
+        rows = []
+        for category in REQUIRED_DECISION_EVIDENCE:
+            path = root / "decision-evidence" / f"{category}.json"
+            field, value = invalid or (None, None)
+            document = {
+                "schema_version": "enterprise_ga_evidence_envelope_v1",
+                "category": category, "candidate": candidate, "synthetic": False,
+                "status": "pass", "generated_at": datetime.now(UTC).isoformat(),
+            }
+            if field and category == "live_authority":
+                document[field] = value
+            _write(path, document)
+            rows.append({"category": category, "status": "pass", "external_attested": True, "sha256": _sha(path)})
+        manifest = root / "enterprise_ga_evidence_manifest.json"
+        _write(manifest, {"schema_version": "enterprise_ga_evidence_manifest_v2", "candidate": candidate, "evidence": rows})
+        attestation, trust = _signed({
+            "schema_version": "enterprise_ga_evidence_attestation_v1", "manifest_sha256": _sha(manifest),
+        }, key=key)
+        _write(root / "enterprise_ga_evidence_attestation.json", attestation)
+        trust_path = root / "enterprise_ga_evidence_trust.json"
+        _write(trust_path, {"schema_version": "enterprise_ga_evidence_trust_v1", **trust})
+        monkeypatch.setenv("MFL_ENTERPRISE_GA_EVIDENCE_TRUST_SHA256", _sha(trust_path))
+
+    seal()
+    result = service.assemble(evidence_root=root).as_dict()
+    assert result["candidate_identity_verified"] and result["attestation_verified"]
+    assert set(result["byte_verified_evidence_categories"]) == set(REQUIRED_DECISION_EVIDENCE)
+    assert result["ga_eligible"] is result["ga_shipped"] is False
+    (root / "decision-evidence" / "live_authority.json").write_text("{}", encoding="utf-8")
+    assert "enterprise_ga_evidence_bytes_unverified:live_authority" in service.assemble(evidence_root=root).blockers
+    seal(invalid=("synthetic", True))
+    assert "enterprise_ga_evidence_envelope_mismatch:live_authority" in service.assemble(evidence_root=root).blockers
+    seal(invalid=("generated_at", (datetime.now(UTC) - timedelta(days=91)).isoformat()))
+    assert "enterprise_ga_evidence_date_invalid:live_authority" in service.assemble(evidence_root=root).blockers
+    monkeypatch.setenv("MFL_GA_CANDIDATE_GIT_SHA", "c" * 40)
+    mismatched = service.assemble(evidence_root=root)
+    assert "enterprise_ga_candidate_identity_mismatch" in mismatched.blockers
+    assert not mismatched.candidate_identity_verified and not mismatched.byte_verified_evidence_categories
 
 
 def test_evidence_suppliers_cannot_supply_their_own_trust_anchor(tmp_path, monkeypatch):

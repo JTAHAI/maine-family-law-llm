@@ -16,7 +16,7 @@ import os
 import re
 import zipfile
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
@@ -45,6 +45,8 @@ _SIGNOFF_TRUST_FILENAME = "organizational_signoff_trust.json"
 _DECISION_FILENAME = "enterprise_ga_evidence_manifest.json"
 _DECISION_ATTESTATION_FILENAME = "enterprise_ga_evidence_attestation.json"
 _DECISION_TRUST_FILENAME = "enterprise_ga_evidence_trust.json"
+_CANDIDATE_SHA = re.compile(r"^[0-9a-f]{40}$")
+_CANDIDATE_VERSION = re.compile(r"^[0-9]{1,5}(?:\.[0-9]{1,5}){2,3}$")
 
 REQUIRED_VULNERABILITY_TOOLS = ("syft", "grype", "pip_audit", "semgrep")
 REQUIRED_SIGNOFF_LANES = ("legal", "security", "privacy", "accessibility", "product", "operations", "release")
@@ -562,6 +564,8 @@ class EnterpriseDecisionReport:
     store_ga_decision: str
     enterprise_ga_decision: str
     evidence_categories_present: list[str] = field(default_factory=list)
+    byte_verified_evidence_categories: list[str] = field(default_factory=list)
+    candidate_identity_verified: bool = False
     attestation_verified: bool = False
     blockers: list[str] = field(default_factory=list)
     review_required: bool = True
@@ -571,6 +575,8 @@ class EnterpriseDecisionReport:
             "schema_version": "enterprise_ga_decision_packet_v1", "status": self.status, "generated_at": self.generated_at,
             "store_ga_decision": self.store_ga_decision, "enterprise_ga_decision": self.enterprise_ga_decision,
             "required_evidence_categories": list(REQUIRED_DECISION_EVIDENCE), "evidence_categories_present": self.evidence_categories_present,
+            "byte_verified_evidence_categories": self.byte_verified_evidence_categories,
+            "candidate_identity_verified": self.candidate_identity_verified,
             "attestation_verified": self.attestation_verified, "blockers": sorted(set(self.blockers)), "review_required": self.review_required,
             "implementation_complete": None, "qualification_complete": None,
             "external_evidence_complete": False, "ga_eligible": False, "ga_shipped": False,
@@ -588,7 +594,9 @@ class EnterpriseDecisionPacket:
             return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision="STORE_GA_NOT_EVALUATED", enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", blockers=blockers)
         manifest_path = root / _DECISION_FILENAME
         manifest, manifest_hash = _load_hashed_object(manifest_path)
-        if manifest is None or manifest.get("schema_version") != "enterprise_ga_evidence_manifest_v1":
+        if manifest is None or manifest.get("schema_version") not in (
+            "enterprise_ga_evidence_manifest_v1", "enterprise_ga_evidence_manifest_v2",
+        ):
             return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision="STORE_GA_NOT_EVALUATED", enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", blockers=["enterprise_ga_evidence_manifest_unavailable"])
         rows = manifest.get("evidence") if isinstance(manifest.get("evidence"), list) else []
         present: set[str] = set()
@@ -606,11 +614,91 @@ class EnterpriseDecisionPacket:
         blockers.extend(signature_blockers)
         if attestation is not None and str(attestation.get("manifest_sha256") or "").casefold() != manifest_hash:
             blockers.append("enterprise_ga_evidence_attestation_manifest_hash_mismatch")
+            verified = False
+        bound_categories: list[str] = []
+        candidate_verified = False
+        if manifest.get("schema_version") == "enterprise_ga_evidence_manifest_v2":
+            # The release operator pins the candidate independently of the evidence
+            # bundle. A valid signature over a different release cannot be reused.
+            candidate = {
+                "git_sha": os.environ.get("MFL_GA_CANDIDATE_GIT_SHA", "").strip(),
+                "version": os.environ.get("MFL_GA_CANDIDATE_VERSION", "").strip(),
+                "package_sha256": os.environ.get("MFL_GA_CANDIDATE_PACKAGE_SHA256", "").strip(),
+            }
+            if not (
+                _CANDIDATE_SHA.fullmatch(candidate["git_sha"])
+                and _CANDIDATE_VERSION.fullmatch(candidate["version"])
+                and _HASH.fullmatch(candidate["package_sha256"])
+            ):
+                blockers.append("enterprise_ga_candidate_pin_required")
+            elif manifest.get("candidate") != candidate:
+                blockers.append("enterprise_ga_candidate_identity_mismatch")
+            elif verified:
+                candidate_verified = True
+                bound_categories, file_blockers = _verify_decision_evidence_bytes(root, candidate, rows)
+                blockers.extend(file_blockers)
+        else:
+            blockers.append("enterprise_ga_candidate_bound_manifest_required")
         # This program intentionally has no authority to declare either a Store
         # submission accepted or an organization released to Enterprise GA.
         blockers.append("external_release_authority_decision_required")
         store = "STORE_GA_NOT_EVALUATED" if "store_qualification" not in present else "STORE_GA_BLOCKED"
-        return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision=store, enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", evidence_categories_present=sorted(present), attestation_verified=verified, blockers=blockers)
+        return EnterpriseDecisionReport(status="blocked", generated_at=_now(), store_ga_decision=store, enterprise_ga_decision="ENTERPRISE_GA_BLOCKED", evidence_categories_present=sorted(present), byte_verified_evidence_categories=bound_categories, candidate_identity_verified=candidate_verified, attestation_verified=verified, blockers=blockers)
+
+
+def _verify_decision_evidence_bytes(
+    root: Path, candidate: dict[str, str], rows: list[Any]
+) -> tuple[list[str], list[str]]:
+    """Check fixed, bounded evidence envelopes, not assertions of legal approval."""
+    evidence_dir = root / "decision-evidence"
+    try:
+        if evidence_dir.resolve(strict=True) != evidence_dir or not evidence_dir.is_dir():
+            raise ValueError
+        if getattr(evidence_dir.lstat(), "st_file_attributes", 0) & 0x400:
+            raise ValueError
+    except (OSError, ValueError):
+        return [], ["enterprise_ga_evidence_directory_unavailable"]
+    by_category: dict[str, list[dict]] = {key: [] for key in REQUIRED_DECISION_EVIDENCE}
+    for row in rows:
+        if isinstance(row, dict) and isinstance(row.get("category"), str):
+            if row["category"] in by_category:
+                by_category[row["category"]].append(row)
+    bound: list[str] = []
+    blockers: list[str] = []
+    now = datetime.now(UTC)
+    for category, entries in sorted(by_category.items()):
+        if len(entries) != 1:
+            blockers.append(f"enterprise_ga_evidence_count_invalid:{category}")
+            continue
+        entry = entries[0]
+        path = evidence_dir / f"{category}.json"
+        envelope, digest = _load_hashed_object(path)
+        try:
+            parent_changed = path.parent.resolve(strict=True) != evidence_dir
+        except (OSError, ValueError):
+            parent_changed = True
+        if (parent_changed or envelope is None or digest != entry.get("sha256")
+                or entry.get("status") != "pass" or entry.get("external_attested") is not True):
+            blockers.append(f"enterprise_ga_evidence_bytes_unverified:{category}")
+            continue
+        if (
+            envelope.get("schema_version") != "enterprise_ga_evidence_envelope_v1"
+            or envelope.get("category") != category
+            or envelope.get("candidate") != candidate
+            or envelope.get("synthetic") is not False
+            or envelope.get("status") != "pass"
+        ):
+            blockers.append(f"enterprise_ga_evidence_envelope_mismatch:{category}")
+            continue
+        try:
+            generated = datetime.fromisoformat(str(envelope.get("generated_at") or ""))
+            if generated.utcoffset() is None or not now - timedelta(days=90) <= generated <= now:
+                raise ValueError
+        except ValueError:
+            blockers.append(f"enterprise_ga_evidence_date_invalid:{category}")
+            continue
+        bound.append(category)
+    return bound, blockers
 
 
 __all__ = [
