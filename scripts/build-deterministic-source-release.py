@@ -12,8 +12,17 @@ import argparse
 import hashlib
 import json
 import stat
+import sys
 from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from legal.security.source_archive_policy import (  # noqa: E402
+    PARSER_FIXTURE,
+    PARSER_FIXTURE_SIZE,
+    is_pinned_parser_fixture,
+    is_python_runtime_module,
+)
 
 EXCLUDED_DIRS = {
     ".git", ".pytest_cache", ".ruff_cache", ".mypy_cache", "__pycache__",
@@ -42,14 +51,14 @@ def _allowed_pdf(path: str) -> bool:
 def _include(path: Path, repo_root: Path) -> bool:
     rel = path.relative_to(repo_root).as_posix()
     parts = PurePosixPath(rel).parts
-    if any(part in EXCLUDED_DIRS for part in parts):
+    if any(part.casefold() in EXCLUDED_DIRS for part in parts) and not is_python_runtime_module(rel):
         return False
     if path.name in EXCLUDED_NAMES:
         return False
     if path.name.endswith(".local.json") and rel != "store/msix/identity.local.json":
         return False
     if path.suffix.casefold() in EXCLUDED_SUFFIXES:
-        return False
+        return rel == PARSER_FIXTURE
     if path.suffix.casefold() == ".pdf" and not _allowed_pdf(rel):
         return False
     if path.name.startswith("smoke_evidence") and path.suffix.casefold() == ".json":
@@ -80,13 +89,24 @@ def build_release(repo_root: Path, output: Path, archive_root: str) -> dict:
         raise ValueError("invalid_archive_root")
 
     files = collect_files(repo_root)
+    fixture = repo_root / PARSER_FIXTURE
+    if fixture in files:
+        with fixture.open("rb") as source:
+            if not is_pinned_parser_fixture(source.read(PARSER_FIXTURE_SIZE + 1)):
+                raise ValueError("malformed_download_fixture_hash_mismatch")
     entries: list[dict[str, object]] = []
     output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
     with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
             rel = path.relative_to(repo_root).as_posix()
-            data = path.read_bytes()
+            if rel == PARSER_FIXTURE:
+                with path.open("rb") as source:
+                    data = source.read(PARSER_FIXTURE_SIZE + 1)
+                if not is_pinned_parser_fixture(data):
+                    raise ValueError("malformed_download_fixture_hash_mismatch")
+            else:
+                data = path.read_bytes()
             digest = hashlib.sha256(data).hexdigest()
             entries.append({"path": rel, "size": len(data), "sha256": digest})
             info = ZipInfo(f"{archive_root}/{rel}", date_time=FIXED_TIMESTAMP)

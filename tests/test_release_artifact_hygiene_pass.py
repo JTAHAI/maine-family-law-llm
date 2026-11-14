@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import stat
 import subprocess
+import sys
+import zipfile
 
 from legal.production.release_artifact_audit import ReleaseArtifactAudit
 
@@ -164,3 +167,74 @@ def test_source_zip_content_audit_accepts_hyphenated_title_case_archive_root(tmp
     payload = json.loads(completed.stdout)
     assert payload["status"] == "pass"
     assert payload["allowed_public_pdf_count"] == 1
+
+
+def test_source_archive_keeps_runtime_modules_and_only_the_pinned_binary_fixture(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    runtime_module = "legal/runtime/idempotency.py"
+    fixture = "data/fixtures/parser_regression/malformed_download_v1.bin"
+    private_runtime = "legal/runtime/cache/private.py"
+    private_root = "runtime/private.py"
+    files = (
+        "openapi.json",
+        "docs/api-contract-test-report.json",
+        "docs/ui-completion-report.json",
+        "docs/model_registry_admission_report.json",
+        "docs/llm_injection_red_team_report.json",
+        "docs/enterprise-security-test-report.json",
+        "docs/governance-compliance-packet-report.json",
+        "docs/sre-reliability-report.json",
+        "configs/maine_true_ga_pass_tracker.json",
+        "configs/maine_ga_pass_evidence_requirements.json",
+        runtime_module,
+        fixture,
+    )
+    for relative in files:
+        target = source / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / relative).read_bytes())
+    for relative in (private_runtime, private_root, "data/fixtures/parser_regression/extra.bin"):
+        target = source / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"not public")
+
+    archive = tmp_path / "source.zip"
+    subprocess.run([
+        sys.executable, str(ROOT / "scripts/build-deterministic-source-release.py"),
+        "--repo-root", str(source), "--output", str(archive),
+    ], check=True, capture_output=True, timeout=30)
+    with zipfile.ZipFile(archive) as zf:
+        assert zf.read(f"ME_FM_LLM/{runtime_module}") == (ROOT / runtime_module).read_bytes()
+        assert zf.read(f"ME_FM_LLM/{fixture}") == (ROOT / fixture).read_bytes()
+        assert f"ME_FM_LLM/{private_runtime}" not in zf.namelist()
+        assert f"ME_FM_LLM/{private_root}" not in zf.namelist()
+        assert "ME_FM_LLM/data/fixtures/parser_regression/extra.bin" not in zf.namelist()
+
+    audit = [sys.executable, str(ROOT / "scripts/audit-source-zip-contents.py")]
+    subprocess.run([*audit, str(archive)], check=True, capture_output=True, timeout=30)
+    tampered = tmp_path / "tampered.zip"
+    with zipfile.ZipFile(archive) as clean, zipfile.ZipFile(tampered, "w") as bad:
+        for name in clean.namelist():
+            bad.writestr(name, b"not the pinned fixture" if name == f"ME_FM_LLM/{fixture}" else clean.read(name))
+        bad.writestr(f"ME_FM_LLM/{private_runtime}", b"not public")
+        bad.writestr("ME_FM_LLM/legal/runtime/private.dll", b"not public")
+        bad.writestr("ME_FM_LLM/legal/runtime/../escape.py", b"not public")
+        bad.writestr("ME_FM_LLM!legal!runtime!escape.py", b"not public")
+        link = zipfile.ZipInfo("ME_FM_LLM/legal/runtime/link.py")
+        link.create_system = 3
+        link.external_attr = (stat.S_IFLNK | 0o777) << 16
+        bad.writestr(link, "../../private.py")
+        bad.writestr(f"{runtime_module.upper()}", b"case-fold collision")
+    # ZipInfo normalizes backslashes at write time on Windows. Put the original
+    # member name in both ZIP headers to exercise the actual hostile wire bytes.
+    tampered.write_bytes(tampered.read_bytes().replace(
+        b"ME_FM_LLM!legal!runtime!escape.py", b"ME_FM_LLM\\legal\\runtime\\escape.py",
+    ))
+    result = subprocess.run([*audit, str(tampered)], capture_output=True, timeout=30)
+    assert result.returncode == 1
+    blockers = json.loads(result.stdout)["blockers"]
+    assert f"prohibited_release_zip_entry:{fixture}" in blockers
+    assert f"prohibited_release_zip_entry:{private_runtime}" in blockers
+    assert "prohibited_release_zip_entry:legal/runtime/private.dll" in blockers
+    assert blockers.count("unsafe_release_zip_path") == 3
+    assert "duplicate_release_zip_path" in blockers

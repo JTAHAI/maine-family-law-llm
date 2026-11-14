@@ -40,6 +40,7 @@ jobs:
           tests/test_filing_ready_gate.py
           tests/test_filing_ready_endpoint.py
           tests/test_trusted_filing_review.py
+          tests/test_release_artifact_hygiene_pass.py
           tests/test_pass40_offline_authority_portability.py
           tests/test_pass161_admin_console_acceptance.py
           tests/test_pass164_signed_policy_pack_lifecycle_acceptance.py
