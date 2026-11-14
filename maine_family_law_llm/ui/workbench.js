@@ -4480,12 +4480,19 @@
       const active = documentWorkspaceState.active;
       if (!active?.document_id) return;
       if (!filingPacketApproved?.checked) { setDocumentWorkspaceStatus('Approve packet generation for this exact revision first.', 'bad'); return; }
+      const owner = documentWorkspaceState.storageMatterId;
+      const stillCurrent = () => owner === documentWorkspaceState.storageMatterId
+        && documentWorkspaceState.active?.document_id === active.document_id
+        && documentWorkspaceState.active?.current_revision_id === active.current_revision_id;
+      filingPacketApproved.checked = false;
+      updateWorkspaceControls();
       try {
         const payload = await fetchJson(`/api/reviewed-filing-packet/documents/${encodeURIComponent(active.document_id)}/build`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({approved: true})});
+        if (!stillCurrent() || payload.matter_id !== owner) return;
         documentWorkspaceState.filingPacketBuild = payload;
         renderFilingPacketStatus(payload);
         setDocumentWorkspaceStatus(payload?.packet?.blockers?.length ? 'Reviewed filing packet built with visible blockers.' : 'Reviewed filing packet built and independently verifiable. Human review remains required.', payload?.packet?.blockers?.length ? 'warn' : 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      } catch (err) { if (stillCurrent()) setDocumentWorkspaceStatus(err.message, 'bad'); }
     }
 
 
