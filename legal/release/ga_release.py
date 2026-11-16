@@ -123,6 +123,7 @@ class GAShipmentAuditReport:
     blockers: list[str] = field(default_factory=list)
     shipment_manifest_hash: str = ""
     maintenance_operations_ready: bool = False
+    shipment_manifest_validated: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -131,6 +132,7 @@ class GAShipmentAuditReport:
             "release_name": self.release_name,
             "version": self.version,
             "ga_shipped": self.ga_shipped,
+            "shipment_manifest_validated": self.shipment_manifest_validated,
             "release_candidate_status": self.release_candidate_status,
             "shipment_manifest_hash": self.shipment_manifest_hash,
             "maintenance_operations_ready": self.maintenance_operations_ready,
@@ -288,12 +290,7 @@ class ReleaseCandidateAuditor:
 
 
 class GAShipmentAuditor:
-    """Pass 51 GA shipment gate.
-
-    GA is true only when the release candidate passed and the final shipment
-    manifest includes all source, data, eval, security, guide, runbook, rollback,
-    and maintenance-operation artifacts plus the explicit GA definition controls.
-    """
+    """Validate the Pass 51 manifest structure without attesting to publication."""
 
     REQUIRED_ARTIFACT_TYPES = (
         "clean_source_zip",
@@ -346,7 +343,7 @@ class GAShipmentAuditor:
         artifact_by_type = _artifact_map(artifacts)
         report_blockers: list[str] = []
 
-        if rc.get("status") != "pass" or not rc.get("release_candidate_frozen"):
+        if rc.get("status") != "pass" or rc.get("release_candidate_frozen") is not True:
             report_blockers.append("release_candidate_not_frozen_or_not_passed")
 
         for artifact_type in self.REQUIRED_ARTIFACT_TYPES:
@@ -362,7 +359,7 @@ class GAShipmentAuditor:
                 report_blockers.append(f"ga_external_artifact_packaged_in_source_repo:{artifact_type}")
 
         for control in self.REQUIRED_CONTROLS:
-            if not controls.get(control, False):
+            if controls.get(control) is not True:
                 report_blockers.append(f"ga_control_not_satisfied:{control}")
 
         artifact_inventory = [artifact.as_dict() for artifact in sorted(artifact_by_type.values(), key=lambda a: a.artifact_type)]
@@ -378,13 +375,14 @@ class GAShipmentAuditor:
             generated_at=datetime.now(timezone.utc).isoformat(),
             release_name=self.release_name,
             version=version,
-            ga_shipped=status == "pass",
+            ga_shipped=False,
+            shipment_manifest_validated=status == "pass",
             release_candidate_status=str(rc.get("status", "unknown")),
             artifacts=artifact_inventory,
             controls=dict(controls),
             blockers=report_blockers,
             shipment_manifest_hash=shipment_hash,
-            maintenance_operations_ready=bool(controls.get("rollback_and_maintenance_operations_present", False)),
+            maintenance_operations_ready=controls.get("rollback_and_maintenance_operations_present") is True,
         )
         if output_path:
             output = Path(output_path)

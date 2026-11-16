@@ -34,7 +34,7 @@ def test_pass167_verifies_hash_chain_tampering_and_encrypts_scoped_export_receip
     assert "audit_chain:legal_holds" in tampered["blockers"]
 
 
-def test_pass167_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypatch) -> None:
+def test_pass167_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypatch, governance_headers) -> None:
     case_root = tmp_path / "fictional-matter"; case_root.mkdir()
     monkeypatch.setattr(local_api, "active_case_root", lambda: case_root)
     monkeypatch.setenv("MFL_LEGAL_HOLD_ROOT", str(tmp_path / "holds"))
@@ -45,7 +45,7 @@ def test_pass167_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypat
     client = TestClient(production_app)
     denied = client.get("/api/admin/audit-verification", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"})
     assert denied.status_code == 403
-    headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "c" * 32}
+    headers = {**governance_headers, "X-MFLL-Client-Session": "c" * 32}
     report = client.get("/api/admin/audit-verification", headers=headers)
     assert report.status_code == 200, report.text
     exported = client.post("/api/admin/audit-verification/export", headers={**headers, "X-MFLL-Idempotency-Key": "audit-export-001"})

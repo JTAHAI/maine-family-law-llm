@@ -15,6 +15,7 @@ from legal.connectors import OfficialAuthorityIngestor, OfficialSourceFetcher, l
 from legal.connectors.base import RetrievedSource, SourceTarget
 from legal.connectors.official_source_catalog import load_source_targets_from_file
 from legal.data_boundaries import StoreName, default_external_data_root, ensure_external_authority_root
+from legal.security.durable_io import exclusive_file_lock, read_bounded_regular_file
 
 
 def _merge_manifest_records(existing: list[dict], incoming: list[dict]) -> list[dict]:
@@ -242,21 +243,25 @@ def main() -> int:
     ingestor = OfficialAuthorityIngestor(fetcher=fetcher, snapshot_base_dir=official_store)
     ingested = ingestor.ingest_all(targets, continue_on_error=not args.fail_fast)
     manifest_records = [item.to_dict() for item in ingested]
+    manifest_path = official_store / "source_manifest.json"
     prior_manifest_count = 0
-    if args.append_existing_manifest:
-        manifest_path_candidate = official_store / "source_manifest.json"
-        if manifest_path_candidate.exists():
-            loaded = json.loads(manifest_path_candidate.read_text(encoding="utf-8"))
+    manifest_changed = bool(manifest_records) and not ingestor.failed
+    with exclusive_file_lock(official_store / ".manifest.lock"):
+        if manifest_path.exists() and (args.append_existing_manifest or not manifest_changed):
+            loaded = json.loads(read_bounded_regular_file(manifest_path, max_bytes=64 * 1024 * 1024))
             if not isinstance(loaded, list):
                 raise SystemExit("Existing source_manifest.json must be a JSON array before append.")
             prior_manifest_count = len(loaded)
-            manifest_records = _merge_manifest_records(loaded, manifest_records)
-    manifest_path = ingestor.write_manifest(manifest_records)
-    failure_report_path = ingestor.write_failure_report()
-    run_report_path = ingestor.write_ingest_run_report(ingested=ingested, manifest_path=manifest_path)
+            manifest_records = _merge_manifest_records(loaded, manifest_records) if manifest_changed else loaded
+        if manifest_changed:
+            manifest_path = ingestor.write_manifest(manifest_records)
+        elif not manifest_path.exists():
+            manifest_records = []
+        failure_report_path = ingestor.write_failure_report()
+        run_report_path = ingestor.write_ingest_run_report(ingested=ingested, manifest_path=manifest_path)
 
     result = {
-        "status": "pass" if not ingestor.failed else "partial",
+        "status": "pass" if manifest_changed else "partial",
         "target_count": len(targets),
         "ingested_count": len(ingested),
         "failed_count": len(ingestor.failed),
@@ -265,6 +270,7 @@ def main() -> int:
         "fixture_mode": bool(args.fixture_mode),
         "force_refresh": bool(args.force_refresh),
         "manifest_path": str(manifest_path),
+        "manifest_changed": manifest_changed,
         "prior_manifest_count": prior_manifest_count,
         "manifest_record_count": len(manifest_records),
         "append_existing_manifest": bool(args.append_existing_manifest),
@@ -278,7 +284,7 @@ def main() -> int:
         print(json.dumps(result, indent=2, sort_keys=True))
     if args.human_report:
         print(_human_report(result))
-    return 0 if not ingestor.failed else 2
+    return 0 if manifest_changed else 2
 
 
 if __name__ == "__main__":

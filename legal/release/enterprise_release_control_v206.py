@@ -17,8 +17,8 @@ DETERMINISTIC_GENERATED_AT = "2026-06-05T00:00:00Z"
 DISCLAIMER = (
     "Enterprise release control is a fail-closed operator workflow. It does not "
     "create attorney review, legal signoff, pilot evidence, production deployment, "
-    "or GA shipment evidence. The release is enterprise_ready only when the external "
-    "Pass 48-51 launch evidence gate passes with real signed artifacts."
+    "or GA shipment evidence. The legacy Pass 48-51 checklist validates input structure. "
+    "A separate release decision must authenticate independently trusted evidence."
 )
 
 FORBIDDEN_RELEASE_CLAIMS = (
@@ -152,19 +152,26 @@ def build_enterprise_release_packet(
     launch_gate = _launch_gate_report(pilot_root, release_root)
     open_passes = launch_gate.get("open_passes", [])
     closed_passes = launch_gate.get("closed_passes", [])
-    enterprise_ready = launch_gate.get("status") == "pass" and open_passes == []
+    structurally_complete = launch_gate.get("status") == "pass" and open_passes == []
     blockers = list(launch_gate.get("blockers", []))
-    if not enterprise_ready:
+    if structurally_complete:
+        blockers.append("external_launch_evidence_authentication_required")
+    else:
         blockers.insert(0, "enterprise_release_blocked_until_pass48_51_external_evidence_passes")
 
     packet = {
         "schema": PACKET_SCHEMA,
         "version": version,
         "generated_at": generated_at,
-        "status": "enterprise_ready" if enterprise_ready else "blocked_external_launch_evidence_required",
-        "enterprise_ready": enterprise_ready,
-        "production_legal_ready": enterprise_ready,
-        "ga_shipped": enterprise_ready,
+        "status": (
+            "blocked_external_launch_evidence_authentication_required"
+            if structurally_complete
+            else "blocked_external_launch_evidence_required"
+        ),
+        "launch_evidence_structurally_complete": structurally_complete,
+        "enterprise_ready": False,
+        "production_legal_ready": False,
+        "ga_shipped": False,
         "pilot_root": _stable_path(pilot_root),
         "release_root": _stable_path(release_root or pilot_root),
         "remaining_passes": open_passes,
@@ -197,10 +204,10 @@ def build_enterprise_release_packet(
         "claims": {
             "legal_advice": False,
             "filing_ready": False,
-            "attorney_review_completed": enterprise_ready,
-            "limited_real_matter_pilot_completed": enterprise_ready,
-            "release_candidate_signed": enterprise_ready,
-            "ga_shipment_completed": enterprise_ready,
+            "attorney_review_completed": False,
+            "limited_real_matter_pilot_completed": False,
+            "release_candidate_signed": False,
+            "ga_shipment_completed": False,
             "private_data_packaged": False,
         },
         "disclaimer": DISCLAIMER,

@@ -161,7 +161,7 @@ def audit_stage(stage_root: Path, forbidden_values: list[str]) -> dict[str, obje
     harmless_source_literals = []
     for row in manifest:
         rel = str(row["path"]).lower()
-        if any(fragment in rel for fragment in BLOCKED_PATH_FRAGMENTS):
+        if any(fragment in rel for fragment in BLOCKED_PATH_FRAGMENTS) or rel.endswith(".dist-info/direct_url.json"):
             blocked_paths.append(row["path"])
             prohibited_residues.append({"path": row["path"], "reason": "prohibited_packaging_residue"})
         is_public_model = rel.startswith(ALLOWED_PUBLIC_MODEL_PREFIXES) and rel.endswith(ALLOWED_PUBLIC_MODEL_SUFFIXES)

@@ -227,6 +227,22 @@ def test_api_and_ui_expose_reviewed_filing_packet(monkeypatch, tmp_path: Path):
     assert built.status_code == 200
     assert built.json()["packet"]["review_required"] is True
     assert built.json()["artifacts"]
+    artifact = built.json()["artifacts"][0]
+    initial = client.get(artifact["download_url"])
+    assert initial.status_code == 200
+    import hashlib
+    assert hashlib.sha256(initial.content).hexdigest() == artifact["sha256"]
+
+    _commit_edit(case, document, "Edited working draft.")
+    stale = client.get(artifact["download_url"])
+    assert stale.status_code == 409
+    assert "filing_packet_revision_changed" in stale.text
+    status_after_edit = client.get(f"/api/reviewed-filing-packet/status?document_id={document['document_id']}")
+    assert status_after_edit.status_code == 200
+    active = status_after_edit.json()["active"]
+    assert active["status"] == "stale"
+    assert active["artifacts"] == []
+    assert active["packet"]["filing_ready"] is False
 
     html = Path("maine_family_law_llm/ui/workbench.html").read_text(encoding="utf-8")
     js = Path("maine_family_law_llm/ui/workbench.js").read_text(encoding="utf-8")

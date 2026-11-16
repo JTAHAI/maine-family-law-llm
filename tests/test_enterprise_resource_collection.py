@@ -76,6 +76,40 @@ def test_enterprise_resource_collector_refuses_repo_data_root() -> None:
         ).collect(dry_run=True)
 
 
+def test_enterprise_collector_rejects_unapproved_destinations_before_transport(tmp_path, monkeypatch):
+    collector = EnterpriseResourceCollector(
+        project_root=tmp_path / "source",
+        data_root=tmp_path / "external-data",
+        catalog=tiny_catalog("https://attacker.invalid/resource"),
+    )
+    monkeypatch.setattr(collector._fetcher, "_open", lambda _: pytest.fail("unexpected network request"))
+    report = collector.collect()
+    assert report.successful_resources == 0
+    manifest = json.loads(collector.manifest_path.read_text(encoding="utf-8"))
+    assert manifest[0]["failure_code"] == "source_destination_refused"
+
+
+def test_enterprise_collector_retains_approved_federal_download(tmp_path, monkeypatch):
+    from test_official_fetch_transport import Response
+
+    url = "https://uscode.house.gov/view.xhtml"
+    catalog = tiny_catalog(url)
+    catalog["resources"][0].update(source_class="federal_family_law", jurisdiction="federal")
+    catalog["required_source_classes"] = {"federal_family_law": 1}
+    collector = EnterpriseResourceCollector(
+        project_root=tmp_path / "source",
+        data_root=tmp_path / "external-data",
+        catalog=catalog,
+    )
+    monkeypatch.setattr(collector._fetcher, "_open", lambda request: Response(request.full_url, b"fictional"))
+    report = collector.collect()
+    assert report.successful_resources == 1
+    manifest = json.loads(collector.manifest_path.read_text(encoding="utf-8"))
+    assert manifest[0]["final_url"] == url
+    assert manifest[0]["sha256"] == hashlib.sha256(b"fictional").hexdigest()
+    assert manifest[0]["attempts"][0]["status"] == "success"
+
+
 def test_enterprise_resource_auditor_validates_snapshot_hash_and_coverage(tmp_path: Path) -> None:
     project_root = Path(__file__).resolve().parents[1]
     data_root = tmp_path / "external-data"

@@ -125,7 +125,7 @@ def test_v206_external_evidence_checklist_is_complete_and_private_safe() -> None
     assert "uses_real_official_maine_authority" in pass51["required_controls"]
 
 
-def test_v206_can_become_enterprise_ready_only_with_explicit_external_artifacts(tmp_path: Path) -> None:
+def test_v206_structurally_valid_external_artifacts_are_not_authenticated(tmp_path: Path) -> None:
     pilot = tmp_path / "pilot"
     release = tmp_path / "release"
     _write(pilot / "attorney_sandbox_pilot_report.json", _pass48_payload())
@@ -138,9 +138,12 @@ def test_v206_can_become_enterprise_ready_only_with_explicit_external_artifacts(
     assert packet["launch_gate_report"]["status"] == "pass"
     assert packet["remaining_passes"] == []
     assert packet["closed_launch_passes"] == [48, 49, 50, 51]
-    assert packet["enterprise_ready"] is True
-    assert packet["production_legal_ready"] is True
-    assert packet["ga_shipped"] is True
+    assert packet["launch_evidence_structurally_complete"] is True
+    assert "external_launch_evidence_authentication_required" in packet["release_blockers"]
+    assert packet["enterprise_ready"] is False
+    assert packet["production_legal_ready"] is False
+    assert packet["ga_shipped"] is False
+    assert packet["claims"]["attorney_review_completed"] is False
 
 
 def test_v206_blocks_placeholder_or_partial_external_artifacts(tmp_path: Path) -> None:

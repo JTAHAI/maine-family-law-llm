@@ -52,14 +52,14 @@ def _contains_forbidden_segment(path: Path, forbidden: Iterable[str]) -> str:
     for candidate in forbidden:
         folded = candidate.casefold()
         for part in parts:
-            if folded == part or folded in part or part in folded:
+            if folded in part:
                 return candidate
     return ""
 
 
 def _looks_like_traversal(path: str) -> bool:
     raw = str(path or "")
-    return ".." in Path(raw).parts or WINDOWS_DRIVE_RE.search(raw) is not None and raw.count("..") > 0
+    return ".." in re.split(r"[\\/]+", raw)
 
 
 def default_external_eval_root(project_root: str | Path = ".") -> Path:

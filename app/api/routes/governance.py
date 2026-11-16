@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from app.api.security import review_response
+from app.api.security import require_local_operator, review_response
 from legal.governance import GovernanceControlCenterService
 from legal.security.local_request_firewall import evaluate_local_request
 
@@ -83,9 +83,10 @@ def draft_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
     request_payload = payload or {}
     result = _service().draft_policy_pack(str(request_payload.get("role") or ""), dict(request_payload.get("overrides") or {}))
     return _wrap("POST /api/governance/policy-packs/draft", "governance_policy_pack_draft", result)
@@ -109,9 +110,11 @@ def review_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    role = _require_role(x_user_role)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
+    role = "admin"
     request_payload = payload or {}
     result = _service().review_policy_pack(
         str(request_payload.get("pack_id") or ""),
@@ -128,9 +131,11 @@ def activate_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    role = _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
+    role = "admin"
     request_payload = payload or {}
     result = _service().activate_policy_pack(
         str(request_payload.get("pack_id") or ""),
@@ -145,9 +150,11 @@ def rollback_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    role = _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
+    role = "admin"
     request_payload = payload or {}
     result = _service().rollback_policy_pack(
         str(request_payload.get("pack_id") or ""),
@@ -162,9 +169,11 @@ def expire_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    role = _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
+    role = "admin"
     request_payload = payload or {}
     result = _service().expire_policy_pack(
         str(request_payload.get("pack_id") or ""),
@@ -180,9 +189,11 @@ def supersede_policy_pack(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    role = _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
+    role = "admin"
     request_payload = payload or {}
     result = _service().supersede_policy_pack(
         str(request_payload.get("pack_id") or ""),
@@ -226,9 +237,10 @@ def record_exception(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role, admin_only=True)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
     result = _service().record_exception(payload or {})
     return _wrap("POST /api/governance/exceptions", "governance_exception_record", result)
 
@@ -245,9 +257,10 @@ def record_sign_off(
     request: Request,
     payload: dict | None = None,
     x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
 ):
     _enforce_local_request(request)
-    _require_role(x_user_role)
+    require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="governance")
     result = _service().record_sign_off(payload or {})
     return _wrap("POST /api/governance/sign-offs", "governance_sign_off_record", result)
 

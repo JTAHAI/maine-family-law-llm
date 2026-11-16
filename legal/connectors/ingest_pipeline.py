@@ -298,10 +298,7 @@ class OfficialAuthorityIngestor:
             "failed_count": len(self.failed),
             "failures": [failure.to_dict() for failure in self.failed],
         }
-        path = self.snapshotter.base_dir / filename
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
-        return path
+        return self.snapshotter.write_json_report(report, filename=filename)
 
     def write_ingest_run_report(
         self,
@@ -323,6 +320,4 @@ class OfficialAuthorityIngestor:
             report["source_class_counts"][source_class] = report["source_class_counts"].get(source_class, 0) + 1
         for failure in self.failed:
             report["failure_codes"][failure.failure_code] = report["failure_codes"].get(failure.failure_code, 0) + 1
-        path = self.snapshotter.base_dir / filename
-        path.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
-        return path
+        return self.snapshotter.write_json_report(report, filename=filename)

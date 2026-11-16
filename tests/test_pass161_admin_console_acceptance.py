@@ -12,14 +12,19 @@ from legal.governance.admin_console import AdminConsoleReceiptStore, build_admin
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_pass161_admin_console_is_tenant_scoped_encrypted_and_never_enumerates_people(tmp_path: Path, monkeypatch) -> None:
+def test_pass161_admin_console_is_tenant_scoped_encrypted_and_never_enumerates_people(tmp_path: Path, monkeypatch, governance_headers) -> None:
     monkeypatch.setenv("MFL_PROJECT_ROOT", str(ROOT))
     monkeypatch.setenv("MFL_ADMIN_CONSOLE_ROOT", str(tmp_path / "admin-receipts"))
     monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency"))
     client = TestClient(production_app)
     denied = client.get("/api/admin/console", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"})
     assert denied.status_code == 403
-    response = client.post("/api/admin/console/refresh", headers={"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Idempotency-Key": "admin-console-refresh-001"}, json={})
+    role_only = {key: value for key, value in governance_headers.items() if key != "Authorization"}
+    assert client.get("/api/admin/console", headers=role_only).status_code == 403
+    assert client.get("/api/admin/console", headers={**governance_headers, "X-Tenant-Id": "other"}).status_code == 403
+    duplicate = [*governance_headers.items(), ("Authorization", governance_headers["Authorization"])]
+    assert client.get("/api/admin/console", headers=duplicate).status_code == 403
+    response = client.post("/api/admin/console/refresh", headers={**governance_headers, "X-MFLL-Client-Session": "a" * 32, "X-MFLL-Idempotency-Key": "admin-console-refresh-001"}, json={})
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["tenant_scope"]["tenant_id"] == "fictional-tenant"

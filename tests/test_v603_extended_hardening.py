@@ -23,6 +23,40 @@ from legal.security.strict_json import StrictJSONError, strict_json_load_path
 from maine_family_law_llm import api as api_module
 
 
+def test_small_state_file_never_requests_cap_sized_scratch_space(tmp_path, monkeypatch):
+    target = tmp_path / "state.json"
+    contents = b'{"ok":true}'
+    target.write_bytes(contents)
+    native_read = os.read
+
+    def constrained_read(fd, size):
+        if size > len(contents) + 1:
+            raise MemoryError("fictional constrained host")
+        return native_read(fd, size)
+
+    monkeypatch.setattr(os, "read", constrained_read)
+    assert read_bounded_regular_file(target, max_bytes=4 * 1024 * 1024) == contents
+
+
+@pytest.mark.parametrize("replace_with", [b"x", b"longer state"])
+def test_bounded_read_rejects_concurrent_size_change(tmp_path, monkeypatch, replace_with):
+    target = tmp_path / "state.json"
+    target.write_bytes(b"state")
+    native_read = os.read
+    first = True
+
+    def changed_size(fd, size):
+        nonlocal first
+        if first:
+            first = False
+            target.write_bytes(replace_with)
+        return native_read(fd, size)
+
+    monkeypatch.setattr(os, "read", changed_size)
+    with pytest.raises(DurableIOError, match="file_size_changed"):
+        read_bounded_regular_file(target, max_bytes=64)
+
+
 def _context(tmp_path: Path) -> RuntimeContext:
     return RuntimeContext(
         mode="store",

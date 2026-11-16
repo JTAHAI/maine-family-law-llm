@@ -1,10 +1,12 @@
 # Shared containment for generated Store build state. No deletion is performed here.
 function Resolve-RepoBuildDirectory([string]$PathText, [string]$RepoRootPath) {
   if (-not $PathText) { throw "Build directory is required." }
-  $repo = [System.IO.Path]::GetFullPath($RepoRootPath).TrimEnd('\')
+  $sep = [System.IO.Path]::DirectorySeparatorChar
+  $comparison = if ($sep -eq '\') { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+  $repo = [System.IO.Path]::GetFullPath($RepoRootPath).TrimEnd($sep)
   $dist = Join-Path $repo 'dist'
-  $full = [System.IO.Path]::GetFullPath($PathText).TrimEnd('\')
-  if (-not $full.StartsWith($dist + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+  $full = [System.IO.Path]::GetFullPath($PathText).TrimEnd($sep)
+  if (-not $full.StartsWith($dist + $sep, $comparison)) {
     throw "Build directories must be dedicated children of repository dist; no external drive folders."
   }
   $cursor = $full
@@ -15,17 +17,18 @@ function Resolve-RepoBuildDirectory([string]$PathText, [string]$RepoRootPath) {
         throw "Build paths must not traverse files, junctions or symbolic links."
       }
     }
-    if ($cursor.Equals($repo, [System.StringComparison]::OrdinalIgnoreCase)) { break }
+    if ($cursor.Equals($repo, $comparison)) { break }
     $cursor = [System.IO.Path]::GetDirectoryName($cursor)
   }
   return $full
 }
 
 function Assert-SeparateBuildDirectories([string]$First, [string]$Second) {
-  $a = $First.TrimEnd('\') + '\'
-  $b = $Second.TrimEnd('\') + '\'
-  if ($a.StartsWith($b, [System.StringComparison]::OrdinalIgnoreCase) -or
-      $b.StartsWith($a, [System.StringComparison]::OrdinalIgnoreCase)) {
+  $sep = [System.IO.Path]::DirectorySeparatorChar
+  $comparison = if ($sep -eq '\') { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+  $a = $First.TrimEnd($sep) + $sep
+  $b = $Second.TrimEnd($sep) + $sep
+  if ($a.StartsWith($b, $comparison) -or $b.StartsWith($a, $comparison)) {
     throw "Build output, staging and temporary directories must not overlap."
   }
 }

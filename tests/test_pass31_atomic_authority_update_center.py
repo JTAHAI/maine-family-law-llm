@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -17,6 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 HEADERS = {"X-User-Role": "reviewer", "X-Tenant-Id": "tenant-authority-update"}
 FIRST_BUILD = "a" * 24
 SECOND_BUILD = "b" * 24
+
+
+def _operator(monkeypatch):
+    monkeypatch.setenv("MFL_AUTHORITY_OPERATOR_TENANT", HEADERS["X-Tenant-Id"])
+    monkeypatch.setenv("MFL_AUTHORITY_OPERATOR_BEARER_SHA256", hashlib.sha256(b"a" * 64).hexdigest())
+    return {**HEADERS, "X-User-Role": "admin", "Authorization": "Bearer " + "a" * 64}
 
 
 def _write_build(root: Path, build_id: str, sources: list[dict[str, str]]) -> None:
@@ -93,7 +100,43 @@ def test_pass31_fixture_update_refuses_nonqualifying_authority_without_activatio
     assert job.result["publication"]["status"] == "blocked"
 
 
-def test_pass31_canonical_activation_requires_role_acknowledgement_and_audit(monkeypatch) -> None:
+def test_all_failed_refresh_preserves_manifest_and_active_pointer(monkeypatch, tmp_path):
+    from legal.connectors import load_official_source_targets
+    from legal.connectors.http_fetcher import OfficialSourceFetchError
+
+    root = tmp_path / "external-authority"
+    manifest = root / "official_authority_store" / "source_manifest.json"
+    manifest.parent.mkdir(parents=True)
+    prior = b'[{"source_id": "prior-source", "hash": "fictional"}]'
+    manifest.write_bytes(prior)
+    pointer = root / "authority_product" / "ACTIVE_BUILD.json"
+    pointer.parent.mkdir()
+    pointer.write_bytes(b'{"build_id": "prior"}')
+    source = load_official_source_targets()[0]
+    monkeypatch.setattr("app.services.authority_library_service.load_official_source_targets", lambda: [source])
+
+    def unavailable(target):
+        raise OfficialSourceFetchError(target=target, code="fixture_outage", message="Fictional outage.")
+
+    service = AuthorityLibraryService(data_root=root, repo_root=tmp_path / "source-repo")
+    monkeypatch.setattr(service, "_build_fetcher", lambda *a, **kw: SimpleNamespace(fetch=unavailable))
+    queued = service.update(fixture_mode=True)
+    deadline = time.monotonic() + 15
+    job = service.get_job(queued["job_id"])
+    while not job.finished_at and time.monotonic() < deadline:
+        time.sleep(0.02)
+
+    assert job.status == "failed"
+    assert manifest.read_bytes() == prior
+    assert pointer.read_bytes() == b'{"build_id": "prior"}'
+    assert job.result["blockers"] == ["authority_refresh_incomplete"]
+    failures = root / "official_authority_store" / "snapshots" / "failed_sources.json"
+    assert json.loads(failures.read_bytes())["failed_count"] == 1
+
+
+def test_pass31_canonical_activation_requires_role_acknowledgement_and_audit(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(tmp_path / "fictional-authority"))
+    monkeypatch.setenv("MFL_AUTHORITY_DATA_ROOT", str(tmp_path / "fictional-authority"))
     monkeypatch.setattr(
         authority_routes.AuthorityLibraryService,
         "activate_build",
@@ -114,14 +157,17 @@ def test_pass31_canonical_activation_requires_role_acknowledgement_and_audit(mon
     assert unacknowledged.status_code == 200
     assert "authority_activation_acknowledgement_required" in unacknowledged.json()["blockers"]
 
-    activated = client.post("/api/authority/activate", headers=HEADERS, json={"build_id": SECOND_BUILD, "acknowledged": True})
+    assert client.post("/api/authority/activate", headers=HEADERS, json={"build_id": SECOND_BUILD, "acknowledged": True}).status_code == 403
+    activated = client.post("/api/authority/activate", headers=_operator(monkeypatch), json={"build_id": SECOND_BUILD, "acknowledged": True})
     assert activated.status_code == 200
     assert activated.headers["X-MFLL-RBAC"] == "enforced"
     assert activated.headers["X-MFLL-Audit-Event-Id"]
     assert activated.json()["audit_event"]["action"] == "authority_build_activation"
 
 
-def test_pass31_frozen_runtime_activation_route_requires_acknowledgement(monkeypatch) -> None:
+def test_pass31_frozen_runtime_activation_route_requires_acknowledgement(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("MAINE_FAMILY_LAW_DATA_ROOT", str(tmp_path / "fictional-authority"))
+    monkeypatch.setenv("MFL_AUTHORITY_DATA_ROOT", str(tmp_path / "fictional-authority"))
     monkeypatch.setattr(
         frozen_api.AuthorityLibraryService,
         "activate_build",
@@ -138,7 +184,8 @@ def test_pass31_frozen_runtime_activation_route_requires_acknowledgement(monkeyp
     assert blocked.status_code == 200
     assert "authority_activation_acknowledgement_required" in blocked.json()["blockers"]
 
-    activated = client.post("/api/authority/activate", json={"build_id": SECOND_BUILD, "acknowledged": True})
+    assert client.post("/api/authority/activate", json={"build_id": SECOND_BUILD, "acknowledged": True}).status_code == 403
+    activated = client.post("/api/authority/activate", headers=_operator(monkeypatch), json={"build_id": SECOND_BUILD, "acknowledged": True})
     assert activated.status_code == 200
     assert activated.json()["operation"] == "activate"
 

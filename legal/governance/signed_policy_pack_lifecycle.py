@@ -19,9 +19,9 @@ from typing import Any
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock
+from legal.security.durable_io import atomic_write_bytes, exclusive_file_lock, read_bounded_regular_file
 from legal.security.local_encryption import LocalEnvelopeEncryptor
-from legal.security.strict_json import strict_json_load_path
+from legal.security.strict_json import strict_json_load_path, strict_json_loads
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$")
 _VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]{1,48})?$")
@@ -92,12 +92,14 @@ def _validate_controls(value: Any) -> tuple[dict[str, bool], list[str]]:
 
 def _verify_signature(pack: dict[str, Any], signature: dict[str, Any], trust_config: Path) -> dict[str, Any]:
     blockers: list[str] = []
+    raw = b""
     try:
-        trust = strict_json_load_path(trust_config, max_bytes=256 * 1024, require_object=True)
+        raw = read_bounded_regular_file(trust_config, max_bytes=256 * 1024)
+        trust = strict_json_loads(raw, max_bytes=256 * 1024, require_object=True)
     except Exception:
         trust = {}
         blockers.append("policy_pack_trust_config_unavailable")
-    keys = trust.get("trusted_keys") if isinstance(trust, dict) else None
+    keys = trust.get("trusted_keys") if trust.get("schema_version") == "policy_pack_trust_v1" else None
     if not isinstance(keys, dict):
         blockers.append("policy_pack_trust_config_invalid")
         keys = {}
@@ -112,7 +114,7 @@ def _verify_signature(pack: dict[str, Any], signature: dict[str, Any], trust_con
             key.verify(base64.b64decode(encoded_signature, validate=True), signable_payload(pack))
         except (ValueError, InvalidSignature):
             blockers.append("policy_pack_signature_invalid")
-    return {"status": "verified" if not blockers else "blocked", "key_id": key_id[:100], "signature_present": bool(signature.get("signature")), "trust_config_sha256": _digest(trust_config.read_bytes()) if trust_config.is_file() else "", "blockers": sorted(set(blockers)), "review_required": True}
+    return {"status": "verified" if not blockers else "blocked", "key_id": key_id[:100], "signature_present": bool(signature.get("signature")), "trust_config_sha256": _digest(raw) if raw else "", "blockers": sorted(set(blockers)), "review_required": True}
 
 
 class SignedPolicyPackStore:
@@ -179,7 +181,23 @@ class SignedPolicyPackStore:
 
     @staticmethod
     def _response(record: dict[str, Any], audit: dict[str, Any]) -> dict[str, Any]:
+        record = {key: value for key, value in record.items() if key != "signature_material"}
         return {"schema_version": "signed_policy_pack_lifecycle_v1", "status": record.get("status"), "policy_pack": record, "source_drill_down": {"content_sha256": record.get("content_sha256", ""), "parent_pack_hash": record.get("parent_pack_hash", ""), "signature_key_id": (record.get("signature") or {}).get("key_id", ""), "audit_event_hash": audit.get("event_hash", ""), "review_required": True}, "private_record_content_included": False, "paths_disclosed": False, "network_used": False, "review_required": True, "notice": "Policy-pack state is local, encrypted, tenant-scoped, and review-required. It cannot create a signing key or substitute for accountable external approval."}
+
+    def _activation_blockers(self, record: dict[str, Any]) -> list[str]:
+        normal, blockers = _validate_controls(record.get("controls"))
+        if normal != record.get("controls") or record.get("content_sha256") != _digest(
+            {key: record.get(key) for key in ("pack_id", "version", "controls", "parent_pack_hash")}
+        ):
+            blockers.append("policy_pack_content_hash_mismatch")
+        if (record.get("validation") or {}).get("status") != "valid":
+            blockers.append("policy_pack_validation_required")
+        material = record.get("signature_material")
+        if not isinstance(material, dict):
+            blockers.append("policy_pack_external_signature_required")
+        else:
+            blockers.extend(_verify_signature(record, material, _trust_path(self.project_root))["blockers"])
+        return sorted(set(blockers))
 
     def validate(self, *, tenant_id: str, pack_id: str) -> dict[str, Any]:
         path = self._path(tenant_id)
@@ -203,8 +221,16 @@ class SignedPolicyPackStore:
         path = self._path(tenant_id)
         with exclusive_file_lock(path.with_suffix(path.suffix + ".lock")):
             state = self._load(path); record = self._read(state, pack_id)
+            if record["status"] in {"active", "superseded", "expired", "rolled_back"}:
+                raise SignedPolicyPackError("policy_pack_requires_new_draft")
             verification = _verify_signature(record, signature, _trust_path(self.project_root))
             record["signature"] = verification
+            if verification["status"] == "verified":
+                record["signature_material"] = {
+                    "key_id": str(signature["key_id"]).strip(), "signature": signature["signature"],
+                }
+            else:
+                record.pop("signature_material", None)
             valid = (record.get("validation") or {}).get("status") == "valid"
             record["status"] = "approved" if valid and verification["status"] == "verified" else "blocked"
             record["history"].append({"event": "signature_checked", "at": _now(), "status": verification["status"], "key_id": verification["key_id"], "blockers": verification["blockers"]})
@@ -215,12 +241,22 @@ class SignedPolicyPackStore:
         path = self._path(tenant_id)
         with exclusive_file_lock(path.with_suffix(path.suffix + ".lock")):
             state = self._load(path); record = self._read(state, pack_id)
-            blockers = list((record.get("validation") or {}).get("blockers") or [])
-            if (record.get("signature") or {}).get("status") != "verified": blockers.append("policy_pack_external_signature_required")
+            if record["status"] in {"expired", "rolled_back", "superseded"}:
+                raise SignedPolicyPackError("policy_pack_requires_new_draft")
+            blockers = self._activation_blockers(record)
+            if record["status"] == "active":
+                if blockers:
+                    raise SignedPolicyPackError("active_policy_pack_no_longer_eligible")
+                return self._response(record, {})
+            prior = str(state.get("active_pack_id") or "")
+            current = state["packs"].get(prior, {})
+            if record.get("parent_pack_hash") != str(current.get("content_sha256") or ""):
+                blockers.append("policy_pack_active_parent_changed")
             if blockers:
+                record["activation_blockers"] = sorted(set(blockers))
                 record["status"] = "blocked"; record["history"].append({"event": "activation_blocked", "at": _now(), "blockers": sorted(set(blockers))})
             else:
-                prior = str(state.get("active_pack_id") or "")
+                record.pop("activation_blockers", None)
                 if prior and prior in state["packs"] and prior != record["pack_id"]:
                     state["packs"][prior]["status"] = "superseded"
                     state["packs"][prior]["superseded_by"] = record["pack_id"]
@@ -246,7 +282,10 @@ class SignedPolicyPackStore:
                 if event == "rolled_back":
                     prior_id = str(record.get("prior_active_pack_id") or "")
                     prior = state["packs"].get(prior_id)
-                    prior_eligible = isinstance(prior, dict) and (prior.get("signature") or {}).get("status") == "verified" and not list((prior.get("validation") or {}).get("blockers") or [])
+                    prior_eligible = (
+                        isinstance(prior, dict) and prior_id != record["pack_id"]
+                        and prior.get("status") == "superseded" and not self._activation_blockers(prior)
+                    )
                     if prior_eligible:
                         prior["status"] = "active"; prior["reactivated_at"] = _now()
                         prior.setdefault("history", []).append({"event": "reactivated_by_rollback", "at": prior["reactivated_at"], "rolled_back_pack_id": record["pack_id"]})

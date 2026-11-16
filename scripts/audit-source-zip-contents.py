@@ -9,8 +9,18 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
-from zipfile import ZipFile
+import stat
+import sys
+from pathlib import Path, PurePosixPath
+from zipfile import BadZipFile, ZipFile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.source_archive_policy import (  # noqa: E402
+    PARSER_FIXTURE,
+    PARSER_FIXTURE_SIZE,
+    is_pinned_parser_fixture,
+    is_python_runtime_module,
+)
 
 REQUIRED_RELEASE_PATHS = {
     "openapi.json",
@@ -71,7 +81,7 @@ def _strip_archive_root(name: str) -> str:
     cosmetic name of the top-level folder in the ZIP.
     """
     clean = name.rstrip("/")
-    parts = Path(clean).parts
+    parts = PurePosixPath(clean).parts
     if len(parts) <= 1:
         return clean
     root = parts[0].casefold()
@@ -87,22 +97,44 @@ def _strip_archive_root(name: str) -> str:
 
 def audit(zip_path: Path) -> dict:
     blockers: list[str] = []
+    normalized: set[str] = set()
+    seen: set[str] = set()
+    prohibited: list[str] = []
+    public_pdfs = 0
     with ZipFile(zip_path) as zf:
-        names = {name for name in zf.namelist() if not name.endswith("/")}
-    normalized = {_strip_archive_root(name) for name in names}
+        for entry in zf.infolist():
+            name = entry.filename.rstrip("/")
+            if (
+                "\x00" in entry.orig_filename or "\\" in entry.orig_filename or ":" in name
+                or any(part.rstrip(" .") != part or not part for part in name.split("/"))
+                or stat.S_ISLNK(entry.external_attr >> 16)
+            ):
+                blockers.append("unsafe_release_zip_path")
+                continue
+            if entry.is_dir():
+                continue
+            path = _strip_archive_root(name)
+            if path.casefold() in seen:
+                blockers.append("duplicate_release_zip_path")
+                continue
+            seen.add(path.casefold())
+            normalized.add(path)
+            parts = {part.casefold() for part in PurePosixPath(path).parts}
+            suffix = PurePosixPath(path).suffix.casefold()
+            if path == PARSER_FIXTURE and entry.file_size == PARSER_FIXTURE_SIZE:
+                with zf.open(entry) as source:
+                    if is_pinned_parser_fixture(source.read(PARSER_FIXTURE_SIZE + 1)):
+                        continue
+            allowed_public_pdf = suffix == ".pdf" and any(path.startswith(prefix) for prefix in ALLOWED_PDF_PREFIXES)
+            public_pdfs += int(allowed_public_pdf)
+            if (
+                (parts & PROHIBITED_PARTS and not is_python_runtime_module(path))
+                or suffix in PROHIBITED_SUFFIXES or (suffix == ".pdf" and not allowed_public_pdf)
+            ):
+                prohibited.append(path)
     missing = sorted(REQUIRED_RELEASE_PATHS - normalized)
     blockers.extend(f"missing_required_release_path:{path}" for path in missing)
-
-    prohibited: list[str] = []
-    for path in sorted(normalized):
-        if not path:
-            continue
-        parts = set(Path(path).parts)
-        suffix = Path(path).suffix.lower()
-        allowed_public_pdf = suffix == ".pdf" and any(path.startswith(prefix) for prefix in ALLOWED_PDF_PREFIXES)
-        if parts & PROHIBITED_PARTS or suffix in PROHIBITED_SUFFIXES or (suffix == ".pdf" and not allowed_public_pdf):
-            prohibited.append(path)
-    blockers.extend(f"prohibited_release_zip_entry:{path}" for path in prohibited[:50])
+    blockers.extend(f"prohibited_release_zip_entry:{path}" for path in sorted(prohibited)[:50])
 
     return {
         "schema": "maine_family_law_llm.source_zip_content_audit.v1",
@@ -112,7 +144,7 @@ def audit(zip_path: Path) -> dict:
         "required_count": len(REQUIRED_RELEASE_PATHS),
         "missing_required_paths": missing,
         "prohibited_entry_count": len(prohibited),
-        "allowed_public_pdf_count": sum(1 for path in normalized if Path(path).suffix.lower() == ".pdf" and any(path.startswith(prefix) for prefix in ALLOWED_PDF_PREFIXES)),
+        "allowed_public_pdf_count": public_pdfs,
         "blockers": blockers,
     }
 
@@ -121,7 +153,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("zip_path", type=Path)
     args = parser.parse_args()
-    report = audit(args.zip_path)
+    try:
+        report = audit(args.zip_path)
+    except (BadZipFile, OSError):
+        report = {"status": "fail", "safe_to_package": False, "blockers": ["source_zip_unreadable"]}
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["status"] == "pass" else 1
 

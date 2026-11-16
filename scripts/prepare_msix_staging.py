@@ -46,6 +46,10 @@ def _is_reparse_or_symlink(path: Path) -> bool:
 
 
 def _should_skip_source_path(relative_path: Path) -> bool:
+    # PEP 610 metadata records the machine-local wheel or checkout URI from
+    # pip's build environment. It is not needed by the application.
+    if relative_path.name.casefold() == "direct_url.json" and relative_path.parent.name.casefold().endswith(".dist-info"):
+        return True
     # python-docx loads its runtime default template from templates/default.docx;
     # the exploded default-docx-template tree is redundant and trips MakeAppx.
     return "docx/templates/default-docx-template/" in relative_path.as_posix()

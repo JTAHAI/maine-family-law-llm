@@ -19,6 +19,12 @@ def test_selected_runtime_matches_loaded_dependencies():
 
 
 def test_mixed_runtime_fails_closed(tmp_path, monkeypatch):
+    site = tmp_path / "venv" / "Lib" / "site-packages"
+    (site / "psutil").mkdir(parents=True)
+    module = site / "psutil" / "__init__.py"
+    module.touch()
+    (tmp_path / "venv" / "pyvenv.cfg").touch()
+    monkeypatch.setattr(process.psutil, "__file__", str(module))
     monkeypatch.setattr(
         process.metadata, "distribution", lambda _: SimpleNamespace(locate_file=lambda _: tmp_path)
     )

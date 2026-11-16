@@ -81,6 +81,7 @@ class AuthorityProductService:
             payload.update(
                 {
                     "product_version": active.manifest.get("product_version"),
+                    "authority_manifest_sha256": self._sha256_file(active.manifest_path),
                     "freshness_counts": active.manifest.get("freshness_counts") or {},
                     "retrieval_document_count": active.manifest.get("retrieval_document_count", 0),
                     "parsed_record_counts": active.manifest.get("parsed_record_counts") or {},

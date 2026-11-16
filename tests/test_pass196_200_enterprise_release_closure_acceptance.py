@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -95,9 +96,18 @@ def _closure_bundle(root: Path, package: Path) -> tuple[dict, Ed25519PrivateKey]
     return package_report, key
 
 
-def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_path: Path) -> None:
+def _pin_trust(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
+    for category in ("release_reproducibility", "organizational_signoff", "enterprise_ga_evidence"):
+        monkeypatch.setenv(
+            f"MFL_{category.upper()}_TRUST_SHA256",
+            _sha(root / f"{category}_trust.json"),
+        )
+
+
+def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; package_report, _key = _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     assert package_report["license_status"] == "pass"
     assert package_report["vulnerability_status"] == "pass"
     assert set(package_report["sbom_artifacts"]) == {"exact-source-sbom.json", "exact-msix-sbom.json"}
@@ -120,9 +130,10 @@ def test_pass196_197_exact_package_sbom_and_signed_reproducibility_contract(tmp_
     assert "release_reproducibility_package_hash_mismatch" in blocked["blockers"]
 
 
-def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path) -> None:
+def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     tabletop = IncidentResponseProgram().tabletop("fictional_private_record_exposure")
     assert tabletop["status"] == "fictional_tabletop_completed_review_required"
     assert tabletop["operational_drill_verified"] is False
@@ -134,8 +145,117 @@ def test_pass198_200_incident_signoffs_and_decision_remain_honest(tmp_path: Path
     decision = EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external).as_dict()
     assert set(decision["evidence_categories_present"]) == set(REQUIRED_DECISION_EVIDENCE)
     assert decision["attestation_verified"] is True
+    assert decision["candidate_identity_verified"] is False
+    assert not decision["byte_verified_evidence_categories"]
     assert decision["store_ga_decision"] == "STORE_GA_BLOCKED"
     assert decision["enterprise_ga_decision"] == "ENTERPRISE_GA_BLOCKED"
+    assert decision["ga_eligible"] is decision["ga_shipped"] is False
+
+
+def test_candidate_bound_release_evidence_requires_actual_current_matching_bytes(tmp_path, monkeypatch):
+    root = tmp_path / "external-release-evidence"
+    candidate = {"git_sha": "a" * 40, "version": "9.0.1", "package_sha256": "b" * 64}
+    key = Ed25519PrivateKey.generate()
+    service = EnterpriseDecisionPacket(project_root=ROOT)
+    for field, value in candidate.items():
+        monkeypatch.setenv(f"MFL_GA_CANDIDATE_{field.upper()}", value)
+
+    def seal(*, invalid=None):
+        rows = []
+        for category in REQUIRED_DECISION_EVIDENCE:
+            path = root / "decision-evidence" / f"{category}.json"
+            field, value = invalid or (None, None)
+            document = {
+                "schema_version": "enterprise_ga_evidence_envelope_v1",
+                "category": category, "candidate": candidate, "synthetic": False,
+                "status": "pass", "generated_at": datetime.now(UTC).isoformat(),
+            }
+            if field and category == "live_authority":
+                document[field] = value
+            _write(path, document)
+            rows.append({"category": category, "status": "pass", "external_attested": True, "sha256": _sha(path)})
+        manifest = root / "enterprise_ga_evidence_manifest.json"
+        _write(manifest, {"schema_version": "enterprise_ga_evidence_manifest_v2", "candidate": candidate, "evidence": rows})
+        attestation, trust = _signed({
+            "schema_version": "enterprise_ga_evidence_attestation_v1", "manifest_sha256": _sha(manifest),
+        }, key=key)
+        _write(root / "enterprise_ga_evidence_attestation.json", attestation)
+        trust_path = root / "enterprise_ga_evidence_trust.json"
+        _write(trust_path, {"schema_version": "enterprise_ga_evidence_trust_v1", **trust})
+        monkeypatch.setenv("MFL_ENTERPRISE_GA_EVIDENCE_TRUST_SHA256", _sha(trust_path))
+
+    approving_key = Ed25519PrivateKey.generate()
+
+    def authorize(*, signer=approving_key, **overrides):
+        now = datetime.now(UTC)
+        approval, trust = _signed({
+            "schema_version": "enterprise_ga_release_authorization_v1",
+            "candidate": candidate, "manifest_sha256": _sha(root / "enterprise_ga_evidence_manifest.json"),
+            "axes": ["store", "enterprise"], "decision": "approve_ga_eligibility",
+            "implementation_complete": True, "qualification_complete": True, "synthetic": False,
+            "issued_at": now.isoformat(), "expires_at": (now + timedelta(days=7)).isoformat(),
+            **overrides,
+        }, key=signer)
+        _write(root / "enterprise_ga_release_authorization.json", approval)
+        trust_path = root / "enterprise_ga_release_authority_trust.json"
+        _write(trust_path, {"schema_version": "enterprise_ga_release_authority_trust_v1", **trust})
+        monkeypatch.setenv("MFL_ENTERPRISE_GA_RELEASE_AUTHORITY_TRUST_SHA256", _sha(trust_path))
+
+    seal()
+    result = service.assemble(evidence_root=root).as_dict()
+    assert result["candidate_identity_verified"] and result["attestation_verified"]
+    assert set(result["byte_verified_evidence_categories"]) == set(REQUIRED_DECISION_EVIDENCE)
+    assert result["ga_eligible"] is result["ga_shipped"] is False
+    authorize(signer=key)
+    assert "enterprise_ga_release_authority_not_independent" in service.assemble(evidence_root=root).blockers
+    authorize(expires_at=(datetime.now(UTC) - timedelta(days=1)).isoformat())
+    assert "enterprise_ga_release_authorization_date_invalid" in service.assemble(evidence_root=root).blockers
+    authorize()
+    approved = service.assemble(evidence_root=root).as_dict()
+    assert approved["status"] == "eligible"
+    assert approved["ga_eligible"] and approved["release_authorization_verified"]
+    assert approved["ga_shipped"] is False
+    monkeypatch.setenv("MFL_ENTERPRISE_GA_RELEASE_AUTHORITY_TRUST_SHA256", "0" * 64)
+    assert not service.assemble(evidence_root=root).as_dict()["ga_eligible"]
+    authorize()
+    (root / "decision-evidence" / "live_authority.json").write_text("{}", encoding="utf-8")
+    assert "enterprise_ga_evidence_bytes_unverified:live_authority" in service.assemble(evidence_root=root).blockers
+    seal(invalid=("synthetic", True))
+    assert "enterprise_ga_evidence_envelope_mismatch:live_authority" in service.assemble(evidence_root=root).blockers
+    seal(invalid=("generated_at", (datetime.now(UTC) - timedelta(days=91)).isoformat()))
+    assert "enterprise_ga_evidence_date_invalid:live_authority" in service.assemble(evidence_root=root).blockers
+    seal()
+    assert "enterprise_ga_release_authorization_candidate_mismatch" in service.assemble(evidence_root=root).blockers
+    monkeypatch.setenv("MFL_GA_CANDIDATE_GIT_SHA", "c" * 40)
+    mismatched = service.assemble(evidence_root=root)
+    assert "enterprise_ga_candidate_identity_mismatch" in mismatched.blockers
+    assert not mismatched.candidate_identity_verified and not mismatched.byte_verified_evidence_categories
+
+
+def test_evidence_suppliers_cannot_supply_their_own_trust_anchor(tmp_path, monkeypatch):
+    package = tmp_path / "Fictional_8.0.0.0_x64.msix"
+    _package(package)
+    external = tmp_path / "external-release-evidence"
+    _closure_bundle(external, package)
+    for category in ("release_reproducibility", "organizational_signoff", "enterprise_ga_evidence"):
+        monkeypatch.delenv(f"MFL_{category.upper()}_TRUST_SHA256", raising=False)
+    sbom = PackageSbomGate(project_root=ROOT).audit(package=package, evidence_root=external)
+    reports = [
+        ReleaseReproducibilityGate(project_root=ROOT).verify(evidence_root=external, package_report=sbom),
+        OrganizationalSignoffGate(project_root=ROOT).verify(evidence_root=external),
+        EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external),
+    ]
+    for report in reports:
+        assert report.attestation_verified is False
+        assert report.status == "blocked"
+        assert any(item.endswith("_trust_pin_required") for item in report.blockers)
+
+    _pin_trust(monkeypatch, external)
+    # A new, internally consistent but untrusted replacement bundle is refused.
+    _closure_bundle(external, package)
+    report = EnterpriseDecisionPacket(project_root=ROOT).assemble(evidence_root=external)
+    assert report.attestation_verified is False
+    assert "enterprise_ga_evidence_trust_pin_mismatch" in report.blockers
 
 
 def test_pass196_200_production_routes_protect_tenant_and_redact_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -147,6 +267,7 @@ def test_pass196_200_production_routes_protect_tenant_and_redact_paths(tmp_path:
 
     package = tmp_path / "Fictional_8.0.0.0_x64.msix"; _package(package)
     external = tmp_path / "external-release-evidence"; _closure_bundle(external, package)
+    _pin_trust(monkeypatch, external)
     monkeypatch.setenv("MFL_RELEASE_CLOSURE_MSIX_PATH", str(package))
     monkeypatch.setenv("MFL_RELEASE_CLOSURE_EVIDENCE_ROOT", str(external))
     client = TestClient(app)

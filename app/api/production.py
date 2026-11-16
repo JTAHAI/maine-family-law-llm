@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.routing import Match
@@ -27,7 +27,7 @@ from app.api.main import app as enterprise_app
 from app.api.local_gateway import LocalGatewayProtection
 from app.api.release_boundary import unsafe_legacy_path as _unsafe_legacy_path
 from app.api.release_boundary import production_request_active
-from app.api.security import audit_event, rbac_envelope
+from app.api.security import audit_event, rbac_envelope, require_local_evaluation_reviewer, require_local_operator
 from legal.api_stability import ApiStabilityProgram
 from legal.evals.claim_support_metrics import ClaimSupportMetricRunner, REQUIRED_CLAIM_STATUS_LABELS
 from legal.evals.citation_quote_metrics import CitationQuoteVerifierMetricRunner, REQUIRED_QUOTE_DECISIONS
@@ -195,20 +195,16 @@ def authority_update_channel() -> AuthorityUpdateChannel:
 
 def _authority_bundle_operator(
     *,
+    request: Request,
     role: str | None,
     tenant_id: str | None,
     endpoint: str,
     action: str,
 ) -> dict[str, Any]:
-    normalized_role = str(role or "").strip().casefold()
-    normalized_tenant = str(tenant_id or "").strip()
-    if normalized_role != "admin":
-        raise HTTPException(status_code=403, detail="admin_role_required")
-    if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?", normalized_tenant):
-        raise HTTPException(status_code=403, detail="tenant_scope_required")
+    normalized_tenant = require_local_operator(request, role=role, tenant_id=tenant_id, lane="authority")
     return {
-        "rbac": rbac_envelope(required_role="admin", tenant_scoped=True),
-        "audit_event": audit_event(endpoint, action, role=normalized_role, tenant_id=normalized_tenant),
+        "rbac": {**rbac_envelope(required_role="admin", tenant_scoped=True), "mode": "tenant_scoped_authority_credential"},
+        "audit_event": audit_event(endpoint, action, role="admin", tenant_id=normalized_tenant),
     }
 
 
@@ -217,7 +213,7 @@ def human_eval_ledger() -> HumanEvalLedger:
         os.environ.get("MFL_HUMAN_EVAL_ROOT")
         or Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "MaineFamilyLawLLM" / "human-evals"
     )
-    return HumanEvalLedger(root)
+    return HumanEvalLedger(root, tenant=os.environ.get("MFL_EVAL_OPERATOR_TENANT", ""))
 
 
 def claim_support_benchmark_paths() -> dict[str, Path | None]:
@@ -494,10 +490,12 @@ def _ensure_control_routes() -> None:
     @local_app.post("/api/authority-updates/install", tags=["authority-updates"])
     def authority_updates_install(
         payload: AuthorityInstallRequest,
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() != "admin":
-            raise HTTPException(status_code=403, detail="admin_role_required")
+        context = _authority_bundle_operator(request=request, role=x_user_role, tenant_id=x_tenant_id,
+                                            endpoint="POST /api/authority-updates/install", action="authority_bundle_install")
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{2,99}", payload.bundle_id):
             raise HTTPException(status_code=400, detail="authority_bundle_id_invalid")
         inbox = Path(
@@ -508,17 +506,19 @@ def _ensure_control_routes() -> None:
         if inbox not in source.parents:
             raise HTTPException(status_code=400, detail="authority_bundle_id_invalid")
         try:
-            return authority_update_channel().install(source)
+            return {**authority_update_channel().install(source), **context}
         except AuthorityUpdateError as exc:
             raise HTTPException(status_code=409, detail=exc.code) from exc
 
     @local_app.post("/api/authority-updates/export", tags=["authority-updates"])
     def authority_updates_export(
         payload: AuthorityArchiveExportRequest,
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
         x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
         context = _authority_bundle_operator(
+            request=request,
             role=x_user_role,
             tenant_id=x_tenant_id,
             endpoint="POST /api/authority-updates/export",
@@ -532,10 +532,12 @@ def _ensure_control_routes() -> None:
     @local_app.post("/api/authority-updates/import", tags=["authority-updates"])
     def authority_updates_import(
         payload: AuthorityArchiveImportRequest,
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
         x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
         context = _authority_bundle_operator(
+            request=request,
             role=x_user_role,
             tenant_id=x_tenant_id,
             endpoint="POST /api/authority-updates/import",
@@ -548,12 +550,14 @@ def _ensure_control_routes() -> None:
 
     @local_app.post("/api/authority-updates/import-upload", tags=["authority-updates"])
     async def authority_updates_import_upload(
+        request: Request,
         bundle: UploadFile = File(...),
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
         x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
         """Import one explicitly selected signed portable bundle without exposing a file path."""
         context = _authority_bundle_operator(
+            request=request,
             role=x_user_role,
             tenant_id=x_tenant_id,
             endpoint="POST /api/authority-updates/import-upload",
@@ -601,15 +605,19 @@ def _ensure_control_routes() -> None:
     ) -> dict[str, Any]:
         if str(x_user_role or "").strip().casefold() not in {"reviewer", "attorney", "admin"}:
             raise HTTPException(status_code=403, detail="reviewer_role_required")
-        return human_eval_ledger().readiness()
+        try:
+            return human_eval_ledger().readiness()
+        except HumanEvalError as exc:
+            raise HTTPException(status_code=409, detail=exc.code) from exc
 
     @local_app.post("/api/evals/human-grounded/cases", tags=["evaluations"])
     def human_eval_case_add(
         payload: dict[str, Any],
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() != "admin":
-            raise HTTPException(status_code=403, detail="admin_role_required")
+        require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="eval")
         try:
             return human_eval_ledger().add_case(payload)
         except HumanEvalError as exc:
@@ -619,12 +627,14 @@ def _ensure_control_routes() -> None:
     def human_eval_review(
         case_id: str,
         payload: dict[str, Any],
-        x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        request: Request,
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() not in {"attorney", "admin"}:
-            raise HTTPException(status_code=403, detail="attorney_role_required")
+        reviewer_id = require_local_evaluation_reviewer(request, tenant_id=x_tenant_id)
         try:
-            return human_eval_ledger().review(case_id, payload)
+            return human_eval_ledger().review(case_id, {
+                **payload, "reviewer_id": reviewer_id, "reviewer_role": "subject_matter_reviewer",
+            }, authenticated=True)
         except HumanEvalError as exc:
             raise HTTPException(status_code=409, detail=exc.code) from exc
 
@@ -632,12 +642,15 @@ def _ensure_control_routes() -> None:
     def human_eval_adjudicate(
         case_id: str,
         payload: dict[str, Any],
+        request: Request,
         x_user_role: str | None = Header(default=None, alias="X-User-Role"),
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     ) -> dict[str, Any]:
-        if str(x_user_role or "").strip().casefold() != "admin":
-            raise HTTPException(status_code=403, detail="admin_role_required")
+        require_local_operator(request, role=x_user_role, tenant_id=x_tenant_id, lane="eval")
         try:
-            return human_eval_ledger().adjudicate(case_id, payload)
+            return human_eval_ledger().adjudicate(case_id, {
+                **payload, "reviewer_id": "local-eval-operator",
+            }, authenticated=True)
         except HumanEvalError as exc:
             raise HTTPException(status_code=409, detail=exc.code) from exc
 

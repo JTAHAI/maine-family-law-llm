@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -23,3 +24,11 @@ def isolated_replay_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     A test may still explicitly override this root to exercise persistence.
     """
     monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "replay-state"))
+
+
+@pytest.fixture
+def governance_headers(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    token = "a" * 64
+    monkeypatch.setenv("MFL_GOVERNANCE_OPERATOR_TENANT", "fictional-tenant")
+    monkeypatch.setenv("MFL_GOVERNANCE_OPERATOR_BEARER_SHA256", hashlib.sha256(token.encode()).hexdigest())
+    return {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "Authorization": "Bearer " + token}

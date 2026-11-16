@@ -11,13 +11,17 @@ from types import SimpleNamespace
 import pytest
 
 from scripts import audit_compact_ranker_runtime as audit
+from scripts import acquire_compact_model_candidates as candidates
 from scripts import qualify_compact_tokenizers_notice as notice
 
 
 @pytest.fixture
 def installed(tmp_path, monkeypatch):
-    directory = tmp_path / "notices"
-    directory.mkdir()
+    # The candidate helpers intentionally write only to a repository dist
+    # directory.  Model that boundary with an isolated synthetic repository.
+    monkeypatch.setattr(candidates, "ROOT", tmp_path)
+    directory = tmp_path / "dist" / "notices"
+    directory.mkdir(parents=True)
     runtime = tmp_path / "runtime"
     runtime.mkdir()
     rows = {
@@ -159,7 +163,11 @@ def test_blob_pin_requires_exact_upstream_content():
 @pytest.mark.parametrize(
     "fault", ["redirect", "encoded", "overflow", "truncated", "tamper", "valid"]
 )
-def test_bounded_acquisition_preserves_no_unverified_payload(tmp_path, fault):
+def test_bounded_acquisition_preserves_no_unverified_payload(tmp_path, monkeypatch, fault):
+    # Exercise the guarded acquisition path against an isolated repository.
+    # This is deliberately not pytest's unbounded raw temporary folder.
+    monkeypatch.setattr(candidates, "ROOT", tmp_path)
+    directory = tmp_path / "dist" / "acquisition"
     raw = b"fictional notice"
     pin = {
         "name": "fixture.txt",
@@ -198,23 +206,26 @@ def test_bounded_acquisition_preserves_no_unverified_payload(tmp_path, fault):
             return Response()
 
     if fault == "valid":
-        result = notice.acquire(pin, tmp_path, session=Session())
+        result = notice.acquire(pin, directory, session=Session())
         assert result.read_bytes() == raw
         # Existing valid file needs no network, and invalid one is preserved.
-        notice.acquire(pin, tmp_path, session=object())
+        notice.acquire(pin, directory, session=object())
         result.write_bytes(b"modified")
         with pytest.raises(ValueError, match="size_mismatch"):
-            notice.acquire(pin, tmp_path, session=object())
+            notice.acquire(pin, directory, session=object())
         assert result.read_bytes() == b"modified"
     else:
         with pytest.raises(ValueError, match="notice_"):
-            notice.acquire(pin, tmp_path, session=Session())
-        assert not (tmp_path / pin["name"]).exists()
+            notice.acquire(pin, directory, session=Session())
+        assert not (directory / pin["name"]).exists()
 
 
 def test_prior_notice_evidence_cannot_be_overwritten(tmp_path, monkeypatch):
-    monkeypatch.setattr(notice, "OUTPUT", tmp_path)
-    target = tmp_path / "tokenizers-notice-proof-existing.json"
+    monkeypatch.setattr(candidates, "ROOT", tmp_path)
+    output = tmp_path / "dist" / "notices"
+    monkeypatch.setattr(notice, "OUTPUT", output)
+    output.mkdir(parents=True)
+    target = output / "tokenizers-notice-proof-existing.json"
     target.write_text("prior evidence")
     with pytest.raises(ValueError, match="preserve_prior_evidence"):
         notice.execute("existing", download=True)

@@ -54,7 +54,7 @@ def test_pass50_blocks_missing_signoff_failed_readiness_and_open_p1():
     assert "audit_enterprise_readiness_not_pass" in blockers
 
 
-def test_pass51_ga_shipment_passes_with_release_candidate_artifacts_and_controls():
+def test_pass51_manifest_validation_does_not_claim_shipment():
     rc_artifacts, ga_artifacts = build_release_artifact_fixture(VERSION)
     release_candidate = ReleaseCandidateAuditor(project_root=ROOT).audit(
         version=VERSION,
@@ -70,10 +70,26 @@ def test_pass51_ga_shipment_passes_with_release_candidate_artifacts_and_controls
     ).as_dict()
 
     assert report["status"] == "pass"
-    assert report["ga_shipped"] is True
+    assert report["shipment_manifest_validated"] is True
+    assert report["ga_shipped"] is False
     assert report["release_candidate_status"] == "pass"
     assert report["maintenance_operations_ready"] is True
     assert report["shipment_manifest_hash"]
+
+
+def test_pass51_rejects_truthy_non_boolean_control_and_frozen_flag():
+    _, artifacts = build_release_artifact_fixture(VERSION)
+    controls = build_ga_control_fixture()
+    controls["pilot_evidence_present"] = "false"
+    report = GAShipmentAuditor().audit(
+        version=VERSION,
+        release_candidate_report={"status": "pass", "release_candidate_frozen": "false"},
+        artifacts=artifacts,
+        controls=controls,
+    ).as_dict()
+    assert report["status"] == "blocked"
+    assert "release_candidate_not_frozen_or_not_passed" in report["blockers"]
+    assert "ga_control_not_satisfied:pilot_evidence_present" in report["blockers"]
 
 
 def test_pass51_blocks_if_release_candidate_or_ga_definition_controls_missing():

@@ -8,7 +8,8 @@ from legal.connectors.http_fetcher import OfficialSourceFetcher
 
 
 def test_strict_content_type_matching_accepts_common_official_variants() -> None:
-    assert OfficialSourceFetcher._content_type_matches("application/pdf", "application/pdf; charset=binary", b"not checked")
+    assert OfficialSourceFetcher._content_type_matches("application/pdf", "application/pdf; charset=binary", b"%PDF-1.7")
+    assert not OfficialSourceFetcher._content_type_matches("application/pdf", "application/pdf", b"<html>Error</html>")
     assert OfficialSourceFetcher._content_type_matches("application/pdf", "application/octet-stream", b"%PDF-1.7")
     assert OfficialSourceFetcher._content_type_matches("text/html", "text/html; charset=utf-8", b"<html></html>")
     assert OfficialSourceFetcher._content_type_matches("text/html", "text/plain", b"<!doctype html><html></html>")

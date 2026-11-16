@@ -477,6 +477,23 @@ def test_store_package_audit_allows_bundled_certifi_ca_bundle() -> None:
     assert "_internal/grpc/_cython/_credentials/roots.pem" in script
 
 
+def test_store_staging_removes_pip_origin_metadata_and_audit_rejects_it(tmp_path: Path) -> None:
+    from scripts.audit_store_package import audit_stage
+    from scripts.prepare_msix_staging import _copy_tree
+
+    runtime = tmp_path / "runtime"
+    metadata = runtime / "_internal" / "example-1.0.dist-info"
+    metadata.mkdir(parents=True)
+    (metadata / "direct_url.json").write_text('{"url":"file:///D:/fictional-build/wheel.whl"}')
+    (metadata / "METADATA").write_text("Name: example\nVersion: 1.0\n")
+    assert audit_stage(runtime, [])["blocked_paths"] == ["_internal/example-1.0.dist-info/direct_url.json"]
+
+    stage = tmp_path / "stage"
+    manifest = _copy_tree(runtime, stage)
+    assert [row.package_relative_path for row in manifest] == ["_internal/example-1.0.dist-info/METADATA"]
+    assert audit_stage(stage, [])["status"] == "pass"
+
+
 def test_store_package_audit_allows_only_scoped_public_model_weights(tmp_path) -> None:
     from scripts.audit_store_package import audit_stage
 

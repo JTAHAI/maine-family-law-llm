@@ -248,6 +248,67 @@ def _path_is_within_prefix(path: str, prefix: str) -> bool:
     return path == prefix or path.startswith(prefix + "/")
 
 
+def require_local_operator(
+    request: Request, *, role: str | None, tenant_id: str | None, lane: str
+) -> str:
+    """Authenticate a separately provisioned, revocable offline operator."""
+    if str(role or "").strip().casefold() != "admin":
+        raise HTTPException(403, detail="admin_role_required")
+    tenant = str(tenant_id or "").strip()
+    if not _TENANT_ID_RE.fullmatch(tenant):
+        raise HTTPException(403, detail="tenant_scope_required")
+    prefix = f"MFL_{lane.upper()}_OPERATOR"
+    configured = os.environ.get(prefix + "_TENANT", "")
+    expected = os.environ.get(prefix + "_BEARER_SHA256", "")
+    headers = request.headers.getlist("authorization")
+    credential = re.fullmatch(r"Bearer ([a-f0-9]{64})", headers[0]) if len(headers) == 1 else None
+    if (
+        len(request.headers.getlist("x-tenant-id")) != 1
+        or len(request.headers.getlist("x-user-role")) != 1
+        or not hmac.compare_digest(configured.encode(), tenant.encode())
+        or not re.fullmatch(r"[a-f0-9]{64}", expected)
+        or credential is None
+        or not hmac.compare_digest(hashlib.sha256(credential[1].encode("ascii")).hexdigest(), expected)
+    ):
+        raise HTTPException(403, detail=f"{lane}_operator_authentication_required")
+    return configured
+
+
+def require_local_evaluation_reviewer(request: Request, *, tenant_id: str | None) -> str:
+    """Resolve a reviewer only from the operator's pinned credential roster."""
+    configured = os.environ.get("MFL_EVAL_OPERATOR_TENANT", "")
+    tenant = str(tenant_id or "")
+    headers = request.headers.getlist("authorization")
+    token = re.fullmatch(r"Bearer ([a-f0-9]{64})", headers[0]) if len(headers) == 1 else None
+    if (not _TENANT_ID_RE.fullmatch(tenant) or len(request.headers.getlist("x-tenant-id")) != 1
+            or not hmac.compare_digest(configured.encode(), tenant.encode()) or token is None):
+        raise HTTPException(403, detail="evaluation_reviewer_authentication_required")
+    raw = os.environ.get("MFL_EVAL_REVIEWERS_SHA256_JSON", "{}")
+    digest = hashlib.sha256(token[1].encode("ascii")).hexdigest()
+    try:
+        from legal.security.strict_json import strict_json_loads
+
+        roster = strict_json_loads(raw.encode("utf-8"), max_bytes=16_384, require_object=True)
+        configured_operator = os.environ.get("MFL_EVAL_OPERATOR_BEARER_SHA256", "")
+        if configured_operator and hmac.compare_digest(configured_operator, digest):
+            raise ValueError
+        matches = [reviewer_id for reviewer_id, verifier in roster.items()
+                   if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{2,99}", reviewer_id)
+                   and isinstance(verifier, str) and hmac.compare_digest(verifier.encode(), digest.encode())]
+        if len(matches) == 1:
+            return matches[0]
+    except ValueError:
+        pass
+    raise HTTPException(403, detail="evaluation_reviewer_authentication_required")
+
+
+def require_authority_operator(request: Request) -> str:
+    return require_local_operator(
+        request, role=request.headers.get("X-User-Role"),
+        tenant_id=request.headers.get("X-Tenant-Id"), lane="authority",
+    )
+
+
 def strict_json_bool(payload: dict[str, Any], field: str, *, default: bool) -> bool:
     """Read a safety-sensitive JSON boolean without truthy-string coercion."""
 

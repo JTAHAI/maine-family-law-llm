@@ -186,7 +186,7 @@
       section.className = 'rail-panel authority-update-center';
       section.dataset.drawerPanel = 'setup';
       section.hidden = true;
-      section.innerHTML = '<div class="rail-title">Authority update center</div><p class="field-hint">An update stages a verified local build. It never changes the active build until you explicitly review and activate it.</p><label for="authority-build-select">Verified authority build</label><select id="authority-build-select"><option value="">Refresh to load local builds</option></select><label class="document-intelligence-option"><input id="authority-build-acknowledgement" type="checkbox"> I reviewed the source-hash diff and want to change the active build.</label><div class="row"><button class="secondary" id="authority-build-refresh" type="button">Refresh builds</button><button class="secondary" id="authority-build-activate" type="button">Activate selected build</button><button class="secondary" id="authority-build-rollback" type="button">Restore selected build</button></div><div aria-live="polite" class="status-strip" id="authority-build-result">Activation and restoration require a selected verified build and explicit review. Legal review remains required.</div>';
+      section.innerHTML = '<div class="rail-title">Authority update center</div><p class="field-hint">An update stages a verified local build. It never changes the active build until you explicitly review and activate it.</p><label>Authority update operator credential <input id="authority-update-credential" type="password" maxlength="64" autocomplete="off"></label><p class="field-hint">Enter the issued authority credential before an update, cancellation, activation or restore. It is not saved.</p><label for="authority-build-select">Verified authority build</label><select id="authority-build-select"><option value="">Refresh to load local builds</option></select><label class="document-intelligence-option"><input id="authority-build-acknowledgement" type="checkbox"> I reviewed the source-hash diff and want to change the active build.</label><div class="row"><button class="secondary" id="authority-build-refresh" type="button">Refresh builds</button><button class="secondary" id="authority-build-activate" type="button">Activate selected build</button><button class="secondary" id="authority-build-rollback" type="button">Restore selected build</button></div><div aria-live="polite" class="status-strip" id="authority-build-result">Activation and restoration require a selected verified build and explicit review. Legal review remains required.</div>';
       const anchor = document.getElementById('authority-gap-review')?.closest('section') || host;
       anchor.insertAdjacentElement('afterend', section);
       authorityBuildSelect = section.querySelector('#authority-build-select');
@@ -309,7 +309,7 @@
       section.className = 'rail-panel authority-bundle-portability';
       section.dataset.drawerPanel = 'setup';
       section.hidden = true;
-      section.innerHTML = '<div class="rail-title">Offline authority portability</div><p class="field-hint">Export or import an already signed, hash-verified authority bundle. The app never creates a signing key, changes the MSIX, or downloads authority data.</p><label class="document-intelligence-option"><input id="authority-bundle-admin-ack" type="checkbox"> I am authorized to manage signed authority bundles on this device</label><label for="authority-bundle-id">Bundle ID for export (leave blank for the active bundle)</label><input id="authority-bundle-id" maxlength="100" placeholder="active signed bundle"><div class="row"><button class="secondary" id="authority-bundle-status" type="button">Check bundle status</button><button class="secondary" id="authority-bundle-export" type="button">Export signed bundle</button></div><label for="authority-bundle-file">Signed portable archive to import</label><input accept=".authority-bundle.zip,application/zip" id="authority-bundle-file" type="file"><div class="row"><button class="secondary" id="authority-bundle-import" type="button">Verify and import selected archive</button></div><div aria-live="polite" class="status-strip" id="authority-bundle-result">No bundle operation loaded. Import and export stay local, require an explicit authorization acknowledgement, and remain review-required.</div>';
+      section.innerHTML = '<div class="rail-title">Offline authority portability</div><p class="field-hint">Export or import an already signed, hash-verified authority bundle. The app never creates a signing key, changes the MSIX, or downloads authority data.</p><label class="document-intelligence-option"><input id="authority-bundle-admin-ack" type="checkbox"> I am authorized to manage signed authority bundles on this device</label><label>Authority bundle operator credential <input id="authority-bundle-credential" type="password" maxlength="64" autocomplete="off"></label><p class="field-hint">Enter the issued credential before importing or exporting. It is not saved.</p><label for="authority-bundle-id">Bundle ID for export (leave blank for the active bundle)</label><input id="authority-bundle-id" maxlength="100" placeholder="active signed bundle"><div class="row"><button class="secondary" id="authority-bundle-status" type="button">Check bundle status</button><button class="secondary" id="authority-bundle-export" type="button">Export signed bundle</button></div><label for="authority-bundle-file">Signed portable archive to import</label><input accept=".authority-bundle.zip,application/zip" id="authority-bundle-file" type="file"><div class="row"><button class="secondary" id="authority-bundle-import" type="button">Verify and import selected archive</button></div><div aria-live="polite" class="status-strip" id="authority-bundle-result">No bundle operation loaded. Import and export stay local, require an explicit authorization acknowledgement, and remain review-required.</div>';
       const anchor = document.getElementById('authority-rule-history-run')?.closest('section') || host;
       anchor.insertAdjacentElement('afterend', section);
       authorityBundleAdminAck = section.querySelector('#authority-bundle-admin-ack');
@@ -1609,6 +1609,10 @@
     const documentReviewDecision = document.getElementById('document-review-decision');
     const documentReviewNotes = document.getElementById('document-review-notes');
     const documentReviewAttested = document.getElementById('document-review-attested');
+    const documentFilingCredential = document.getElementById('document-filing-credential');
+    const documentFilingPrivacy = document.getElementById('document-filing-privacy');
+    const documentFilingQuotes = document.getElementById('document-filing-quotes');
+    const documentFilingClaims = document.getElementById('document-filing-claims');
     const documentReviewCommit = document.getElementById('document-review-commit');
     const documentReviewHistory = document.getElementById('document-review-history');
     const findingsFormsStatusBadge = document.getElementById('findings-forms-status-badge');
@@ -2302,7 +2306,14 @@
 
     async function fetchJson(url, options = {}) {
       let res;
-      const mutation = isIdempotentMutation(url, options);
+      const preservation = /^\/api\/admin\/(legal-holds|retention-plans)(?:\/|$)/.exec(url);
+      const governance = url.startsWith('/api/admin/') && !preservation;
+      const authorityUpdate = /^\/api\/authority\/(update(?:\/cancel)?|activate|rollback)$/.test(url);
+      const authorityOperator = authorityUpdate || /^\/api\/authority-updates\/(install|import|import-upload|export)$/.test(url);
+      const evalOperator = url === '/api/evals/human-grounded/cases';
+      const modelOperator = /^\/api\/local-agent\/worker\/(start|stop)$/.test(url);
+      const operatorAction = preservation || governance || authorityOperator || evalOperator || modelOperator;
+      const mutation = !operatorAction && isIdempotentMutation(url, options);
       const writesState = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(String(options.method || 'GET').toUpperCase());
       const headers = new Headers(options.headers || {});
       if (!headers.has('X-User-Role')) headers.set('X-User-Role', 'reviewer');
@@ -2311,6 +2322,33 @@
       if (/^\/api\/document-workspace\/(?:review-queue|documents\/[^/]+\/reviews?(?:\/|$))/.test(url) && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/reviewed-filing-packet/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
       if (url.startsWith('/api/authority-change-impact/') && !headers.has('X-MFLL-Matter-Id')) headers.set('X-MFLL-Matter-Id', documentWorkspaceState.storageMatterId || '');
+      if (operatorAction) {
+        const input = document.getElementById(
+          governance ? 'governance-operator-credential' : authorityOperator ? (authorityUpdate ? 'authority-update-credential' : 'authority-bundle-credential')
+            : evalOperator ? 'attorney-gold-credential'
+              : modelOperator ? 'local-agent-worker-credential'
+                : preservation[1] === 'legal-holds' ? 'legal-hold-credential' : 'retention-plan-credential'
+        );
+        const token = input?.value.trim();
+        if (input) input.value = '';
+        if (preservation) {
+          const matter = String(corpusLibraryPayload?.active_case_id || '');
+          if (!matter) throw new Error('Open the matter you are authorized to manage.');
+          headers.set('X-MFLL-Matter-Id', matter);
+        }
+        if (!/^[a-f0-9]{64}$/.test(token || '')) {
+          input?.focus();
+          const lane = preservation ? 'preservation' : authorityOperator ? 'authority bundle' : evalOperator ? 'evaluation' : modelOperator ? 'model' : 'governance';
+          throw Object.assign(new Error(`Enter the ${lane} operator credential before continuing.`), {
+            safeCode: 'local_operator_credential_required',
+            preserved: 'Nothing was sent or changed.',
+            recovery: 'Enter the operator credential for this action and retry.'
+          });
+        }
+        headers.set('Authorization', 'Bearer ' + token);
+        if (authorityUpdate) headers.set('X-User-Role', 'admin');
+        options = {...options, redirect: 'error'};
+      }
       if (mutation && !headers.has('X-MFLL-Idempotency-Key')) {
         const supplied = String(options.idempotencyKey || '').trim();
         const key = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$/.test(supplied) ? supplied : newLocalIdempotencyKey();
@@ -2380,8 +2418,8 @@
       return String(candidate || fallback).replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 180) || fallback;
     }
 
-    async function downloadSessionBoundArtifact(url, fallbackName = 'review-required-artifact') {
-      const response = await fetch(url, {headers: localRequestHeaders(), cache: 'no-store'});
+    async function downloadSessionBoundArtifact(url, fallbackName = 'review-required-artifact', extraHeaders = {}) {
+      const response = await fetch(url, {headers: localRequestHeaders(extraHeaders), cache: 'no-store', redirect: 'error'});
       if (!response.ok) {
         let code = `local_http_${response.status}`;
         try {
@@ -2412,7 +2450,16 @@
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
       if (!link || !isSessionBoundArtifactUrl(link.getAttribute('href'))) return;
       event.preventDefault();
-      void downloadSessionBoundArtifact(link.href, link.download || 'review-required-artifact').catch((error) => {
+      let headers = {};
+      if (link.dataset.filingCredentialRequired === 'true') {
+        headers = takeFilingCredential({'X-MFLL-Matter-Id': documentWorkspaceState.storageMatterId || ''});
+        if (!headers.Authorization) {
+          setDocumentWorkspaceStatus('Re-enter the filing reviewer credential before downloading the exact copy.', 'warn');
+          documentFilingCredential?.focus();
+          return;
+        }
+      }
+      void downloadSessionBoundArtifact(link.href, link.download || 'review-required-artifact', headers).catch((error) => {
         showToast(safeErrorMessage(error, 'The local artifact could not be opened. The original record was preserved.'));
       });
     });
@@ -3105,12 +3152,12 @@
       if (!localWorkbenchOverlay) return;
       localWorkbenchReturnFocus = document.activeElement;
       openOverlay(localWorkbenchOverlay);
-      await loadLocalWorkbenchStatus();
       const dialog = localWorkbenchOverlay.querySelector('[role="dialog"]');
       if (dialog) {
         dialog.scrollTop = 0;
         dialog.focus({preventScroll: true});
       }
+      await loadLocalWorkbenchStatus();
     }
 
     function closeLocalWorkbench() {
@@ -3789,6 +3836,10 @@
       if (documentReviewerRole) documentReviewerRole.value = 'other_reviewer';
       if (documentReviewDecision) documentReviewDecision.value = 'request_changes';
       if (documentReviewAttested) documentReviewAttested.checked = false;
+      if (documentFilingCredential) documentFilingCredential.value = '';
+      if (documentFilingPrivacy) documentFilingPrivacy.checked = false;
+      if (documentFilingQuotes) documentFilingQuotes.value = '';
+      if (documentFilingClaims) documentFilingClaims.value = '';
       if (filingPacketReviewerLabel) filingPacketReviewerLabel.value = '';
       if (filingPacketReviewerRole) filingPacketReviewerRole.value = 'other_reviewer';
       if (filingPacketApproved) filingPacketApproved.checked = false;
@@ -4019,7 +4070,7 @@
         documentClaimAnnotations.textContent = 'No material legal claims were extracted for individual annotation.';
         return;
       }
-      documentClaimAnnotations.innerHTML = `<div class="document-claim-annotations-head"><strong>Claim-by-claim review</strong><span>${rows.length} claim(s)</span></div>${rows.map((row) => `<article data-review-claim="${escapeHtml(row.claim_id || '')}"><div><strong>${escapeHtml(row.statement || '')}</strong><span class="badge ${String(row.support_status || '').includes('supported') ? 'good' : 'warn'}">${escapeHtml(String(row.support_status || 'unverified').replaceAll('_', ' '))}</span></div><div class="document-claim-annotation-fields"><label>Reviewer finding<select data-claim-status><option value="">Choose…</option><option value="accepted">Accepted as supported</option><option value="not_material">Not material</option><option value="needs_revision">Needs revision</option><option value="unsupported">Unsupported</option><option value="contradicted">Contradicted</option><option value="needs_authority">Needs authority</option><option value="needs_fact_support">Needs fact support</option></select></label><label>Claim note<input data-claim-note maxlength="2000" placeholder="Why this claim passes or remains blocked"/></label></div><small>${escapeHtml((row.source_ids || []).join(' · ') || 'No source IDs supplied with this claim')}</small></article>`).join('')}`;
+      documentClaimAnnotations.innerHTML = `<div class="document-claim-annotations-head"><strong>Claim-by-claim review</strong><span>${rows.length} claim(s)</span></div>${rows.map((row) => `<article data-review-claim="${escapeHtml(row.claim_id || '')}"><div><strong>${escapeHtml(row.statement || '')}</strong><span class="badge ${row.support_status === 'supported' ? 'good' : 'warn'}">${escapeHtml(String(row.support_status || 'unverified').replaceAll('_', ' '))}</span></div><div class="document-claim-annotation-fields"><label>Reviewer finding<select data-claim-status><option value="">Choose…</option><option value="accepted">Accepted as supported</option><option value="not_material">Not material</option><option value="needs_revision">Needs revision</option><option value="unsupported">Unsupported</option><option value="contradicted">Contradicted</option><option value="needs_authority">Needs authority</option><option value="needs_fact_support">Needs fact support</option></select></label><label>Claim note<input data-claim-note maxlength="2000" placeholder="Why this claim passes or remains blocked"/></label></div><small>${escapeHtml((row.source_ids || []).join(' · ') || 'No source IDs supplied with this claim')}</small></article>`).join('')}`;
     }
 
     function collectClaimAnnotations() {
@@ -4080,9 +4131,12 @@
           : {...row, status: 'unverified history — review required', filing_gate: {filing_ready: false}});
       const latest = payload?.latest_is_current ? payload.latest : null;
       if (documentReviewLedgerStatus) {
-        const ready = Boolean(latest?.filing_gate?.filing_ready);
-        documentReviewLedgerStatus.className = `badge ${ready ? 'good' : 'warn'}`;
-        documentReviewLedgerStatus.textContent = latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : rows.length ? 'History not authenticated — review required' : 'Not reviewed';
+        documentReviewLedgerStatus.className = 'badge warn';
+        documentReviewLedgerStatus.textContent = payload?.filing_recheck_required === 'current_sources_recheck_required'
+          ? 'Review recorded — recheck before export'
+          : payload?.filing_recheck_required === 'trusted_filing_reviewer_missing_or_revoked'
+            ? 'Filing reviewer no longer authorized'
+            : latest ? String(latest.status || 'reviewed').replaceAll('_', ' ') : rows.length ? 'History not authenticated — review required' : 'Not reviewed';
       }
       if (!documentReviewHistory) return;
       documentReviewHistory.innerHTML = rows.length ? rows.map((row) => { const annotations = Array.isArray(row.claim_annotations) ? row.claim_annotations : []; return `<article><div><strong>${escapeHtml(String(row.decision || 'review').replaceAll('_', ' '))}</strong><span class="badge ${row?.filing_gate?.filing_ready ? 'good' : 'warn'}">${escapeHtml(String(row.status || 'review').replaceAll('_', ' '))}</span></div><small>${escapeHtml(row.committed_at || '')} · revision ${escapeHtml(String(row.revision_id || '').slice(0, 8))} · ${escapeHtml(row?.reviewer?.name || '')}</small>${row.notes ? `<p>${escapeHtml(row.notes)}</p>` : ''}${annotations.length ? `<details><summary>${annotations.length} claim finding(s)</summary><ul>${annotations.map((item) => `<li><strong>${escapeHtml(item.claim_id || '')}</strong>: ${escapeHtml(String(item.status || '').replaceAll('_', ' '))}${item.note ? ` — ${escapeHtml(item.note)}` : ''}</li>`).join('')}</ul></details>` : ''}<code>${escapeHtml(String(row.decision_sha256 || '').slice(0, 24))}…</code></article>`; }).join('') : 'No review decisions recorded.';
@@ -4138,7 +4192,16 @@
       const facts = String(documentReviewFacts?.value || '').split(/\r?\n/).map((row) => row.trim()).filter(Boolean).slice(0, 128);
       setDocumentWorkspaceStatus('Building a revision-bound authority and evidence review packet…');
       try {
-        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({facts, quotes: [], claims: [], auto_extract_claims: true})});
+        const sourceLines = (field) => String(field?.value || '').split(/\r?\n/).filter((line) => line.trim()).map((line) => {
+          const separator = line.indexOf('|');
+          const id = separator > 0 ? line.slice(0, separator).trim() : '';
+          const statement = separator > 0 ? line.slice(separator + 1).trim() : '';
+          if (!id || !statement) throw new Error('Enter each quote or additional claim as source ID | exact text.');
+          return [id, statement];
+        });
+        const quotes = sourceLines(documentFilingQuotes).map(([source_id, quoted_text]) => ({source_id, quoted_text}));
+        const claims = sourceLines(documentFilingClaims).map(([id, claim]) => ({claim, source_ids: [id]}));
+        const payload = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/prepare`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({facts, quotes, claims, auto_extract_claims: true})});
         if (owner !== documentWorkspaceState.storageMatterId || payload.matter_id !== owner || documentWorkspaceState.active?.document_id !== active.document_id || documentWorkspaceState.active?.current_revision_id !== payload.packet?.revision_id) return;
         documentWorkspaceState.reviewRequest = payload;
         renderDocumentReviewPacket(payload);
@@ -4155,13 +4218,20 @@
       }
     }
 
+    function takeFilingCredential(headers = {}) {
+      const credential = documentFilingCredential?.value.trim() || '';
+      if (documentFilingCredential) documentFilingCredential.value = '';
+      return credential ? {...headers, Authorization: 'Bearer ' + credential} : headers;
+    }
+
     async function commitDocumentReview() {
       const active = documentWorkspaceState.active;
       const prepared = documentWorkspaceState.reviewRequest;
       if (!active?.document_id || !prepared?.request_id || !prepared?.confirmation_token) return;
       if (documentReviewCommit?.disabled || prepared.matter_id !== documentWorkspaceState.storageMatterId || prepared.packet?.document_id !== active.document_id || prepared.packet?.revision_id !== active.current_revision_id) return;
       const reviewerName = documentReviewerName?.value.trim() || '';
-      if (!reviewerName) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
+      if (!reviewerName && !prepared.packet?.filing_reviewer_authenticated) { setDocumentWorkspaceStatus('Enter a reviewer name or local reviewer ID.', 'bad'); documentReviewerName?.focus(); return; }
+      if (prepared.packet?.filing_reviewer_authenticated && !documentFilingCredential?.value.trim()) { setDocumentWorkspaceStatus('Re-enter the credential for this matter to record the filing decision.', 'bad'); documentFilingCredential?.focus(); return; }
       const decision = documentReviewDecision?.value || 'approve_review';
       const attested = Boolean(documentReviewAttested?.checked);
       if (decision === 'approve_review' && !attested) { setDocumentWorkspaceStatus('Review completion requires the exact-revision attestation.', 'bad'); return; }
@@ -4171,7 +4241,7 @@
       if (documentReviewCommit) documentReviewCommit.disabled = true;
       setDocumentWorkspaceStatus('Encrypting and recording the exact-revision decision…');
       try {
-        const result = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/commit`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({request_id: prepared.request_id, confirmation_token: prepared.confirmation_token, confirmed: true, decision, reviewer_name: reviewerName, reviewer_role: documentReviewerRole?.value || 'other_reviewer', attested, notes: documentReviewNotes?.value || '', claim_annotations: collectClaimAnnotations()})});
+        const result = await fetchJson(`/api/document-workspace/documents/${encodeURIComponent(active.document_id)}/review/commit`, {method: 'POST', headers: takeFilingCredential({'Content-Type': 'application/json'}), body: JSON.stringify({request_id: prepared.request_id, confirmation_token: prepared.confirmation_token, confirmed: true, decision, reviewer_name: reviewerName, reviewer_role: documentReviewerRole?.value || 'other_reviewer', attested, privacy_attested: Boolean(documentFilingPrivacy?.checked), notes: documentReviewNotes?.value || '', claim_annotations: collectClaimAnnotations()})});
         if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         documentWorkspaceState.reviewRequest = null;
         if (documentReviewCommit) documentReviewCommit.disabled = true;
@@ -4180,7 +4250,7 @@
         if (result.matter_id !== documentWorkspaceState.storageMatterId || documentWorkspaceState.active?.document_id !== active.document_id) return;
         const blockers = result?.filing_gate?.blockers || [];
         renderDocumentReviewPacket({packet: {...prepared.packet, filing_gate_preflight: result.filing_gate}});
-        setDocumentWorkspaceStatus(blockers.length ? `Review recorded. Export remains blocked by ${blockers.length} gate item(s).` : 'Review recorded and all filing-gate checks passed.', blockers.length ? 'warn' : 'good');
+        setDocumentWorkspaceStatus(blockers.length ? `Review recorded. Export remains blocked by ${blockers.length} gate item(s).` : 'Review recorded. Build the packet to recheck current sources before downloading the exact filing copy.', 'warn');
       } catch (err) {
         setDocumentWorkspaceStatus(err.message + ' Reload review history before retrying; an earlier write may have been preserved.', 'bad');
         documentWorkspaceState.reviewRequest = null;
@@ -4293,7 +4363,7 @@
     }
 
     function filingPacketArtifactLinks(rows) {
-      return (Array.isArray(rows) ? rows : []).map((row) => `<a class="secondary compact-action" href="${escapeHtml(row.download_url || '#')}" download>${escapeHtml(String(row.name || 'artifact').replaceAll('-', ' '))}</a>`).join('');
+      return (Array.isArray(rows) ? rows : []).map((row) => `<a class="secondary compact-action" href="${escapeHtml(row.download_url || '#')}" download ${row.name === 'verified-filing-copy.txt' ? 'data-filing-credential-required="true"' : ''}>${escapeHtml(String(row.name || 'artifact').replaceAll('-', ' '))}</a>`).join('');
     }
 
     function renderFilingPacketStatus(payload) {
@@ -4444,12 +4514,19 @@
       const active = documentWorkspaceState.active;
       if (!active?.document_id) return;
       if (!filingPacketApproved?.checked) { setDocumentWorkspaceStatus('Approve packet generation for this exact revision first.', 'bad'); return; }
+      const owner = documentWorkspaceState.storageMatterId;
+      const stillCurrent = () => owner === documentWorkspaceState.storageMatterId
+        && documentWorkspaceState.active?.document_id === active.document_id
+        && documentWorkspaceState.active?.current_revision_id === active.current_revision_id;
+      filingPacketApproved.checked = false;
+      updateWorkspaceControls();
       try {
         const payload = await fetchJson(`/api/reviewed-filing-packet/documents/${encodeURIComponent(active.document_id)}/build`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({approved: true})});
+        if (!stillCurrent() || payload.matter_id !== owner) return;
         documentWorkspaceState.filingPacketBuild = payload;
         renderFilingPacketStatus(payload);
         setDocumentWorkspaceStatus(payload?.packet?.blockers?.length ? 'Reviewed filing packet built with visible blockers.' : 'Reviewed filing packet built and independently verifiable. Human review remains required.', payload?.packet?.blockers?.length ? 'warn' : 'good');
-      } catch (err) { setDocumentWorkspaceStatus(err.message, 'bad'); }
+      } catch (err) { if (stillCurrent()) setDocumentWorkspaceStatus(err.message, 'bad'); }
     }
 
 
@@ -5267,6 +5344,15 @@
       const el = (id) => section.querySelector('#' + id);
       const value = (id) => String(el(id)?.value || '').trim();
       const result = el('attorney-gold-result');
+      const credentialLabel = document.createElement('label');
+      credentialLabel.textContent = 'Evaluation operator credential ';
+      const credential = document.createElement('input');
+      credential.type = 'password';
+      credential.id = 'attorney-gold-credential';
+      credential.maxLength = 64;
+      credential.autocomplete = 'off';
+      credentialLabel.append(credential);
+      el('attorney-gold-confirm').closest('label').before(credentialLabel);
       const adminHeaders = {'Content-Type':'application/json', 'X-User-Role':'admin'};
       const reviewerHeaders = {'X-User-Role':'reviewer'};
       const show = (payload, heading) => { if (result) result.innerHTML = `<strong>${escapeHtml(heading)}</strong><p>Not attorney reviewed. The ledger stores hashes and reviewer metadata, not private prompts or answers.</p><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`; };

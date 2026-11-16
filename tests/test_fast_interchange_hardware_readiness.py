@@ -37,10 +37,10 @@ def test_bf16_readiness_requires_modern_gpu_and_headroom():
 
 def test_fp32_can_use_cpu_but_preserves_os_memory_reserve():
     compatibility = {"quantization": "fp32", "max_resident_bytes": 4 * GIB}
-    ready = assess_specialist_hardware(profile(memory=8 * GIB), compatibility)
+    ready = assess_specialist_hardware(profile(memory=8 * GIB), compatibility, runtime={"kind": "cpu"})
     assert ready["status"] == "ready"
     assert ready["recommended_accelerator"] == {"kind": "cpu"}
-    blocked = assess_specialist_hardware(profile(memory=4 * GIB), compatibility)
+    blocked = assess_specialist_hardware(profile(memory=4 * GIB), compatibility, runtime={"kind": "cpu"})
     assert "insufficient_available_memory_for_specialist" in blocked["blockers"]
 
 
@@ -49,6 +49,7 @@ def test_fp32_avoids_an_undersized_gpu_and_uses_safe_cpu_fallback():
     ready = assess_specialist_hardware(
         profile(memory=12 * GIB, gpus=[gpu(available=2 * GIB, capability=8.6)]),
         compatibility,
+        runtime={"kind": "cpu"},
     )
     assert ready["status"] == "ready"
     assert ready["required_available_vram_bytes"] == int(2.5 * GIB)

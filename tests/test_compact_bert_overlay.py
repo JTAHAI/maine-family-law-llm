@@ -11,7 +11,11 @@ from scripts import prepare_compact_bert_overlay as overlay
 
 @pytest.fixture
 def fixture(tmp_path, monkeypatch):
-    source, target = tmp_path / "installed", tmp_path / "overlay"
+    # The overlay guard deliberately allows writes only under a repository's
+    # dist directory.  Give this isolated fixture a synthetic repository
+    # identity instead of weakening that production path boundary.
+    monkeypatch.setattr(overlay, "ROOT", tmp_path)
+    source, target = tmp_path / "installed", tmp_path / "dist" / "overlay"
     names = [
         "transformers/__init__.py",
         "transformers/models/__init__.py",

@@ -14,11 +14,12 @@ import json
 import re
 from typing import Any, Iterable
 
+from .version import VERSION as PUBLIC_EDITION_VERSION
+
 
 SENTINEL_NAME = "ProSe-SENTINEL AI"
 SENTINEL_ADAPTER_VERSION = "1.0.0"
 SENTINEL_CONTRACT_VERSION = "family-law-training-admission-v1"
-PUBLIC_EDITION_VERSION = "9.0.1"
 MAX_SOURCE_CARDS = 32
 _SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$")
 

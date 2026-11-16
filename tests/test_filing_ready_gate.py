@@ -1,3 +1,5 @@
+import pytest
+
 from legal.drafting.filing_ready_gate import FilingReadyGate, MANDATORY_CHECKS
 
 
@@ -108,3 +110,38 @@ def test_explicit_false_summary_vetoes_complete_evidence():
     assert result["mandatory_checks"]["citations_resolved"] is False
     assert "citations_resolved" in result["blockers"]
     assert "citation_report_missing" not in result["blockers"]
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("human_review_complete", "false"),
+    ("citations_resolved", 1),
+    ("citations_verified", False),
+    ("form_freshness_verified", "false"),
+    ("review_required", "false"),
+    ("verification_report", {"blockers": None}),
+    ("verification_report", []),
+    ("verification_report", {"blockers": False}),
+    ("workflow_blockers", 1),
+    ("review_annotation_blockers", {}),
+    ("forms_report", {"unexpected": True}),
+    ("forms_report", {"status": "checked", "unknown_forms": False}),
+    ("procedure_posture_report", {"status": "unknown", "procedural_posture": "test"}),
+    ("privacy_review", {"blockers": ["alternate_privacy_blocker"]}),
+])
+def test_malformed_or_conflicting_evidence_fails_closed(field, value):
+    payload = _complete_gate_payload()
+    payload[field] = value
+    result = FilingReadyGate().evaluate(payload)
+    assert result["filing_ready"] is False
+    assert result["export_status"] == "blocked"
+
+
+@pytest.mark.parametrize("start,end", [(False, 9), (-1, 9), (9, 9), (10, 9), ("1", 9), (1, 9.0)])
+def test_malformed_offsets_do_not_count_as_quote_or_fact_evidence(start, end):
+    payload = _complete_gate_payload()
+    payload["quote_report"][0].update(start_offset=start, end_offset=end)
+    payload["fact_to_evidence_map"][0].update(start_offset=start, end_offset=end)
+    result = FilingReadyGate().evaluate(payload)
+    assert not result["mandatory_checks"]["quotes_found"]
+    assert not result["mandatory_checks"]["facts_mapped_to_evidence"]
+    assert result["filing_ready"] is False

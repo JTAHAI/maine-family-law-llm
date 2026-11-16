@@ -42,6 +42,8 @@ def extract_legal_claims(text: str) -> list[str]:
         if len(cleaned) < 12:
             continue
         lowered = cleaned.lower()
+        if lowered in {"findings of fact", "conclusions of law"}:
+            continue  # Exact structural headings contain no legal proposition.
         if (
             any(re.search(r"\b" + re.escape(trigger) + r"\b", lowered) for trigger in LEGAL_CLAIM_TRIGGERS)
             or re.search(r"\b\d+(?:-[A-Z])?\s*M\.?R\.?S\.?A?\.?\s*§", cleaned, re.I)

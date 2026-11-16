@@ -27,6 +27,7 @@ def test_pass151_incremental_chunks_deduplicate_verify_and_restore_independently
     stable = b"fictional-stable-record-" * 40_000
     (matter / "stable.txt").write_bytes(stable)
     (matter / "changed.txt").write_text("fictional version one", encoding="utf-8")
+    (matter / "empty.txt").touch()
     backup_root = tmp_path / "external-encrypted-backups"
     monkeypatch.setenv("MAINE_MATTER_STORE_KEY", "fictional-backup-key")
     monkeypatch.setenv("MFL_BACKUP_ROOT", str(backup_root))
@@ -37,7 +38,9 @@ def test_pass151_incremental_chunks_deduplicate_verify_and_restore_independently
     first = store.run_backup({"schedule_id": "daily_backup"})
     assert first["backup_format"] == "incremental_encrypted_chunks_v2"
     assert first["verified"] is True and first["restore_independent"] is True
-    assert first["new_chunk_count"] == first["chunk_count"]
+    # Repeated content can deduplicate within the first snapshot too.
+    assert first["new_chunk_count"] > 0
+    assert first["new_chunk_count"] + first["reused_chunk_count"] == first["chunk_count"]
 
     (matter / "changed.txt").write_text("fictional version two", encoding="utf-8")
     second = store.run_backup({"schedule_id": "daily_backup"})
@@ -54,6 +57,7 @@ def test_pass151_incremental_chunks_deduplicate_verify_and_restore_independently
     assert restored["live_matter_overwritten"] is False and restored["restore_independent"] is True
     recovery = backup_root / "recovery" / second["backup_id"]
     assert (recovery / "stable.txt").read_bytes() == stable
+    assert (recovery / "empty.txt").read_bytes() == b""
     assert (recovery / "changed.txt").read_text(encoding="utf-8") == "fictional version two"
     assert all(b"fictional-stable-record" not in path.read_bytes() for path in backup_root.rglob("*.enc"))
     monkeypatch.setenv("MFL_BACKUP_ROOT", str(matter / "unsafe-internal-backups"))

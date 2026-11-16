@@ -303,7 +303,7 @@ def test_local_only_core_workflows_make_no_external_request(monkeypatch, tmp_pat
     scan.write_bytes(stream.getvalue())
     ocr = create_ocr_preservation_copy(case_root=case_root, source_path=scan, approved=True)
 
-    authority = AuthorityLibraryService(data_root=Path(r"C:\dev\ME_FM_LLM_data"), repo_root=ROOT)
+    authority = AuthorityLibraryService(data_root=tmp_path / "fictional-authority", repo_root=ROOT)
     authority_rows = authority.list_sources(query="parental rights", limit=3)
     assert intelligence["network_used"] is False
     assert draft["review_required"] is True

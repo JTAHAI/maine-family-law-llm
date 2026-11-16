@@ -24,12 +24,12 @@ def test_pass170_separates_readiness_lanes_and_encrypts_refresh_receipt(tmp_path
     assert b"fictional-tenant" not in encrypted.read_bytes()
 
 
-def test_pass170_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypatch) -> None:
+def test_pass170_production_admin_route_and_shipped_ui(tmp_path: Path, monkeypatch, governance_headers) -> None:
     monkeypatch.setenv("MFL_ORGANIZATION_READINESS_ROOT", str(tmp_path / "readiness")); monkeypatch.setenv("MFL_IDEMPOTENCY_STATE_ROOT", str(tmp_path / "idempotency"))
     client = TestClient(production_app)
     denied = client.get("/api/admin/organization-readiness", headers={"X-User-Role": "reviewer", "X-Tenant-Id": "fictional-tenant"})
     assert denied.status_code == 403
-    headers = {"X-User-Role": "admin", "X-Tenant-Id": "fictional-tenant", "X-MFLL-Client-Session": "f" * 32}
+    headers = {**governance_headers, "X-MFLL-Client-Session": "f" * 32}
     report = client.get("/api/admin/organization-readiness", headers=headers)
     assert report.status_code == 200 and report.json()["overall_decision"] == "not_ready_for_enterprise_ga"
     refreshed = client.post("/api/admin/organization-readiness/refresh", headers={**headers, "X-MFLL-Idempotency-Key": "organization-readiness-001"})

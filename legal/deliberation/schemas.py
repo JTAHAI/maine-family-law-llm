@@ -344,6 +344,7 @@ class DeliberationRun:
     last_error: str = ""
     configuration_hash: str = ""
     tool_call_count: int = 0
+    tool_calls_by_name: dict[str, int] = field(default_factory=dict)
     worker_turn_count: int = 0
     verifier_status: str = "review_required"
     restart_count: int = 0
@@ -379,6 +380,7 @@ class DeliberationRun:
             "last_error": self.last_error,
             "configuration_hash": self.configuration_hash,
             "tool_call_count": self.tool_call_count,
+            "tool_calls_by_name": dict(self.tool_calls_by_name),
             "worker_turn_count": self.worker_turn_count,
             "verifier_status": self.verifier_status,
             "restart_count": self.restart_count,
