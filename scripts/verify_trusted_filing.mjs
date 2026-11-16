@@ -10,7 +10,11 @@ const base = new URL(process.argv[2]);
 assert.equal(base.hostname, '127.0.0.1');
 assert.equal(base.protocol, 'http:');
 const fixture = JSON.parse(await fs.readFile(process.argv[3], 'utf8'));
-const report = {checks: [], external_requests: 0, page_errors: [], fictional_only: true, frozen: false};
+const runtimeHash = process.argv[4];
+const report = {
+  checks: [], external_requests: 0, page_errors: [], fictional_only: true,
+  frozen: Boolean(runtimeHash), runtime_sha256: runtimeHash || null, installed_msix: false,
+};
 const browser = await chromium.launch({
   channel: 'msedge', headless: true,
   args: ['--disable-background-networking', '--disable-component-update'],

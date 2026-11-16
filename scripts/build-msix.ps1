@@ -250,10 +250,12 @@ New-Item -ItemType Directory -Force -Path $assetsRoot | Out-Null
 & $storePython -B (Join-Path $RepoRoot "scripts\generate_msix_assets.py") --brand-root (Join-Path $RepoRoot "assets\brand\focaf_family_law_llm_brand_kit") --output-dir $assetsRoot --inventory-path (Join-Path $assetsRoot "asset-inventory.json")
 if ($LASTEXITCODE -ne 0) { throw "MSIX asset generation failed." }
 & $storePython -B $hygiene clean --root $runtimeRoot --output $runtimeCleanup
+if ($LASTEXITCODE -ne 0) { throw "Frozen runtime cleanup failed." }
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 & $storePython -B (Join-Path $RepoRoot "scripts\prepare_msix_staging.py") --runtime-root $runtimeRoot --assets-root $assetsRoot --stage-root $stageRoot --manifest-output (Join-Path $evidenceRoot "msix-staging-manifest.json")
 if ($LASTEXITCODE -ne 0) { throw "MSIX staging preparation failed." }
 & $storePython -B $hygiene clean --root $packageRoot --output $stageCleanup
+if ($LASTEXITCODE -ne 0) { throw "MSIX staging cleanup failed." }
 & $storePython -B $hygiene snapshot --root $packageRoot --output $tracePath --checkpoint after_msix_staging --command "prepare_msix_staging.py and final staging cleanup" --parent-command "build-msix.ps1"
 
 $manifestText = (Get-Content -LiteralPath $manifestTemplate -Raw).Replace("__IDENTITY_NAME__", $IdentityName).Replace("__PUBLISHER__", $Publisher).Replace("__PACKAGE_VERSION__", $PackageVersion).Replace("__PACKAGE_DISPLAY_NAME__", $PackageDisplayName).Replace("__PUBLISHER_DISPLAY_NAME__", $PublisherDisplayName)
@@ -262,16 +264,20 @@ Set-Content -LiteralPath $manifestPath -Value $manifestText -Encoding UTF8
 if ($LASTEXITCODE -ne 0) { throw "makepri failed while generating resources.pri" }
 & $storePython -B $hygiene snapshot --root $packageRoot --output $tracePath --checkpoint before_private_data_audit --command "makepri resource generation" --parent-command "build-msix.ps1"
 & $storePython -B $hygiene seal --root $packageRoot --output $sealPath --cleanup-evidence $runtimeCleanup --cleanup-evidence $stageCleanup
+if ($LASTEXITCODE -ne 0) { throw "MSIX payload could not be sealed." }
 & $storePython -B (Join-Path $RepoRoot "scripts\audit_store_package.py") --stage-root $packageRoot --manifest-output (Join-Path $evidenceRoot "package-file-manifest.json") --audit-output (Join-Path $evidenceRoot "private-data-audit.json") --forbidden-path $RepoRoot --forbidden-path $storeBuildPython --forbidden-path ([Environment]::GetFolderPath("UserProfile")) --forbidden-path $env:TEMP --forbidden-path $stageRoot
 if ($LASTEXITCODE -ne 0) { throw "Store package audit failed." }
 & $storePython -B $hygiene verify --root $packageRoot --seal $sealPath --output $sealAudit
+if ($LASTEXITCODE -ne 0) { throw "MSIX payload changed after sealing." }
 & $storePython -B (Join-Path $RepoRoot "scripts\audit_msix_staging.py") --stage-root $packageRoot --manifest-input (Join-Path $evidenceRoot "msix-staging-manifest.json") --sealed-manifest $sealPath --audit-output (Join-Path $evidenceRoot "msix-path-audit.json") --map-output (Join-Path $msixRoot "package-map.txt") --makeappx-log $makeAppxLog
 if ($LASTEXITCODE -ne 0) { throw "MSIX staging audit failed." }
 & $storePython -B $hygiene snapshot --root $packageRoot --output $tracePath --checkpoint before_makeappx --command "sealed payload directory pack" --parent-command "build-msix.ps1"
 & $storePython -B $hygiene verify --root $packageRoot --seal $sealPath --output $sealAudit
+if ($LASTEXITCODE -ne 0) { throw "MSIX payload changed before packing." }
 & $makeAppx pack /v /o /d $packageRoot /p $shortMsixPath 2>&1 | Tee-Object -FilePath $makeAppxLog | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "makeappx failed while creating the MSIX package. See $makeAppxLog" }
 & $storePython -B $hygiene verify --root $packageRoot --seal $sealPath --output $sealAudit
+if ($LASTEXITCODE -ne 0) { throw "MSIX payload changed while packing." }
 
 $certificateCerPath = ""
 if (-not $Unsigned) {

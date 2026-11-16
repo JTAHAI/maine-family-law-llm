@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "maine-family-law-llm"
-version = "9.0.1"
+version = "9.0.2"
 description = "Local-first Maine family-law research, evidence, drafting, and optional loopback local-model workbench with exact context approval and provenance receipts"
 readme = "README.md"
 license = {file = "LICENSE.md"}

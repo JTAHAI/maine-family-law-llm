@@ -1,0 +1,20 @@
+{
+  "schema_version": "v902_release_scope_v1",
+  "release": "9.0.2",
+  "package_version": "9.0.2.0",
+  "decision": "PACKAGE_CANDIDATE_PENDING_VERIFICATION",
+  "release_type": "maintenance",
+  "previous_maintenance_scope_reference": "configs/v901_release_scope.json",
+  "canonical_feature_truth_manifest": "configs/release_feature_truth.json",
+  "public_feature_claims_status": "pending_current_package_verification",
+  "new_public_feature_ids": [],
+  "hardened_workflows": ["trusted_filing_review", "exact_revision_txt_export", "scope_bound_deliberation"],
+  "new_bundled_legal_model_ids": [],
+  "model_import_requires_production_admission": true,
+  "storage_schema_change": false,
+  "automatic_downloads": false,
+  "review_required": true,
+  "attorney_approval_claimed": false,
+  "enterprise_organizational_validation_claimed": false,
+  "store_certification_claimed": false
+}

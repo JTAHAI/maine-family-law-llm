@@ -1,3 +1,9 @@
+Maine Family Law LLM v9.0.2
+
+Product 9.0.2; Store package 9.0.2.0; build 58.
+Trusted reviewer identity and exact-revision filing copies; stricter source, consent,
+privacy, and release boundaries. Optional on-device AI is unchanged; no bundled legal models.
+
 Maine Family Law LLM v9.0.1
 
 Product 9.0.1; Store package 9.0.1.0; build 57.

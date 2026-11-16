@@ -1,3 +1,11 @@
+## v9.0.2 — Safer review and export
+
+- Bind reviewer sign-off to the exact draft and a configured matter-scoped credential.
+- Recheck approval and source evidence before downloading the reviewed TXT. Other formats stay working copies.
+- Keep deliberation within confirmed tool permissions and verify legal claims against admitted source text.
+- Improve blocked-action messages and keyboard focus in the review controls.
+- Optional 4B and 8B setup remains available in chat; no legal-specialist weights are bundled.
+
 ## v9.0.1 — Guided local AI setup in chat
 
 - Chat checks hardware, disk space, Ollama and the selected 4B or 8B model.

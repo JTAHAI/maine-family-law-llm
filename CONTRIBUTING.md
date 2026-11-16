@@ -78,6 +78,9 @@ directory must be outside the test source worktree (use the owning checkout's
 `dist/qa`), and `MFL_PROOF_NODE_MODULES` must locate installed Playwright.
 The script uses Edge, starts a loopback listener, seeds a fictional matter and
 authority fixture, and shuts down the listener and browser on exit.
+Add `--runtime-executable <path-to-MaineFamilyLawLLM.exe> --runtime-sha256 <digest>`
+to prove the same journey against the exact frozen candidate, using the executable
+digest from the sealed package payload. This does not install or submit the MSIX.
 
 The Enterprise GA evidence verifier accepts a candidate-bound v2 manifest.
 Pin the expected SHA, version and MSIX digest independently with
