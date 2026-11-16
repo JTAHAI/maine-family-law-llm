@@ -7,7 +7,7 @@
 - Keep local AI review within its approved scope. Deliberation respects the tools you allow, keeps separate limits for each run, and checks legal claims against admitted sources rather than treating model output as authority.
 - Optional local 4B and 8B assistance is still available from chat, with hardware checks and consent before downloading missing components.
 
-Reviewed TXT export does not submit anything to a court. Other formats remain working copies for human review. The Essential package does not include Ollama, model weights, or an official authority corpus. Optional AI requires separate local setup and is not a certified legal specialist.
+Reviewed TXT export does not submit anything to a court. Other formats remain working copies for human review. The Essential package does not include Ollama, language-model weights, or an official authority corpus. Optional AI requires separate local setup and is not a certified legal specialist.
 
 ## Windows package
 

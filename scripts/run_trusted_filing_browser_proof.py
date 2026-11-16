@@ -17,7 +17,7 @@ import urllib.request
 from pathlib import Path
 
 
-def _run_frozen(executable: Path, sha256: str, repo: Path, input_path: Path) -> int:
+def _run_frozen(executable: Path, sha256: str, repo: Path, input_path: Path, browser_environment: dict[str, str]) -> int:
     if not executable.is_file() or executable.name != "MaineFamilyLawLLM.exe":
         raise SystemExit("Select the exact frozen MaineFamilyLawLLM.exe.")
     with executable.open("rb") as stream:
@@ -53,7 +53,7 @@ def _run_frozen(executable: Path, sha256: str, repo: Path, input_path: Path) -> 
             raise RuntimeError("Exact frozen runtime did not become healthy.")
         result = subprocess.run(
             ["node", str(repo / "scripts" / "verify_trusted_filing.mjs"), origin, str(input_path), sha256],
-            cwd=repo, timeout=150, check=False,
+            cwd=repo, env=browser_environment, timeout=150, check=False,
         )
         with opener.open(origin + "/api/health", timeout=5) as response:
             if response.headers.get("X-MFL-Service-Instance") != instance:
@@ -87,6 +87,7 @@ def main() -> int:
         root = Path(run)
         profile = root / "profile"
         profile.mkdir()
+        actual_windows_profile = os.environ.get("USERPROFILE")
         proof_node_modules = os.environ.get("MFL_PROOF_NODE_MODULES", "")
         for key in tuple(os.environ):
             if key.startswith(("MFL_", "MAINE_")):
@@ -95,7 +96,9 @@ def main() -> int:
             "APPDATA": str(profile),
             "LOCALAPPDATA": str(profile),
             "USERPROFILE": str(profile),
-            "MFL_CASE_LIBRARY_PATH": str(root / "case-library.json"),
+            # The Store launcher sets its canonical profile location regardless
+            # of the inherited case-library env var. Seed that same location.
+            "MFL_CASE_LIBRARY_PATH": str(profile / "MaineFamilyLawLLM" / "case_library.json"),
             "MFL_RUNTIME_STATE_ROOT": str(root / "state"),
             "MFL_VAULT_KEY_ROOT": str(root / "vault"),
             "MFL_IDEMPOTENCY_STATE_ROOT": str(root / "replay"),
@@ -103,6 +106,11 @@ def main() -> int:
             "MAINE_MATTER_STORE_KEY": secrets.token_hex(32),
             "TEMP": run, "TMP": run,
         })
+        browser_environment = os.environ.copy()
+        if actual_windows_profile:
+            # Edge uses the registered OS profile to find its installer. Its
+            # disposable browser user-data directory is still owned by Playwright.
+            browser_environment["USERPROFILE"] = actual_windows_profile
         sys.path[:0] = [str(repo / "src"), str(repo), str(repo / "tests")]
         import uvicorn
         from app.api.production import app
@@ -126,7 +134,7 @@ def main() -> int:
             "claims": [cite + ".", phrase], "source_id": source_id,
         }), encoding="utf-8")
         if args.runtime_executable:
-            return _run_frozen(args.runtime_executable.resolve(), args.runtime_sha256, repo, fixture)
+            return _run_frozen(args.runtime_executable.resolve(), args.runtime_sha256, repo, fixture, browser_environment)
         with socket.socket() as bound:
             bound.bind(("127.0.0.1", 0))
             origin = f"http://127.0.0.1:{bound.getsockname()[1]}"
@@ -141,7 +149,7 @@ def main() -> int:
                     raise RuntimeError("Fictional loopback fixture did not start.")
                 return subprocess.run(
                     ["node", str(repo / "scripts" / "verify_trusted_filing.mjs"), origin, str(fixture)],
-                    cwd=repo, timeout=150, check=False,
+                    cwd=repo, env=browser_environment, timeout=150, check=False,
                 ).returncode
             finally:
                 server.should_exit = True

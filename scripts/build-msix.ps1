@@ -13,6 +13,8 @@ param(
   [switch]$UseDevIdentity,
   [switch]$Unsigned,
   [switch]$Offline,
+  [string]$ReuseFrozenRuntimeSha256 = "",
+  [string]$ReuseFrozenRuntimeSeal = "",
   [string]$SpecialistPackRoot = "",
   [string]$SpecialistTrustPath = "",
   [ValidateSet("essential", "full")]
@@ -160,6 +162,27 @@ $sealAudit = Join-Path $evidenceRoot "sealed-msix-payload-audit.json"
 $archiveAudit = Join-Path $evidenceRoot "sealed-msix-archive-audit.json"
 $sizeBudgetReport = Join-Path $evidenceRoot "package-size-budget.json"
 
+if ($ReuseFrozenRuntimeSha256 -or $ReuseFrozenRuntimeSeal) {
+  if (-not $Offline -or $SpecialistPackRoot -or $SpecialistTrustPath -or -not $ReuseFrozenRuntimeSeal -or $ReuseFrozenRuntimeSha256 -cnotmatch '^[a-f0-9]{64}$') {
+    throw "An offline repack requires a pinned frozen executable and does not admit additional model weights."
+  }
+  $runtimeRoot = Resolve-RepoBuildDirectory $runtimeRoot $RepoRoot
+  $reuseExe = Join-Path $runtimeRoot "MaineFamilyLawLLM.exe"
+  if (-not (Test-Path -LiteralPath $reuseExe -PathType Leaf) -or (Get-Sha256Hex $reuseExe) -cne $ReuseFrozenRuntimeSha256) {
+    throw "The frozen runtime does not match the pinned executable digest."
+  }
+  $ReuseFrozenRuntimeSeal = [System.IO.Path]::GetFullPath($ReuseFrozenRuntimeSeal)
+  $reuseReceiptDir = Resolve-RepoBuildDirectory (Split-Path -Parent $ReuseFrozenRuntimeSeal) $RepoRoot
+  Assert-SeparateBuildDirectories $reuseReceiptDir $OutputRoot
+  Assert-SeparateBuildDirectories $reuseReceiptDir $PackagingRoot
+  $reuseReceipt = Get-Item -LiteralPath $ReuseFrozenRuntimeSeal -Force
+  if ($reuseReceipt.PSIsContainer -or ($reuseReceipt.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+    throw "The frozen runtime seal must be a regular receipt file."
+  }
+  & $storePython -B $hygiene verify --root $runtimeRoot --seal $ReuseFrozenRuntimeSeal --output (Join-Path $reuseReceiptDir "frozen-repack-input-audit.json")
+  if ($LASTEXITCODE -ne 0) { throw "The frozen runtime no longer matches its input seal." }
+}
+
 foreach ($path in @($packagingRoot, $msixRoot, $evidenceRoot)) {
   $path = Resolve-RepoBuildDirectory $path $RepoRoot
   if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force }
@@ -188,13 +211,19 @@ if ($SpecialistPackRoot) {
 if ($SpecialistTrustPath) {
   $runtimeBuildArguments += @("-SpecialistTrustPath", $SpecialistTrustPath)
 }
-& powershell.exe @runtimeBuildArguments
-if ($LASTEXITCODE -ne 0) { throw "Frozen runtime build failed." }
+if (-not $ReuseFrozenRuntimeSha256) {
+  & powershell.exe @runtimeBuildArguments
+  if ($LASTEXITCODE -ne 0) { throw "Frozen runtime build failed." }
+}
 if (-not (Test-Path -LiteralPath $storeBuildPython)) { throw "Provisioned Store interpreter missing." }
 $storePython = $storeBuildPython
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_pyinstaller --command "PyInstaller frozen runtime build" --parent-command "build-store-runtime.ps1"
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\test-store-runtime.ps1") -RepoRoot $RepoRoot -RuntimeRoot $runtimeRoot -EvidenceRoot $evidenceRoot
 if ($LASTEXITCODE -ne 0) { throw "Frozen runtime qualification failed; no MSIX may be sealed." }
+$frozenSmoke = Get-Content -LiteralPath (Join-Path $evidenceRoot "store-build-smoke.json") -Raw | ConvertFrom-Json
+if ((Convert-ToPackageVersion $frozenSmoke.application_version) -ne $PackageVersion) {
+  throw "The frozen application version does not match the MSIX manifest version."
+}
 & $storePython -B $hygiene snapshot --root $runtimeRoot --output $tracePath --checkpoint after_frozen_runtime_smoke --command "test-store-runtime.ps1 frozen runtime smoke" --parent-command "build-msix.ps1"
 $inventoryPath = Join-Path $evidenceRoot "bundled-engine-inventory.json"
 & $storePython -B (Join-Path $RepoRoot "scripts\generate_bundled_engine_inventory.py") --runtime-root $runtimeRoot --output $inventoryPath --feature-tier $FeatureTier
@@ -251,6 +280,10 @@ New-Item -ItemType Directory -Force -Path $assetsRoot | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "MSIX asset generation failed." }
 & $storePython -B $hygiene clean --root $runtimeRoot --output $runtimeCleanup
 if ($LASTEXITCODE -ne 0) { throw "Frozen runtime cleanup failed." }
+if ($ReuseFrozenRuntimeSeal) {
+  & $storePython -B $hygiene verify --root $runtimeRoot --seal $ReuseFrozenRuntimeSeal --output (Join-Path $evidenceRoot "frozen-repack-audit.json")
+  if ($LASTEXITCODE -ne 0) { throw "The frozen runtime changed during pre-pack checks." }
+}
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 & $storePython -B (Join-Path $RepoRoot "scripts\prepare_msix_staging.py") --runtime-root $runtimeRoot --assets-root $assetsRoot --stage-root $stageRoot --manifest-output (Join-Path $evidenceRoot "msix-staging-manifest.json")
 if ($LASTEXITCODE -ne 0) { throw "MSIX staging preparation failed." }
